@@ -174,7 +174,6 @@ def test_activation_queue_efficiency_scaled(spec, state):
 @with_all_phases
 @spec_state_test
 def test_large_exit_epoch(spec, state):
-
     assert spec.is_active_validator(state.validators[0], spec.get_current_epoch(state))
     assert spec.is_active_validator(state.validators[1], spec.get_current_epoch(state))
 
@@ -185,6 +184,7 @@ def test_large_exit_epoch(spec, state):
     state.validators[1].effective_balance = spec.config.EJECTION_BALANCE
 
     expect_assertion_error(lambda: run_process_registry_updates(spec, state))
+    yield 'post', None
 
 
 @with_all_phases
