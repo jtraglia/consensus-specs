@@ -5,7 +5,7 @@ from eth2spec.test.context import (
     spec_test, spec_state_test,
     with_all_phases, single_phase,
     with_custom_state, with_presets,
-    scaled_churn_balances,
+    scaled_churn_balances, expect_assertion_error
 )
 from eth2spec.test.helpers.epoch_processing import run_epoch_processing_with
 
@@ -169,6 +169,22 @@ def test_activation_queue_efficiency_min(spec, state):
 def test_activation_queue_efficiency_scaled(spec, state):
     assert spec.get_validator_churn_limit(state) > spec.config.MIN_PER_EPOCH_CHURN_LIMIT
     yield from run_test_activation_queue_efficiency(spec, state)
+
+
+@with_all_phases
+@spec_state_test
+def test_large_exit_epoch(spec, state):
+
+    assert spec.is_active_validator(state.validators[0], spec.get_current_epoch(state))
+    assert spec.is_active_validator(state.validators[1], spec.get_current_epoch(state))
+
+    # Give validator #0 a large exit epoch close to uint64 max value
+    state.validators[0].exit_epoch = spec.FAR_FUTURE_EPOCH - 1
+
+    # Validator #1 will be given an exit epoch after validator #0
+    state.validators[1].effective_balance = spec.config.EJECTION_BALANCE
+
+    expect_assertion_error(lambda: run_process_registry_updates(spec, state))
 
 
 @with_all_phases
