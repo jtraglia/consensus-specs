@@ -1,3 +1,5 @@
+import pytest
+
 from eth2spec.test.helpers.deposits import mock_deposit
 from eth2spec.test.helpers.state import next_epoch, next_slots
 from eth2spec.test.helpers.constants import MINIMAL
@@ -183,7 +185,8 @@ def test_large_exit_epoch(spec, state):
     # Validator #1 will be given an exit epoch after validator #0
     state.validators[1].effective_balance = spec.config.EJECTION_BALANCE
 
-    expect_assertion_error(lambda: run_process_registry_updates(spec, state))
+    with pytest.raises(ValueError):
+      yield from run_process_registry_updates(spec, state)
     yield 'post', None
 
 
