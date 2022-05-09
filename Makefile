@@ -94,7 +94,7 @@ pyspec:
 
 # installs the packages to run pyspec tests
 install_test:
-	python3 -m venv venv; . venv/bin/activate; python3 -m pip install -e .[lint]; python3 -m pip install -e .[test]
+	python3 -m venv venv; . venv/bin/activate; python3 -m pip install --upgrade pip; python3 -m pip install -e .[lint]; python3 -m pip install -e .[test]
 
 # Testing against `minimal` config by default
 test: pyspec
@@ -157,7 +157,7 @@ test_deposit_contract:
 	dapp test -v --fuzz-runs 5
 
 install_deposit_contract_web3_tester:
-	cd $(DEPOSIT_CONTRACT_TESTER_DIR); python3 -m venv venv; . venv/bin/activate; python3 -m pip install -r requirements.txt
+	cd $(DEPOSIT_CONTRACT_TESTER_DIR); python3 -m venv venv; . venv/bin/activate; python3 -m pip install --upgrade pip; python3 -m pip install -r requirements.txt
 
 test_deposit_contract_web3_tests:
 	cd $(DEPOSIT_CONTRACT_TESTER_DIR); . venv/bin/activate; \
@@ -179,6 +179,7 @@ define run_generator
 	cd $(GENERATOR_DIR)/$(1); \
 	if ! test -d venv; then python3 -m venv venv; fi; \
 	. venv/bin/activate; \
+	pip3 install --upgrade pip; \
 	pip3 install -r requirements.txt; \
 	python3 main.py -o $(CURRENT_DIR)/$(TEST_VECTOR_DIR); \
 	echo "generator $(1) finished"
