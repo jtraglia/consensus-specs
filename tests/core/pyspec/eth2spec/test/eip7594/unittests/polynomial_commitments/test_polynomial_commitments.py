@@ -131,13 +131,13 @@ def test_verify_cell_kzg_proof_batch(spec):
     blob = get_sample_blob(spec)
     commitment = spec.blob_to_kzg_commitment(blob)
     cells, proofs = spec.compute_cells_and_kzg_proofs(blob)
+    commitments = [commitment] * len(cells)
 
     assert len(cells) == len(proofs)
 
     assert spec.verify_cell_kzg_proof_batch(
-        row_commitments_bytes=[commitment],
-        row_indices=[0, 0],
-        column_indices=[0, 4],
+        commitments_bytes=[commitments[0], commitments[4]],
+        cell_indices=[0, 4],
         cells=[cells[0], cells[4]],
         proofs_bytes=[proofs[0], proofs[4]],
     )
@@ -161,15 +161,15 @@ def test_verify_cell_kzg_proof_batch(spec):
 
     # the cells of interest
     row_indices = [0, 0, 1, 2, 1]
-    column_indices = [0, 4, 0, 1, 2]
-    cells = [all_cells[i][j] for (i, j) in zip(row_indices, column_indices)]
-    proofs = [all_proofs[i][j] for (i, j) in zip(row_indices, column_indices)]
+    cell_indices = [0, 4, 0, 1, 2]
+    commitments = [all_commitments[i] for i in row_indices]
+    cells = [all_cells[i][j] for (i, j) in zip(row_indices, cell_indices)]
+    proofs = [all_proofs[i][j] for (i, j) in zip(row_indices, cell_indices)]
 
     # do the check
     assert spec.verify_cell_kzg_proof_batch(
-        row_commitments_bytes=all_commitments,
-        row_indices=row_indices,
-        column_indices=column_indices,
+        commitments_bytes=commitments,
+        cell_indices=cell_indices,
         cells=cells,
         proofs_bytes=proofs,
     )
@@ -184,13 +184,13 @@ def test_verify_cell_kzg_proof_batch_invalid(spec):
     blob = get_sample_blob(spec)
     commitment = spec.blob_to_kzg_commitment(blob)
     cells, proofs = spec.compute_cells_and_kzg_proofs(blob)
+    commitments = [commitment] * len(cells)
 
     assert len(cells) == len(proofs)
 
     assert not spec.verify_cell_kzg_proof_batch(
-        row_commitments_bytes=[commitment],
-        row_indices=[0, 0],
-        column_indices=[0, 4],
+        commitments_bytes=[commitments[0], commitments[4]],
+        cell_indices=[0, 4],
         cells=[cells[0], cells[5]],  # Note: this is where it should go wrong
         proofs_bytes=[proofs[0], proofs[4]],
     )
@@ -214,18 +214,18 @@ def test_verify_cell_kzg_proof_batch_invalid(spec):
 
     # the cells of interest
     row_indices = [0, 0, 1, 2, 1]
-    column_indices = [0, 4, 0, 1, 2]
-    cells = [all_cells[i][j] for (i, j) in zip(row_indices, column_indices)]
-    proofs = [all_proofs[i][j] for (i, j) in zip(row_indices, column_indices)]
+    cell_indices = [0, 4, 0, 1, 2]
+    commitments = [all_commitments[i] for i in row_indices]
+    cells = [all_cells[i][j] for (i, j) in zip(row_indices, cell_indices)]
+    proofs = [all_proofs[i][j] for (i, j) in zip(row_indices, cell_indices)]
 
     # let's change one of the cells. Then it should not verify
     cells[1] = all_cells[1][3]
 
     # do the check
     assert not spec.verify_cell_kzg_proof_batch(
-        row_commitments_bytes=all_commitments,
-        row_indices=row_indices,
-        column_indices=column_indices,
+        commitments_bytes=commitments,
+        cell_indices=cell_indices,
         cells=cells,
         proofs_bytes=proofs,
     )
