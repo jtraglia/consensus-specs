@@ -320,6 +320,7 @@ def compute_powers(x: BLSFieldElement, n: uint64) -> Sequence[BLSFieldElement]:
 #### `compute_roots_of_unity`
 
 ```python
+@functools.lru_cache(maxsize=None)
 def compute_roots_of_unity(order: uint64) -> Sequence[BLSFieldElement]:
     """
     Return roots of unity of ``order``.

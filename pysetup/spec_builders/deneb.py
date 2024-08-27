@@ -10,6 +10,7 @@ class DenebSpecBuilder(BaseSpecBuilder):
     def imports(cls, preset_name: str):
         return f'''
 from eth2spec.capella import {preset_name} as capella
+import functools
 '''
 
 

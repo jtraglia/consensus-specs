@@ -173,7 +173,7 @@ def _update_constant_vars_with_kzg_setups(constant_vars, preset_name):
     constant_vars['KZG_SETUP_G1_MONOMIAL'] = VariableDefinition(constant_vars['KZG_SETUP_G1_MONOMIAL'].value, str(kzg_setups[0]), comment, None)
     constant_vars['KZG_SETUP_G1_LAGRANGE'] = VariableDefinition(constant_vars['KZG_SETUP_G1_LAGRANGE'].value, str(kzg_setups[1]), comment, None)
     constant_vars['KZG_SETUP_G2_MONOMIAL'] = VariableDefinition(constant_vars['KZG_SETUP_G2_MONOMIAL'].value, str(kzg_setups[2]), comment, None)
-    
+
 
 def get_spec(file_name: Path, preset: Dict[str, str], config: Dict[str, str], preset_name=str) -> SpecObject:
     functions: Dict[str, str] = {}
@@ -204,7 +204,7 @@ def get_spec(file_name: Path, preset: Dict[str, str], config: Dict[str, str], pr
             if child.lang != "python":
                 continue
             source = _get_source_from_code_block(child)
-            if source.startswith("def"):
+            if source.startswith("def") or source.startswith("@functools.lru_cache"):
                 current_name = _get_function_name_from_source(source)
                 self_type_name = _get_self_type_from_source(source)
                 function_def = "\n".join(line.rstrip() for line in source.splitlines())

@@ -152,17 +152,23 @@ def g2_lincomb(points: Sequence[G2Point], scalars: Sequence[BLSFieldElement]) ->
 #### `_fft_field`
 
 ```python
-def _fft_field(vals: Sequence[BLSFieldElement],
-               roots_of_unity: Sequence[BLSFieldElement]) -> Sequence[BLSFieldElement]:
-    if len(vals) == 1:
-        return vals
+def _fft_field(vals: Sequence[int], roots_of_unity: Sequence[int]) -> Sequence[int]:
+    n = len(vals)
+    if n == 1:
+      return vals
+
+    # Split the input values into even and odd indexed elements
     L = _fft_field(vals[::2], roots_of_unity[::2])
     R = _fft_field(vals[1::2], roots_of_unity[::2])
-    o = [BLSFieldElement(0) for _ in vals]
-    for i, (x, y) in enumerate(zip(L, R)):
-        y_times_root = (int(y) * int(roots_of_unity[i])) % BLS_MODULUS
-        o[i] = BLSFieldElement((int(x) + y_times_root) % BLS_MODULUS)
-        o[i + len(L)] = BLSFieldElement((int(x) - y_times_root + BLS_MODULUS) % BLS_MODULUS)
+
+    # Prepare output array
+    o = [0] * n
+
+    for i in range(n // 2):
+        y_times_root = (R[i] * roots_of_unity[i]) % BLS_MODULUS
+        o[i] = (L[i] + y_times_root) % BLS_MODULUS
+        o[i + n // 2] = (L[i] - y_times_root + BLS_MODULUS) % BLS_MODULUS
+
     return o
 ```
 
@@ -171,15 +177,21 @@ def _fft_field(vals: Sequence[BLSFieldElement],
 ```python
 def fft_field(vals: Sequence[BLSFieldElement],
               roots_of_unity: Sequence[BLSFieldElement],
-              inv: bool=False) -> Sequence[BLSFieldElement]:
+              inv: bool = False) -> Sequence[BLSFieldElement]:
+    # Convert input vals and roots_of_unity to integers
+    int_vals = [int(x) for x in vals]
+    int_roots_of_unity = [int(x) for x in roots_of_unity]
+
     if inv:
         # Inverse FFT
         invlen = pow(len(vals), BLS_MODULUS - 2, BLS_MODULUS)
-        return [BLSFieldElement((int(x) * invlen) % BLS_MODULUS)
-                for x in _fft_field(vals, list(roots_of_unity[0:1]) + list(roots_of_unity[:0:-1]))]
+        reversed_roots = [int_roots_of_unity[0]] + int_roots_of_unity[1:][::-1]
+        result = _fft_field(int_vals, reversed_roots)
+        return [BLSFieldElement((x * invlen) % BLS_MODULUS) for x in result]
     else:
         # Regular FFT
-        return _fft_field(vals, roots_of_unity)
+        result = _fft_field(int_vals, int_roots_of_unity)
+        return [BLSFieldElement(x % BLS_MODULUS) for x in result]
 ```
 
 #### `coset_fft_field`
@@ -281,7 +293,7 @@ def add_polynomialcoeff(a: PolynomialCoeff, b: PolynomialCoeff) -> PolynomialCoe
 ```python
 def neg_polynomialcoeff(a: PolynomialCoeff) -> PolynomialCoeff:
     """
-    Negative of coefficient form polynomial ``a``
+    Negative of coefficient form polynomial ``a``.
     """
     return [(BLS_MODULUS - x) % BLS_MODULUS for x in a]
 ```
@@ -291,7 +303,11 @@ def neg_polynomialcoeff(a: PolynomialCoeff) -> PolynomialCoeff:
 ```python
 def multiply_polynomialcoeff(a: PolynomialCoeff, b: PolynomialCoeff) -> PolynomialCoeff:
     """
-    Multiplies the coefficient form polynomials ``a`` and ``b``
+    Multiplies the coefficient form polynomials ``a`` and ``b``.
+    
+    We could optimize this with FFTs like we do with ``divide_polynomialcoeff``, but
+    this is used with small polynomials (e.g., a=64, b=2) so this naive
+    implementation is actually faster.
     """
     assert len(a) + len(b) <= FIELD_ELEMENTS_PER_EXT_BLOB
 
@@ -302,26 +318,59 @@ def multiply_polynomialcoeff(a: PolynomialCoeff, b: PolynomialCoeff) -> Polynomi
     return r
 ```
 
+#### `next_power_of_two`
+
+```python
+def next_power_of_two(x: int) -> int:
+    """
+    Helper function which returns the next power of two.
+    """
+    assert x > 0
+    return 2 ** ((x - 1).bit_length())
+```
+
 #### `divide_polynomialcoeff`
 
 ```python
 def divide_polynomialcoeff(a: PolynomialCoeff, b: PolynomialCoeff) -> PolynomialCoeff:
     """
-    Long polynomial division for two coefficient form polynomials ``a`` and ``b``
+    Divides the coefficient form polynomials ``a`` by ``b``.
     """
-    a = a.copy()  # Make a copy since `a` is passed by reference
-    o: List[BLSFieldElement] = []
-    apos = len(a) - 1
-    bpos = len(b) - 1
-    diff = apos - bpos
-    while diff >= 0:
-        quot = div(a[apos], b[bpos])
-        o.insert(0, quot)
-        for i in range(bpos, -1, -1):
-            a[diff + i] = (int(a[diff + i]) - int(b[i] + BLS_MODULUS) * int(quot)) % BLS_MODULUS
-        apos -= 1
-        diff -= 1
-    return [x % BLS_MODULUS for x in o]
+    # Ensure the divisor is not zero
+    assert len(b) > 0 and any(int(x) != 0 for x in b)
+
+    # Compute the extended roots of unity to use with FFT operations
+    roots_of_unity_extended = compute_roots_of_unity(FIELD_ELEMENTS_PER_EXT_BLOB)
+
+    # Ensure the polynomials are of compatible length
+    n = len(a) - len(b) + 1
+    m = next_power_of_two(len(a) + len(b) - 1)
+
+    # Pad polynomials with zeros
+    a_padded = a + [BLSFieldElement(0)] * (m - len(a))
+    b_padded = b + [BLSFieldElement(0)] * (m - len(b))
+
+    # Compute FFT of both polynomials
+    fft_a = fft_field(a_padded, roots_of_unity_extended)
+    fft_b = fft_field(b_padded, roots_of_unity_extended)
+    
+    # Compute the inverse of fft_b in the frequency domain
+    fft_b_inv = []
+    for i in range(m):
+        if int(fft_b[i]) == 0:
+            # No inverse for zero; set to zero
+            fft_b_inv.append(BLSFieldElement(0))
+        else:
+            fft_b_inv.append(bls_modular_inverse(fft_b[i]))
+
+    # Compute the quotient in the frequency domain
+    fft_quotient = [(int(fft_a[i]) * int(fft_b_inv[i])) % BLS_MODULUS for i in range(m)]
+
+    # Inverse FFT to get the quotient polynomial in coefficient form
+    quotient_coeff = fft_field(fft_quotient, roots_of_unity_extended, inv=True)
+
+    # Return the trimmed quotient
+    return quotient_coeff[:n]
 ```
 
 #### `interpolate_polynomialcoeff`
@@ -354,12 +403,19 @@ def interpolate_polynomialcoeff(xs: Sequence[BLSFieldElement], ys: Sequence[BLSF
 ```python
 def vanishing_polynomialcoeff(xs: Sequence[BLSFieldElement]) -> PolynomialCoeff:
     """
-    Compute the vanishing polynomial on ``xs`` (in coefficient form)
+    Compute the vanishing polynomial on ``xs`` (in coefficient form) using a
+    divide-and-conquer approach.
     """
-    p = [1]
-    for x in xs:
-        p = multiply_polynomialcoeff(p, [-int(x) + BLS_MODULUS, 1])
-    return p
+    if len(xs) == 1:
+        return [-int(xs[0]) + BLS_MODULUS, 1]
+
+    # Split the input into two halves
+    mid = len(xs) // 2
+    left = vanishing_polynomialcoeff(xs[:mid])
+    right = vanishing_polynomialcoeff(xs[mid:])
+
+    # Combine the results
+    return multiply_polynomialcoeff(left, right)
 ```
 
 #### `evaluate_polynomialcoeff`
@@ -367,7 +423,7 @@ def vanishing_polynomialcoeff(xs: Sequence[BLSFieldElement]) -> PolynomialCoeff:
 ```python
 def evaluate_polynomialcoeff(polynomial_coeff: PolynomialCoeff, z: BLSFieldElement) -> BLSFieldElement:
     """
-    Evaluate a coefficient form polynomial at ``z`` using Horner's schema
+    Evaluate a coefficient form polynomial at ``z`` using Horner's schema.
     """
     y = 0
     for coef in polynomial_coeff[::-1]:
