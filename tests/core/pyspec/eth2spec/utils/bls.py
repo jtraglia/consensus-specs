@@ -54,6 +54,9 @@ bls_active = True
 # Default to fastest_bls
 bls = fastest_bls
 
+# Expose the scalar type
+Scalar = arkworks_Scalar
+
 STUB_SIGNATURE = b'\x11' * 96
 STUB_PUBKEY = b'\x22' * 48
 G2_POINT_AT_INFINITY = b'\xc0' + b'\x00' * 95

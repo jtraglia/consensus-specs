@@ -11,7 +11,6 @@ class EIP7594SpecBuilder(BaseSpecBuilder):
     def imports(cls, preset_name: str):
         return f'''
 from eth2spec.deneb import {preset_name} as deneb
-from poly_ops import Fr
 '''
 
 
