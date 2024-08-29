@@ -265,6 +265,7 @@ def bls_modular_inverse(x: Fr) -> Fr:
     Compute the modular inverse of x (for x != 0)
     i.e. return y such that x * y % BLS_MODULUS == 1
     """
+    assert x != Fr(0)
     return Fr(pow(int(x), -1, BLS_MODULUS))
 ```
 
@@ -344,7 +345,7 @@ def evaluate_polynomial_in_evaluation_form(polynomial: Sequence[Fr], z: Fr) -> F
         a = polynomial[i] * roots_of_unity_brp[i]
         b = z - roots_of_unity_brp[i]
         result += a / b
-    result = result * Fr(pow(int(z), width, BLS_MODULUS) - 1) * Fr(inverse_width)
+    result = result * Fr(pow(int(z), width, BLS_MODULUS) - 1) * inverse_width
     return result
 ```
 

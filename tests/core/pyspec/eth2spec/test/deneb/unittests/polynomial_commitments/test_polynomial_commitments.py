@@ -226,12 +226,10 @@ def test_bls_modular_inverse(spec):
     rng = random.Random(5566)
 
     # Should fail for x == 0
-    expect_assertion_error(lambda: spec.bls_modular_inverse(0))
-    expect_assertion_error(lambda: spec.bls_modular_inverse(spec.BLS_MODULUS))
-    expect_assertion_error(lambda: spec.bls_modular_inverse(2 * spec.BLS_MODULUS))
+    expect_assertion_error(lambda: spec.bls_modular_inverse(spec.Fr(0)))
 
     # Test a trivial inversion
-    assert spec.Fr(1) == spec.bls_modular_inverse(1)
+    assert spec.Fr(1) == spec.bls_modular_inverse(spec.Fr(1))
 
     # Test a random inversion
     r = spec.Fr(rng.randint(0, spec.BLS_MODULUS - 1))
