@@ -188,18 +188,19 @@ def coset_fft_field(vals: Sequence[bls.Scalar],
     This is useful for when one wants to divide by a polynomial which
     vanishes on one or more elements in the domain.
     """
-    vals = vals.copy()
+    vals = [v for v in vals]  # copy
 
     def shift_vals(vals: Sequence[bls.Scalar], factor: bls.Scalar) -> Sequence[bls.Scalar]:
         """
         Multiply each entry in `vals` by succeeding powers of `factor`
         i.e., [vals[0] * factor^0, vals[1] * factor^1, ..., vals[n] * factor^n]
         """
+        updated_vals: List[bls.Scalar] = []
         shift = bls.Scalar(1)
         for i in range(len(vals)):
-            vals[i] = vals[i] * shift
+            updated_vals.append(vals[i] * shift)
             shift = shift * factor
-        return vals
+        return updated_vals
 
     # This is the coset generator; it is used to compute a FFT/IFFT over a coset of
     # the roots of unity.
@@ -290,7 +291,7 @@ def multiply_polynomialcoeff(a: Sequence[bls.Scalar], b: Sequence[bls.Scalar]) -
     """
     assert len(a) + len(b) <= FIELD_ELEMENTS_PER_EXT_BLOB
 
-    r = [bls.Scalar(0)]
+    r: Sequence[bls.Scalar] = [bls.Scalar(0)]
     for power, coef in enumerate(a):
         summand = [bls.Scalar(0)] * power + [coef * x for x in b]
         r = add_polynomialcoeff(r, summand)
@@ -304,7 +305,7 @@ def divide_polynomialcoeff(a: Sequence[bls.Scalar], b: Sequence[bls.Scalar]) -> 
     """
     Long polynomial division for two coefficient form polynomials ``a`` and ``b``
     """
-    a = a.copy()  # Make a copy since `a` is passed by reference
+    a = [v for v in a]  # copy
     o: List[bls.Scalar] = []
     apos = len(a) - 1
     bpos = len(b) - 1
@@ -329,10 +330,10 @@ def interpolate_polynomialcoeff(xs: Sequence[bls.Scalar], ys: Sequence[bls.Scala
     Outputs a coefficient form polynomial. Leading coefficients may be zero.
     """
     assert len(xs) == len(ys)
-    r = [bls.Scalar(0)]
+    r: Sequence[bls.Scalar] = [bls.Scalar(0)]
 
     for i in range(len(xs)):
-        summand = [ys[i]]
+        summand: Sequence[bls.Scalar] = [ys[i]]
         for j in range(len(ys)):
             if j != i:
                 weight_adjustment = bls_modular_inverse(xs[i] - xs[j])
@@ -351,7 +352,7 @@ def vanishing_polynomialcoeff(xs: Sequence[bls.Scalar]) -> Sequence[bls.Scalar]:
     """
     Compute the vanishing polynomial on ``xs`` (in coefficient form)
     """
-    p = [bls.Scalar(1)]
+    p: Sequence[bls.Scalar] = [bls.Scalar(1)]
     for x in xs:
         p = multiply_polynomialcoeff(p, [-x, bls.Scalar(1)])
     return p
@@ -481,7 +482,7 @@ def verify_cell_kzg_proof_batch_impl(commitments: Sequence[KZGCommitment],
 
     # Step 4.2: Compute RLI = [sum_k r^k interpolation_poly_k(s)]
     # Note: an efficient implementation would use the IDFT based method explained in the blog post
-    sum_interp_polys_coeff = [bls.Scalar(0)] * n
+    sum_interp_polys_coeff: Sequence[bls.Scalar] = [bls.Scalar(0)] * n
     for k in range(num_cells):
         interp_poly_coeff = interpolate_polynomialcoeff(coset_for_cell(cell_indices[k]), cosets_evals[k])
         interp_poly_scaled_coeff = multiply_polynomialcoeff([r_powers[k]], interp_poly_coeff)
@@ -624,7 +625,8 @@ def verify_cell_kzg_proof_batch(commitments_bytes: Sequence[Bytes48],
     deduplicated_commitments = [bytes_to_kzg_commitment(commitment_bytes)
                                 for commitment_bytes in set(commitments_bytes)]
     # Create indices list mapping initial commitments (that may contain duplicates) to the deduplicated commitments
-    commitment_indices = [deduplicated_commitments.index(commitment_bytes) for commitment_bytes in commitments_bytes]
+    commitment_indices = [CommitmentIndex(deduplicated_commitments.index(commitment_bytes))
+                          for commitment_bytes in commitments_bytes]
 
     cosets_evals = [cell_to_coset_evals(cell) for cell in cells]
     proofs = [bytes_to_kzg_proof(proof_bytes) for proof_bytes in proofs_bytes]
@@ -674,9 +676,11 @@ def construct_vanishing_polynomial(missing_cell_indices: Sequence[CellIndex]) ->
 ### `recover_polynomialcoeff`
 
 ```python
-def recover_polynomialcoeff(cell_indices: Sequence[CellIndex], cells: Sequence[Cell]) -> Sequence[bls.Scalar]:
+def recover_polynomialcoeff(cell_indices: Sequence[CellIndex],
+                            cells: Sequence[Sequence[bls.Scalar]]) -> Sequence[bls.Scalar]:
     """
     Recover the polynomial in coefficient form that when evaluated at the roots of unity will give the extended blob.
+    TODO: rename cells to coset_evals.
     """
     # Get the extended domain. This will be referred to as the FFT domain.
     roots_of_unity_extended = compute_roots_of_unity(FIELD_ELEMENTS_PER_EXT_BLOB)
