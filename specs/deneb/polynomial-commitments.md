@@ -285,7 +285,7 @@ def g1_lincomb(points: Sequence[KZGCommitment], scalars: Sequence[bls.Scalar]) -
     for point in points:
         points_g1.append(bls.bytes48_to_G1(point))
 
-    result = bls.multi_exp(points_g1, [int(s) for s in scalars])
+    result = bls.multi_exp(points_g1, scalars)
     return KZGCommitment(bls.G1_to_bytes48(result))
 ```
 
@@ -345,7 +345,8 @@ def evaluate_polynomial_in_evaluation_form(polynomial: Sequence[bls.Scalar], z: 
         a = polynomial[i] * roots_of_unity_brp[i]
         b = z - roots_of_unity_brp[i]
         result += a / b
-    result = result * bls.Scalar(pow(int(z), width, BLS_MODULUS) - 1) * inverse_width
+    r = (BLS_MODULUS + pow(int(z), width, BLS_MODULUS) - 1) % BLS_MODULUS
+    result = result * bls.Scalar(r) * inverse_width
     return result
 ```
 
@@ -398,9 +399,9 @@ def verify_kzg_proof_impl(commitment: KZGCommitment, z: bls.Scalar, y: bls.Scala
     # Verify: P - y = Q * (X - z)
     X_minus_z = bls.add(
         bls.bytes96_to_G2(KZG_SETUP_G2_MONOMIAL[1]),
-        bls.multiply(bls.G2(), int(-z)),
+        bls.multiply(bls.G2(), -z),
     )
-    P_minus_y = bls.add(bls.bytes48_to_G1(commitment), bls.multiply(bls.G1(), int(-y)))
+    P_minus_y = bls.add(bls.bytes48_to_G1(commitment), bls.multiply(bls.G1(), -y))
     return bls.pairing_check([
         [P_minus_y, bls.neg(bls.G2())],
         [bls.bytes48_to_G1(proof), X_minus_z]
@@ -428,10 +429,7 @@ def verify_kzg_proof_batch(commitments: Sequence[KZGCommitment],
 
     # Append all inputs to the transcript before we hash
     for commitment, z, y, proof in zip(commitments, zs, ys, proofs):
-        data += commitment \
-            + int.to_bytes(z, BYTES_PER_FIELD_ELEMENT, KZG_ENDIANNESS) \
-            + int.to_bytes(y, BYTES_PER_FIELD_ELEMENT, KZG_ENDIANNESS) \
-            + proof
+        data += commitment + bls_field_to_bytes(z) + bls_field_to_bytes(y) + proof
 
     r = hash_to_bls_field(data)
     r_powers = compute_powers(r, len(commitments))
@@ -439,11 +437,8 @@ def verify_kzg_proof_batch(commitments: Sequence[KZGCommitment],
     # Verify: e(sum r^i proof_i, [s]) ==
     # e(sum r^i (commitment_i - [y_i]) + sum r^i z_i proof_i, [1])
     proof_lincomb = g1_lincomb(proofs, r_powers)
-    proof_z_lincomb = g1_lincomb(
-        proofs,
-        [bls.Scalar((int(z) * int(r_power)) % BLS_MODULUS) for z, r_power in zip(zs, r_powers)],
-    )
-    C_minus_ys = [bls.add(bls.bytes48_to_G1(commitment), bls.multiply(bls.G1(), (BLS_MODULUS - y) % BLS_MODULUS))
+    proof_z_lincomb = g1_lincomb(proofs, [z * r_power for z, r_power in zip(zs, r_powers)])
+    C_minus_ys = [bls.add(bls.bytes48_to_G1(commitment), bls.multiply(bls.G1(), -y))
                   for commitment, y in zip(commitments, ys)]
     C_minus_y_as_KZGCommitments = [KZGCommitment(bls.G1_to_bytes48(x)) for x in C_minus_ys]
     C_minus_y_lincomb = g1_lincomb(C_minus_y_as_KZGCommitments, r_powers)
