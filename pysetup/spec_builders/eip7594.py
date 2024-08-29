@@ -11,8 +11,9 @@ class EIP7594SpecBuilder(BaseSpecBuilder):
     def imports(cls, preset_name: str):
         return f'''
 from eth2spec.deneb import {preset_name} as deneb
+from poly_ops import Fr
 '''
-    
+
 
     @classmethod
     def sundry_functions(cls) -> str:
@@ -20,6 +21,7 @@ from eth2spec.deneb import {preset_name} as deneb
 def retrieve_column_sidecars(beacon_block_root: Root) -> Sequence[DataColumnSidecar]:
     return []
 """
+
 
     @classmethod
     def hardcoded_custom_type_dep_constants(cls, spec_object) -> str:

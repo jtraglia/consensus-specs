@@ -71,9 +71,6 @@ The following is a list of the public methods:
 
 | Name | SSZ equivalent | Description |
 | - | - | - |
-| `PolynomialCoeff` | `List[BLSFieldElement, FIELD_ELEMENTS_PER_EXT_BLOB]` | A polynomial in coefficient form |
-| `Coset` | `Vector[BLSFieldElement, FIELD_ELEMENTS_PER_CELL]` | The evaluation domain of a cell |
-| `CosetEvals` | `Vector[BLSFieldElement, FIELD_ELEMENTS_PER_CELL]` | The internal representation of a cell (the evaluations over its Coset) |
 | `Cell` | `ByteVector[BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL]` | The unit of blob data that can come with its own KZG proof |
 | `CellIndex` | `uint64` | Validation: `x < CELLS_PER_EXT_BLOB` |
 | `CommitmentIndex` | `uint64` | The type which represents the index of an element in the list of commitments |
@@ -99,9 +96,9 @@ Cells are the smallest unit of blob data that can come with their own KZG proofs
 #### `cell_to_coset_evals`
 
 ```python
-def cell_to_coset_evals(cell: Cell) -> CosetEvals:
+def cell_to_coset_evals(cell: Cell) -> Sequence[Fr]:
     """
-    Convert an untrusted ``Cell`` into a trusted ``CosetEvals``.
+    Convert an untrusted ``Cell`` into a trusted ``Sequence[Fr]``.
     """
     evals = []
     for i in range(FIELD_ELEMENTS_PER_CELL):
@@ -109,13 +106,13 @@ def cell_to_coset_evals(cell: Cell) -> CosetEvals:
         end = (i + 1) * BYTES_PER_FIELD_ELEMENT
         value = bytes_to_bls_field(cell[start:end])
         evals.append(value)
-    return CosetEvals(evals)
+    return evals
 ```
 
 #### `coset_evals_to_cell`
 
 ```python
-def coset_evals_to_cell(coset_evals: CosetEvals) -> Cell:
+def coset_evals_to_cell(coset_evals: Sequence[Fr]) -> Cell:
     """
     Convert a trusted ``CosetEval`` into an untrusted ``Cell``.
     """
@@ -130,7 +127,7 @@ def coset_evals_to_cell(coset_evals: CosetEvals) -> Cell:
 #### `g2_lincomb`
 
 ```python
-def g2_lincomb(points: Sequence[G2Point], scalars: Sequence[BLSFieldElement]) -> Bytes96:
+def g2_lincomb(points: Sequence[G2Point], scalars: Sequence[Fr]) -> Bytes96:
     """
     BLS multiscalar multiplication in G2. This can be naively implemented using double-and-add.
     """
@@ -152,31 +149,27 @@ def g2_lincomb(points: Sequence[G2Point], scalars: Sequence[BLSFieldElement]) ->
 #### `_fft_field`
 
 ```python
-def _fft_field(vals: Sequence[BLSFieldElement],
-               roots_of_unity: Sequence[BLSFieldElement]) -> Sequence[BLSFieldElement]:
+def _fft_field(vals: Sequence[Fr], roots_of_unity: Sequence[Fr]) -> Sequence[Fr]:
     if len(vals) == 1:
         return vals
     L = _fft_field(vals[::2], roots_of_unity[::2])
     R = _fft_field(vals[1::2], roots_of_unity[::2])
-    o = [BLSFieldElement(0) for _ in vals]
+    o = [Fr(0) for _ in vals]
     for i, (x, y) in enumerate(zip(L, R)):
-        y_times_root = (int(y) * int(roots_of_unity[i])) % BLS_MODULUS
-        o[i] = BLSFieldElement((int(x) + y_times_root) % BLS_MODULUS)
-        o[i + len(L)] = BLSFieldElement((int(x) - y_times_root + BLS_MODULUS) % BLS_MODULUS)
+        y_times_root = y * roots_of_unity[i]
+        o[i] = x + y_times_root
+        o[i + len(L)] = x - y_times_root
     return o
 ```
 
 #### `fft_field`
 
 ```python
-def fft_field(vals: Sequence[BLSFieldElement],
-              roots_of_unity: Sequence[BLSFieldElement],
-              inv: bool=False) -> Sequence[BLSFieldElement]:
+def fft_field(vals: Sequence[Fr], roots_of_unity: Sequence[Fr], inv: bool=False) -> Sequence[Fr]:
     if inv:
         # Inverse FFT
-        invlen = pow(len(vals), BLS_MODULUS - 2, BLS_MODULUS)
-        return [BLSFieldElement((int(x) * invlen) % BLS_MODULUS)
-                for x in _fft_field(vals, list(roots_of_unity[0:1]) + list(roots_of_unity[:0:-1]))]
+        invlen = Fr(pow(len(vals), BLS_MODULUS - 2, BLS_MODULUS))
+        return [x * invlen for x in _fft_field(vals, list(roots_of_unity[0:1]) + list(roots_of_unity[:0:-1]))]
     else:
         # Regular FFT
         return _fft_field(vals, roots_of_unity)
@@ -185,9 +178,7 @@ def fft_field(vals: Sequence[BLSFieldElement],
 #### `coset_fft_field`
 
 ```python
-def coset_fft_field(vals: Sequence[BLSFieldElement],
-                    roots_of_unity: Sequence[BLSFieldElement],
-                    inv: bool=False) -> Sequence[BLSFieldElement]:
+def coset_fft_field(vals: Sequence[Fr], roots_of_unity: Sequence[Fr], inv: bool=False) -> Sequence[Fr]:
     """
     Computes an FFT/IFFT over a coset of the roots of unity.
     This is useful for when one wants to divide by a polynomial which
@@ -195,20 +186,20 @@ def coset_fft_field(vals: Sequence[BLSFieldElement],
     """
     vals = vals.copy()
 
-    def shift_vals(vals: Sequence[BLSFieldElement], factor: BLSFieldElement) -> Sequence[BLSFieldElement]:
+    def shift_vals(vals: Sequence[Fr], factor: Fr) -> Sequence[Fr]:
         """
         Multiply each entry in `vals` by succeeding powers of `factor`
         i.e., [vals[0] * factor^0, vals[1] * factor^1, ..., vals[n] * factor^n]
         """
-        shift = 1
+        shift = Fr(1)
         for i in range(len(vals)):
-            vals[i] = BLSFieldElement((int(vals[i]) * shift) % BLS_MODULUS)
-            shift = (shift * int(factor)) % BLS_MODULUS
+            vals[i] = vals[i] * shift
+            shift = shift * factor
         return vals
 
     # This is the coset generator; it is used to compute a FFT/IFFT over a coset of
     # the roots of unity.
-    shift_factor = BLSFieldElement(PRIMITIVE_ROOT_OF_UNITY)
+    shift_factor = Fr(PRIMITIVE_ROOT_OF_UNITY)
     if inv:
         vals = fft_field(vals, roots_of_unity, inv)
         shift_inv = bls_modular_inverse(shift_factor)
@@ -224,8 +215,8 @@ def coset_fft_field(vals: Sequence[BLSFieldElement],
 def compute_verify_cell_kzg_proof_batch_challenge(commitments: Sequence[KZGCommitment],
                                                   commitment_indices: Sequence[CommitmentIndex],
                                                   cell_indices: Sequence[CellIndex],
-                                                  cosets_evals: Sequence[CosetEvals],
-                                                  proofs: Sequence[KZGProof]) -> BLSFieldElement:
+                                                  cosets_evals: Sequence[Sequence[Fr]],
+                                                  proofs: Sequence[KZGProof]) -> Fr:
     """
     Compute a random challenge ``r`` used in the universal verification equation. To compute the
     challenge, ``RANDOM_CHALLENGE_KZG_CELL_BATCH_DOMAIN`` and all data that can influence the
@@ -253,7 +244,7 @@ def compute_verify_cell_kzg_proof_batch_challenge(commitments: Sequence[KZGCommi
 #### `polynomial_eval_to_coeff`
 
 ```python
-def polynomial_eval_to_coeff(polynomial: Polynomial) -> PolynomialCoeff:
+def polynomial_eval_to_coeff(polynomial: Sequence[Fr]) -> Sequence[Fr]:
     """
     Interpolates a polynomial (given in evaluation form) to a polynomial in coefficient form.
     """
@@ -266,38 +257,38 @@ def polynomial_eval_to_coeff(polynomial: Polynomial) -> PolynomialCoeff:
 #### `add_polynomialcoeff`
 
 ```python
-def add_polynomialcoeff(a: PolynomialCoeff, b: PolynomialCoeff) -> PolynomialCoeff:
+def add_polynomialcoeff(a: Sequence[Fr], b: Sequence[Fr]) -> Sequence[Fr]:
     """
     Sum the coefficient form polynomials ``a`` and ``b``.
     """
     a, b = (a, b) if len(a) >= len(b) else (b, a)
     length_a = len(a)
     length_b = len(b)
-    return [(a[i] + (b[i] if i < length_b else 0)) % BLS_MODULUS for i in range(length_a)]
+    return [a[i] + (b[i] if i < length_b else Fr(0)) for i in range(length_a)]
 ```
 
 #### `neg_polynomialcoeff`
 
 ```python
-def neg_polynomialcoeff(a: PolynomialCoeff) -> PolynomialCoeff:
+def neg_polynomialcoeff(a: Sequence[Fr]) -> Sequence[Fr]:
     """
     Negative of coefficient form polynomial ``a``
     """
-    return [(BLS_MODULUS - x) % BLS_MODULUS for x in a]
+    return [-x for x in a]
 ```
 
 #### `multiply_polynomialcoeff`
 
 ```python
-def multiply_polynomialcoeff(a: PolynomialCoeff, b: PolynomialCoeff) -> PolynomialCoeff:
+def multiply_polynomialcoeff(a: Sequence[Fr], b: Sequence[Fr]) -> Sequence[Fr]:
     """
     Multiplies the coefficient form polynomials ``a`` and ``b``
     """
     assert len(a) + len(b) <= FIELD_ELEMENTS_PER_EXT_BLOB
 
-    r = [0]
+    r = [Fr(0)]
     for power, coef in enumerate(a):
-        summand = [0] * power + [int(coef) * int(x) % BLS_MODULUS for x in b]
+        summand = [Fr(0)] * power + [coef * x for x in b]
         r = add_polynomialcoeff(r, summand)
     return r
 ```
@@ -305,44 +296,44 @@ def multiply_polynomialcoeff(a: PolynomialCoeff, b: PolynomialCoeff) -> Polynomi
 #### `divide_polynomialcoeff`
 
 ```python
-def divide_polynomialcoeff(a: PolynomialCoeff, b: PolynomialCoeff) -> PolynomialCoeff:
+def divide_polynomialcoeff(a: Sequence[Fr], b: Sequence[Fr]) -> Sequence[Fr]:
     """
     Long polynomial division for two coefficient form polynomials ``a`` and ``b``
     """
     a = a.copy()  # Make a copy since `a` is passed by reference
-    o: List[BLSFieldElement] = []
+    o: List[Fr] = []
     apos = len(a) - 1
     bpos = len(b) - 1
     diff = apos - bpos
     while diff >= 0:
-        quot = div(a[apos], b[bpos])
+        quot = a[apos] / b[bpos]
         o.insert(0, quot)
         for i in range(bpos, -1, -1):
-            a[diff + i] = (int(a[diff + i]) - int(b[i] + BLS_MODULUS) * int(quot)) % BLS_MODULUS
+            a[diff + i] = a[diff + i] - b[i] * quot
         apos -= 1
         diff -= 1
-    return [x % BLS_MODULUS for x in o]
+    return o
 ```
 
 #### `interpolate_polynomialcoeff`
 
 ```python
-def interpolate_polynomialcoeff(xs: Sequence[BLSFieldElement], ys: Sequence[BLSFieldElement]) -> PolynomialCoeff:
+def interpolate_polynomialcoeff(xs: Sequence[Fr], ys: Sequence[Fr]) -> Sequence[Fr]:
     """
     Lagrange interpolation: Finds the lowest degree polynomial that takes the value ``ys[i]`` at ``x[i]``
     for all i.
     Outputs a coefficient form polynomial. Leading coefficients may be zero.
     """
     assert len(xs) == len(ys)
-    r = [0]
+    r = [Fr(0)]
 
     for i in range(len(xs)):
         summand = [ys[i]]
         for j in range(len(ys)):
             if j != i:
-                weight_adjustment = bls_modular_inverse(int(xs[i]) - int(xs[j]))
+                weight_adjustment = bls_modular_inverse(xs[i] - xs[j])
                 summand = multiply_polynomialcoeff(
-                    summand, [((BLS_MODULUS - int(weight_adjustment)) * int(xs[j])) % BLS_MODULUS, weight_adjustment]
+                    summand, [-weight_adjustment * xs[j], weight_adjustment]
                 )
         r = add_polynomialcoeff(r, summand)
 
@@ -352,27 +343,27 @@ def interpolate_polynomialcoeff(xs: Sequence[BLSFieldElement], ys: Sequence[BLSF
 #### `vanishing_polynomialcoeff`
 
 ```python
-def vanishing_polynomialcoeff(xs: Sequence[BLSFieldElement]) -> PolynomialCoeff:
+def vanishing_polynomialcoeff(xs: Sequence[Fr]) -> Sequence[Fr]:
     """
     Compute the vanishing polynomial on ``xs`` (in coefficient form)
     """
-    p = [1]
+    p = [Fr(1)]
     for x in xs:
-        p = multiply_polynomialcoeff(p, [-int(x) + BLS_MODULUS, 1])
+        p = multiply_polynomialcoeff(p, [-x, Fr(1)])
     return p
 ```
 
 #### `evaluate_polynomialcoeff`
 
 ```python
-def evaluate_polynomialcoeff(polynomial_coeff: PolynomialCoeff, z: BLSFieldElement) -> BLSFieldElement:
+def evaluate_polynomialcoeff(polynomial_coeff: Sequence[Fr], z: Fr) -> Fr:
     """
     Evaluate a coefficient form polynomial at ``z`` using Horner's schema
     """
-    y = 0
+    y = Fr(0)
     for coef in polynomial_coeff[::-1]:
-        y = (int(y) * int(z) + int(coef)) % BLS_MODULUS
-    return BLSFieldElement(y % BLS_MODULUS)
+        y = y * z + coef
+    return y
 ```
 
 ### KZG multiproofs
@@ -383,8 +374,8 @@ Extended KZG functions for multiproofs
 
 ```python
 def compute_kzg_proof_multi_impl(
-        polynomial_coeff: PolynomialCoeff,
-        zs: Coset) -> Tuple[KZGProof, CosetEvals]:
+        polynomial_coeff: Sequence[Fr],
+        zs: Sequence[Fr]) -> Tuple[KZGProof, Sequence[Fr]]:
     """
     Compute a KZG multi-evaluation proof for a set of `k` points.
 
@@ -416,7 +407,7 @@ def compute_kzg_proof_multi_impl(
 def verify_cell_kzg_proof_batch_impl(commitments: Sequence[KZGCommitment],
                                      commitment_indices: Sequence[CommitmentIndex],
                                      cell_indices: Sequence[CellIndex],
-                                     cosets_evals: Sequence[CosetEvals],
+                                     cosets_evals: Sequence[Sequence[Fr]],
                                      proofs: Sequence[KZGProof]) -> bool:
     """
     Helper: Verify that a set of cells belong to their corresponding commitment.
@@ -477,16 +468,16 @@ def verify_cell_kzg_proof_batch_impl(commitments: Sequence[KZGCommitment],
     # Step 4.1: Compute RLC = sum_i weights[i] commitments[i]
     # Step 4.1a: Compute weights[i]: the sum of all r^k for which cell k is associated with commitment i.
     # Note: we do that by iterating over all k and updating the correct weights[i] accordingly
-    weights = [0] * num_commitments
+    weights = [Fr(0)] * num_commitments
     for k in range(num_cells):
         i = commitment_indices[k]
-        weights[i] = (weights[i] + int(r_powers[k])) % BLS_MODULUS
+        weights[i] += r_powers[k]
     # Step 4.1b: Linearly combine the weights with the commitments to get RLC
     rlc = bls.bytes48_to_G1(g1_lincomb(commitments, weights))
 
     # Step 4.2: Compute RLI = [sum_k r^k interpolation_poly_k(s)]
     # Note: an efficient implementation would use the IDFT based method explained in the blog post
-    sum_interp_polys_coeff = [0] * n
+    sum_interp_polys_coeff = [Fr(0)] * n
     for k in range(num_cells):
         interp_poly_coeff = interpolate_polynomialcoeff(coset_for_cell(cell_indices[k]), cosets_evals[k])
         interp_poly_scaled_coeff = multiply_polynomialcoeff([r_powers[k]], interp_poly_coeff)
@@ -498,7 +489,7 @@ def verify_cell_kzg_proof_batch_impl(commitments: Sequence[KZGCommitment],
     for k in range(num_cells):
         h_k = int(coset_shift_for_cell(cell_indices[k]))
         h_k_pow = pow(h_k, n, BLS_MODULUS)
-        wrp = (int(r_powers[k]) * h_k_pow) % BLS_MODULUS
+        wrp = r_powers[k] * Fr(h_k_pow)
         weighted_r_powers.append(wrp)
     rlp = bls.bytes48_to_G1(g1_lincomb(proofs, weighted_r_powers))
 
@@ -518,7 +509,7 @@ def verify_cell_kzg_proof_batch_impl(commitments: Sequence[KZGCommitment],
 #### `coset_shift_for_cell`
 
 ```python
-def coset_shift_for_cell(cell_index: CellIndex) -> BLSFieldElement:
+def coset_shift_for_cell(cell_index: CellIndex) -> Fr:
     """
     Get the shift that determines the coset for a given ``cell_index``.
     Precisely, consider the group of roots of unity of order FIELD_ELEMENTS_PER_CELL * CELLS_PER_EXT_BLOB.
@@ -536,7 +527,7 @@ def coset_shift_for_cell(cell_index: CellIndex) -> BLSFieldElement:
 #### `coset_for_cell`
 
 ```python
-def coset_for_cell(cell_index: CellIndex) -> Coset:
+def coset_for_cell(cell_index: CellIndex) -> Sequence[Fr]:
     """
     Get the coset for a given ``cell_index``.
     Precisely, consider the group of roots of unity of order FIELD_ELEMENTS_PER_CELL * CELLS_PER_EXT_BLOB.
@@ -548,7 +539,7 @@ def coset_for_cell(cell_index: CellIndex) -> Coset:
     roots_of_unity_brp = bit_reversal_permutation(
         compute_roots_of_unity(FIELD_ELEMENTS_PER_EXT_BLOB)
     )
-    return Coset(roots_of_unity_brp[FIELD_ELEMENTS_PER_CELL * cell_index:FIELD_ELEMENTS_PER_CELL * (cell_index + 1)])
+    return roots_of_unity_brp[FIELD_ELEMENTS_PER_CELL * cell_index:FIELD_ELEMENTS_PER_CELL * (cell_index + 1)]
 ```
 
 ## Cells
@@ -558,7 +549,7 @@ def coset_for_cell(cell_index: CellIndex) -> Coset:
 #### `compute_cells_and_kzg_proofs_polynomialcoeff`
 
 ```python
-def compute_cells_and_kzg_proofs_polynomialcoeff(polynomial_coeff: PolynomialCoeff) -> Tuple[
+def compute_cells_and_kzg_proofs_polynomialcoeff(polynomial_coeff: Sequence[Fr]) -> Tuple[
         Vector[Cell, CELLS_PER_EXT_BLOB],
         Vector[KZGProof, CELLS_PER_EXT_BLOB]]:
     """
@@ -648,7 +639,7 @@ def verify_cell_kzg_proof_batch(commitments_bytes: Sequence[Bytes48],
 ### `construct_vanishing_polynomial`
 
 ```python
-def construct_vanishing_polynomial(missing_cell_indices: Sequence[CellIndex]) -> Sequence[BLSFieldElement]:
+def construct_vanishing_polynomial(missing_cell_indices: Sequence[CellIndex]) -> Sequence[Fr]:
     """
     Given the cells indices that are missing from the data, compute the polynomial that vanishes at every point that
     corresponds to a missing field element.
@@ -669,7 +660,7 @@ def construct_vanishing_polynomial(missing_cell_indices: Sequence[CellIndex]) ->
     ])
 
     # Extend vanishing polynomial to full domain using the closed form of the vanishing polynomial over a coset
-    zero_poly_coeff = [BLSFieldElement(0)] * FIELD_ELEMENTS_PER_EXT_BLOB
+    zero_poly_coeff = [Fr(0)] * FIELD_ELEMENTS_PER_EXT_BLOB
     for i, coeff in enumerate(short_zero_poly):
         zero_poly_coeff[i * FIELD_ELEMENTS_PER_CELL] = coeff
 
@@ -679,8 +670,7 @@ def construct_vanishing_polynomial(missing_cell_indices: Sequence[CellIndex]) ->
 ### `recover_polynomialcoeff`
 
 ```python
-def recover_polynomialcoeff(cell_indices: Sequence[CellIndex],
-                            cells: Sequence[Cell]) -> Sequence[BLSFieldElement]:
+def recover_polynomialcoeff(cell_indices: Sequence[CellIndex], cells: Sequence[Cell]) -> Sequence[Fr]:
     """
     Recover the polynomial in coefficient form that when evaluated at the roots of unity will give the extended blob.
     """
@@ -691,7 +681,7 @@ def recover_polynomialcoeff(cell_indices: Sequence[CellIndex],
     # If a cell is missing, then its evaluation is zero.
     # We let E(x) be a polynomial of degree FIELD_ELEMENTS_PER_EXT_BLOB - 1
     # that interpolates the evaluations including the zeros for missing ones.
-    extended_evaluation_rbo = [0] * FIELD_ELEMENTS_PER_EXT_BLOB
+    extended_evaluation_rbo = [Fr(0)] * FIELD_ELEMENTS_PER_EXT_BLOB
     for cell_index, cell in zip(cell_indices, cells):
         start = cell_index * FIELD_ELEMENTS_PER_CELL
         end = (cell_index + 1) * FIELD_ELEMENTS_PER_CELL
@@ -710,8 +700,7 @@ def recover_polynomialcoeff(cell_indices: Sequence[CellIndex],
     # Compute (E*Z)(x) = E(x) * Z(x) in evaluation form over the FFT domain
     # Note: over the FFT domain, the polynomials (E*Z)(x) and (P*Z)(x) agree, where
     # P(x) is the polynomial we want to reconstruct (degree FIELD_ELEMENTS_PER_BLOB - 1).
-    extended_evaluation_times_zero = [BLSFieldElement(int(a) * int(b) % BLS_MODULUS)
-                                      for a, b in zip(zero_poly_eval, extended_evaluation)]
+    extended_evaluation_times_zero = [a * b for a, b in zip(zero_poly_eval, extended_evaluation)]
 
     # We know that (E*Z)(x) and (P*Z)(x) agree over the FFT domain,
     # and we know that (P*Z)(x) has degree at most FIELD_ELEMENTS_PER_EXT_BLOB - 1.
@@ -729,7 +718,7 @@ def recover_polynomialcoeff(cell_indices: Sequence[CellIndex],
     zero_poly_over_coset = coset_fft_field(zero_poly_coeff, roots_of_unity_extended)
 
     # Compute P(x) = (P*Z)(x) / Z(x) in evaluation form over a coset of the FFT domain
-    reconstructed_poly_over_coset = [div(a, b) for a, b in zip(extended_evaluations_over_coset, zero_poly_over_coset)]
+    reconstructed_poly_over_coset = [a / b for a, b in zip(extended_evaluations_over_coset, zero_poly_over_coset)]
 
     # Convert P(x) to coefficient form
     reconstructed_poly_coeff = coset_fft_field(reconstructed_poly_over_coset, roots_of_unity_extended, inv=True)
