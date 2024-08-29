@@ -677,20 +677,19 @@ def construct_vanishing_polynomial(missing_cell_indices: Sequence[CellIndex]) ->
 
 ```python
 def recover_polynomialcoeff(cell_indices: Sequence[CellIndex],
-                            cells: Sequence[Sequence[bls.Scalar]]) -> Sequence[bls.Scalar]:
+                            cosets_evals: Sequence[Sequence[bls.Scalar]]) -> Sequence[bls.Scalar]:
     """
     Recover the polynomial in coefficient form that when evaluated at the roots of unity will give the extended blob.
-    TODO: rename cells to coset_evals.
     """
     # Get the extended domain. This will be referred to as the FFT domain.
     roots_of_unity_extended = compute_roots_of_unity(FIELD_ELEMENTS_PER_EXT_BLOB)
 
-    # Flatten the cells into evaluations
+    # Flatten the cosets_evals.
     # If a cell is missing, then its evaluation is zero.
     # We let E(x) be a polynomial of degree FIELD_ELEMENTS_PER_EXT_BLOB - 1
     # that interpolates the evaluations including the zeros for missing ones.
     extended_evaluation_rbo = [bls.Scalar(0)] * FIELD_ELEMENTS_PER_EXT_BLOB
-    for cell_index, cell in zip(cell_indices, cells):
+    for cell_index, cell in zip(cell_indices, cosets_evals):
         start = cell_index * FIELD_ELEMENTS_PER_CELL
         end = (cell_index + 1) * FIELD_ELEMENTS_PER_CELL
         extended_evaluation_rbo[start:end] = cell
