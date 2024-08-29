@@ -165,7 +165,9 @@ def _fft_field(vals: Sequence[bls.Scalar], roots_of_unity: Sequence[bls.Scalar])
 #### `fft_field`
 
 ```python
-def fft_field(vals: Sequence[bls.Scalar], roots_of_unity: Sequence[bls.Scalar], inv: bool=False) -> Sequence[bls.Scalar]:
+def fft_field(vals: Sequence[bls.Scalar],
+              roots_of_unity: Sequence[bls.Scalar],
+              inv: bool=False) -> Sequence[bls.Scalar]:
     if inv:
         # Inverse FFT
         invlen = bls.Scalar(pow(len(vals), BLS_MODULUS - 2, BLS_MODULUS))
@@ -178,7 +180,9 @@ def fft_field(vals: Sequence[bls.Scalar], roots_of_unity: Sequence[bls.Scalar], 
 #### `coset_fft_field`
 
 ```python
-def coset_fft_field(vals: Sequence[bls.Scalar], roots_of_unity: Sequence[bls.Scalar], inv: bool=False) -> Sequence[bls.Scalar]:
+def coset_fft_field(vals: Sequence[bls.Scalar],
+                    roots_of_unity: Sequence[bls.Scalar],
+                    inv: bool=False) -> Sequence[bls.Scalar]:
     """
     Computes an FFT/IFFT over a coset of the roots of unity.
     This is useful for when one wants to divide by a polynomial which
