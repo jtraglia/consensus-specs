@@ -196,7 +196,6 @@ define run_generator
 	if ! test -d venv; then python3 -m venv venv; fi; \
 	. venv/bin/activate; \
 	pip3 install -r requirements.txt; \
-	pip install /Users/jtraglia/Projects/jtraglia/py-arkworks-bls12381/target/wheels/py_arkworks_bls12381-0.3.4.tar.gz; \
 	python3 main.py -o $(CURRENT_DIR)/$(TEST_VECTOR_DIR); \
 	echo "generator $(1) finished"
 endef

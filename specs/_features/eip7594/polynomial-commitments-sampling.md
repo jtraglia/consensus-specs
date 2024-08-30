@@ -98,7 +98,7 @@ Cells are the smallest unit of blob data that can come with their own KZG proofs
 ```python
 def cell_to_coset_evals(cell: Cell) -> Sequence[bls.Scalar]:
     """
-    Convert an untrusted ``Cell`` into a trusted ``Sequence[bls.Scalar]``.
+    Convert an untrusted ``Cell`` into trusted coset evaluations.
     """
     evals = []
     for i in range(FIELD_ELEMENTS_PER_CELL):
@@ -114,7 +114,7 @@ def cell_to_coset_evals(cell: Cell) -> Sequence[bls.Scalar]:
 ```python
 def coset_evals_to_cell(coset_evals: Sequence[bls.Scalar]) -> Cell:
     """
-    Convert a trusted ``CosetEval`` into an untrusted ``Cell``.
+    Convert trusted coset evaluations into an untrusted ``Cell``.
     """
     cell = []
     for i in range(FIELD_ELEMENTS_PER_CELL):
@@ -684,7 +684,7 @@ def recover_polynomialcoeff(cell_indices: Sequence[CellIndex],
     # Get the extended domain. This will be referred to as the FFT domain.
     roots_of_unity_extended = compute_roots_of_unity(FIELD_ELEMENTS_PER_EXT_BLOB)
 
-    # Flatten the cosets_evals.
+    # Flatten the cosets evaluations.
     # If a cell is missing, then its evaluation is zero.
     # We let E(x) be a polynomial of degree FIELD_ELEMENTS_PER_EXT_BLOB - 1
     # that interpolates the evaluations including the zeros for missing ones.

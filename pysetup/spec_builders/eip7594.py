@@ -22,7 +22,6 @@ def retrieve_column_sidecars(beacon_block_root: Root) -> Sequence[DataColumnSide
     return []
 """
 
-
     @classmethod
     def hardcoded_custom_type_dep_constants(cls, spec_object) -> str:
         return {
