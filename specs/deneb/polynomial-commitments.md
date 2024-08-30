@@ -27,8 +27,6 @@
     - [`bytes_to_kzg_proof`](#bytes_to_kzg_proof)
     - [`blob_to_polynomial`](#blob_to_polynomial)
     - [`compute_challenge`](#compute_challenge)
-    - [`bls_modular_inverse`](#bls_modular_inverse)
-    - [`div`](#div)
     - [`g1_lincomb`](#g1_lincomb)
     - [`compute_powers`](#compute_powers)
     - [`compute_roots_of_unity`](#compute_roots_of_unity)
@@ -257,18 +255,6 @@ def compute_challenge(blob: Blob, commitment: KZGCommitment) -> bls.Scalar:
     return hash_to_bls_field(data)
 ```
 
-#### `bls_modular_inverse`
-
-```python
-def bls_modular_inverse(x: bls.Scalar) -> bls.Scalar:
-    """
-    Compute the modular inverse of x (for x != 0)
-    i.e. return y such that x * y % BLS_MODULUS == 1
-    """
-    assert x != bls.Scalar(0)
-    return bls.Scalar(pow(int(x), -1, BLS_MODULUS))
-```
-
 #### `g1_lincomb`
 
 ```python
@@ -331,7 +317,7 @@ def evaluate_polynomial_in_evaluation_form(polynomial: Sequence[bls.Scalar], z: 
     """
     width = len(polynomial)
     assert width == FIELD_ELEMENTS_PER_BLOB
-    inverse_width = bls_modular_inverse(bls.Scalar(width))
+    inverse_width = bls.Scalar(width).inverse()
 
     roots_of_unity_brp = bit_reversal_permutation(compute_roots_of_unity(FIELD_ELEMENTS_PER_BLOB))
 

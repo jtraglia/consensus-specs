@@ -170,7 +170,7 @@ def fft_field(vals: Sequence[bls.Scalar],
               inv: bool=False) -> Sequence[bls.Scalar]:
     if inv:
         # Inverse FFT
-        invlen = bls.Scalar(pow(len(vals), BLS_MODULUS - 2, BLS_MODULUS))
+        invlen = bls.Scalar(len(vals)).pow(bls.Scalar(BLS_MODULUS - 2))
         return [x * invlen for x in _fft_field(vals, list(roots_of_unity[0:1]) + list(roots_of_unity[:0:-1]))]
     else:
         # Regular FFT
@@ -207,8 +207,7 @@ def coset_fft_field(vals: Sequence[bls.Scalar],
     shift_factor = bls.Scalar(PRIMITIVE_ROOT_OF_UNITY)
     if inv:
         vals = fft_field(vals, roots_of_unity, inv)
-        shift_inv = bls_modular_inverse(shift_factor)
-        return shift_vals(vals, shift_inv)
+        return shift_vals(vals, shift_factor.inverse())
     else:
         vals = shift_vals(vals, shift_factor)
         return fft_field(vals, roots_of_unity, inv)
@@ -336,7 +335,7 @@ def interpolate_polynomialcoeff(xs: Sequence[bls.Scalar], ys: Sequence[bls.Scala
         summand: Sequence[bls.Scalar] = [ys[i]]
         for j in range(len(ys)):
             if j != i:
-                weight_adjustment = bls_modular_inverse(xs[i] - xs[j])
+                weight_adjustment = (xs[i] - xs[j]).inverse()
                 summand = multiply_polynomialcoeff(
                     summand, [-weight_adjustment * xs[j], weight_adjustment]
                 )
@@ -492,9 +491,9 @@ def verify_cell_kzg_proof_batch_impl(commitments: Sequence[KZGCommitment],
     # Step 4.3: Compute RLP = sum_k (r^k * h_k^n) proofs[k]
     weighted_r_powers = []
     for k in range(num_cells):
-        h_k = int(coset_shift_for_cell(cell_indices[k]))
-        h_k_pow = pow(h_k, n, BLS_MODULUS)
-        wrp = r_powers[k] * bls.Scalar(h_k_pow)
+        h_k = coset_shift_for_cell(cell_indices[k])
+        h_k_pow = h_k.pow(bls.Scalar(n))
+        wrp = r_powers[k] * h_k_pow
         weighted_r_powers.append(wrp)
     rlp = bls.bytes48_to_G1(g1_lincomb(proofs, weighted_r_powers))
 

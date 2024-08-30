@@ -219,27 +219,6 @@ def test_verify_blob_kzg_proof_incorrect_proof(spec):
 @with_deneb_and_later
 @spec_test
 @single_phase
-def test_bls_modular_inverse(spec):
-    """
-    Verify computation of multiplicative inverse
-    """
-    rng = random.Random(5566)
-
-    # Should fail for x == 0
-    expect_assertion_error(lambda: spec.bls_modular_inverse(spec.bls.Scalar(0)))
-
-    # Test a trivial inversion
-    assert spec.bls.Scalar(1) == spec.bls_modular_inverse(spec.bls.Scalar(1))
-
-    # Test a random inversion
-    r = spec.bls.Scalar(rng.randint(0, spec.BLS_MODULUS - 1))
-    r_inv = spec.bls_modular_inverse(r)
-    assert r * r_inv == spec.bls.Scalar(1)
-
-
-@with_deneb_and_later
-@spec_test
-@single_phase
 def test_validate_kzg_g1_generator(spec):
     """
     Verify that `validate_kzg_g1` allows the generator G1
