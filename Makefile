@@ -33,7 +33,7 @@ ALL_EXECUTABLE_SPEC_NAMES = \
 BOLD = $(shell tput bold)
 NORM = $(shell tput sgr0)
 
-# Print a message listing available targets.
+# Print target descriptions.
 help:
 	@echo "make $(BOLD)check_toc$(NORM)  -- check table of contents"
 	@echo "make $(BOLD)clean$(NORM)      -- delete all untracked files"
@@ -70,13 +70,15 @@ $(VENV): requirements_preinstallation.txt
 # The pyspec is rebuilt to enforce the /specs being part of eth2specs source
 # distribution. It could be forgotten otherwise.
 dist_build: $(VENV) pyspec
-	$(PYTHON_VENV) setup.py sdist bdist_wheel
+	@$(PYTHON_VENV) setup.py sdist bdist_wheel
 
+# Check the distribution for issues.
 dist_check: $(VENV)
-	$(PYTHON_VENV) -m twine check dist/*
+	@$(PYTHON_VENV) -m twine check dist/*
 
+# Upload the distribution to PyPI.
 dist_upload: $(VENV)
-	$(PYTHON_VENV) -m twine upload dist/*
+	@$(PYTHON_VENV) -m twine upload dist/*
 
 ###############################################################################
 # Specification
@@ -154,10 +156,10 @@ SYNC_DIR = ./sync
 
 # Start a local documentation server.
 serve_docs:
-	@cp -r $(SPEC_DIR) $(DOCS_DIR);
-	@cp -r $(SYNC_DIR) $(DOCS_DIR);
-	@cp -r $(SSZ_DIR) $(DOCS_DIR);
-	@cp -r $(FORK_CHOICE_DIR) $(DOCS_DIR);
+	@cp -r $(SPEC_DIR) $(DOCS_DIR)
+	@cp -r $(SYNC_DIR) $(DOCS_DIR)
+	@cp -r $(SSZ_DIR) $(DOCS_DIR)
+	@cp -r $(FORK_CHOICE_DIR) $(DOCS_DIR)
 	@cp $(CURDIR)/README.md $(DOCS_DIR)/README.md
 	@mkdocs build
 	@mkdocs serve
@@ -178,7 +180,7 @@ MARKDOWN_FILES = $(wildcard $(SPEC_DIR)/*/*.md) \
 
 # Check an individual file. 
 %.toc:
-	cp $* $*.tmp && \
+	@cp $* $*.tmp && \
 	doctoc $* && \
 	diff -q $* $*.tmp && \
 	rm $*.tmp
@@ -188,14 +190,14 @@ check_toc: $(MARKDOWN_FILES:=.toc)
 
 # Check for typos.
 codespell:
-	codespell . --skip "./.git,./venv,$(PY_SPEC_DIR)/.mypy_cache" -I .codespell-whitelist
+	@codespell . --skip "./.git,./venv,$(PY_SPEC_DIR)/.mypy_cache" -I .codespell-whitelist
 
 # Check for mistakes.
 lint: $(PYTHON_VENV)
-	flake8 --config $(LINTER_CONFIG_FILE) $(PY_SPEC_DIR)/eth2spec
-	flake8 --config $(LINTER_CONFIG_FILE) $(TEST_GENERATORS_DIR)
-	$(PYTHON_VENV) -m pylint --rcfile $(LINTER_CONFIG_FILE) $(PYLINT_SCOPE)
-	$(PYTHON_VENV) -m mypy --config-file $(LINTER_CONFIG_FILE) $(MYPY_SCOPE)
+	@flake8 --config $(LINTER_CONFIG_FILE) $(PY_SPEC_DIR)/eth2spec
+	@flake8 --config $(LINTER_CONFIG_FILE) $(TEST_GENERATORS_DIR)
+	@$(PYTHON_VENV) -m pylint --rcfile $(LINTER_CONFIG_FILE) $(PYLINT_SCOPE)
+	@$(PYTHON_VENV) -m mypy --config-file $(LINTER_CONFIG_FILE) $(MYPY_SCOPE)
 
 ###############################################################################
 # Deposit Contract
@@ -211,6 +213,7 @@ SOLIDITY_DEPOSIT_CONTRACT_SOURCE = ${SOLIDITY_DEPOSIT_CONTRACT_DIR}/deposit_cont
 SOLIDITY_FILE_NAME = deposit_contract.json
 DEPOSIT_CONTRACT_TESTER_DIR = ${SOLIDITY_DEPOSIT_CONTRACT_DIR}/web3_tester
 
+# Compile the deposit contract.
 compile_deposit_contract:
 	@cd $(SOLIDITY_DEPOSIT_CONTRACT_DIR)
 	@git submodule update --recursive --init
@@ -224,17 +227,20 @@ compile_deposit_contract:
 	@cat build/DepositContract.bin >> $(SOLIDITY_FILE_NAME)
 	@/bin/echo -n '"}' >> $(SOLIDITY_FILE_NAME)
 
+# Fuzz the deposit contract a little.
 test_deposit_contract:
-	dapp test -v --fuzz-runs 5
+	@dapp test -v --fuzz-runs 5
 
-install_deposit_contract_web3_tester:
-	cd $(DEPOSIT_CONTRACT_TESTER_DIR); \
+# Install the web3 tester.
+_install_deposit_contract_web3_tester:
+	@cd $(DEPOSIT_CONTRACT_TESTER_DIR); \
 	python3 -m venv venv; \
 	source venv/bin/activate; \
 	python3 -m pip install -r requirements.txt
 
-test_deposit_contract_web3_tests: install_deposit_contract_web3_tester
-	cd $(DEPOSIT_CONTRACT_TESTER_DIR); \
+# Run the web3 tests.
+test_deposit_contract_web3_tests: _install_deposit_contract_web3_tester
+	@cd $(DEPOSIT_CONTRACT_TESTER_DIR); \
 	source venv/bin/activate; \
 	python3 -m pytest .
 
