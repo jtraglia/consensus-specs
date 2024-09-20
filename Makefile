@@ -84,7 +84,7 @@ dist_upload: $(VENV)
 # Specification
 ###############################################################################
 
-TEST_LIBS_DIR = ./tests/core
+TEST_LIBS_DIR = $(CURDIR)/tests/core
 PY_SPEC_DIR = $(TEST_LIBS_DIR)/pyspec
 
 # Create the pyspec for all phases.
@@ -193,7 +193,7 @@ codespell:
 	@codespell . --skip "./.git,./venv,$(PY_SPEC_DIR)/.mypy_cache" -I .codespell-whitelist
 
 # Check for mistakes.
-lint: $(PYTHON_VENV)
+lint: pyspec
 	@flake8 --config $(LINTER_CONFIG_FILE) $(PY_SPEC_DIR)/eth2spec
 	@flake8 --config $(LINTER_CONFIG_FILE) $(TEST_GENERATORS_DIR)
 	@$(PYTHON_VENV) -m pylint --rcfile $(LINTER_CONFIG_FILE) $(PYLINT_SCOPE)
