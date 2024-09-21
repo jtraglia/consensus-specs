@@ -15,16 +15,21 @@ ALL_EXECUTABLE_SPEC_NAMES = \
 
 # A list of fake targets.
 .PHONY: \
-	check_toc  \ 
-	clean      \
-	codespell  \
-	gen_all    \
-	gen_errors \
-	gen_list   \
-	help       \
-	lint       \
-	pyspec     \
-	serve_docs
+	check_toc   \ 
+	clean       \
+	codespell   \
+	coverage    \
+	depcon_comp \
+	depcon_test \
+	depcon_fuzz \
+	gen_all     \
+	gen_errors  \
+	gen_list    \
+	help        \
+	lint        \
+	pyspec      \
+	serve_docs  \
+	test
 
 ###############################################################################
 # Help
@@ -35,17 +40,21 @@ NORM = $(shell tput sgr0)
 
 # Print target descriptions.
 help:
-	@echo "make $(BOLD)check_toc$(NORM)  -- check table of contents"
-	@echo "make $(BOLD)clean$(NORM)      -- delete all untracked files"
-	@echo "make $(BOLD)codespell$(NORM)  -- fix all the typos"
-	@echo "make $(BOLD)coverage$(NORM)   -- run tests with coverage tracking"
-	@echo "make $(BOLD)gen_<gen>$(NORM)  -- run a single generator"
-	@echo "make $(BOLD)gen_all$(NORM)    -- run all generators"
-	@echo "make $(BOLD)gen_errors$(NORM) -- detect generator errors"
-	@echo "make $(BOLD)gen_list$(NORM)   -- list all generator targets"
-	@echo "make $(BOLD)lint$(NORM)       -- make the code pretty"
-	@echo "make $(BOLD)pyspec$(NORM)     -- generate python specifications"
-	@echo "make $(BOLD)serve_docs$(NORM) -- start a local docs web server"
+	@echo "make $(BOLD)check_toc$(NORM)   -- check table of contents"
+	@echo "make $(BOLD)clean$(NORM)       -- delete all untracked files"
+	@echo "make $(BOLD)codespell$(NORM)   -- fix all the typos"
+	@echo "make $(BOLD)coverage$(NORM)    -- run pyspec tests with coverage"
+	@echo "make $(BOLD)depcon_comp$(NORM) -- compile the deposit contract"
+	@echo "make $(BOLD)depcon_test$(NORM) -- run tests on deposit contract"
+	@echo "make $(BOLD)depcon_fuzz$(NORM) -- fuzz the deposit contract"
+	@echo "make $(BOLD)gen_<gen>$(NORM)   -- run a single generator"
+	@echo "make $(BOLD)gen_all$(NORM)     -- run all generators"
+	@echo "make $(BOLD)gen_errors$(NORM)  -- detect generator errors"
+	@echo "make $(BOLD)gen_list$(NORM)    -- list all generator targets"
+	@echo "make $(BOLD)lint$(NORM)        -- make the code pretty"
+	@echo "make $(BOLD)pyspec$(NORM)      -- generate python specifications"
+	@echo "make $(BOLD)serve_docs$(NORM)  -- start a local docs web server"
+	@echo "make $(BOLD)test$(NORM)        -- run pyspec tests"
 
 ###############################################################################
 # Virtual Environment
@@ -214,7 +223,7 @@ SOLIDITY_FILE_NAME = deposit_contract.json
 DEPOSIT_CONTRACT_TESTER_DIR = ${SOLIDITY_DEPOSIT_CONTRACT_DIR}/web3_tester
 
 # Compile the deposit contract.
-compile_deposit_contract:
+depcon_compile:
 	@cd $(SOLIDITY_DEPOSIT_CONTRACT_DIR)
 	@git submodule update --recursive --init
 	@solc --metadata-literal --optimize --optimize-runs 5000000 --bin --abi \
@@ -227,22 +236,22 @@ compile_deposit_contract:
 	@cat build/DepositContract.bin >> $(SOLIDITY_FILE_NAME)
 	@/bin/echo -n '"}' >> $(SOLIDITY_FILE_NAME)
 
-# Fuzz the deposit contract a little.
-test_deposit_contract:
-	@dapp test -v --fuzz-runs 5
-
 # Install the web3 tester.
-_install_deposit_contract_web3_tester:
+_install_depcon_web3_tester:
 	@cd $(DEPOSIT_CONTRACT_TESTER_DIR); \
 	python3 -m venv venv; \
 	source venv/bin/activate; \
 	python3 -m pip install -r requirements.txt
 
-# Run the web3 tests.
-test_deposit_contract_web3_tests: _install_deposit_contract_web3_tester
+# Run the tests.
+depcon_test: depcon_compile _install_depcon_web3_tester
 	@cd $(DEPOSIT_CONTRACT_TESTER_DIR); \
 	source venv/bin/activate; \
 	python3 -m pytest .
+
+# Do a little fuzzing.
+depcon_fuzz: depcon_compile
+	@dapp test -v --fuzz-runs 5
 
 ###############################################################################
 # Generators
