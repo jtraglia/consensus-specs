@@ -110,19 +110,21 @@ TEST_PRESET_TYPE ?= minimal
 TEST_REPORT_DIR = $(PY_SPEC_DIR)/test-reports
 
 # Run pyspec tests.
-# To only run tests for a specific fork, do:
-#   fork=<fork> make test
-# For example:
+# To only run a specific test, prepend with k=<test>, eg:
+#   k=test_verify_kzg_proof make test
+# To only run tests for a specific fork, prepend with fork=<fork>, eg:
 #   fork=altair make test
-test: PYTEST_FORK_OPTION := $(if $(fork),--fork=$(fork))
+test: MAYBE_TEST := $(if $(k),-k=$(k))
+test: MAYBE_FORK := $(if $(fork),--fork=$(fork))
 test: pyspec
 	@mkdir -p $(TEST_REPORT_DIR)
 	@$(PYTHON_VENV) -m pytest \
 		-n auto \
+		$(MAYBE_TEST) \
+		$(MAYBE_FORK) \
 		--bls-type=fastest \
 		--preset=$(TEST_PRESET_TYPE) \
 		--junitxml=$(TEST_REPORT_DIR)/test_results.xml \
-		$(PYTEST_FORK_OPTION) \
 		$(PY_SPEC_DIR)/eth2spec
 
 ###############################################################################
@@ -134,21 +136,23 @@ COV_INDEX_FILE=$(COV_HTML_OUT)/index.html
 COVERAGE_SCOPE := $(foreach S,$(ALL_EXECUTABLE_SPEC_NAMES), --cov=eth2spec.$S.$(TEST_PRESET_TYPE))
 
 # Run pytest with coverage tracking
-_test_with_coverage: SPECIFIC_TEST := $(if $(k),-k=$(k))
+_test_with_coverage: MAYBE_TEST := $(if $(k),-k=$(k))
+_test_with_coverage: MAYBE_FORK := $(if $(fork),--fork=$(fork))
 _test_with_coverage: pyspec
 	@$(PYTHON_VENV) -m pytest \
-		$(SPECIFIC_TEST) \
 		-n auto \
+		$(MAYBE_TEST) \
+		$(MAYBE_FORK) \
 		--disable-bls \
 		$(COVERAGE_SCOPE) \
 		--cov-report="html:$(COV_HTML_OUT)" \
 		--cov-branch \
 		$(PY_SPEC_DIR)/eth2spec
 
-# To only run a specific test, do:
-#   k=<test> make coverage
-# For example:
-#   k=test_verify_kzg_proof make coverage
+# To only run a specific test, prepend with k=<test>, eg:
+#   k=test_verify_kzg_proof make test
+# To only run tests for a specific fork, prepend with fork=<fork>, eg:
+#   fork=altair make test
 coverage: _test_with_coverage
 	@echo "Opening result: $(COV_INDEX_FILE)"
 	@((open "$(COV_INDEX_FILE)" || xdg-open "$(COV_INDEX_FILE)") &> /dev/null) &
