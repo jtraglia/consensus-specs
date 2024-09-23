@@ -17,7 +17,6 @@ ALL_EXECUTABLE_SPEC_NAMES = \
 .PHONY: \
 	check_toc      \ 
 	clean          \
-	codespell      \
 	coverage       \
 	depcon_comp    \
 	depcon_fuzz    \
@@ -41,22 +40,21 @@ NORM = $(shell tput sgr0)
 
 # Print target descriptions.
 help:
-	@echo "make $(BOLD)check_toc$(NORM)      -- check table of contents"
-	@echo "make $(BOLD)clean$(NORM)          -- delete all untracked files"
-	@echo "make $(BOLD)codespell$(NORM)      -- fix all the typos"
-	@echo "make $(BOLD)coverage$(NORM)       -- run pyspec tests with coverage"
-	@echo "make $(BOLD)depcon_comp$(NORM)    -- compile the deposit contract"
-	@echo "make $(BOLD)depcon_test$(NORM)    -- run tests on deposit contract"
-	@echo "make $(BOLD)depcon_fuzz$(NORM)    -- fuzz the deposit contract"
-	@echo "make $(BOLD)gen_<gen>$(NORM)      -- run a single generator"
-	@echo "make $(BOLD)gen_all$(NORM)        -- run all generators"
-	@echo "make $(BOLD)detect_errors$(NORM)  -- detect generator errors"
-	@echo "make $(BOLD)gen_list$(NORM)       -- list all generator targets"
-	@echo "make $(BOLD)eth2spec$(NORM)       -- force rebuild eth2spec package"
-	@echo "make $(BOLD)lint$(NORM)           -- make the code pretty"
-	@echo "make $(BOLD)pyspec$(NORM)         -- generate python specifications"
-	@echo "make $(BOLD)serve_docs$(NORM)     -- start a local docs web server"
-	@echo "make $(BOLD)test$(NORM)           -- run pyspec tests"
+	@echo "make $(BOLD)check_toc$(NORM)     -- check table of contents"
+	@echo "make $(BOLD)clean$(NORM)         -- delete all untracked files"
+	@echo "make $(BOLD)coverage$(NORM)      -- run pyspec tests with coverage"
+	@echo "make $(BOLD)depcon_comp$(NORM)   -- compile the deposit contract"
+	@echo "make $(BOLD)depcon_test$(NORM)   -- run tests on deposit contract"
+	@echo "make $(BOLD)depcon_fuzz$(NORM)   -- fuzz the deposit contract"
+	@echo "make $(BOLD)detect_errors$(NORM) -- detect generator errors"
+	@echo "make $(BOLD)gen_<gen>$(NORM)     -- run a single generator"
+	@echo "make $(BOLD)gen_all$(NORM)       -- run all generators"
+	@echo "make $(BOLD)gen_list$(NORM)      -- list all generator targets"
+	@echo "make $(BOLD)eth2spec$(NORM)      -- force rebuild eth2spec package"
+	@echo "make $(BOLD)lint$(NORM)          -- run the linters"
+	@echo "make $(BOLD)pyspec$(NORM)        -- generate python specifications"
+	@echo "make $(BOLD)serve_docs$(NORM)    -- start a local docs web server"
+	@echo "make $(BOLD)test$(NORM)          -- run pyspec tests"
 
 ###############################################################################
 # Virtual Environment
@@ -99,7 +97,7 @@ TEST_LIBS_DIR = $(CURDIR)/tests/core
 PY_SPEC_DIR = $(TEST_LIBS_DIR)/pyspec
 ETH2SPEC = $(CURDIR)/.eth2spec
 
-# Install the eth2spec pacakge.
+# Install the eth2spec package.
 $(ETH2SPEC): $(VENV)
 	@$(PIP_VENV) install .[docs,lint,test,generator]
 	@touch $(ETH2SPEC)
@@ -215,12 +213,9 @@ MARKDOWN_FILES = $(wildcard $(SPEC_DIR)/*/*.md) \
 # Ensure the table of contents are good.
 check_toc: $(MARKDOWN_FILES:=.toc)
 
-# Check for typos.
-codespell:
-	@codespell . --skip "./.git,./venv,$(PY_SPEC_DIR)/.mypy_cache" -I .codespell-whitelist
-
 # Check for mistakes.
-lint: $(ETH2SPEC) pyspec
+lint: $(ETH2SPEC) pyspec check_toc
+	@codespell . --skip "./.git,./venv,$(PY_SPEC_DIR)/.mypy_cache" -I .codespell-whitelist
 	@flake8 --config $(LINTER_CONFIG_FILE) $(PY_SPEC_DIR)/eth2spec
 	@flake8 --config $(LINTER_CONFIG_FILE) $(TEST_GENERATORS_DIR)
 	@$(PYTHON_VENV) -m pylint --rcfile $(LINTER_CONFIG_FILE) $(PYLINT_SCOPE)
