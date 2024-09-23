@@ -15,21 +15,21 @@ ALL_EXECUTABLE_SPEC_NAMES = \
 
 # A list of fake targets.
 .PHONY: \
-	check_toc   \ 
-	clean       \
-	codespell   \
-	coverage    \
-	depcon_comp \
-	depcon_fuzz \
-	depcon_test \
-	eth2spec    \
-	gen_all     \
-	gen_errors  \
-	gen_list    \
-	help        \
-	lint        \
-	pyspec      \
-	serve_docs  \
+	check_toc      \ 
+	clean          \
+	codespell      \
+	coverage       \
+	depcon_comp    \
+	depcon_fuzz    \
+	depcon_test    \
+	detect_errors  \
+	eth2spec       \
+	gen_all        \
+	gen_list       \
+	help           \
+	lint           \
+	pyspec         \
+	serve_docs     \
 	test
 
 ###############################################################################
@@ -41,22 +41,22 @@ NORM = $(shell tput sgr0)
 
 # Print target descriptions.
 help:
-	@echo "make $(BOLD)check_toc$(NORM)   -- check table of contents"
-	@echo "make $(BOLD)clean$(NORM)       -- delete all untracked files"
-	@echo "make $(BOLD)codespell$(NORM)   -- fix all the typos"
-	@echo "make $(BOLD)coverage$(NORM)    -- run pyspec tests with coverage"
-	@echo "make $(BOLD)depcon_comp$(NORM) -- compile the deposit contract"
-	@echo "make $(BOLD)depcon_test$(NORM) -- run tests on deposit contract"
-	@echo "make $(BOLD)depcon_fuzz$(NORM) -- fuzz the deposit contract"
-	@echo "make $(BOLD)gen_<gen>$(NORM)   -- run a single generator"
-	@echo "make $(BOLD)gen_all$(NORM)     -- run all generators"
-	@echo "make $(BOLD)gen_errors$(NORM)  -- detect generator errors"
-	@echo "make $(BOLD)gen_list$(NORM)    -- list all generator targets"
-	@echo "make $(BOLD)eth2spec$(NORM)    -- force rebuild eth2spec package"
-	@echo "make $(BOLD)lint$(NORM)        -- make the code pretty"
-	@echo "make $(BOLD)pyspec$(NORM)      -- generate python specifications"
-	@echo "make $(BOLD)serve_docs$(NORM)  -- start a local docs web server"
-	@echo "make $(BOLD)test$(NORM)        -- run pyspec tests"
+	@echo "make $(BOLD)check_toc$(NORM)      -- check table of contents"
+	@echo "make $(BOLD)clean$(NORM)          -- delete all untracked files"
+	@echo "make $(BOLD)codespell$(NORM)      -- fix all the typos"
+	@echo "make $(BOLD)coverage$(NORM)       -- run pyspec tests with coverage"
+	@echo "make $(BOLD)depcon_comp$(NORM)    -- compile the deposit contract"
+	@echo "make $(BOLD)depcon_test$(NORM)    -- run tests on deposit contract"
+	@echo "make $(BOLD)depcon_fuzz$(NORM)    -- fuzz the deposit contract"
+	@echo "make $(BOLD)gen_<gen>$(NORM)      -- run a single generator"
+	@echo "make $(BOLD)gen_all$(NORM)        -- run all generators"
+	@echo "make $(BOLD)detect_errors$(NORM)  -- detect generator errors"
+	@echo "make $(BOLD)gen_list$(NORM)       -- list all generator targets"
+	@echo "make $(BOLD)eth2spec$(NORM)       -- force rebuild eth2spec package"
+	@echo "make $(BOLD)lint$(NORM)           -- make the code pretty"
+	@echo "make $(BOLD)pyspec$(NORM)         -- generate python specifications"
+	@echo "make $(BOLD)serve_docs$(NORM)     -- start a local docs web server"
+	@echo "make $(BOLD)test$(NORM)           -- run pyspec tests"
 
 ###############################################################################
 # Virtual Environment
@@ -304,7 +304,7 @@ gen_kzg_setups: $(ETH2SPEC)
 gen_all: $(GENERATOR_TARGETS)
 
 # Detect errors in generators.
-gen_error: $(TEST_VECTOR_DIR)
+detect_errors: $(TEST_VECTOR_DIR)
 	@find $(TEST_VECTOR_DIR) -name "INCOMPLETE"
 	@if [ -f $(GENERATOR_ERROR_LOG_FILE) ]; then \
 		echo "[ERROR] $(GENERATOR_ERROR_LOG_FILE) file exists"; \
