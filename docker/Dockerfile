@@ -16,7 +16,5 @@ RUN apt update && ${INSTALL_CMD} && ${PIP_UPGRADE_CMD} && rm -rf /var/lib/apt/li
 COPY . .
 
 # Inline installation commands
-RUN make install_test && \
-    make preinstallation && \
-    make pyspec
+RUN make eth2spec pyspec
 

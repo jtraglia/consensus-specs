@@ -88,7 +88,7 @@ jobs:
       - restore_pyspec_cached_venv
       - run:
           name: Install pyspec requirements
-          command: make install_test
+          command: make eth2spec
       - save_pyspec_cached_venv
   test-phase0:
     docker:
@@ -100,7 +100,7 @@ jobs:
       - restore_pyspec_cached_venv
       - run:
           name: Run py-tests
-          command: make citest fork=phase0
+          command: make test fork=phase0
       - store_test_results:
           path: tests/core/pyspec/test-reports
   test-altair:
@@ -113,7 +113,7 @@ jobs:
       - restore_pyspec_cached_venv
       - run:
           name: Run py-tests
-          command: make citest fork=altair
+          command: make test fork=altair
       - store_test_results:
           path: tests/core/pyspec/test-reports
   test-bellatrix:
@@ -126,7 +126,7 @@ jobs:
       - restore_pyspec_cached_venv
       - run:
           name: Run py-tests
-          command: make citest fork=bellatrix
+          command: make test fork=bellatrix
       - store_test_results:
           path: tests/core/pyspec/test-reports
   test-capella:
@@ -139,7 +139,7 @@ jobs:
       - restore_pyspec_cached_venv
       - run:
           name: Run py-tests
-          command: make citest fork=capella
+          command: make test fork=capella
       - store_test_results:
           path: tests/core/pyspec/test-reports
   test-deneb:
@@ -152,7 +152,7 @@ jobs:
       - restore_pyspec_cached_venv
       - run:
           name: Run py-tests
-          command: make citest fork=deneb
+          command: make test fork=deneb
       - store_test_results:
           path: tests/core/pyspec/test-reports
   test-electra:
@@ -165,7 +165,7 @@ jobs:
       - restore_pyspec_cached_venv
       - run:
           name: Run py-tests
-          command: make citest fork=electra
+          command: make test fork=electra
       - store_test_results:
           path: tests/core/pyspec/test-reports
   test-whisk:
@@ -178,7 +178,7 @@ jobs:
       - restore_pyspec_cached_venv
       - run:
           name: Run py-tests
-          command: make citest fork=whisk
+          command: make test fork=whisk
       - store_test_results:
           path: tests/core/pyspec/test-reports
   test-eip7594:
@@ -191,7 +191,7 @@ jobs:
       - restore_pyspec_cached_venv
       - run:
           name: Run py-tests
-          command: make citest fork=eip7594
+          command: make test fork=eip7594
       - store_test_results:
           path: tests/core/pyspec/test-reports
   table_of_contents:
@@ -211,7 +211,7 @@ jobs:
       - checkout
       - run:
           name: Check codespell
-          command: pip install 'codespell<3.0.0,>=2.0.0' --user &&  make codespell
+          command: pip install 'codespell<3.0.0,>=2.0.0' --user && make codespell
   lint:
     docker:
       - image: cimg/python:3.12.4
@@ -223,9 +223,6 @@ jobs:
       - run:
           name: Run linter for pyspec
           command: make lint
-      - run:
-          name: Run linter for test generators
-          command: make lint_generators
   build_deposit_contract:
     docker:
       - image: ethereum/solc:0.6.11-alpine
@@ -239,7 +236,7 @@ jobs:
       - run:
           name: Compile the contract
           command: |
-            make compile_deposit_contract
+            make depcon_comp
             git diff --color --exit-code
       - persist_to_workspace:
           root: .
@@ -263,7 +260,7 @@ jobs:
             cp -r /tmp/build/* build
             cp -r /tmp/solidity_deposit_contract/lib/* ./solidity_deposit_contract/lib
             cp -r /tmp/solidity_deposit_contract/deposit_contract.json ./solidity_deposit_contract/deposit_contract.json
-            nix-shell --command 'make test_deposit_contract' ./solidity_deposit_contract/shell.nix
+            nix-shell --command 'make depcon_test' ./solidity_deposit_contract/shell.nix
       - save_cache:
           key: nix-store-test-v2
           paths:
@@ -277,8 +274,8 @@ jobs:
           key: v3-specs-repo-{{ .Branch }}-{{ .Revision }}
       - restore_deposit_contract_tester_cached_venv
       - run:
-          name: Install deposit contract tester requirements
-          command: make install_deposit_contract_web3_tester
+          name: Compile deposit contract 
+          command: make depcon_comp
       - save_deposit_contract_tester_cached_venv
   test_deposit_contract_web3_tests:
     docker:
@@ -290,7 +287,7 @@ jobs:
       - restore_deposit_contract_tester_cached_venv
       - run:
           name: Run deposit contract test with web3.py
-          command: make test_deposit_contract_web3_tests
+          command: make depcon_test
 workflows:
   version: 2.1
   test_spec:

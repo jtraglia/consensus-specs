@@ -178,13 +178,16 @@ SPEC_DIR = ./specs
 SSZ_DIR = ./ssz
 SYNC_DIR = ./sync
 
-# Start a local documentation server.
-serve_docs:
+# Copy files to the docs directory.
+_copy_docs:
 	@cp -r $(SPEC_DIR) $(DOCS_DIR)
 	@cp -r $(SYNC_DIR) $(DOCS_DIR)
 	@cp -r $(SSZ_DIR) $(DOCS_DIR)
 	@cp -r $(FORK_CHOICE_DIR) $(DOCS_DIR)
 	@cp $(CURDIR)/README.md $(DOCS_DIR)/README.md
+
+# Start a local documentation server.
+serve_docs: _copy_docs
 	@mkdocs build
 	@mkdocs serve
 
@@ -217,7 +220,7 @@ codespell:
 	@codespell . --skip "./.git,./venv,$(PY_SPEC_DIR)/.mypy_cache" -I .codespell-whitelist
 
 # Check for mistakes.
-lint: pyspec
+lint: $(ETH2SPEC) pyspec
 	@flake8 --config $(LINTER_CONFIG_FILE) $(PY_SPEC_DIR)/eth2spec
 	@flake8 --config $(LINTER_CONFIG_FILE) $(TEST_GENERATORS_DIR)
 	@$(PYTHON_VENV) -m pylint --rcfile $(LINTER_CONFIG_FILE) $(PYLINT_SCOPE)

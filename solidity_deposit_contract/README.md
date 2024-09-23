@@ -15,7 +15,7 @@ In August 2020, version `r2` was released with metadata modifications and relice
 
 In the `eth2.0-specs` directory run:
 ```sh
-make compile_deposit_contract
+make depcon_comp
 ```
 
 The following parameters were used to generate the bytecode for the `DepositContract` available in this repository:
@@ -31,13 +31,15 @@ solc --optimize --optimize-runs 5000000 --metadata-literal --bin deposit_contrac
 
 ## Running web3 tests
 
-1. In the `eth2.0-specs` directory run `make install_deposit_contract_web3_tester` to install the tools needed (make sure to have Python 3.7 and pip installed).
-2. In the `eth2.0-specs` directory run `make test_deposit_contract_web3_tests` to execute the tests.
+In the `eth2.0-specs` directory run:
+```sh
+make depcon_test
+```
 
 ## Running randomized `dapp` tests:
 
 Install the latest version of `dapp` by following the instructions at [dapp.tools](https://dapp.tools/). Then in the `eth2.0-specs` directory run:
 
 ```sh
-make test_deposit_contract
+make depcon_fuzz
 ```
