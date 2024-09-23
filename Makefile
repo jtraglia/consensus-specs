@@ -20,8 +20,9 @@ ALL_EXECUTABLE_SPEC_NAMES = \
 	codespell   \
 	coverage    \
 	depcon_comp \
-	depcon_test \
 	depcon_fuzz \
+	depcon_test \
+	eth2spec    \
 	gen_all     \
 	gen_errors  \
 	gen_list    \
@@ -51,6 +52,7 @@ help:
 	@echo "make $(BOLD)gen_all$(NORM)     -- run all generators"
 	@echo "make $(BOLD)gen_errors$(NORM)  -- detect generator errors"
 	@echo "make $(BOLD)gen_list$(NORM)    -- list all generator targets"
+	@echo "make $(BOLD)eth2spec$(NORM)    -- force rebuild eth2spec package"
 	@echo "make $(BOLD)lint$(NORM)        -- make the code pretty"
 	@echo "make $(BOLD)pyspec$(NORM)      -- generate python specifications"
 	@echo "make $(BOLD)serve_docs$(NORM)  -- start a local docs web server"
@@ -95,12 +97,21 @@ dist_upload: $(VENV)
 
 TEST_LIBS_DIR = $(CURDIR)/tests/core
 PY_SPEC_DIR = $(TEST_LIBS_DIR)/pyspec
+ETH2SPEC = $(CURDIR)/.eth2spec
+
+# Install the eth2spec pacakge.
+$(ETH2SPEC): $(VENV)
+	@$(PIP_VENV) install .[docs,lint,test,generator]
+	@touch $(ETH2SPEC)
+
+# Force rebuild/install the eth2spec package.
+eth2spec:
+	$(MAKE) --always-make $(ETH2SPEC)
 
 # Create the pyspec for all phases.
-pyspec: $(VENV)
+pyspec: $(VENV) setup.py
 	@echo "Building all pyspecs"
 	@$(PYTHON_VENV) setup.py pyspecdev
-	@$(PIP_VENV) install .[docs,lint,test,generator]
 
 ###############################################################################
 # Testing
@@ -116,7 +127,7 @@ TEST_REPORT_DIR = $(PY_SPEC_DIR)/test-reports
 #   fork=altair make test
 test: MAYBE_TEST := $(if $(k),-k=$(k))
 test: MAYBE_FORK := $(if $(fork),--fork=$(fork))
-test: pyspec
+test: $(ETH2SPEC) pyspec
 	@mkdir -p $(TEST_REPORT_DIR)
 	@$(PYTHON_VENV) -m pytest \
 		-n auto \
@@ -138,7 +149,7 @@ COVERAGE_SCOPE := $(foreach S,$(ALL_EXECUTABLE_SPEC_NAMES), --cov=eth2spec.$S.$(
 # Run pytest with coverage tracking
 _test_with_coverage: MAYBE_TEST := $(if $(k),-k=$(k))
 _test_with_coverage: MAYBE_FORK := $(if $(fork),--fork=$(fork))
-_test_with_coverage: pyspec
+_test_with_coverage: $(ETH2SPEC) pyspec
 	@$(PYTHON_VENV) -m pytest \
 		-n auto \
 		$(MAYBE_TEST) \
@@ -275,12 +286,12 @@ gen_list:
 	done
 
 # Run one generator.
-gen_%: pyspec
+gen_%: $(ETH2SPEC) pyspec
 	@mkdir -p $(TEST_VECTOR_DIR)
 	@$(PYTHON_VENV) $(GENERATOR_DIR)/$*/main.py -o $(TEST_VECTOR_DIR); \
 
 # Generate KZG setups.
-gen_kzg_setups: $(VENV)
+gen_kzg_setups: $(ETH2SPEC)
 	@for preset in minimal mainnet; do \
 		$(PYTHON_VENV) $(SCRIPTS_DIR)/gen_kzg_trusted_setups.py \
 			--secret=1337 \

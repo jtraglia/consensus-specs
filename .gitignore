@@ -3,6 +3,7 @@
 venv
 .venvs
 .venv
+.eth2spec
 /.pytest_cache
 *.swp
 
