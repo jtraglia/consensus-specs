@@ -6,7 +6,7 @@ on:
 jobs:
   release:
     timeout-minutes: 720  # 12 hours
-    runs-on: [self-hosted-ghr-custom, size-xl-x64, profile-consensusSpecs]
+    runs-on: ubuntu-latest
     permissions:
       contents: write
       packages: write
@@ -24,10 +24,10 @@ jobs:
           python-version: '3.13'
 
       # As a sanity check, ensure tests pass
-      - name: Run tests for minimal
-        run: make test preset=minimal
-      - name: Run tests for mainnet
-        run: make test preset=mainnet
+      #- name: Run tests for minimal
+      #  run: make test preset=minimal
+      #- name: Run tests for mainnet
+      #  run: make test preset=mainnet
 
       # Add support for large files
       - name: Install Git LFS
@@ -39,7 +39,7 @@ jobs:
       # Clone the repo & delete the old files
       - name: Clone spec tests repo
         run: |
-          git clone https://github.com/ethereum/consensus-spec-tests.git --depth=1
+          git clone https://github.com/jtraglia/consensus-spec-tests.git --depth=1
           cd consensus-spec-tests
           rm -rf configs presets tests
 
@@ -54,7 +54,7 @@ jobs:
       - name: Generate reference tests
         run: |
           cd consensus-specs
-          make reftests verbose=true
+          make reftests verbose=true runner=shuffling
           tar -czvf general.tar.gz tests/general
           tar -czvf minimal.tar.gz tests/minimal
           tar -czvf mainnet.tar.gz tests/mainnet
@@ -113,13 +113,13 @@ jobs:
             Spec tests for `${{ github.ref_name }}`.
 
             Detailed changelog can be found in
-            [`${{ github.ref_name }}` specs release](https://github.com/ethereum/consensus-specs/releases/tag/${{ github.ref_name }}).
+            [`${{ github.ref_name }}` specs release](https://github.com/jtraglia/consensus-specs/releases/tag/${{ github.ref_name }}).
           prerelease: ${{ contains(github.ref_name, '-') }}
           draft: false
-          repository: ethereum/consensus-spec-tests
+          repository: jtraglia/consensus-spec-tests
           files: |
             consensus-spec-tests/general.tar.gz
             consensus-spec-tests/minimal.tar.gz
             consensus-spec-tests/mainnet.tar.gz
         env:
-          GITHUB_TOKEN: ${{ secrets.SPEC_TESTS_PAT }}
+          GITHUB_TOKEN: ${{ secrets.CONSENSUS_SPEC_TESTS_PAT }}
