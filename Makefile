@@ -50,6 +50,7 @@ help:
 # Virtual Environment
 ###############################################################################
 
+# This is a virtual environment
 VENV = venv
 PYTHON_VENV = $(VENV)/bin/python3
 PIP_VENV = $(VENV)/bin/pip3
