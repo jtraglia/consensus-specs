@@ -17,8 +17,8 @@ jobs:
         with:
           days-before-stale: 365
           days-before-close: 30
-          stale-issue-label: stale
-          stale-pr-label: stale
+          stale-issue-label: Stale
+          stale-pr-label: Stale
           stale-issue-message: |
             This issue has been inactive for one year.
             Marking as stale.
