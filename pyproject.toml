@@ -6,6 +6,7 @@ requires = [
   "wheel==0.45.1",
 ]
 
+# This is our project
 [project]
 name = "eth2spec"
 dynamic = ["version"]
