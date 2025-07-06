@@ -357,6 +357,7 @@ KZG core functions. These are also defined in Deneb execution specs.
 #### `blob_to_kzg_commitment`
 
 ```python
+@cache
 def blob_to_kzg_commitment(blob: Blob) -> KZGCommitment:
     """
     Public method.
@@ -368,6 +369,7 @@ def blob_to_kzg_commitment(blob: Blob) -> KZGCommitment:
 #### `verify_kzg_proof`
 
 ```python
+@cache
 def verify_kzg_proof(
     commitment_bytes: Bytes48, z_bytes: Bytes32, y_bytes: Bytes32, proof_bytes: Bytes48
 ) -> bool:
@@ -465,6 +467,7 @@ def verify_kzg_proof_batch(
 #### `compute_kzg_proof`
 
 ```python
+@cache
 def compute_kzg_proof(blob: Blob, z_bytes: Bytes32) -> Tuple[KZGProof, Bytes32]:
     """
     Compute KZG proof at point `z` for the polynomial represented by `blob`.
@@ -543,6 +546,7 @@ def compute_kzg_proof_impl(
 #### `compute_blob_kzg_proof`
 
 ```python
+@cache
 def compute_blob_kzg_proof(blob: Blob, commitment_bytes: Bytes48) -> KZGProof:
     """
     Given a blob, return the KZG proof that is used to verify it against the commitment.
@@ -561,6 +565,7 @@ def compute_blob_kzg_proof(blob: Blob, commitment_bytes: Bytes48) -> KZGProof:
 #### `verify_blob_kzg_proof`
 
 ```python
+@cache
 def verify_blob_kzg_proof(blob: Blob, commitment_bytes: Bytes48, proof_bytes: Bytes48) -> bool:
     """
     Given a blob and a KZG proof, verify that the blob data corresponds to the provided commitment.

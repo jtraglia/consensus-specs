@@ -557,6 +557,7 @@ def coset_for_cell(cell_index: CellIndex) -> Coset:
 #### `compute_cells`
 
 ```python
+@cache
 def compute_cells(blob: Blob) -> Vector[Cell, CELLS_PER_EXT_BLOB]:
     """
     Given a blob, extend it and return all the cells of the extended blob.
@@ -597,6 +598,7 @@ def compute_cells_and_kzg_proofs_polynomialcoeff(
 #### `compute_cells_and_kzg_proofs`
 
 ```python
+@cache
 def compute_cells_and_kzg_proofs(
     blob: Blob,
 ) -> Tuple[Vector[Cell, CELLS_PER_EXT_BLOB], Vector[KZGProof, CELLS_PER_EXT_BLOB]]:

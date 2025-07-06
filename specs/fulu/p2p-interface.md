@@ -106,6 +106,7 @@ def verify_data_column_sidecar(sidecar: DataColumnSidecar) -> bool:
 ##### `verify_data_column_sidecar_kzg_proofs`
 
 ```python
+@cache
 def verify_data_column_sidecar_kzg_proofs(sidecar: DataColumnSidecar) -> bool:
     """
     Verify if the KZG proofs are correct.
