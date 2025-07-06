@@ -356,6 +356,8 @@ KZG core functions. These are also defined in Deneb execution specs.
 
 #### `blob_to_kzg_commitment`
 
+<!-- eth2spec: cache -->
+
 ```python
 def blob_to_kzg_commitment(blob: Blob) -> KZGCommitment:
     """
@@ -366,6 +368,8 @@ def blob_to_kzg_commitment(blob: Blob) -> KZGCommitment:
 ```
 
 #### `verify_kzg_proof`
+
+<!-- eth2spec: cache -->
 
 ```python
 def verify_kzg_proof(
@@ -464,6 +468,8 @@ def verify_kzg_proof_batch(
 
 #### `compute_kzg_proof`
 
+<!-- eth2spec: cache -->
+
 ```python
 def compute_kzg_proof(blob: Blob, z_bytes: Bytes32) -> Tuple[KZGProof, Bytes32]:
     """
@@ -542,6 +548,8 @@ def compute_kzg_proof_impl(
 
 #### `compute_blob_kzg_proof`
 
+<!-- eth2spec: cache -->
+
 ```python
 def compute_blob_kzg_proof(blob: Blob, commitment_bytes: Bytes48) -> KZGProof:
     """
@@ -559,6 +567,8 @@ def compute_blob_kzg_proof(blob: Blob, commitment_bytes: Bytes48) -> KZGProof:
 ```
 
 #### `verify_blob_kzg_proof`
+
+<!-- eth2spec: cache -->
 
 ```python
 def verify_blob_kzg_proof(blob: Blob, commitment_bytes: Bytes48, proof_bytes: Bytes48) -> bool:
@@ -585,6 +595,8 @@ def verify_blob_kzg_proof(blob: Blob, commitment_bytes: Bytes48, proof_bytes: By
 ```
 
 #### `verify_blob_kzg_proof_batch`
+
+<!-- eth2spec: cache -->
 
 ```python
 def verify_blob_kzg_proof_batch(

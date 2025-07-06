@@ -12,6 +12,7 @@ from dataclasses import (
     dataclass,
     field,
 )
+from functools import cache
 from typing import (
     Any, Callable, Dict, Set, Sequence, Tuple, Optional, TypeVar, NamedTuple, Final
 )

@@ -30,6 +30,7 @@ class MarkdownToSpec:
         self.preset = preset
         self.config = config
         self.preset_name = preset_name
+        self.cache_next_item = False
 
         self.document_iterator: Iterator[Element] = self._parse_document(file_name)
         self.all_custom_types: dict[str, str] = {}
@@ -138,6 +139,9 @@ class MarkdownToSpec:
             clean_source = "\n".join(line.rstrip() for line in element_source.splitlines())
 
             if isinstance(element, ast.FunctionDef):
+                if self.cache_next_item:
+                    clean_source = "@cache\n" + clean_source
+                    self.cache_next_item = False
                 self._process_code_def(clean_source, element)
             elif isinstance(element, ast.ClassDef) and _has_decorator(element, "dataclass"):
                 self._add_dataclass(clean_source, element)
@@ -399,6 +403,10 @@ class MarkdownToSpec:
                     f"expected table after list-of-records comment, got {type(table_element)}"
                 )
             self._process_list_of_records_table(table_element, match.group(1).upper())
+
+        # This comment marks that the function should be cached
+        if body == "<!-- eth2spec: cache -->":
+            self.cache_next_item = True
 
     def _finalize_types(self) -> None:
         """

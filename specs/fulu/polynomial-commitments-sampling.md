@@ -556,6 +556,8 @@ def coset_for_cell(cell_index: CellIndex) -> Coset:
 
 #### `compute_cells`
 
+<!-- eth2spec: cache -->
+
 ```python
 def compute_cells(blob: Blob) -> Vector[Cell, CELLS_PER_EXT_BLOB]:
     """
@@ -595,6 +597,8 @@ def compute_cells_and_kzg_proofs_polynomialcoeff(
 ```
 
 #### `compute_cells_and_kzg_proofs`
+
+<!-- eth2spec: cache -->
 
 ```python
 def compute_cells_and_kzg_proofs(
@@ -777,6 +781,8 @@ def recover_polynomialcoeff(
 ```
 
 ### `recover_cells_and_kzg_proofs`
+
+<!-- eth2spec: cache -->
 
 ```python
 def recover_cells_and_kzg_proofs(
