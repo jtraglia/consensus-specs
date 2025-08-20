@@ -20,7 +20,8 @@ output: Bytes32 -- the computed challenge value
 - `Bytes32` is a 32-byte hexadecimal string, prefixed with `0x`.
 - `CommitmentIndex` is an unsigned 64-bit integer.
 - `CellIndex` is an unsigned 64-bit integer.
-- `CosetEvals` is a list of field elements, each encoded as a 32-byte hexadecimal string prefixed with `0x`.
+- `CosetEvals` is a list of field elements, each encoded as a 32-byte
+  hexadecimal string prefixed with `0x`.
 
 All byte(s) fields are encoded as strings, hexadecimal encoding, prefixed with
 `0x`.

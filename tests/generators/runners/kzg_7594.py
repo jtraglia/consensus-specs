@@ -644,7 +644,9 @@ def case_compute_verify_cell_kzg_proof_batch_challenge():
                             ],
                             "proofs": encode_hex_list(proofs),
                         },
-                        "output": encode_hex(spec.bls_field_to_bytes(challenge)) if challenge is not None else None,
+                        "output": encode_hex(spec.bls_field_to_bytes(challenge))
+                        if challenge is not None
+                        else None,
                     },
                 )
             ]
@@ -657,7 +659,10 @@ def case_compute_verify_cell_kzg_proof_batch_challenge():
         def get_inputs():
             return [], [], [], [], []
 
-        yield "compute_verify_cell_kzg_proof_batch_challenge_case_empty", get_test_runner(get_inputs)
+        yield (
+            "compute_verify_cell_kzg_proof_batch_challenge_case_empty",
+            get_test_runner(get_inputs),
+        )
 
     # Valid: Single cell
     if True:
@@ -666,16 +671,19 @@ def case_compute_verify_cell_kzg_proof_batch_challenge():
             blob = VALID_BLOBS[0]
             cells, proofs = cached_compute_cells_and_kzg_proofs(blob)
             commitment = cached_blob_to_kzg_commitment(blob)
-            
+
             commitments = [commitment]
             commitment_indices = [0]
             cell_indices = [0]
             cosets_evals = [spec.cell_to_coset_evals(cells[0])]
             proofs_selected = [proofs[0]]
-            
+
             return commitments, commitment_indices, cell_indices, cosets_evals, proofs_selected
 
-        yield "compute_verify_cell_kzg_proof_batch_challenge_case_single_cell", get_test_runner(get_inputs)
+        yield (
+            "compute_verify_cell_kzg_proof_batch_challenge_case_single_cell",
+            get_test_runner(get_inputs),
+        )
 
     # Valid: Multiple cells from single blob
     if True:
@@ -684,17 +692,20 @@ def case_compute_verify_cell_kzg_proof_batch_challenge():
             blob = VALID_BLOBS[1]
             cells, proofs = cached_compute_cells_and_kzg_proofs(blob)
             commitment = cached_blob_to_kzg_commitment(blob)
-            
+
             num_cells = 4
             commitments = [commitment]
             commitment_indices = [0] * num_cells
             cell_indices = list(range(num_cells))
             cosets_evals = [spec.cell_to_coset_evals(cells[i]) for i in range(num_cells)]
             proofs_selected = [proofs[i] for i in range(num_cells)]
-            
+
             return commitments, commitment_indices, cell_indices, cosets_evals, proofs_selected
 
-        yield "compute_verify_cell_kzg_proof_batch_challenge_case_multiple_cells_single_blob", get_test_runner(get_inputs)
+        yield (
+            "compute_verify_cell_kzg_proof_batch_challenge_case_multiple_cells_single_blob",
+            get_test_runner(get_inputs),
+        )
 
     # Valid: Multiple cells from multiple blobs
     if True:
@@ -706,7 +717,7 @@ def case_compute_verify_cell_kzg_proof_batch_challenge():
             cells1, proofs1 = cached_compute_cells_and_kzg_proofs(blob1)
             commitment0 = cached_blob_to_kzg_commitment(blob0)
             commitment1 = cached_blob_to_kzg_commitment(blob1)
-            
+
             commitments = [commitment0, commitment1]
             commitment_indices = [0, 1, 0, 1]
             cell_indices = [0, 1, 2, 3]
@@ -717,10 +728,13 @@ def case_compute_verify_cell_kzg_proof_batch_challenge():
                 spec.cell_to_coset_evals(cells1[3]),
             ]
             proofs_selected = [proofs0[0], proofs1[1], proofs0[2], proofs1[3]]
-            
+
             return commitments, commitment_indices, cell_indices, cosets_evals, proofs_selected
 
-        yield "compute_verify_cell_kzg_proof_batch_challenge_case_multiple_cells_multiple_blobs", get_test_runner(get_inputs)
+        yield (
+            "compute_verify_cell_kzg_proof_batch_challenge_case_multiple_cells_multiple_blobs",
+            get_test_runner(get_inputs),
+        )
 
     # Valid: Same cell multiple times (duplicate cells)
     if True:
@@ -729,17 +743,20 @@ def case_compute_verify_cell_kzg_proof_batch_challenge():
             blob = VALID_BLOBS[4]
             cells, proofs = cached_compute_cells_and_kzg_proofs(blob)
             commitment = cached_blob_to_kzg_commitment(blob)
-            
+
             num_duplicates = 3
             commitments = [commitment]
             commitment_indices = [0] * num_duplicates
             cell_indices = [5] * num_duplicates  # Same cell index repeated
             cosets_evals = [spec.cell_to_coset_evals(cells[5])] * num_duplicates
             proofs_selected = [proofs[5]] * num_duplicates
-            
+
             return commitments, commitment_indices, cell_indices, cosets_evals, proofs_selected
 
-        yield "compute_verify_cell_kzg_proof_batch_challenge_case_duplicate_cells", get_test_runner(get_inputs)
+        yield (
+            "compute_verify_cell_kzg_proof_batch_challenge_case_duplicate_cells",
+            get_test_runner(get_inputs),
+        )
 
     # Valid: Many cells (stress test with many cells)
     if True:
@@ -748,7 +765,7 @@ def case_compute_verify_cell_kzg_proof_batch_challenge():
             blob = VALID_BLOBS[5]
             cells, proofs = cached_compute_cells_and_kzg_proofs(blob)
             commitment = cached_blob_to_kzg_commitment(blob)
-            
+
             # Use half of all cells
             num_cells = spec.CELLS_PER_EXT_BLOB // 2
             commitments = [commitment]
@@ -756,10 +773,13 @@ def case_compute_verify_cell_kzg_proof_batch_challenge():
             cell_indices = list(range(num_cells))
             cosets_evals = [spec.cell_to_coset_evals(cells[i]) for i in range(num_cells)]
             proofs_selected = [proofs[i] for i in range(num_cells)]
-            
+
             return commitments, commitment_indices, cell_indices, cosets_evals, proofs_selected
 
-        yield "compute_verify_cell_kzg_proof_batch_challenge_case_many_cells", get_test_runner(get_inputs)
+        yield (
+            "compute_verify_cell_kzg_proof_batch_challenge_case_many_cells",
+            get_test_runner(get_inputs),
+        )
 
     # Valid: Non-sequential cell indices
     if True:
@@ -768,7 +788,7 @@ def case_compute_verify_cell_kzg_proof_batch_challenge():
             blob = VALID_BLOBS[6]
             cells, proofs = cached_compute_cells_and_kzg_proofs(blob)
             commitment = cached_blob_to_kzg_commitment(blob)
-            
+
             # Use non-sequential indices
             indices = [10, 5, 20, 15, 0, 30]
             commitments = [commitment]
@@ -776,10 +796,13 @@ def case_compute_verify_cell_kzg_proof_batch_challenge():
             cell_indices = indices
             cosets_evals = [spec.cell_to_coset_evals(cells[i]) for i in indices]
             proofs_selected = [proofs[i] for i in indices]
-            
+
             return commitments, commitment_indices, cell_indices, cosets_evals, proofs_selected
 
-        yield "compute_verify_cell_kzg_proof_batch_challenge_case_non_sequential_indices", get_test_runner(get_inputs)
+        yield (
+            "compute_verify_cell_kzg_proof_batch_challenge_case_non_sequential_indices",
+            get_test_runner(get_inputs),
+        )
 
     # Valid: Mixed commitment indices order
     if True:
@@ -794,7 +817,7 @@ def case_compute_verify_cell_kzg_proof_batch_challenge():
             commitment0 = cached_blob_to_kzg_commitment(blob0)
             commitment1 = cached_blob_to_kzg_commitment(blob1)
             commitment2 = cached_blob_to_kzg_commitment(blob2)
-            
+
             # Mix up the order of commitment indices
             commitments = [commitment0, commitment1, commitment2]
             commitment_indices = [2, 0, 1, 0, 2, 1]
@@ -807,11 +830,21 @@ def case_compute_verify_cell_kzg_proof_batch_challenge():
                 spec.cell_to_coset_evals(cells2[4]),
                 spec.cell_to_coset_evals(cells1[5]),
             ]
-            proofs_selected = [proofs2[0], proofs0[1], proofs1[2], proofs0[3], proofs2[4], proofs1[5]]
-            
+            proofs_selected = [
+                proofs2[0],
+                proofs0[1],
+                proofs1[2],
+                proofs0[3],
+                proofs2[4],
+                proofs1[5],
+            ]
+
             return commitments, commitment_indices, cell_indices, cosets_evals, proofs_selected
 
-        yield "compute_verify_cell_kzg_proof_batch_challenge_case_mixed_commitment_indices", get_test_runner(get_inputs)
+        yield (
+            "compute_verify_cell_kzg_proof_batch_challenge_case_mixed_commitment_indices",
+            get_test_runner(get_inputs),
+        )
 
     # Valid: Maximum cell index values
     if True:
@@ -820,7 +853,7 @@ def case_compute_verify_cell_kzg_proof_batch_challenge():
             blob = VALID_BLOBS[3]
             cells, proofs = cached_compute_cells_and_kzg_proofs(blob)
             commitment = cached_blob_to_kzg_commitment(blob)
-            
+
             # Use the highest valid cell indices
             max_index = spec.CELLS_PER_EXT_BLOB - 1
             indices = [max_index, max_index - 1, max_index - 2]
@@ -829,10 +862,13 @@ def case_compute_verify_cell_kzg_proof_batch_challenge():
             cell_indices = indices
             cosets_evals = [spec.cell_to_coset_evals(cells[i]) for i in indices]
             proofs_selected = [proofs[i] for i in indices]
-            
+
             return commitments, commitment_indices, cell_indices, cosets_evals, proofs_selected
 
-        yield "compute_verify_cell_kzg_proof_batch_challenge_case_max_cell_indices", get_test_runner(get_inputs)
+        yield (
+            "compute_verify_cell_kzg_proof_batch_challenge_case_max_cell_indices",
+            get_test_runner(get_inputs),
+        )
 
     # Valid: All cells from a blob
     if True:
@@ -841,7 +877,7 @@ def case_compute_verify_cell_kzg_proof_batch_challenge():
             blob = VALID_BLOBS[4]
             cells, proofs = cached_compute_cells_and_kzg_proofs(blob)
             commitment = cached_blob_to_kzg_commitment(blob)
-            
+
             # Use all cells
             num_cells = spec.CELLS_PER_EXT_BLOB
             commitments = [commitment]
@@ -849,10 +885,13 @@ def case_compute_verify_cell_kzg_proof_batch_challenge():
             cell_indices = list(range(num_cells))
             cosets_evals = [spec.cell_to_coset_evals(cells[i]) for i in range(num_cells)]
             proofs_selected = proofs
-            
+
             return commitments, commitment_indices, cell_indices, cosets_evals, proofs_selected
 
-        yield "compute_verify_cell_kzg_proof_batch_challenge_case_all_cells", get_test_runner(get_inputs)
+        yield (
+            "compute_verify_cell_kzg_proof_batch_challenge_case_all_cells",
+            get_test_runner(get_inputs),
+        )
 
 
 ###############################################################################
@@ -866,7 +905,10 @@ def get_test_cases() -> Iterable[TestCase]:
         ("compute_cells_and_kzg_proofs", case_compute_cells_and_kzg_proofs),
         ("verify_cell_kzg_proof_batch", case_verify_cell_kzg_proof_batch),
         ("recover_cells_and_kzg_proofs", case_recover_cells_and_kzg_proofs),
-        ("compute_verify_cell_kzg_proof_batch_challenge", case_compute_verify_cell_kzg_proof_batch_challenge),
+        (
+            "compute_verify_cell_kzg_proof_batch_challenge",
+            case_compute_verify_cell_kzg_proof_batch_challenge,
+        ),
     ]
 
     test_cases = []
