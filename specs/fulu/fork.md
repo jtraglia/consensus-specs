@@ -38,8 +38,20 @@ def initialize_proposer_lookahead(
     """
     current_epoch = get_current_epoch(state)
     lookahead = []
-    for i in range(MIN_SEED_LOOKAHEAD + 1):
-        lookahead.extend(get_beacon_proposer_indices(state, Epoch(current_epoch + i)))
+
+    # Compute proposer indices for all epochs in the lookahead period
+    for epoch_offset in range(MIN_SEED_LOOKAHEAD + 1):
+        epoch = Epoch(current_epoch + epoch_offset)
+        indices = get_active_validator_indices(state, epoch)
+        seed = get_seed(state, epoch, DOMAIN_BEACON_PROPOSER)
+        start_slot = compute_start_slot_at_epoch(epoch)
+
+        # Add proposer for each slot in this epoch
+        for slot_offset in range(SLOTS_PER_EPOCH):
+            slot_seed = hash(seed + uint_to_bytes(Slot(start_slot + slot_offset)))
+            proposer = compute_proposer_index(state, indices, slot_seed)
+            lookahead.append(proposer)
+
     return lookahead
 ```
 

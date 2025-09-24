@@ -41,7 +41,6 @@
     - [New `remove_flag`](#new-remove_flag)
     - [New `compute_balance_weighted_selection`](#new-compute_balance_weighted_selection)
     - [New `compute_balance_weighted_acceptance`](#new-compute_balance_weighted_acceptance)
-    - [Modified `compute_proposer_indices`](#modified-compute_proposer_indices)
   - [Beacon State accessors](#beacon-state-accessors)
     - [Modified `get_next_sync_committee_indices`](#modified-get_next_sync_committee_indices)
     - [Modified `get_attestation_participation_flag_indices`](#modified-get_attestation_participation_flag_indices)
@@ -53,6 +52,7 @@
   - [Epoch processing](#epoch-processing)
     - [Modified `process_epoch`](#modified-process_epoch)
     - [New `process_builder_pending_payments`](#new-process_builder_pending_payments)
+    - [Modified `process_proposer_lookahead`](#modified-process_proposer_lookahead)
   - [Block processing](#block-processing)
     - [Withdrawals](#withdrawals)
       - [New `is_builder_payment_withdrawable`](#new-is_builder_payment_withdrawable)
@@ -521,27 +521,6 @@ def compute_balance_weighted_acceptance(
     return effective_balance * MAX_RANDOM_VALUE >= MAX_EFFECTIVE_BALANCE_ELECTRA * random_value
 ```
 
-#### Modified `compute_proposer_indices`
-
-*Note*: `compute_proposer_indices` is refactored to use
-`compute_balance_weighted_selection` as a helper for the balance-weighted
-sampling process.
-
-```python
-def compute_proposer_indices(
-    state: BeaconState, epoch: Epoch, seed: Bytes32, indices: Sequence[ValidatorIndex]
-) -> Vector[ValidatorIndex, SLOTS_PER_EPOCH]:
-    """
-    Return the proposer indices for the given ``epoch``.
-    """
-    start_slot = compute_start_slot_at_epoch(epoch)
-    seeds = [hash(seed + uint_to_bytes(Slot(start_slot + i))) for i in range(SLOTS_PER_EPOCH)]
-    return [
-        compute_balance_weighted_selection(state, indices, seed, size=1, shuffle_indices=True)[0]
-        for seed in seeds
-    ]
-```
-
 ### Beacon State accessors
 
 #### Modified `get_next_sync_committee_indices`
@@ -752,6 +731,29 @@ def process_builder_pending_payments(state: BeaconState) -> None:
     state.builder_pending_payments = state.builder_pending_payments[SLOTS_PER_EPOCH:] + [
         BuilderPendingPayment() for _ in range(SLOTS_PER_EPOCH)
     ]
+```
+
+#### Modified `process_proposer_lookahead`
+
+```python
+def process_proposer_lookahead(state: BeaconState) -> None:
+    # Shift out proposers in the first epoch
+    last_epoch_start = len(state.proposer_lookahead) - SLOTS_PER_EPOCH
+    state.proposer_lookahead[:last_epoch_start] = state.proposer_lookahead[SLOTS_PER_EPOCH:]
+
+    # Populate proposer indices for the new epoch
+    epoch = Epoch(get_current_epoch(state) + MIN_SEED_LOOKAHEAD + 1)
+    active_validator_indices = get_active_validator_indices(state, epoch)
+    seed = get_seed(state, epoch, DOMAIN_BEACON_PROPOSER)
+    start_slot = compute_start_slot_at_epoch(epoch)
+
+    for i in range(SLOTS_PER_EPOCH):
+        slot_seed = hash(seed + uint_to_bytes(Slot(start_slot + i)))
+        # [Modified in Gloas:EIP7732]
+        index = compute_balance_weighted_selection(
+            state, active_validator_indices, slot_seed, size=1, shuffle_indices=True
+        )[0]
+        state.proposer_lookahead[len(state.proposer_lookahead) - SLOTS_PER_EPOCH + i] = index
 ```
 
 ### Block processing
