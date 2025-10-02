@@ -72,7 +72,15 @@ def _prepare_state(
     return state
 
 
-_custom_state_cache_dict = LRU(size=10)
+_custom_state_cache_dict = None
+
+
+def _get_custom_state_cache_dict():
+    """Lazy initialization of LRU cache to avoid pickling issues with multiprocessing."""
+    global _custom_state_cache_dict
+    if _custom_state_cache_dict is None:
+        _custom_state_cache_dict = LRU(size=10)
+    return _custom_state_cache_dict
 
 
 def with_custom_state(
@@ -81,14 +89,15 @@ def with_custom_state(
     def deco(fn):
         def entry(*args, spec: Spec, phases: SpecForks, **kw):
             # make a key for the state, unique to the fork + config (incl preset choice) and balances/activations
+            custom_state_cache_dict = _get_custom_state_cache_dict()
             key = (spec.fork, spec.config.__hash__(), spec.__file__, balances_fn, threshold_fn)
-            if key not in _custom_state_cache_dict:
+            if key not in custom_state_cache_dict:
                 state = _prepare_state(balances_fn, threshold_fn, spec, phases)
-                _custom_state_cache_dict[key] = state.get_backing()
+                custom_state_cache_dict[key] = state.get_backing()
 
             # Take an entry out of the LRU.
             # No copy is necessary, as we wrap the immutable backing with a new view.
-            state = spec.BeaconState(backing=_custom_state_cache_dict[key])
+            state = spec.BeaconState(backing=custom_state_cache_dict[key])
             kw["state"] = state
             return fn(*args, spec=spec, phases=phases, **kw)
 

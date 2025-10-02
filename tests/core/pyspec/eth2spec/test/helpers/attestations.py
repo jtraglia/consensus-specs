@@ -458,7 +458,15 @@ def prepare_state_with_attestations(spec, state, participation_fn=None):
     return attestations
 
 
-_prep_state_cache_dict = LRU(size=10)
+_prep_state_cache_dict = None
+
+
+def _get_prep_state_cache_dict():
+    """Lazy initialization of LRU cache to avoid pickling issues with multiprocessing."""
+    global _prep_state_cache_dict
+    if _prep_state_cache_dict is None:
+        _prep_state_cache_dict = LRU(size=10)
+    return _prep_state_cache_dict
 
 
 def cached_prepare_state_with_attestations(spec, state):
@@ -469,15 +477,16 @@ def cached_prepare_state_with_attestations(spec, state):
     # If the pre-state is not already known in the LRU, then take it,
     # prepare it with attestations, and put it in the LRU.
     # The input state is likely already cached, so the hash-tree-root does not affect speed.
+    prep_state_cache_dict = _get_prep_state_cache_dict()
     key = (spec.fork, state.hash_tree_root())
-    if key not in _prep_state_cache_dict:
+    if key not in prep_state_cache_dict:
         prepare_state_with_attestations(spec, state)
-        _prep_state_cache_dict[key] = (
+        prep_state_cache_dict[key] = (
             state.get_backing()
         )  # cache the tree structure, not the view wrapping it.
 
     # Put the LRU cache result into the state view, as if we transitioned the original view
-    state.set_backing(_prep_state_cache_dict[key])
+    state.set_backing(prep_state_cache_dict[key])
 
 
 def get_max_attestations(spec):

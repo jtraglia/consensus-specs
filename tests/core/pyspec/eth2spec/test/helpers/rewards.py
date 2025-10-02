@@ -307,7 +307,15 @@ def transition_state_to_leak(spec, state, epochs=None):
     assert spec.is_in_inactivity_leak(state)
 
 
-_cache_dict = LRU(size=10)
+_cache_dict = None
+
+
+def _get_cache_dict():
+    """Lazy initialization of LRU cache to avoid pickling issues with multiprocessing."""
+    global _cache_dict
+    if _cache_dict is None:
+        _cache_dict = LRU(size=10)
+    return _cache_dict
 
 
 def leaking(epochs=None):
@@ -316,21 +324,22 @@ def leaking(epochs=None):
             # If the pre-state is not already known in the LRU, then take it,
             # transition it to leak, and put it in the LRU.
             # The input state is likely already cached, so the hash-tree-root does not affect speed.
+            cache_dict = _get_cache_dict()
             key = (
                 state.hash_tree_root(),
                 spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY,
                 spec.SLOTS_PER_EPOCH,
                 epochs,
             )
-            if key not in _cache_dict:
+            if key not in cache_dict:
                 transition_state_to_leak(spec, state, epochs=epochs)
-                _cache_dict[key] = (
+                cache_dict[key] = (
                     state.get_backing()
                 )  # cache the tree structure, not the view wrapping it.
 
             # Take an entry out of the LRU.
             # No copy is necessary, as we wrap the immutable backing with a new view.
-            state = spec.BeaconState(backing=_cache_dict[key])
+            state = spec.BeaconState(backing=cache_dict[key])
             return fn(*args, spec=spec, state=state, **kw)
 
         return entry
