@@ -14,8 +14,8 @@ from eth2spec.test.helpers.forks import (
     is_post_gloas,
 )
 from eth2spec.test.helpers.keys import privkeys
-from eth2spec.test.helpers.withdrawals import get_expected_withdrawals
 from eth2spec.utils.ssz.ssz_impl import hash_tree_root
+from tests.infra.helpers.withdrawals import get_expected_withdrawals
 
 
 def get_execution_payload_header(spec, state, execution_payload):

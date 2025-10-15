@@ -18,6 +18,8 @@ def verify_withdrawals_post_state(
     post_state,
     execution_payload,
     expected_withdrawals,
+    processed_builder_withdrawals_count,
+    processed_partial_withdrawals_count,
     fully_withdrawable_indices,
     partial_withdrawals_indices,
     pending_withdrawal_requests,
@@ -34,7 +36,14 @@ def verify_withdrawals_post_state(
         )
         return
 
-    _verify_withdrawals_next_withdrawal_index(spec, pre_state, post_state, expected_withdrawals)
+    _verify_withdrawals_next_withdrawal_index(
+        spec,
+        pre_state,
+        post_state,
+        expected_withdrawals,
+        processed_builder_withdrawals_count,
+        processed_partial_withdrawals_count,
+    )
 
     # Verify withdrawals indexes
     for index, withdrawal in enumerate(
@@ -56,7 +65,14 @@ def verify_withdrawals_post_state(
         _verify_withdrawals_requests(execution_payload, pending_withdrawal_requests)
 
 
-def _verify_withdrawals_next_withdrawal_index(spec, pre_state, post_state, expected_withdrawals):
+def _verify_withdrawals_next_withdrawal_index(
+    spec,
+    pre_state,
+    post_state,
+    expected_withdrawals,
+    processed_builder_withdrawals_count,
+    processed_partial_withdrawals_count,
+):
     """
     Verify post_state.next_withdrawal_index
     """
@@ -77,6 +93,14 @@ def _verify_withdrawals_next_withdrawal_index(spec, pre_state, post_state, expec
         raise ValueError(
             "len(expected_withdrawals) should not be greater than MAX_WITHDRAWALS_PER_PAYLOAD"
         )
+
+    # If all withdrawals were partial withdrawals, the next validator index does not change
+    if len(expected_withdrawals) != 0:
+        if len(expected_withdrawals) == processed_partial_withdrawals_count:
+            pre_index = pre_state.next_withdrawal_validator_index
+            post_index = post_state.next_withdrawal_validator_index
+            assert pre_index == post_index
+            return
 
     # Verify post_state.next_withdrawal_validator_index
     if len(expected_withdrawals) == spec.MAX_WITHDRAWALS_PER_PAYLOAD:

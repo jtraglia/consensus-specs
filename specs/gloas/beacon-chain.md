@@ -841,7 +841,7 @@ def get_expected_withdrawals(state: BeaconState) -> Tuple[Sequence[Withdrawal], 
     # Sweep for pending partial withdrawals
     bound = min(
         len(withdrawals) + MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
-        MAX_WITHDRAWALS_PER_PAYLOAD - 1,
+        MAX_WITHDRAWALS_PER_PAYLOAD,
     )
     for withdrawal in state.pending_partial_withdrawals:
         if withdrawal.withdrawable_epoch > epoch or len(withdrawals) == bound:
@@ -875,6 +875,9 @@ def get_expected_withdrawals(state: BeaconState) -> Tuple[Sequence[Withdrawal], 
     # Sweep for remaining.
     bound = min(len(state.validators), MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
     for _ in range(bound):
+        if len(withdrawals) == MAX_WITHDRAWALS_PER_PAYLOAD:
+            break
+
         validator = state.validators[validator_index]
         total_withdrawn = sum(w.amount for w in withdrawals if w.validator_index == validator_index)
         balance = state.balances[validator_index] - total_withdrawn
@@ -898,8 +901,6 @@ def get_expected_withdrawals(state: BeaconState) -> Tuple[Sequence[Withdrawal], 
                 )
             )
             withdrawal_index += WithdrawalIndex(1)
-        if len(withdrawals) == MAX_WITHDRAWALS_PER_PAYLOAD:
-            break
         validator_index = ValidatorIndex((validator_index + 1) % len(state.validators))
     return (
         withdrawals,
@@ -947,6 +948,14 @@ def process_withdrawals(state: BeaconState) -> None:
     if len(withdrawals) != 0:
         latest_withdrawal = withdrawals[-1]
         state.next_withdrawal_index = WithdrawalIndex(latest_withdrawal.index + 1)
+
+        # [Modified in Gloas:EIP7732]
+        # Bail if there are no sweep withdrawals
+        non_sweep_withdrawals_count = (
+            processed_builder_withdrawals_count + processed_partial_withdrawals_count
+        )
+        if len(withdrawals) == non_sweep_withdrawals_count:
+            return
 
     # Update the next validator index to start the next withdrawal sweep
     if len(withdrawals) == MAX_WITHDRAWALS_PER_PAYLOAD:

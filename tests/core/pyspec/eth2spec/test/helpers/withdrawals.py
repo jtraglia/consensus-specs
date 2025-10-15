@@ -1,7 +1,7 @@
 import pytest
 
 from eth2spec.test.helpers.forks import is_post_electra, is_post_fulu, is_post_gloas
-from tests.infra.helpers.withdrawals import get_expected_withdrawals, verify_withdrawals_post_state
+from tests.infra.helpers.withdrawals import verify_withdrawals_post_state
 
 
 def set_validator_fully_withdrawable(spec, state, index, withdrawable_epoch=None):
@@ -220,7 +220,21 @@ def run_withdrawals_processing(
       - post-state ('post').
     If ``valid == False``, run expecting ``AssertionError``
     """
-    expected_withdrawals = get_expected_withdrawals(spec, state)
+    processed_builder_withdrawals_count = None
+    processed_partial_withdrawals_count = None
+    if is_post_gloas(spec):
+        (
+            expected_withdrawals,
+            processed_builder_withdrawals_count,
+            processed_partial_withdrawals_count,
+        ) = spec.get_expected_withdrawals(state)
+    elif is_post_electra(spec):
+        expected_withdrawals, processed_partial_withdrawals_count = spec.get_expected_withdrawals(
+            state
+        )
+    else:
+        expected_withdrawals = spec.get_expected_withdrawals(state)
+
     assert len(expected_withdrawals) <= spec.MAX_WITHDRAWALS_PER_PAYLOAD
     if num_expected_withdrawals is not None:
         assert len(expected_withdrawals) == num_expected_withdrawals
@@ -251,6 +265,8 @@ def run_withdrawals_processing(
         state,
         execution_payload,
         expected_withdrawals,
+        processed_builder_withdrawals_count,
+        processed_partial_withdrawals_count,
         fully_withdrawable_indices,
         partial_withdrawals_indices,
         pending_withdrawal_requests,

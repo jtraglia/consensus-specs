@@ -32,13 +32,13 @@ from eth2spec.test.helpers.state import (
 )
 from eth2spec.test.helpers.voluntary_exits import prepare_signed_exits
 from eth2spec.test.helpers.withdrawals import (
-    get_expected_withdrawals,
     prepare_expected_withdrawals,
     prepare_pending_withdrawal,
     set_eth1_withdrawal_credential_with_balance,
     set_validator_fully_withdrawable,
     set_validator_partially_withdrawable,
 )
+from tests.infra.helpers.withdrawals import get_expected_withdrawals
 
 #
 # `is_execution_enabled` has been removed from Capella
