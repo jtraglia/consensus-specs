@@ -4,101 +4,101 @@
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
-- [Introduction](#introduction)
-- [Constants](#constants)
-  - [Domain types](#domain-types)
-  - [Misc](#misc)
-  - [Withdrawal prefixes](#withdrawal-prefixes)
-- [Preset](#preset)
-  - [Misc](#misc-1)
-  - [Max operations per block](#max-operations-per-block)
-  - [State list lengths](#state-list-lengths)
-- [Containers](#containers)
-  - [New containers](#new-containers)
-    - [`BuilderPendingPayment`](#builderpendingpayment)
-    - [`BuilderPendingWithdrawal`](#builderpendingwithdrawal)
-    - [`PayloadAttestationData`](#payloadattestationdata)
-    - [`PayloadAttestation`](#payloadattestation)
-    - [`PayloadAttestationMessage`](#payloadattestationmessage)
-    - [`IndexedPayloadAttestation`](#indexedpayloadattestation)
-    - [`ExecutionPayloadBid`](#executionpayloadbid)
-    - [`SignedExecutionPayloadBid`](#signedexecutionpayloadbid)
-    - [`ExecutionPayloadEnvelope`](#executionpayloadenvelope)
-    - [`SignedExecutionPayloadEnvelope`](#signedexecutionpayloadenvelope)
-  - [Modified containers](#modified-containers)
-    - [`BeaconBlockBody`](#beaconblockbody)
-    - [`BeaconState`](#beaconstate)
-- [Helper functions](#helper-functions)
-  - [Predicates](#predicates)
-    - [New `has_builder_withdrawal_credential`](#new-has_builder_withdrawal_credential)
-    - [Modified `has_compounding_withdrawal_credential`](#modified-has_compounding_withdrawal_credential)
-    - [New `is_attestation_same_slot`](#new-is_attestation_same_slot)
-    - [New `is_builder_withdrawal_credential`](#new-is_builder_withdrawal_credential)
-    - [New `is_valid_indexed_payload_attestation`](#new-is_valid_indexed_payload_attestation)
-    - [New `is_parent_block_full`](#new-is_parent_block_full)
-  - [Misc](#misc-2)
-    - [Modified `get_pending_balance_to_withdraw`](#modified-get_pending_balance_to_withdraw)
-    - [New `remove_flag`](#new-remove_flag)
-    - [New `compute_balance_weighted_selection`](#new-compute_balance_weighted_selection)
-    - [New `compute_balance_weighted_acceptance`](#new-compute_balance_weighted_acceptance)
-    - [Modified `compute_proposer_indices`](#modified-compute_proposer_indices)
-  - [Beacon State accessors](#beacon-state-accessors)
-    - [Modified `get_next_sync_committee_indices`](#modified-get_next_sync_committee_indices)
-    - [Modified `get_attestation_participation_flag_indices`](#modified-get_attestation_participation_flag_indices)
-    - [New `get_ptc`](#new-get_ptc)
-    - [New `get_indexed_payload_attestation`](#new-get_indexed_payload_attestation)
-    - [New `get_builder_payment_quorum_threshold`](#new-get_builder_payment_quorum_threshold)
-- [Beacon chain state transition function](#beacon-chain-state-transition-function)
-  - [Modified `process_slot`](#modified-process_slot)
-  - [Epoch processing](#epoch-processing)
-    - [Modified `process_epoch`](#modified-process_epoch)
-    - [New `process_builder_pending_payments`](#new-process_builder_pending_payments)
-  - [Block processing](#block-processing)
-    - [Withdrawals](#withdrawals)
-      - [New `is_builder_payment_withdrawable`](#new-is_builder_payment_withdrawable)
-      - [Modified `get_expected_withdrawals`](#modified-get_expected_withdrawals)
-      - [Modified `process_withdrawals`](#modified-process_withdrawals)
-    - [Execution payload bid](#execution-payload-bid)
-      - [New `verify_execution_payload_bid_signature`](#new-verify_execution_payload_bid_signature)
-      - [New `process_execution_payload_bid`](#new-process_execution_payload_bid)
-    - [Operations](#operations)
-      - [Modified `process_operations`](#modified-process_operations)
-      - [Attestations](#attestations)
-        - [Modified `process_attestation`](#modified-process_attestation)
-      - [Payload Attestations](#payload-attestations)
-        - [New `process_payload_attestation`](#new-process_payload_attestation)
-      - [Proposer Slashing](#proposer-slashing)
-        - [Modified `process_proposer_slashing`](#modified-process_proposer_slashing)
-    - [Modified `is_merge_transition_complete`](#modified-is_merge_transition_complete)
-    - [Modified `validate_merge_block`](#modified-validate_merge_block)
-  - [Execution payload processing](#execution-payload-processing)
-    - [New `verify_execution_payload_envelope_signature`](#new-verify_execution_payload_envelope_signature)
-    - [New `process_execution_payload`](#new-process_execution_payload)
+- [Gloas -- The Beacon Chain](#gloas----the-beacon-chain)
+  - [Introduction](#introduction)
+  - [Constants](#constants)
+    - [Domain types](#domain-types)
+    - [Misc](#misc)
+    - [Withdrawal prefixes](#withdrawal-prefixes)
+  - [Preset](#preset)
+    - [Misc](#misc-1)
+    - [Max operations per block](#max-operations-per-block)
+    - [State list lengths](#state-list-lengths)
+  - [Containers](#containers)
+    - [New containers](#new-containers)
+      - [`BuilderPendingPayment`](#builderpendingpayment)
+      - [`BuilderPendingWithdrawal`](#builderpendingwithdrawal)
+      - [`PayloadAttestationData`](#payloadattestationdata)
+      - [`PayloadAttestation`](#payloadattestation)
+      - [`PayloadAttestationMessage`](#payloadattestationmessage)
+      - [`IndexedPayloadAttestation`](#indexedpayloadattestation)
+      - [`ExecutionPayloadBid`](#executionpayloadbid)
+      - [`SignedExecutionPayloadBid`](#signedexecutionpayloadbid)
+      - [`ExecutionPayloadEnvelope`](#executionpayloadenvelope)
+      - [`SignedExecutionPayloadEnvelope`](#signedexecutionpayloadenvelope)
+    - [Modified containers](#modified-containers)
+      - [`BeaconBlockBody`](#beaconblockbody)
+      - [`BeaconState`](#beaconstate)
+  - [Helper functions](#helper-functions)
+    - [Predicates](#predicates)
+      - [New `has_builder_withdrawal_credential`](#new-has_builder_withdrawal_credential)
+      - [Modified `has_compounding_withdrawal_credential`](#modified-has_compounding_withdrawal_credential)
+      - [New `is_attestation_same_slot`](#new-is_attestation_same_slot)
+      - [New `is_builder_withdrawal_credential`](#new-is_builder_withdrawal_credential)
+      - [New `is_valid_indexed_payload_attestation`](#new-is_valid_indexed_payload_attestation)
+      - [New `is_parent_block_full`](#new-is_parent_block_full)
+    - [Misc](#misc-2)
+      - [Modified `get_pending_balance_to_withdraw`](#modified-get_pending_balance_to_withdraw)
+      - [New `remove_flag`](#new-remove_flag)
+      - [New `compute_balance_weighted_selection`](#new-compute_balance_weighted_selection)
+      - [New `compute_balance_weighted_acceptance`](#new-compute_balance_weighted_acceptance)
+      - [Modified `compute_proposer_indices`](#modified-compute_proposer_indices)
+    - [Beacon State accessors](#beacon-state-accessors)
+      - [Modified `get_next_sync_committee_indices`](#modified-get_next_sync_committee_indices)
+      - [Modified `get_attestation_participation_flag_indices`](#modified-get_attestation_participation_flag_indices)
+      - [New `get_ptc`](#new-get_ptc)
+      - [New `get_indexed_payload_attestation`](#new-get_indexed_payload_attestation)
+      - [New `get_builder_payment_quorum_threshold`](#new-get_builder_payment_quorum_threshold)
+  - [Beacon chain state transition function](#beacon-chain-state-transition-function)
+    - [Modified `process_slot`](#modified-process_slot)
+    - [Epoch processing](#epoch-processing)
+      - [Modified `process_epoch`](#modified-process_epoch)
+      - [New `process_builder_pending_payments`](#new-process_builder_pending_payments)
+    - [Block processing](#block-processing)
+      - [Withdrawals](#withdrawals)
+        - [New `is_builder_payment_withdrawable`](#new-is_builder_payment_withdrawable)
+        - [Modified `get_expected_withdrawals`](#modified-get_expected_withdrawals)
+        - [Modified `process_withdrawals`](#modified-process_withdrawals)
+      - [Execution payload bid](#execution-payload-bid)
+        - [New `verify_execution_payload_bid_signature`](#new-verify_execution_payload_bid_signature)
+        - [New `process_execution_payload_bid`](#new-process_execution_payload_bid)
+      - [Operations](#operations)
+        - [Modified `process_operations`](#modified-process_operations)
+        - [Attestations](#attestations)
+          - [Modified `process_attestation`](#modified-process_attestation)
+        - [Payload Attestations](#payload-attestations)
+          - [New `process_payload_attestation`](#new-process_payload_attestation)
+        - [Proposer Slashing](#proposer-slashing)
+          - [Modified `process_proposer_slashing`](#modified-process_proposer_slashing)
+      - [Modified `is_merge_transition_complete`](#modified-is_merge_transition_complete)
+      - [Modified `validate_merge_block`](#modified-validate_merge_block)
+    - [Execution payload processing](#execution-payload-processing)
+      - [New `verify_execution_payload_envelope_signature`](#new-verify_execution_payload_envelope_signature)
+      - [New `process_execution_payload`](#new-process_execution_payload)
 
 <!-- mdformat-toc end -->
 
 ## Introduction
 
-This is the beacon chain specification of the enshrined proposer builder
-separation feature.
-
 *Note*: This specification is built upon [Fulu](../fulu/beacon-chain.md) and is
 under active development.
 
-This feature adds new staked consensus participants called *Builders* and new
+The headliner feature for Gloas is
+[EIP-7732 (Enshrined Proposer-Builder Separation)](https://eips.ethereum.org/EIPS/eip-7732).
+This feature adds new staked consensus participants called *builders* and new
 honest validators duties called *payload timeliness attestations*. The slot is
-divided in **four** intervals. Honest validators gather *signed bids* (a
+now divided into **four** intervals. Honest validators gather *signed bids* (a
 `SignedExecutionPayloadBid`) from builders and submit their consensus blocks (a
 `SignedBeaconBlock`) including accepted bids at the beginning of the slot. At
 the start of the second interval, honest validators submit attestations just as
-they do previous to this feature). At the start of the third interval,
+they do previous to this feature. At the start of the third interval,
 aggregators aggregate these attestations and the builder broadcasts either a
-full payload or a message indicating that they are withholding the payload (a
-`SignedExecutionPayloadEnvelope`). At the start of the fourth interval, some
-validators selected to be members of the new **Payload Timeliness Committee**
-(PTC) attest to the presence and timeliness of the builder's payload.
+full payload (a `SignedExecutionPayloadEnvelope`) or a message indicating that
+they are withholding the payload. At the start of the fourth interval,
+validators which are selected to be members of the new *payload timeliness
+committee* (PTC) attest to the presence and timeliness of the builder's payload.
 
-At any given slot, the status of the blockchain's head may be either
+At any given slot, the status of the blockchain's head may be either:
 
 - A block from a previous slot (e.g. the current slot's proposer did not submit
   its block).
