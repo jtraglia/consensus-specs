@@ -173,6 +173,19 @@ def run_generator(input_test_cases: Iterable[TestCase], args=None):
     debug_print(f"Generating tests into {args.output_dir}")
     tests_prefix = get_shared_prefix(selected_test_cases)
 
+    def drain_status_queue(status_queue, active_tests, active_tests_lock):
+        """Process all pending status messages from the queue."""
+        while True:
+            try:
+                msg_type, key, value = status_queue.get_nowait()
+                with active_tests_lock:
+                    if msg_type == "start":
+                        active_tests[key] = value
+                    elif msg_type == "end":
+                        active_tests.pop(key, None)
+            except:
+                break
+
     def worker_function(data):
         """Execute a test case and update active tests."""
         test_case, status_queue = data
@@ -193,11 +206,12 @@ def run_generator(input_test_cases: Iterable[TestCase], args=None):
         finally:
             status_queue.put(("end", key, None))
 
-    def periodic_status_print(active_tests, active_tests_lock, total_tasks, completed, skipped, interval=300):
+    def periodic_status_print(active_tests, active_tests_lock, status_queue, total_tasks, completed, skipped, interval=300):
         """Print status updates periodically in verbose mode."""
         process = psutil.Process()
         while completed.value < total_tasks:
             time.sleep(interval)
+            drain_status_queue(status_queue, active_tests, active_tests_lock)
             remaining = total_tasks - completed.value
             if remaining > 0:
                 with active_tests_lock:
@@ -233,10 +247,11 @@ def run_generator(input_test_cases: Iterable[TestCase], args=None):
                             f"  - Active: {key[1]} (running for {time_since(start_time_test)})"
                         )
 
-    def display_active_tests(active_tests, active_tests_lock, total_tasks, completed, skipped, width):
+    def display_active_tests(active_tests, active_tests_lock, status_queue, total_tasks, completed, skipped, width):
         """Display a table of active tests."""
         with Live(console=console) as live:
             while True:
+                drain_status_queue(status_queue, active_tests, active_tests_lock)
                 remaining = total_tasks - completed.value
                 if remaining == 0:
                     # Show a final status when the queue is empty
@@ -282,26 +297,10 @@ def run_generator(input_test_cases: Iterable[TestCase], args=None):
             active_tests = {}
             active_tests_lock = threading.Lock()
 
-            # Thread to process status updates from queue
-            def process_status_queue():
-                while completed.value < len(selected_test_cases):
-                    try:
-                        msg_type, key, value = status_queue.get(timeout=1)
-                        with active_tests_lock:
-                            if msg_type == "start":
-                                active_tests[key] = value
-                            elif msg_type == "end":
-                                active_tests.pop(key, None)
-                    except:
-                        pass
-
-            queue_thread = threading.Thread(target=process_status_queue, daemon=True)
-            queue_thread.start()
-
             if not args.verbose:
                 display_thread = threading.Thread(
                     target=display_active_tests,
-                    args=(active_tests, active_tests_lock, len(selected_test_cases), completed, skipped, width),
+                    args=(active_tests, active_tests_lock, status_queue, len(selected_test_cases), completed, skipped, width),
                     daemon=True,
                 )
                 display_thread.start()
@@ -309,7 +308,7 @@ def run_generator(input_test_cases: Iterable[TestCase], args=None):
                 # Start periodic status printing in verbose mode
                 status_thread = threading.Thread(
                     target=periodic_status_print,
-                    args=(active_tests, active_tests_lock, len(selected_test_cases), completed, skipped),
+                    args=(active_tests, active_tests_lock, status_queue, len(selected_test_cases), completed, skipped),
                     daemon=True,
                 )
                 status_thread.start()
