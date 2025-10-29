@@ -277,8 +277,6 @@ def run_generator(input_test_cases: Iterable[TestCase], args=None):
             completed = manager.Value("i", 0)
             skipped = manager.Value("i", 0)
             width = max([len(t.get_identifier()) for t in selected_test_cases])
-            longest_identifier = max(selected_test_cases, key=lambda t: len(t.get_identifier())).get_identifier()
-            print(f"Longest test identifier ({width} chars): {longest_identifier}")
 
             # Local dict for tracking active tests (updated from queue)
             active_tests = {}
