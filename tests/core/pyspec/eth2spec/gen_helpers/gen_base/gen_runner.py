@@ -175,14 +175,13 @@ def run_generator(input_test_cases: Iterable[TestCase], args=None):
 
     def worker_function(data):
         """Execute a test case and update active tests."""
-        test_case, active_tests = data
+        test_case, status_queue = data
         key = (uuid.uuid4(), test_case.get_identifier())
         test_start = time.time()
-        active_tests[key] = test_start
-
-        debug_print(f"Starting: {test_case.get_identifier()}")
 
         try:
+            status_queue.put(("start", key, test_start))
+            debug_print(f"Starting: {test_case.get_identifier()}")
             execute_test(test_case, dumper)
             elapsed = time.time() - test_start
             debug_print(f"Generated: {test_case.get_identifier()} (took {elapsed:.2f}s)")
@@ -192,16 +191,19 @@ def run_generator(input_test_cases: Iterable[TestCase], args=None):
             debug_print(f"Skipped: {test_case.get_identifier()} (took {elapsed:.2f}s)")
             return "skipped"
         finally:
-            del active_tests[key]
+            status_queue.put(("end", key, None))
 
-    def periodic_status_print(active_tests, total_tasks, completed, skipped, interval=300):
+    def periodic_status_print(active_tests, active_tests_lock, total_tasks, completed, skipped, interval=300):
         """Print status updates periodically in verbose mode."""
         process = psutil.Process()
         while completed.value < total_tasks:
             time.sleep(interval)
             remaining = total_tasks - completed.value
             if remaining > 0:
-                active_count = len(active_tests)
+                with active_tests_lock:
+                    active_count = len(active_tests)
+                    active_snapshot = list(active_tests.items())
+
                 # Get system-wide and process memory stats
                 vm = psutil.virtual_memory()
                 total_memory_mb = vm.total / 1024 / 1024
@@ -225,13 +227,13 @@ def run_generator(input_test_cases: Iterable[TestCase], args=None):
                     f"all processes {system_used_mb:.0f}MB, "
                     f"total available {total_memory_mb:.0f}MB"
                 )
-                if active_tests:
-                    for key, start_time_test in list(active_tests.items()):
+                if active_snapshot:
+                    for key, start_time_test in active_snapshot:
                         debug_print(
                             f"  - Active: {key[1]} (running for {time_since(start_time_test)})"
                         )
 
-    def display_active_tests(active_tests, total_tasks, completed, skipped, width):
+    def display_active_tests(active_tests, active_tests_lock, total_tasks, completed, skipped, width):
         """Display a table of active tests."""
         with Live(console=console) as live:
             while True:
@@ -259,7 +261,11 @@ def run_generator(input_test_cases: Iterable[TestCase], args=None):
                 table = Table(box=box.ROUNDED)
                 table.add_column(column_header, style="cyan", no_wrap=True, width=width)
                 table.add_column("Elapsed Time", justify="right", style="magenta")
-                for k, start in sorted(active_tests.items(), key=lambda x: x[1]):
+
+                with active_tests_lock:
+                    active_snapshot = sorted(active_tests.items(), key=lambda x: x[1])
+
+                for k, start in active_snapshot:
                     table.add_row(k[1], f"{time_since(start)}")
                 live.update(table)
                 time.sleep(0.25)
@@ -267,15 +273,37 @@ def run_generator(input_test_cases: Iterable[TestCase], args=None):
     # Generate all of the test cases
     try:
         with multiprocessing.Manager() as manager:
-            active_tests = manager.dict()
+            status_queue = manager.Queue()
             completed = manager.Value("i", 0)
             skipped = manager.Value("i", 0)
             width = max([len(t.get_identifier()) for t in selected_test_cases])
+            longest_identifier = max(selected_test_cases, key=lambda t: len(t.get_identifier())).get_identifier()
+            print(f"Longest test identifier ({width} chars): {longest_identifier}")
+
+            # Local dict for tracking active tests (updated from queue)
+            active_tests = {}
+            active_tests_lock = threading.Lock()
+
+            # Thread to process status updates from queue
+            def process_status_queue():
+                while completed.value < len(selected_test_cases):
+                    try:
+                        msg_type, key, value = status_queue.get(timeout=1)
+                        with active_tests_lock:
+                            if msg_type == "start":
+                                active_tests[key] = value
+                            elif msg_type == "end":
+                                active_tests.pop(key, None)
+                    except:
+                        pass
+
+            queue_thread = threading.Thread(target=process_status_queue, daemon=True)
+            queue_thread.start()
 
             if not args.verbose:
                 display_thread = threading.Thread(
                     target=display_active_tests,
-                    args=(active_tests, len(selected_test_cases), completed, skipped, width),
+                    args=(active_tests, active_tests_lock, len(selected_test_cases), completed, skipped, width),
                     daemon=True,
                 )
                 display_thread.start()
@@ -283,13 +311,13 @@ def run_generator(input_test_cases: Iterable[TestCase], args=None):
                 # Start periodic status printing in verbose mode
                 status_thread = threading.Thread(
                     target=periodic_status_print,
-                    args=(active_tests, len(selected_test_cases), completed, skipped),
+                    args=(active_tests, active_tests_lock, len(selected_test_cases), completed, skipped),
                     daemon=True,
                 )
                 status_thread.start()
 
             # Map each test case to a thread worker
-            inputs = [(t, active_tests) for t in selected_test_cases]
+            inputs = [(t, status_queue) for t in selected_test_cases]
 
             if args.threads == 1:
                 for input in inputs:
