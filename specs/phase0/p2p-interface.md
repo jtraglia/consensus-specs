@@ -463,6 +463,51 @@ on the network.
   while proposers for the block's branch are calculated -- in such a case _do
   not_ `REJECT`, instead `IGNORE` this message.
 
+```python
+def gossip_validate_beacon_block(
+    signed_beacon_block: SignedBeaconBlock,
+    store: Store,
+    seen_proposer_slots: set,
+) -> Ignore | Reject | Accept:
+    block = signed_beacon_block.message
+    slot = block.slot
+    parent_root = block.parent_root
+    proposer_index = block.proposer_index
+
+    if slot > get_current_slot(store) + MAXIMUM_GOSSIP_CLOCK_DISPARITY:
+        return Ignore("future slot")
+
+    if slot <= compute_start_slot_at_epoch(store.finalized_checkpoint.epoch):
+        return Ignore("finalized slot")
+
+    if (proposer_index, slot) in seen_proposer_slots:
+        return Ignore("already seen")
+
+    if not verify_proposer_signature(signed_beacon_block, store):
+        return Reject("invalid signature")
+
+    if parent_root not in store.blocks:
+        return Ignore("parent not seen")
+
+    if slot <= store.blocks[parent_root].slot:
+        return Reject("invalid slot")
+
+    checkpoint_root = get_checkpoint_block(store, parent_root, store.finalized_checkpoint.epoch)
+    if checkpoint_root != store.finalized_checkpoint.root:
+        return Reject("finalized checkpoint not ancestor of block")
+
+    # If the `proposer_index` cannot immediately be verified against
+    # the expected shuffling, the block MAY be queued for later processing
+    # while proposers for the block's branch are calculated. In such a case
+    # _do not_ `REJECT`, instead `IGNORE` this message.
+    parent_state = store.block_states[parent_root].copy()
+    get_beacon_proposer_index(parent_state)
+    if proposer_index != get_expected_proposer(store, parent_root, slot):
+        return Reject("unexpected proposer index")
+
+    return Accept()
+```
+
 ###### `beacon_aggregate_and_proof`
 
 The `beacon_aggregate_and_proof` topic is used to propagate aggregated
