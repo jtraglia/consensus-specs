@@ -83,8 +83,8 @@ def compute_fork_version(epoch: Epoch) -> Version:
 
 *Note*: The `signed_block_header` and `kzg_commitments_inclusion_proof` fields
 have been removed from `DataColumnSidecar` in Gloas as header and inclusion
-proof verifications are no longer required in ePBS. Instead, sidecars are
-validated by checking that the hash of `kzg_commitments` matches what's
+proof verifications are no longer required with EIP-7732. Instead, sidecars are
+validated by checking that the hash of `kzg_commitments` matches what is
 committed in the builder's bid for the corresponding `beacon_block_root`.
 
 ```python
@@ -137,8 +137,6 @@ def verify_data_column_sidecar(sidecar: DataColumnSidecar) -> bool:
 
 ### The gossip domain: gossipsub
 
-Some gossip meshes are upgraded in the fork of Gloas to support upgraded types.
-
 #### Topics and messages
 
 Topics follow the same specification as in prior upgrades.
@@ -160,10 +158,9 @@ are given in this table:
 
 ##### Global topics
 
-Gloas introduces new global topics for execution bid, execution payload and
-payload attestation.
-
 ###### `beacon_aggregate_and_proof`
+
+*[Modified in Gloas:EIP7732]*
 
 Let `block` be the beacon block corresponding to
 `aggregate.data.beacon_block_root`.
@@ -182,7 +179,7 @@ The following validations are removed:
 *[Modified in Gloas:EIP7732]*
 
 The *type* of the payload of this topic changes to the (modified)
-`SignedBeaconBlock` found in [the Beacon Chain changes](./beacon-chain.md).
+`SignedBeaconBlock` found in the [Beacon Chain](./beacon-chain.md) specifications.
 
 There are no new validations for this topic. However, all validations with
 regards to the `ExecutionPayload` are removed:
@@ -198,7 +195,7 @@ regards to the `ExecutionPayload` are removed:
   - [REJECT] The block's parent (defined by `block.parent_root`) passes all
     validation (excluding execution node verification of the
     `block.body.execution_payload`).
-- otherwise:
+- Otherwise:
   - [IGNORE] The block's parent (defined by `block.parent_root`) passes all
     validation (including execution node verification of the
     `block.body.execution_payload`).
@@ -214,6 +211,8 @@ And instead the following validations are set in place with the alias
   block's parent (defined by `block.parent_root`).
 
 ###### `execution_payload`
+
+*[New in Gloas:EIP7732]*
 
 This topic is used to propagate execution payload messages as
 `SignedExecutionPayloadEnvelope`.
@@ -245,7 +244,10 @@ obtained from the `state.latest_execution_payload_bid`)
 
 ###### `payload_attestation_message`
 
-This topic is used to propagate signed payload attestation message.
+*[New in Gloas:EIP7732]*
+
+This topic is used to propagate signed payload attestation messages as
+`PayloadAttestationMessage`.
 
 The following validations MUST pass before forwarding the
 `payload_attestation_message` on the network, assuming the alias
@@ -268,6 +270,8 @@ The following validations MUST pass before forwarding the
   the validator's public key.
 
 ###### `execution_payload_bid`
+
+*[New in Gloas:EIP7732]*
 
 This topic is used to propagate signed bids as `SignedExecutionPayloadBid`.
 
@@ -360,6 +364,8 @@ The following validations MUST pass before forwarding the
 
 ###### `beacon_attestation_{subnet_id}`
 
+*[Modified in Gloas:EIP7732]*
+
 Let `block` be the beacon block corresponding to
 `attestation.data.beacon_block_root`.
 
@@ -379,7 +385,11 @@ The following validations are removed:
 
 ##### BeaconBlocksByRange v2
 
+*[Modified in Gloas:EIP7732]*
+
 **Protocol ID:** `/eth2/beacon_chain/req/beacon_blocks_by_range/2/`
+
+Per `fork_version = compute_fork_version(epoch)`:
 
 <!-- eth2spec: skip -->
 
@@ -396,7 +406,11 @@ The following validations are removed:
 
 ##### BeaconBlocksByRoot v2
 
+*[Modified in Gloas:EIP7732]*
+
 **Protocol ID:** `/eth2/beacon_chain/req/beacon_blocks_by_root/2/`
+
+Per `fork_version = compute_fork_version(epoch)`:
 
 <!-- eth2spec: skip -->
 
@@ -413,10 +427,10 @@ The following validations are removed:
 
 ##### ExecutionPayloadEnvelopesByRange v1
 
+*[New in Gloas:EIP7732]*
+
 **Protocol ID:**
 `/eth2/beacon_chain/req/execution_payload_envelopes_by_range/1/`
-
-*[New in Gloas:EIP7732]*
 
 Request Content:
 
@@ -435,16 +449,14 @@ Response Content:
 )
 ```
 
-Specifications of req\\response methods are equivalent to
+Specifications for Req/Resp methods are equivalent to
 [BeaconBlocksByRange v2](#beaconblocksbyrange-v2), with the only difference
 being the response content type.
 
-For each successful `response_chunk`, the `ForkDigest` context epoch is
-determined by `compute_epoch_at_slot(beacon_block.slot)` based on the
+For each successful `response_chunk`, the `fork_version` is determined by
+`compute_fork_version(compute_epoch_at_slot(beacon_block.slot))` based on the
 `beacon_block` referred to by
 `signed_execution_payload_envelope.message.beacon_block_root`.
-
-Per `fork_version = compute_fork_version(epoch)`:
 
 <!-- eth2spec: skip -->
 
@@ -454,20 +466,9 @@ Per `fork_version = compute_fork_version(epoch)`:
 
 ##### ExecutionPayloadEnvelopesByRoot v1
 
+*[New in Gloas:EIP7732]*
+
 **Protocol ID:** `/eth2/beacon_chain/req/execution_payload_envelopes_by_root/1/`
-
-For each successful `response_chunk`, the `ForkDigest` context epoch is
-determined by `compute_epoch_at_slot(beacon_block.slot)` based on the
-`beacon_block` referred to by
-`signed_execution_payload_envelope.message.beacon_block_root`.
-
-Per `fork_version = compute_fork_version(epoch)`:
-
-<!-- eth2spec: skip -->
-
-| `fork_version`       | Chunk SSZ type                         |
-| -------------------- | -------------------------------------- |
-| `GLOAS_FORK_VERSION` | `gloas.SignedExecutionPayloadEnvelope` |
 
 Request Content:
 
@@ -493,13 +494,13 @@ the responding peer is missing payload envelopes.
 
 No more than `MAX_REQUEST_PAYLOADS` may be requested at a time.
 
-ExecutionPayloadEnvelopesByRoot is primarily used to recover recent execution
+`ExecutionPayloadEnvelopesByRoot` is primarily used to recover recent execution
 payload envelopes (e.g. when receiving a payload attestation with revealed
 status as true but never received a payload).
 
 The request MUST be encoded as an SSZ-field.
 
-The response MUST consist of zero or more `response_chunk`. Each successful
+The response MUST consist of zero or more `response_chunk`. Each _successful_
 `response_chunk` MUST contain a single `SignedExecutionPayloadEnvelope` payload.
 
 Clients MUST support requesting payload envelopes since the latest finalized
@@ -507,3 +508,14 @@ epoch.
 
 Clients MUST respond with at least one payload envelope, if they have it.
 Clients MAY limit the number of payload envelopes in the response.
+
+For each successful `response_chunk`, the `fork_version` is determined by
+`compute_fork_version(compute_epoch_at_slot(beacon_block.slot))` based on the
+`beacon_block` referred to by
+`signed_execution_payload_envelope.message.beacon_block_root`.
+
+<!-- eth2spec: skip -->
+
+| `fork_version`       | Chunk SSZ type                         |
+| -------------------- | -------------------------------------- |
+| `GLOAS_FORK_VERSION` | `gloas.SignedExecutionPayloadEnvelope` |
