@@ -89,13 +89,11 @@ def upgrade_to_gloas(pre: fulu.BeaconState) -> BeaconState:
         pending_deposits=pre.pending_deposits,
         pending_partial_withdrawals=pre.pending_partial_withdrawals,
         pending_consolidations=pre.pending_consolidations,
+        # [New in Gloas:EIP7732]
+        pending_payments=[PendingPayment() for _ in range(2 * SLOTS_PER_EPOCH)],
         proposer_lookahead=pre.proposer_lookahead,
         # [New in Gloas:EIP7732]
         execution_payload_availability=[0b1 for _ in range(SLOTS_PER_HISTORICAL_ROOT)],
-        # [New in Gloas:EIP7732]
-        builder_pending_payments=[BuilderPendingPayment() for _ in range(2 * SLOTS_PER_EPOCH)],
-        # [New in Gloas:EIP7732]
-        builder_pending_withdrawals=[],
         # [New in Gloas:EIP7732]
         latest_block_hash=pre.latest_execution_payload_header.block_hash,
         # [New in Gloas:EIP7732]

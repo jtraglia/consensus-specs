@@ -19,8 +19,6 @@
     - [Blob sidecars](#blob-sidecars)
   - [Payload timeliness attestation](#payload-timeliness-attestation)
     - [Constructing a payload attestation](#constructing-a-payload-attestation)
-- [Modified functions](#modified-functions)
-  - [Modified `prepare_execution_payload`](#modified-prepare_execution_payload)
 - [Data column sidecars](#data-column-sidecars)
   - [Modified `get_data_column_sidecars_from_column_sidecar`](#modified-get_data_column_sidecars_from_column_sidecar)
 
@@ -141,9 +139,6 @@ top of a `state` MUST take the following actions in order to construct the
 - Select one bid and set
   `body.signed_execution_payload_bid = signed_execution_payload_bid`.
 
-*Note:* The execution address encoded in the `fee_recipient` field in the
-`signed_execution_payload_bid.message` will receive the builder payment.
-
 #### Constructing `payload_attestations`
 
 Up to `MAX_PAYLOAD_ATTESTATIONS` aggregate payload attestations can be included
@@ -222,43 +217,6 @@ def get_payload_attestation_message_signature(
 `ExecutionPayload` contained in within the envelope, but the checks in the
 [Networking](./p2p-interface.md) specifications should pass for the
 `SignedExecutionPayloadEnvelope`.
-
-## Modified functions
-
-### Modified `prepare_execution_payload`
-
-*Note*: The function `prepare_execution_payload` is modified to handle the
-updated `get_expected_withdrawals` return signature.
-
-```python
-def prepare_execution_payload(
-    state: BeaconState,
-    safe_block_hash: Hash32,
-    finalized_block_hash: Hash32,
-    suggested_fee_recipient: ExecutionAddress,
-    execution_engine: ExecutionEngine,
-) -> Optional[PayloadId]:
-    # Verify consistency of the parent hash with respect to the previous execution payload bid
-    parent_hash = state.latest_execution_payload_bid.block_hash
-
-    # [Modified in Gloas:EIP7732]
-    # Set the forkchoice head and initiate the payload build process
-    withdrawals, _, _ = get_expected_withdrawals(state)
-
-    payload_attributes = PayloadAttributes(
-        timestamp=compute_time_at_slot(state, state.slot),
-        prev_randao=get_randao_mix(state, get_current_epoch(state)),
-        suggested_fee_recipient=suggested_fee_recipient,
-        withdrawals=withdrawals,
-        parent_beacon_block_root=hash_tree_root(state.latest_block_header),
-    )
-    return execution_engine.notify_forkchoice_updated(
-        head_block_hash=parent_hash,
-        safe_block_hash=safe_block_hash,
-        finalized_block_hash=finalized_block_hash,
-        payload_attributes=payload_attributes,
-    )
-```
 
 ## Data column sidecars
 

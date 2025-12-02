@@ -12,11 +12,9 @@
 - [Preset](#preset)
   - [Misc](#misc-1)
   - [Max operations per block](#max-operations-per-block)
-  - [State list lengths](#state-list-lengths)
 - [Containers](#containers)
   - [New containers](#new-containers)
-    - [`BuilderPendingPayment`](#builderpendingpayment)
-    - [`BuilderPendingWithdrawal`](#builderpendingwithdrawal)
+    - [`PendingPayment`](#pendingpayment)
     - [`PayloadAttestationData`](#payloadattestationdata)
     - [`PayloadAttestation`](#payloadattestation)
     - [`PayloadAttestationMessage`](#payloadattestationmessage)
@@ -51,10 +49,9 @@
   - [Modified `process_slot`](#modified-process_slot)
   - [Epoch processing](#epoch-processing)
     - [Modified `process_epoch`](#modified-process_epoch)
-    - [New `process_builder_pending_payments`](#new-process_builder_pending_payments)
+    - [New `process_pending_payments`](#new-process_pending_payments)
   - [Block processing](#block-processing)
     - [Withdrawals](#withdrawals)
-      - [New `is_builder_payment_withdrawable`](#new-is_builder_payment_withdrawable)
       - [Modified `get_expected_withdrawals`](#modified-get_expected_withdrawals)
       - [Modified `process_withdrawals`](#modified-process_withdrawals)
     - [Execution payload bid](#execution-payload-bid)
@@ -119,32 +116,18 @@ Gloas is a consensus-layer upgrade containing a number of features. Including:
 | -------------------------- | ----- |
 | `MAX_PAYLOAD_ATTESTATIONS` | `4`   |
 
-### State list lengths
-
-| Name                                | Value                         | Unit                        |
-| ----------------------------------- | ----------------------------- | --------------------------- |
-| `BUILDER_PENDING_WITHDRAWALS_LIMIT` | `uint64(2**20)` (= 1,048,576) | Builder pending withdrawals |
-
 ## Containers
 
 ### New containers
 
-#### `BuilderPendingPayment`
+#### `PendingPayment`
 
 ```python
-class BuilderPendingPayment(Container):
+class PendingPayment(Container):
     weight: Gwei
-    withdrawal: BuilderPendingWithdrawal
-```
-
-#### `BuilderPendingWithdrawal`
-
-```python
-class BuilderPendingWithdrawal(Container):
-    fee_recipient: ExecutionAddress
+    proposer_index: ValidatorIndex
     amount: Gwei
     builder_index: ValidatorIndex
-    withdrawable_epoch: Epoch
 ```
 
 #### `PayloadAttestationData`
@@ -192,7 +175,6 @@ class ExecutionPayloadBid(Container):
     parent_block_root: Root
     block_hash: Hash32
     prev_randao: Bytes32
-    fee_recipient: ExecutionAddress
     gas_limit: uint64
     builder_index: ValidatorIndex
     slot: Slot
@@ -305,13 +287,11 @@ class BeaconState(Container):
     pending_deposits: List[PendingDeposit, PENDING_DEPOSITS_LIMIT]
     pending_partial_withdrawals: List[PendingPartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT]
     pending_consolidations: List[PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT]
+    # [New in Gloas:EIP7732]
+    pending_payments: Vector[PendingPayment, 2 * SLOTS_PER_EPOCH]
     proposer_lookahead: Vector[ValidatorIndex, (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH]
     # [New in Gloas:EIP7732]
     execution_payload_availability: Bitvector[SLOTS_PER_HISTORICAL_ROOT]
-    # [New in Gloas:EIP7732]
-    builder_pending_payments: Vector[BuilderPendingPayment, 2 * SLOTS_PER_EPOCH]
-    # [New in Gloas:EIP7732]
-    builder_pending_withdrawals: List[BuilderPendingWithdrawal, BUILDER_PENDING_WITHDRAWALS_LIMIT]
     # [New in Gloas:EIP7732]
     latest_block_hash: Hash32
     # [New in Gloas:EIP7732]
@@ -424,15 +404,9 @@ def get_pending_balance_to_withdraw(state: BeaconState, validator_index: Validat
         )
         # [New in Gloas:EIP7732]
         + sum(
-            withdrawal.amount
-            for withdrawal in state.builder_pending_withdrawals
-            if withdrawal.builder_index == validator_index
-        )
-        # [New in Gloas:EIP7732]
-        + sum(
-            payment.withdrawal.amount
-            for payment in state.builder_pending_payments
-            if payment.withdrawal.builder_index == validator_index
+            payment.amount
+            for payment in state.pending_payments
+            if payment.builder_index == validator_index
         )
     )
 ```
@@ -685,7 +659,7 @@ def process_epoch(state: BeaconState) -> None:
     process_pending_deposits(state)
     process_pending_consolidations(state)
     # [New in Gloas:EIP7732]
-    process_builder_pending_payments(state)
+    process_pending_payments(state)
     process_effective_balance_updates(state)
     process_slashings_reset(state)
     process_randao_mixes_reset(state)
@@ -695,25 +669,22 @@ def process_epoch(state: BeaconState) -> None:
     process_proposer_lookahead(state)
 ```
 
-#### New `process_builder_pending_payments`
+#### New `process_pending_payments`
 
 ```python
-def process_builder_pending_payments(state: BeaconState) -> None:
+def process_pending_payments(state: BeaconState) -> None:
     """
     Processes the builder pending payments from the previous epoch.
     """
     quorum = get_builder_payment_quorum_threshold(state)
-    for payment in state.builder_pending_payments[:SLOTS_PER_EPOCH]:
+    for payment in state.pending_payments[:SLOTS_PER_EPOCH]:
         if payment.weight > quorum:
-            amount = payment.withdrawal.amount
-            exit_queue_epoch = compute_exit_epoch_and_update_churn(state, amount)
-            withdrawable_epoch = exit_queue_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
-            payment.withdrawal.withdrawable_epoch = Epoch(withdrawable_epoch)
-            state.builder_pending_withdrawals.append(payment.withdrawal)
+            decrease_balance(state, payment.builder_index, payment.amount)
+            increase_balance(state, payment.proposer_index, payment.amount)
 
-    old_payments = state.builder_pending_payments[SLOTS_PER_EPOCH:]
-    new_payments = [BuilderPendingPayment() for _ in range(SLOTS_PER_EPOCH)]
-    state.builder_pending_payments = old_payments + new_payments
+    old_payments = state.pending_payments[SLOTS_PER_EPOCH:]
+    new_payments = [PendingPayment() for _ in range(SLOTS_PER_EPOCH)]
+    state.pending_payments = old_payments + new_payments
 ```
 
 ### Block processing
@@ -736,68 +707,20 @@ def process_block(state: BeaconState, block: BeaconBlock) -> None:
 
 #### Withdrawals
 
-##### New `is_builder_payment_withdrawable`
-
-```python
-def is_builder_payment_withdrawable(
-    state: BeaconState, withdrawal: BuilderPendingWithdrawal
-) -> bool:
-    """
-    Check if the builder is slashed and not yet withdrawable.
-    """
-    builder = state.validators[withdrawal.builder_index]
-    current_epoch = compute_epoch_at_slot(state.slot)
-    return builder.withdrawable_epoch >= current_epoch or not builder.slashed
-```
-
 ##### Modified `get_expected_withdrawals`
 
 ```python
-def get_expected_withdrawals(state: BeaconState) -> Tuple[Sequence[Withdrawal], uint64, uint64]:
+def get_expected_withdrawals(state: BeaconState) -> Tuple[Sequence[Withdrawal], uint64]:
     epoch = get_current_epoch(state)
     withdrawal_index = state.next_withdrawal_index
     validator_index = state.next_withdrawal_validator_index
     withdrawals: List[Withdrawal] = []
     processed_partial_withdrawals_count = 0
-    processed_builder_withdrawals_count = 0
-
-    # [New in Gloas:EIP7732]
-    # Sweep for builder payments
-    for withdrawal in state.builder_pending_withdrawals:
-        if (
-            withdrawal.withdrawable_epoch > epoch
-            or len(withdrawals) + 1 == MAX_WITHDRAWALS_PER_PAYLOAD
-        ):
-            break
-        if is_builder_payment_withdrawable(state, withdrawal):
-            total_withdrawn = sum(
-                w.amount for w in withdrawals if w.validator_index == withdrawal.builder_index
-            )
-            balance = state.balances[withdrawal.builder_index] - total_withdrawn
-            builder = state.validators[withdrawal.builder_index]
-            if builder.slashed:
-                withdrawable_balance = min(balance, withdrawal.amount)
-            elif balance > MIN_ACTIVATION_BALANCE:
-                withdrawable_balance = min(balance - MIN_ACTIVATION_BALANCE, withdrawal.amount)
-            else:
-                withdrawable_balance = 0
-
-            if withdrawable_balance > 0:
-                withdrawals.append(
-                    Withdrawal(
-                        index=withdrawal_index,
-                        validator_index=withdrawal.builder_index,
-                        address=withdrawal.fee_recipient,
-                        amount=withdrawable_balance,
-                    )
-                )
-                withdrawal_index += WithdrawalIndex(1)
-        processed_builder_withdrawals_count += 1
 
     # Sweep for pending partial withdrawals
     bound = min(
         len(withdrawals) + MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
-        MAX_WITHDRAWALS_PER_PAYLOAD - 1,
+        MAX_WITHDRAWALS_PER_PAYLOAD,
     )
     for withdrawal in state.pending_partial_withdrawals:
         if withdrawal.withdrawable_epoch > epoch or len(withdrawals) == bound:
@@ -857,11 +780,7 @@ def get_expected_withdrawals(state: BeaconState) -> Tuple[Sequence[Withdrawal], 
         if len(withdrawals) == MAX_WITHDRAWALS_PER_PAYLOAD:
             break
         validator_index = ValidatorIndex((validator_index + 1) % len(state.validators))
-    return (
-        withdrawals,
-        processed_builder_withdrawals_count,
-        processed_partial_withdrawals_count,
-    )
+    return withdrawals, processed_partial_withdrawals_count
 ```
 
 ##### Modified `process_withdrawals`
@@ -886,20 +805,10 @@ def process_withdrawals(
 
     # [Modified in Gloas:EIP7732]
     # Get information about the expected withdrawals
-    withdrawals, processed_builder_withdrawals_count, processed_partial_withdrawals_count = (
-        get_expected_withdrawals(state)
-    )
+    withdrawals, processed_partial_withdrawals_count = get_expected_withdrawals(state)
     state.payload_expected_withdrawals = List[Withdrawal, MAX_WITHDRAWALS_PER_PAYLOAD](withdrawals)
     for withdrawal in withdrawals:
         decrease_balance(state, withdrawal.validator_index, withdrawal.amount)
-
-    # [New in Gloas:EIP7732]
-    # Update the pending builder withdrawals
-    state.builder_pending_withdrawals = [
-        w
-        for w in state.builder_pending_withdrawals[:processed_builder_withdrawals_count]
-        if not is_builder_payment_withdrawable(state, w)
-    ] + state.builder_pending_withdrawals[processed_builder_withdrawals_count:]
 
     # Update pending partial withdrawals
     state.pending_partial_withdrawals = state.pending_partial_withdrawals[
@@ -964,19 +873,13 @@ def process_execution_payload_bid(state: BeaconState, block: BeaconBlock) -> Non
 
     # Check that the builder is active, non-slashed, and has funds to cover the bid
     pending_payments = sum(
-        payment.withdrawal.amount
-        for payment in state.builder_pending_payments
-        if payment.withdrawal.builder_index == builder_index
-    )
-    pending_withdrawals = sum(
-        withdrawal.amount
-        for withdrawal in state.builder_pending_withdrawals
-        if withdrawal.builder_index == builder_index
+        payment.amount
+        for payment in state.pending_payments
+        if payment.builder_index == builder_index
     )
     assert (
         amount == 0
-        or state.balances[builder_index]
-        >= amount + pending_payments + pending_withdrawals + MIN_ACTIVATION_BALANCE
+        or state.balances[builder_index] >= amount + pending_payments + MIN_ACTIVATION_BALANCE
     )
 
     # Verify that the bid is for the current slot
@@ -988,18 +891,13 @@ def process_execution_payload_bid(state: BeaconState, block: BeaconBlock) -> Non
 
     # Record the pending payment if there is some payment
     if amount > 0:
-        pending_payment = BuilderPendingPayment(
+        pending_payment = PendingPayment(
             weight=0,
-            withdrawal=BuilderPendingWithdrawal(
-                fee_recipient=bid.fee_recipient,
-                amount=amount,
-                builder_index=builder_index,
-                withdrawable_epoch=FAR_FUTURE_EPOCH,
-            ),
+            proposer_index=block.proposer_index,
+            amount=amount,
+            builder_index=builder_index,
         )
-        state.builder_pending_payments[SLOTS_PER_EPOCH + bid.slot % SLOTS_PER_EPOCH] = (
-            pending_payment
-        )
+        state.pending_payments[SLOTS_PER_EPOCH + bid.slot % SLOTS_PER_EPOCH] = pending_payment
 
     # Cache the signed execution payload bid
     state.latest_execution_payload_bid = bid
@@ -1093,11 +991,11 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     if data.target.epoch == get_current_epoch(state):
         current_epoch_target = True
         epoch_participation = state.current_epoch_participation
-        payment = state.builder_pending_payments[SLOTS_PER_EPOCH + data.slot % SLOTS_PER_EPOCH]
+        payment = state.pending_payments[SLOTS_PER_EPOCH + data.slot % SLOTS_PER_EPOCH]
     else:
         current_epoch_target = False
         epoch_participation = state.previous_epoch_participation
-        payment = state.builder_pending_payments[data.slot % SLOTS_PER_EPOCH]
+        payment = state.pending_payments[data.slot % SLOTS_PER_EPOCH]
 
     proposer_reward_numerator = 0
     for index in get_attesting_indices(state, attestation):
@@ -1118,11 +1016,7 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
         # [New in Gloas:EIP7732]
         # Add weight for same-slot attestations when any new flag is set.
         # This ensures each validator contributes exactly once per slot.
-        if (
-            will_set_new_flag
-            and is_attestation_same_slot(state, data)
-            and payment.withdrawal.amount > 0
-        ):
+        if will_set_new_flag and is_attestation_same_slot(state, data) and payment.amount > 0:
             payment.weight += state.validators[index].effective_balance
 
     # Reward proposer
@@ -1135,9 +1029,9 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     # [New in Gloas:EIP7732]
     # Update builder payment weight
     if current_epoch_target:
-        state.builder_pending_payments[SLOTS_PER_EPOCH + data.slot % SLOTS_PER_EPOCH] = payment
+        state.pending_payments[SLOTS_PER_EPOCH + data.slot % SLOTS_PER_EPOCH] = payment
     else:
-        state.builder_pending_payments[data.slot % SLOTS_PER_EPOCH] = payment
+        state.pending_payments[data.slot % SLOTS_PER_EPOCH] = payment
 ```
 
 ##### Payload Attestations
@@ -1188,16 +1082,16 @@ def process_proposer_slashing(state: BeaconState, proposer_slashing: ProposerSla
         assert bls.Verify(proposer.pubkey, signing_root, signed_header.signature)
 
     # [New in Gloas:EIP7732]
-    # Remove the BuilderPendingPayment corresponding to
+    # Remove the PendingPayment corresponding to
     # this proposal if it is still in the 2-epoch window.
     slot = header_1.slot
     proposal_epoch = compute_epoch_at_slot(slot)
     if proposal_epoch == get_current_epoch(state):
         payment_index = SLOTS_PER_EPOCH + slot % SLOTS_PER_EPOCH
-        state.builder_pending_payments[payment_index] = BuilderPendingPayment()
+        state.pending_payments[payment_index] = PendingPayment()
     elif proposal_epoch == get_previous_epoch(state):
         payment_index = slot % SLOTS_PER_EPOCH
-        state.builder_pending_payments[payment_index] = BuilderPendingPayment()
+        state.pending_payments[payment_index] = PendingPayment()
 
     slash_validator(state, header_1.proposer_index)
 ```
@@ -1294,18 +1188,12 @@ def process_execution_payload(
     for_ops(requests.withdrawals, process_withdrawal_request)
     for_ops(requests.consolidations, process_consolidation_request)
 
-    # Queue the builder payment
-    payment = state.builder_pending_payments[SLOTS_PER_EPOCH + state.slot % SLOTS_PER_EPOCH]
-    amount = payment.withdrawal.amount
-    if amount > 0:
-        exit_queue_epoch = compute_exit_epoch_and_update_churn(state, amount)
-        payment.withdrawal.withdrawable_epoch = Epoch(
-            exit_queue_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
-        )
-        state.builder_pending_withdrawals.append(payment.withdrawal)
-    state.builder_pending_payments[SLOTS_PER_EPOCH + state.slot % SLOTS_PER_EPOCH] = (
-        BuilderPendingPayment()
-    )
+    # Process the builder payment
+    payment = state.pending_payments[SLOTS_PER_EPOCH + state.slot % SLOTS_PER_EPOCH]
+    if payment.amount > 0:
+        decrease_balance(state, payment.builder_index, payment.amount)
+        increase_balance(state, payment.proposer_index, payment.amount)
+    state.pending_payments[SLOTS_PER_EPOCH + state.slot % SLOTS_PER_EPOCH] = PendingPayment()
 
     # Cache the execution payload hash
     state.execution_payload_availability[state.slot % SLOTS_PER_HISTORICAL_ROOT] = 0b1
