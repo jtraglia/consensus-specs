@@ -15,41 +15,41 @@
 - [Configuration](#configuration)
   - [Inactivity penalties](#inactivity-penalties)
 - [Containers](#containers)
-  - [Modified containers](#modified-containers)
-    - [`BeaconBlockBody`](#beaconblockbody)
-    - [`BeaconState`](#beaconstate)
-  - [New containers](#new-containers)
-    - [`SyncAggregate`](#syncaggregate)
-    - [`SyncCommittee`](#synccommittee)
+  - [Modified `BeaconBlockBody`](#modified-beaconblockbody)
+  - [Modified `BeaconState`](#modified-beaconstate)
+  - [New `SyncAggregate`](#new-syncaggregate)
+  - [New `SyncCommittee`](#new-synccommittee)
 - [Helpers](#helpers)
   - [Crypto](#crypto)
   - [Misc](#misc-1)
-    - [`add_flag`](#add_flag)
-    - [`has_flag`](#has_flag)
-    - [`get_index_for_new_validator`](#get_index_for_new_validator)
-    - [`set_or_append_list`](#set_or_append_list)
+    - [New `add_flag`](#new-add_flag)
+    - [New `has_flag`](#new-has_flag)
+    - [New `get_index_for_new_validator`](#new-get_index_for_new_validator)
+    - [New `set_or_append_list`](#new-set_or_append_list)
   - [Beacon state accessors](#beacon-state-accessors)
-    - [`get_next_sync_committee_indices`](#get_next_sync_committee_indices)
-    - [`get_next_sync_committee`](#get_next_sync_committee)
-    - [`get_base_reward_per_increment`](#get_base_reward_per_increment)
-    - [`get_base_reward`](#get_base_reward)
-    - [`get_unslashed_participating_indices`](#get_unslashed_participating_indices)
-    - [`get_attestation_participation_flag_indices`](#get_attestation_participation_flag_indices)
-    - [`get_flag_index_deltas`](#get_flag_index_deltas)
+    - [New `get_next_sync_committee_indices`](#new-get_next_sync_committee_indices)
+    - [New `get_next_sync_committee`](#new-get_next_sync_committee)
+    - [New `get_base_reward_per_increment`](#new-get_base_reward_per_increment)
+    - [New `get_base_reward`](#new-get_base_reward)
+    - [New `get_unslashed_participating_indices`](#new-get_unslashed_participating_indices)
+    - [New `get_attestation_participation_flag_indices`](#new-get_attestation_participation_flag_indices)
+    - [New `get_flag_index_deltas`](#new-get_flag_index_deltas)
     - [Modified `get_inactivity_penalty_deltas`](#modified-get_inactivity_penalty_deltas)
   - [Beacon state mutators](#beacon-state-mutators)
     - [Modified `slash_validator`](#modified-slash_validator)
   - [Block processing](#block-processing)
+    - [Modified `process_block`](#modified-process_block)
     - [Modified `process_attestation`](#modified-process_attestation)
     - [Modified `add_validator_to_registry`](#modified-add_validator_to_registry)
-    - [Sync aggregate processing](#sync-aggregate-processing)
+    - [New `process_sync_aggregate`](#new-process_sync_aggregate)
   - [Epoch processing](#epoch-processing)
-    - [Justification and finalization](#justification-and-finalization)
-    - [Inactivity scores](#inactivity-scores)
-    - [Rewards and penalties](#rewards-and-penalties-1)
-    - [Slashings](#slashings)
-    - [Participation flags updates](#participation-flags-updates)
-    - [Sync committee updates](#sync-committee-updates)
+    - [Modified `process_epoch`](#modified-process_epoch)
+    - [Modified `process_justification_and_finalization`](#modified-process_justification_and_finalization)
+    - [New `process_inactivity_updates`](#new-process_inactivity_updates)
+    - [Modified `process_rewards_and_penalties`](#modified-process_rewards_and_penalties)
+    - [Modified `process_slashings`](#modified-process_slashings)
+    - [New `process_participation_flag_updates`](#new-process_participation_flag_updates)
+    - [New `process_sync_committee_updates`](#new-process_sync_committee_updates)
 
 <!-- mdformat-toc end -->
 
@@ -138,9 +138,7 @@ creates new values and replaces usage throughout.
 
 ## Containers
 
-### Modified containers
-
-#### `BeaconBlockBody`
+### Modified `BeaconBlockBody`
 
 ```python
 class BeaconBlockBody(Container):
@@ -156,7 +154,7 @@ class BeaconBlockBody(Container):
     sync_aggregate: SyncAggregate
 ```
 
-#### `BeaconState`
+### Modified `BeaconState`
 
 ```python
 class BeaconState(Container):
@@ -191,9 +189,7 @@ class BeaconState(Container):
     next_sync_committee: SyncCommittee
 ```
 
-### New containers
-
-#### `SyncAggregate`
+### New `SyncAggregate`
 
 ```python
 class SyncAggregate(Container):
@@ -201,7 +197,7 @@ class SyncAggregate(Container):
     sync_committee_signature: BLSSignature
 ```
 
-#### `SyncCommittee`
+### New `SyncCommittee`
 
 ```python
 class SyncCommittee(Container):
@@ -221,7 +217,7 @@ documents.
 
 ### Misc
 
-#### `add_flag`
+#### New `add_flag`
 
 ```python
 def add_flag(flags: ParticipationFlags, flag_index: int) -> ParticipationFlags:
@@ -232,7 +228,7 @@ def add_flag(flags: ParticipationFlags, flag_index: int) -> ParticipationFlags:
     return flags | flag
 ```
 
-#### `has_flag`
+#### New `has_flag`
 
 ```python
 def has_flag(flags: ParticipationFlags, flag_index: int) -> bool:
@@ -243,14 +239,14 @@ def has_flag(flags: ParticipationFlags, flag_index: int) -> bool:
     return flags & flag == flag
 ```
 
-#### `get_index_for_new_validator`
+#### New `get_index_for_new_validator`
 
 ```python
 def get_index_for_new_validator(state: BeaconState) -> ValidatorIndex:
     return ValidatorIndex(len(state.validators))
 ```
 
-#### `set_or_append_list`
+#### New `set_or_append_list`
 
 ```python
 def set_or_append_list(list: List, index: ValidatorIndex, value: Any) -> None:
@@ -262,7 +258,7 @@ def set_or_append_list(list: List, index: ValidatorIndex, value: Any) -> None:
 
 ### Beacon state accessors
 
-#### `get_next_sync_committee_indices`
+#### New `get_next_sync_committee_indices`
 
 ```python
 def get_next_sync_committee_indices(state: BeaconState) -> Sequence[ValidatorIndex]:
@@ -290,7 +286,7 @@ def get_next_sync_committee_indices(state: BeaconState) -> Sequence[ValidatorInd
     return sync_committee_indices
 ```
 
-#### `get_next_sync_committee`
+#### New `get_next_sync_committee`
 
 *Note*: The function `get_next_sync_committee` should only be called at sync
 committee period boundaries and when
@@ -307,7 +303,7 @@ def get_next_sync_committee(state: BeaconState) -> SyncCommittee:
     return SyncCommittee(pubkeys=pubkeys, aggregate_pubkey=aggregate_pubkey)
 ```
 
-#### `get_base_reward_per_increment`
+#### New `get_base_reward_per_increment`
 
 ```python
 def get_base_reward_per_increment(state: BeaconState) -> Gwei:
@@ -318,7 +314,7 @@ def get_base_reward_per_increment(state: BeaconState) -> Gwei:
     )
 ```
 
-#### `get_base_reward`
+#### New `get_base_reward`
 
 *Note*: The function `get_base_reward` is modified with the removal of
 `BASE_REWARDS_PER_EPOCH` and the use of increment based accounting.
@@ -335,7 +331,7 @@ def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
     return Gwei(increments * get_base_reward_per_increment(state))
 ```
 
-#### `get_unslashed_participating_indices`
+#### New `get_unslashed_participating_indices`
 
 ```python
 def get_unslashed_participating_indices(
@@ -356,7 +352,7 @@ def get_unslashed_participating_indices(
     return set(filter(lambda index: not state.validators[index].slashed, participating_indices))
 ```
 
-#### `get_attestation_participation_flag_indices`
+#### New `get_attestation_participation_flag_indices`
 
 ```python
 def get_attestation_participation_flag_indices(
@@ -395,7 +391,7 @@ def get_attestation_participation_flag_indices(
     return participation_flag_indices
 ```
 
-#### `get_flag_index_deltas`
+#### New `get_flag_index_deltas`
 
 ```python
 def get_flag_index_deltas(
@@ -432,7 +428,8 @@ def get_flag_index_deltas(
 ```python
 def get_inactivity_penalty_deltas(state: BeaconState) -> Tuple[Sequence[Gwei], Sequence[Gwei]]:
     """
-    Return the inactivity penalty deltas by considering timely target participation flags and inactivity scores.
+    Return the inactivity penalty deltas by considering timely
+    target participation flags and inactivity scores.
     """
     rewards = [Gwei(0) for _ in range(len(state.validators))]
     penalties = [Gwei(0) for _ in range(len(state.validators))]
@@ -488,6 +485,8 @@ def slash_validator(
 ```
 
 ### Block processing
+
+#### Modified `process_block`
 
 ```python
 def process_block(state: BeaconState, block: BeaconBlock) -> None:
@@ -567,9 +566,7 @@ def add_validator_to_registry(
     set_or_append_list(state.inactivity_scores, index, uint64(0))
 ```
 
-#### Sync aggregate processing
-
-*Note*: The function `process_sync_aggregate` is new.
+#### New `process_sync_aggregate`
 
 ```python
 def process_sync_aggregate(state: BeaconState, sync_aggregate: SyncAggregate) -> None:
@@ -637,6 +634,8 @@ def process_sync_aggregate(state: BeaconState, sync_aggregate: SyncAggregate) ->
 
 ### Epoch processing
 
+#### Modified `process_epoch`
+
 ```python
 def process_epoch(state: BeaconState) -> None:
     # [Modified in Altair]
@@ -659,7 +658,7 @@ def process_epoch(state: BeaconState) -> None:
     process_sync_committee_updates(state)
 ```
 
-#### Justification and finalization
+#### Modified `process_justification_and_finalization`
 
 *Note*: The function `process_justification_and_finalization` is modified to
 adapt to the new participation records.
@@ -684,9 +683,7 @@ def process_justification_and_finalization(state: BeaconState) -> None:
     )
 ```
 
-#### Inactivity scores
-
-*Note*: The function `process_inactivity_updates` is new.
+#### New `process_inactivity_updates`
 
 ```python
 def process_inactivity_updates(state: BeaconState) -> None:
@@ -709,7 +706,7 @@ def process_inactivity_updates(state: BeaconState) -> None:
             )
 ```
 
-#### Rewards and penalties
+#### Modified `process_rewards_and_penalties`
 
 *Note*: The function `process_rewards_and_penalties` is modified to support the
 incentive accounting reforms.
@@ -731,7 +728,7 @@ def process_rewards_and_penalties(state: BeaconState) -> None:
             decrease_balance(state, ValidatorIndex(index), penalties[index])
 ```
 
-#### Slashings
+#### Modified `process_slashings`
 
 *Note*: The function `process_slashings` is modified to use
 `PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR`.
@@ -756,9 +753,7 @@ def process_slashings(state: BeaconState) -> None:
             decrease_balance(state, ValidatorIndex(index), penalty)
 ```
 
-#### Participation flags updates
-
-*Note*: The function `process_participation_flag_updates` is new.
+#### New `process_participation_flag_updates`
 
 ```python
 def process_participation_flag_updates(state: BeaconState) -> None:
@@ -768,9 +763,7 @@ def process_participation_flag_updates(state: BeaconState) -> None:
     ]
 ```
 
-#### Sync committee updates
-
-*Note*: The function `process_sync_committee_updates` is new.
+#### New `process_sync_committee_updates`
 
 ```python
 def process_sync_committee_updates(state: BeaconState) -> None:
