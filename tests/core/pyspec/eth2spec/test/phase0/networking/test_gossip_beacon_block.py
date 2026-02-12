@@ -6,7 +6,7 @@ from eth2spec.test.helpers.block import (
     build_empty_block_for_next_slot,
     sign_block,
 )
-from eth2spec.test.helpers.constants import PHASE0
+from eth2spec.test.helpers.constants import ALTAIR, PHASE0
 from eth2spec.test.helpers.fork_choice import (
     get_genesis_forkchoice_store_and_block,
 )
@@ -36,7 +36,7 @@ def run_validate_beacon_block_gossip(spec, seen, store, state, signed_block, cur
         return "reject", str(e)
 
 
-@with_phases([PHASE0])
+@with_phases([PHASE0, ALTAIR])
 @spec_state_test
 def test_gossip_beacon_block__valid_block(spec, state):
     """
@@ -74,7 +74,7 @@ def test_gossip_beacon_block__valid_block(spec, state):
     )
 
 
-@with_phases([PHASE0])
+@with_phases([PHASE0, ALTAIR])
 @spec_state_test
 def test_gossip_beacon_block__ignore_future_slot(spec, state):
     """
@@ -120,7 +120,7 @@ def test_gossip_beacon_block__ignore_future_slot(spec, state):
     )
 
 
-@with_phases([PHASE0])
+@with_phases([PHASE0, ALTAIR])
 @spec_state_test
 def test_gossip_beacon_block__valid_within_clock_disparity(spec, state):
     """
@@ -159,7 +159,7 @@ def test_gossip_beacon_block__valid_within_clock_disparity(spec, state):
     )
 
 
-@with_phases([PHASE0])
+@with_phases([PHASE0, ALTAIR])
 @spec_state_test
 def test_gossip_beacon_block__ignore_already_seen_proposer_slot(spec, state):
     """
@@ -211,7 +211,7 @@ def test_gossip_beacon_block__ignore_already_seen_proposer_slot(spec, state):
     yield "messages", "meta", messages
 
 
-@with_phases([PHASE0])
+@with_phases([PHASE0, ALTAIR])
 @spec_state_test
 def test_gossip_beacon_block__ignore_slot_not_greater_than_finalized(spec, state):
     """
@@ -283,7 +283,7 @@ def test_gossip_beacon_block__ignore_slot_not_greater_than_finalized(spec, state
     )
 
 
-@with_phases([PHASE0])
+@with_phases([PHASE0, ALTAIR])
 @spec_state_test
 def test_gossip_beacon_block__ignore_parent_not_seen(spec, state):
     """
@@ -338,7 +338,7 @@ def test_gossip_beacon_block__ignore_parent_not_seen(spec, state):
     )
 
 
-@with_phases([PHASE0])
+@with_phases([PHASE0, ALTAIR])
 @spec_state_test
 def test_gossip_beacon_block__reject_parent_failed_validation(spec, state):
     """
@@ -412,7 +412,7 @@ def test_gossip_beacon_block__reject_parent_failed_validation(spec, state):
     )
 
 
-@with_phases([PHASE0])
+@with_phases([PHASE0, ALTAIR])
 @spec_state_test
 def test_gossip_beacon_block__reject_slot_not_higher_than_parent(spec, state):
     """
@@ -484,7 +484,7 @@ def test_gossip_beacon_block__reject_slot_not_higher_than_parent(spec, state):
     )
 
 
-@with_phases([PHASE0])
+@with_phases([PHASE0, ALTAIR])
 @spec_state_test
 def test_gossip_beacon_block__reject_finalized_checkpoint_not_ancestor(spec, state):
     """
@@ -567,7 +567,7 @@ def test_gossip_beacon_block__reject_finalized_checkpoint_not_ancestor(spec, sta
     )
 
 
-@with_phases([PHASE0])
+@with_phases([PHASE0, ALTAIR])
 @spec_state_test
 def test_gossip_beacon_block__reject_invalid_proposer_signature(spec, state):
     """
@@ -615,7 +615,7 @@ def test_gossip_beacon_block__reject_invalid_proposer_signature(spec, state):
     )
 
 
-@with_phases([PHASE0])
+@with_phases([PHASE0, ALTAIR])
 @spec_state_test
 def test_gossip_beacon_block__reject_invalid_proposer_index(spec, state):
     """
@@ -663,7 +663,7 @@ def test_gossip_beacon_block__reject_invalid_proposer_index(spec, state):
     )
 
 
-@with_phases([PHASE0])
+@with_phases([PHASE0, ALTAIR])
 @spec_state_test
 def test_gossip_beacon_block__reject_wrong_proposer_index(spec, state):
     """

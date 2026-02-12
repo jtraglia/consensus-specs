@@ -3,7 +3,7 @@ from eth_utils import encode_hex
 
 def get_seen(spec):
     """Create an empty Seen object for gossip validation."""
-    return spec.Seen(
+    kwargs = dict(
         proposer_slots=set(),
         aggregator_epochs=set(),
         aggregate_data_roots={},
@@ -12,6 +12,14 @@ def get_seen(spec):
         attester_slashing_indices=set(),
         attestation_validator_epochs=set(),
     )
+    # Add altair fields if available
+    if hasattr(spec, "SyncCommitteeMessage"):
+        kwargs.update(
+            sync_contribution_aggregator_slots=set(),
+            sync_contribution_data={},
+            sync_message_validator_slots=set(),
+        )
+    return spec.Seen(**kwargs)
 
 
 def get_filename(obj):
@@ -31,6 +39,10 @@ def get_filename(obj):
         prefix = "attester_slashing"
     elif "VoluntaryExit" in class_name:
         prefix = "voluntary_exit"
+    elif "ContributionAndProof" in class_name:
+        prefix = "contribution"
+    elif class_name == "SyncCommitteeMessage":
+        prefix = "sync_committee_message"
     else:
         raise Exception(f"unsupported type: {class_name}")
 
