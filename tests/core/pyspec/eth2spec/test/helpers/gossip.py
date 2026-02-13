@@ -3,6 +3,7 @@ from eth_utils import encode_hex
 from eth2spec.test.helpers.forks import (
     is_post_altair,
     is_post_capella,
+    is_post_deneb,
 )
 
 
@@ -28,6 +29,11 @@ def get_seen(spec):
     if is_post_capella(spec):
         kwargs.update(
             bls_to_execution_change_indices=set(),
+        )
+    # Add deneb fields if available
+    if is_post_deneb(spec):
+        kwargs.update(
+            blob_sidecar_slots=set(),
         )
     return spec.Seen(**kwargs)
 
@@ -55,6 +61,8 @@ def get_filename(obj):
         prefix = "sync_committee_message"
     elif class_name == "BLSToExecutionChange":
         prefix = "bls_to_execution_change"
+    elif class_name == "BlobSidecar":
+        prefix = "blob_sidecar"
     else:
         raise Exception(f"unsupported type: {class_name}")
 

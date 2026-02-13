@@ -5,7 +5,7 @@ from eth2spec.test.context import (
 from eth2spec.test.helpers.block import (
     build_empty_block_for_next_slot,
 )
-from eth2spec.test.helpers.constants import ALTAIR, BELLATRIX, CAPELLA
+from eth2spec.test.helpers.constants import ALTAIR, BELLATRIX, CAPELLA, DENEB
 from eth2spec.test.helpers.fork_choice import (
     get_genesis_forkchoice_store_and_block,
 )
@@ -70,7 +70,7 @@ def run_validate_sync_committee_message_gossip(
         return "reject", str(e)
 
 
-@with_phases([ALTAIR, BELLATRIX, CAPELLA])
+@with_phases([ALTAIR, BELLATRIX, CAPELLA, DENEB])
 @spec_state_test
 def test_gossip_sync_committee_message__valid(spec, state):
     """
@@ -115,7 +115,7 @@ def test_gossip_sync_committee_message__valid(spec, state):
     )
 
 
-@with_phases([ALTAIR, BELLATRIX, CAPELLA])
+@with_phases([ALTAIR, BELLATRIX, CAPELLA, DENEB])
 @spec_state_test
 def test_gossip_sync_committee_message__ignore_future_slot(spec, state):
     """
@@ -163,7 +163,7 @@ def test_gossip_sync_committee_message__ignore_future_slot(spec, state):
     )
 
 
-@with_phases([ALTAIR, BELLATRIX, CAPELLA])
+@with_phases([ALTAIR, BELLATRIX, CAPELLA, DENEB])
 @spec_state_test
 def test_gossip_sync_committee_message__ignore_past_slot(spec, state):
     """
@@ -210,7 +210,7 @@ def test_gossip_sync_committee_message__ignore_past_slot(spec, state):
     )
 
 
-@with_phases([ALTAIR, BELLATRIX, CAPELLA])
+@with_phases([ALTAIR, BELLATRIX, CAPELLA, DENEB])
 @spec_state_test
 def test_gossip_sync_committee_message__reject_wrong_subnet(spec, state):
     """
@@ -262,7 +262,7 @@ def test_gossip_sync_committee_message__reject_wrong_subnet(spec, state):
     )
 
 
-@with_phases([ALTAIR, BELLATRIX, CAPELLA])
+@with_phases([ALTAIR, BELLATRIX, CAPELLA, DENEB])
 @spec_state_test
 def test_gossip_sync_committee_message__ignore_duplicate(spec, state):
     """
@@ -323,7 +323,7 @@ def test_gossip_sync_committee_message__ignore_duplicate(spec, state):
     )
 
 
-@with_phases([ALTAIR, BELLATRIX, CAPELLA])
+@with_phases([ALTAIR, BELLATRIX, CAPELLA, DENEB])
 @spec_state_test
 def test_gossip_sync_committee_message__reject_invalid_signature(spec, state):
     """
