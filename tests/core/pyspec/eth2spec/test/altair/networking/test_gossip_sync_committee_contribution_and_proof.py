@@ -5,7 +5,7 @@ from eth2spec.test.context import (
 from eth2spec.test.helpers.block import (
     build_empty_block_for_next_slot,
 )
-from eth2spec.test.helpers.constants import ALTAIR, BELLATRIX
+from eth2spec.test.helpers.constants import ALTAIR, BELLATRIX, CAPELLA
 from eth2spec.test.helpers.fork_choice import (
     get_genesis_forkchoice_store_and_block,
 )
@@ -147,7 +147,7 @@ def run_validate_sync_committee_contribution_and_proof_gossip(
         return "reject", str(e)
 
 
-@with_phases([ALTAIR, BELLATRIX])
+@with_phases([ALTAIR, BELLATRIX, CAPELLA])
 @spec_state_test
 def test_gossip_sync_committee_contribution_and_proof__valid(spec, state):
     """
@@ -190,7 +190,7 @@ def test_gossip_sync_committee_contribution_and_proof__valid(spec, state):
     )
 
 
-@with_phases([ALTAIR, BELLATRIX])
+@with_phases([ALTAIR, BELLATRIX, CAPELLA])
 @spec_state_test
 def test_gossip_sync_committee_contribution_and_proof__ignore_future_slot(spec, state):
     """
@@ -229,7 +229,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_future_slot(spec, 
     )
 
 
-@with_phases([ALTAIR, BELLATRIX])
+@with_phases([ALTAIR, BELLATRIX, CAPELLA])
 @spec_state_test
 def test_gossip_sync_committee_contribution_and_proof__ignore_past_slot(spec, state):
     """
@@ -274,7 +274,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_past_slot(spec, st
     )
 
 
-@with_phases([ALTAIR, BELLATRIX])
+@with_phases([ALTAIR, BELLATRIX, CAPELLA])
 @spec_state_test
 def test_gossip_sync_committee_contribution_and_proof__reject_invalid_subcommittee_index(
     spec, state
@@ -316,7 +316,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_subcommitt
     )
 
 
-@with_phases([ALTAIR, BELLATRIX])
+@with_phases([ALTAIR, BELLATRIX, CAPELLA])
 @spec_state_test
 def test_gossip_sync_committee_contribution_and_proof__reject_no_participants(spec, state):
     """
@@ -357,7 +357,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_no_participants(sp
     )
 
 
-@with_phases([ALTAIR, BELLATRIX])
+@with_phases([ALTAIR, BELLATRIX, CAPELLA])
 @spec_state_test
 def test_gossip_sync_committee_contribution_and_proof__reject_not_aggregator(spec, state):
     """
@@ -424,7 +424,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_not_aggregator(spe
     )
 
 
-@with_phases([ALTAIR, BELLATRIX])
+@with_phases([ALTAIR, BELLATRIX, CAPELLA])
 @spec_state_test
 def test_gossip_sync_committee_contribution_and_proof__reject_aggregator_not_in_subcommittee(
     spec, state
@@ -484,7 +484,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_aggregator_not_in_
     )
 
 
-@with_phases([ALTAIR, BELLATRIX])
+@with_phases([ALTAIR, BELLATRIX, CAPELLA])
 @spec_state_test
 def test_gossip_sync_committee_contribution_and_proof__ignore_duplicate_aggregator(spec, state):
     """
@@ -535,7 +535,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_duplicate_aggregat
     )
 
 
-@with_phases([ALTAIR, BELLATRIX])
+@with_phases([ALTAIR, BELLATRIX, CAPELLA])
 @spec_state_test
 def test_gossip_sync_committee_contribution_and_proof__reject_invalid_selection_proof(spec, state):
     """
@@ -587,7 +587,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_selection_
     )
 
 
-@with_phases([ALTAIR, BELLATRIX])
+@with_phases([ALTAIR, BELLATRIX, CAPELLA])
 @spec_state_test
 def test_gossip_sync_committee_contribution_and_proof__reject_invalid_aggregator_signature(
     spec, state
@@ -637,7 +637,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_aggregator
     )
 
 
-@with_phases([ALTAIR, BELLATRIX])
+@with_phases([ALTAIR, BELLATRIX, CAPELLA])
 @spec_state_test
 def test_gossip_sync_committee_contribution_and_proof__reject_invalid_aggregate_signature(
     spec, state

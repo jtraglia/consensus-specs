@@ -1,5 +1,10 @@
 from eth_utils import encode_hex
 
+from eth2spec.test.helpers.forks import (
+    is_post_altair,
+    is_post_capella,
+)
+
 
 def get_seen(spec):
     """Create an empty Seen object for gossip validation."""
@@ -13,11 +18,16 @@ def get_seen(spec):
         attestation_validator_epochs=set(),
     )
     # Add altair fields if available
-    if hasattr(spec, "SyncCommitteeMessage"):
+    if is_post_altair(spec):
         kwargs.update(
             sync_contribution_aggregator_slots=set(),
             sync_contribution_data={},
             sync_message_validator_slots=set(),
+        )
+    # Add capella fields if available
+    if is_post_capella(spec):
+        kwargs.update(
+            bls_to_execution_change_indices=set(),
         )
     return spec.Seen(**kwargs)
 
@@ -43,6 +53,8 @@ def get_filename(obj):
         prefix = "contribution"
     elif class_name == "SyncCommitteeMessage":
         prefix = "sync_committee_message"
+    elif class_name == "BLSToExecutionChange":
+        prefix = "bls_to_execution_change"
     else:
         raise Exception(f"unsupported type: {class_name}")
 

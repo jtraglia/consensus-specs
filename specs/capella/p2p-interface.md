@@ -6,6 +6,7 @@
 - [Modifications in Capella](#modifications-in-capella)
   - [Helpers](#helpers)
     - [Modified `compute_fork_version`](#modified-compute_fork_version)
+    - [Modified `Seen`](#modified-seen)
   - [The gossip domain: gossipsub](#the-gossip-domain-gossipsub)
     - [Topics and messages](#topics-and-messages)
       - [Global topics](#global-topics)
@@ -45,6 +46,28 @@ def compute_fork_version(epoch: Epoch) -> Version:
     if epoch >= ALTAIR_FORK_EPOCH:
         return ALTAIR_FORK_VERSION
     return GENESIS_FORK_VERSION
+```
+
+#### Modified `Seen`
+
+The `Seen` class is extended with an additional field to track BLS to execution
+change gossip deduplication state.
+
+```python
+@dataclass
+class Seen(object):
+    proposer_slots: Set[Tuple[ValidatorIndex, Slot]]
+    aggregator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
+    aggregate_data_roots: Dict[Root, Set[Tuple[boolean, ...]]]
+    voluntary_exit_indices: Set[ValidatorIndex]
+    proposer_slashing_indices: Set[ValidatorIndex]
+    attester_slashing_indices: Set[ValidatorIndex]
+    attestation_validator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
+    sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, uint64]]
+    sync_contribution_data: Dict[Tuple[Slot, Root, uint64], Set[Tuple[boolean, ...]]]
+    sync_message_validator_slots: Set[Tuple[ValidatorIndex, Slot, uint64]]
+    # [New in Capella]
+    bls_to_execution_change_indices: Set[ValidatorIndex]
 ```
 
 ### The gossip domain: gossipsub
@@ -88,16 +111,61 @@ further details.
 This topic is used to propagate signed bls to execution change messages to be
 included in future blocks.
 
-The following validations MUST pass before forwarding the
-`signed_bls_to_execution_change` on the network:
+```python
+def validate_bls_to_execution_change_gossip(
+    seen: Seen,
+    state: BeaconState,
+    signed_address_change: SignedBLSToExecutionChange,
+    current_time_ms: uint64,
+) -> None:
+    """
+    Validate a SignedBLSToExecutionChange for gossip propagation.
+    Raises GossipIgnore or GossipReject on validation failure.
+    """
+    address_change = signed_address_change.message
+    validator_index = address_change.validator_index
 
-- _[IGNORE]_ `current_epoch >= CAPELLA_FORK_EPOCH`, where `current_epoch` is
-  defined by the current wall-clock time.
-- _[IGNORE]_ The `signed_bls_to_execution_change` is the first valid signed bls
-  to execution change received for the validator with index
-  `signed_bls_to_execution_change.message.validator_index`.
-- _[REJECT]_ All of the conditions within `process_bls_to_execution_change` pass
-  validation.
+    # [IGNORE] current_epoch >= CAPELLA_FORK_EPOCH
+    genesis_time_ms = state.genesis_time * 1000
+    current_slot = (current_time_ms - genesis_time_ms) // SLOT_DURATION_MS
+    current_epoch = compute_epoch_at_slot(Slot(current_slot))
+    if current_epoch < CAPELLA_FORK_EPOCH:
+        raise GossipIgnore("current epoch is before Capella fork epoch")
+
+    # [IGNORE] The signed_bls_to_execution_change is the first valid signed bls to execution
+    # change received for the validator with index
+    # signed_bls_to_execution_change.message.validator_index.
+    if validator_index in seen.bls_to_execution_change_indices:
+        raise GossipIgnore("already seen bls to execution change for this validator")
+
+    # [REJECT] All of the conditions within process_bls_to_execution_change pass validation.
+    # -- validator_index in range
+    if validator_index >= len(state.validators):
+        raise GossipReject("validator index out of range")
+
+    validator = state.validators[validator_index]
+
+    # -- withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX
+    if validator.withdrawal_credentials[:1] != BLS_WITHDRAWAL_PREFIX:
+        raise GossipReject("validator does not have BLS withdrawal credentials")
+
+    # -- withdrawal_credentials[1:] == hash(from_bls_pubkey)[1:]
+    if validator.withdrawal_credentials[1:] != hash(address_change.from_bls_pubkey)[1:]:
+        raise GossipReject("from_bls_pubkey does not match withdrawal credentials")
+
+    # -- BLS signature valid (fork-agnostic domain)
+    domain = compute_domain(
+        DOMAIN_BLS_TO_EXECUTION_CHANGE, genesis_validators_root=state.genesis_validators_root
+    )
+    signing_root = compute_signing_root(address_change, domain)
+    if not bls.Verify(
+        address_change.from_bls_pubkey, signing_root, signed_address_change.signature
+    ):
+        raise GossipReject("invalid bls to execution change signature")
+
+    # Mark as seen
+    seen.bls_to_execution_change_indices.add(validator_index)
+```
 
 #### Transitioning the gossip
 
