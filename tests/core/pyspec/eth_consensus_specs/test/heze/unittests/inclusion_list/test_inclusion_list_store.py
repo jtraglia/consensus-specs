@@ -253,7 +253,7 @@ def test_inclusion_list_store_equivocation(spec, state):
 @with_heze_and_later
 @spec_test
 @with_custom_state(
-    balances_fn=lambda spec: [spec.MAX_EFFECTIVE_BALANCE] * spec.INCLUSION_LIST_COMMITTEE_SIZE,
+    balances_fn=lambda spec: [spec.MAX_EFFECTIVE_BALANCE] * spec.SLOTS_PER_EPOCH,
     threshold_fn=default_activation_threshold,
 )
 @single_phase
