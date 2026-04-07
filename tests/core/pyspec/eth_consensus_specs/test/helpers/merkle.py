@@ -1,4 +1,4 @@
-from remerkleable.tree import gindex_bit_iter
+from eth_consensus_specs.utils.ssz.ssz_typing import gindex_bit_iter
 
 
 def build_proof(anchor, leaf_index):
