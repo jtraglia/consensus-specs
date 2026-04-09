@@ -268,55 +268,64 @@ def finalize_on_12(spec, state, epoch, sufficient_support, messed_up_target):
 @with_all_phases
 @spec_state_test
 def test_234_ok_support(spec, state):
-    yield from finalize_on_234(spec, state, 5, True)
+    ge = spec.get_current_epoch(state)
+    yield from finalize_on_234(spec, state, ge + 5, True)
 
 
 @with_all_phases
 @spec_state_test
 def test_234_poor_support(spec, state):
-    yield from finalize_on_234(spec, state, 5, False)
+    ge = spec.get_current_epoch(state)
+    yield from finalize_on_234(spec, state, ge + 5, False)
 
 
 @with_all_phases
 @spec_state_test
 def test_23_ok_support(spec, state):
-    yield from finalize_on_23(spec, state, 4, True)
+    ge = spec.get_current_epoch(state)
+    yield from finalize_on_23(spec, state, ge + 4, True)
 
 
 @with_all_phases
 @spec_state_test
 def test_23_poor_support(spec, state):
-    yield from finalize_on_23(spec, state, 4, False)
+    ge = spec.get_current_epoch(state)
+    yield from finalize_on_23(spec, state, ge + 4, False)
 
 
 @with_all_phases
 @spec_state_test
 def test_123_ok_support(spec, state):
-    yield from finalize_on_123(spec, state, 6, True)
+    ge = spec.get_current_epoch(state)
+    yield from finalize_on_123(spec, state, ge + 6, True)
 
 
 @with_all_phases
 @spec_state_test
 def test_123_poor_support(spec, state):
-    yield from finalize_on_123(spec, state, 6, False)
+    ge = spec.get_current_epoch(state)
+    yield from finalize_on_123(spec, state, ge + 6, False)
 
 
 @with_all_phases
 @spec_state_test
 def test_12_ok_support(spec, state):
-    yield from finalize_on_12(spec, state, 3, True, False)
+    ge = spec.get_current_epoch(state)
+    yield from finalize_on_12(spec, state, ge + 3, True, False)
 
 
 @with_all_phases
 @spec_state_test
 def test_12_ok_support_messed_target(spec, state):
-    yield from finalize_on_12(spec, state, 3, True, True)
+    ge = spec.get_current_epoch(state)
+    yield from finalize_on_12(spec, state, ge + 3, True, True)
 
 
 @with_all_phases
 @spec_state_test
 def test_12_poor_support(spec, state):
-    yield from finalize_on_12(spec, state, 3, False, False)
+    ge = spec.get_current_epoch(state)
+    yield from finalize_on_12(spec, state, ge + 3, False, False)
 
 
 @with_all_phases

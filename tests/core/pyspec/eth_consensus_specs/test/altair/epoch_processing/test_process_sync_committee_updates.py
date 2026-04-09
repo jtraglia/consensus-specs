@@ -43,7 +43,8 @@ def run_sync_committees_progress_test(spec, state):
 
     # Ensure assignments have changed:
     assert state.next_sync_committee != second_sync_committee
-    if current_period > 0:
+    genesis_period = spec.compute_sync_committee_period(spec.GENESIS_EPOCH)
+    if current_period > genesis_period:
         assert state.current_sync_committee != first_sync_committee
     else:
         # Current and next are duplicated in genesis period so remain stable

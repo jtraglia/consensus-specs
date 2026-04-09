@@ -16,26 +16,28 @@ from eth_consensus_specs.test.helpers.state import (
 
 def _setup_missed_slot_scenario(spec, state):
     """
-    Creates blocks for slots 1, 2, 3 but skips slot 4 (missed slot).
-    Returns slot 4's block root (which inherits from slot 3).
+    Creates blocks for slot+1, slot+2, slot+3 but skips slot+4 (missed slot).
+    Returns slot+4's block root (which inherits from slot+3).
     Used for testing is_matching_blockroot=True, is_current_blockroot=False.
     """
-    apply_empty_block(spec, state, 1)
-    apply_empty_block(spec, state, 2)
-    apply_empty_block(spec, state, 3)
-    next_slots(spec, state, 2)  # Advance to slot 5 without creating block at slot 4
-    return spec.get_block_root_at_slot(state, 4)
+    genesis_slot = state.slot
+    apply_empty_block(spec, state, genesis_slot + 1)
+    apply_empty_block(spec, state, genesis_slot + 2)
+    apply_empty_block(spec, state, genesis_slot + 3)
+    next_slots(spec, state, 2)  # Advance 2 more slots without creating block at slot+4
+    return spec.get_block_root_at_slot(state, genesis_slot + 4)
 
 
 def _setup_same_slot_scenario(spec, state, target_slot):
     """
-    Creates blocks for slots 1, 2, 3 and advances for inclusion delay.
+    Creates blocks for slot+1, slot+2, slot+3 and advances for inclusion delay.
     Returns the block root for the target slot.
     Used for testing same-slot attestations.
     """
-    apply_empty_block(spec, state, 1)
-    apply_empty_block(spec, state, 2)
-    apply_empty_block(spec, state, 3)
+    genesis_slot = state.slot
+    apply_empty_block(spec, state, genesis_slot + 1)
+    apply_empty_block(spec, state, genesis_slot + 2)
+    apply_empty_block(spec, state, genesis_slot + 3)
     next_slots(spec, state, spec.MIN_ATTESTATION_INCLUSION_DELAY)
     return spec.get_block_root_at_slot(state, target_slot)
 
@@ -60,10 +62,12 @@ def test_valid_attestation_data_index_zero_previous_slot(spec, state):
     """
     Test that attestation with index = 0 is valid in Gloas for previous slot attestations.
     """
-    # Using basic scenario (advance to slot 5, only creates one block at slot 5)
-    transition_to_slot_via_block(spec, state, 5)
-    slot_3_block_root = spec.get_block_root_at_slot(state, 3)  # Will be genesis block root
-    attestation = get_valid_attestation(spec, state, slot=4, beacon_block_root=slot_3_block_root)
+    genesis_slot = state.slot
+    transition_to_slot_via_block(spec, state, genesis_slot + 5)
+    slot_3_block_root = spec.get_block_root_at_slot(state, genesis_slot + 3)
+    attestation = get_valid_attestation(
+        spec, state, slot=genesis_slot + 4, beacon_block_root=slot_3_block_root
+    )
     attestation.data.index = 0
     sign_attestation(spec, state, attestation)
 
@@ -78,8 +82,11 @@ def test_valid_attestation_data_index_one_previous_slot_matching_blockroot(spec,
     Test that attestation with index = 1 is valid when is_matching_blockroot=True, is_current_blockroot=False
     (attestation for slot 4 where no block was proposed, so it inherits slot 3's block root).
     """
+    genesis_slot = state.slot
     slot_4_block_root = _setup_missed_slot_scenario(spec, state)
-    attestation = get_valid_attestation(spec, state, slot=4, beacon_block_root=slot_4_block_root)
+    attestation = get_valid_attestation(
+        spec, state, slot=genesis_slot + 4, beacon_block_root=slot_4_block_root
+    )
     attestation.data.index = 1
     sign_attestation(spec, state, attestation)
 
@@ -103,10 +110,13 @@ def test_valid_attestation_data_index_one_previous_slot_current_blockroot(spec, 
     """
     Test that attestation with index = 1 is valid when is_matching_blockroot=False, is_current_blockroot=True.
     """
-    transition_to_slot_via_block(spec, state, 5)
+    genesis_slot = state.slot
+    transition_to_slot_via_block(spec, state, genesis_slot + 5)
     # Custom block root different from any real block root
     custom_block_root = spec.Root(b"\x01" * 32)
-    attestation = get_valid_attestation(spec, state, slot=4, beacon_block_root=custom_block_root)
+    attestation = get_valid_attestation(
+        spec, state, slot=genesis_slot + 4, beacon_block_root=custom_block_root
+    )
     attestation.data.index = 1
     sign_attestation(spec, state, attestation)
 
@@ -130,7 +140,7 @@ def test_valid_same_slot_attestation_index_zero(spec, state):
     """
     Test that attestation with index = 0 is still valid in Gloas for same slot.
     """
-    attestation_slot = 2
+    attestation_slot = state.slot + 2
     slot_2_block_root = _setup_same_slot_scenario(spec, state, target_slot=attestation_slot)
     attestation = get_valid_attestation(
         spec, state, slot=attestation_slot, beacon_block_root=slot_2_block_root
@@ -148,7 +158,7 @@ def test_invalid_same_slot_attestation_index_one(spec, state):
     """
     Test that same-slot condition with index = 1 is invalid (same-slot must use index = 0).
     """
-    attestation_slot = 2
+    attestation_slot = state.slot + 2
     slot_2_block_root = _setup_same_slot_scenario(spec, state, target_slot=attestation_slot)
     attestation = get_valid_attestation(
         spec, state, slot=attestation_slot, beacon_block_root=slot_2_block_root
@@ -166,12 +176,13 @@ def test_builder_payment_weight_tracking(spec, state):
     """
     Test that builder payment weights are tracked correctly for Gloas.
     """
-    transition_to_slot_via_block(spec, state, 2)
+    genesis_slot = state.slot
+    transition_to_slot_via_block(spec, state, genesis_slot + 2)
 
-    # Create attestation for slot 0
-    attestation_slot = 0
+    # Create attestation for genesis slot
+    attestation_slot = genesis_slot
     attestation = get_valid_attestation(spec, state, slot=attestation_slot, index=0)
-    attestation.data.index = 0  # Same-slot (slot 0) must use index 0
+    attestation.data.index = 0  # Same-slot (genesis slot) must use index 0
 
     # Get only the first validator to attest
     committee = spec.get_beacon_committee(state, attestation_slot, 0)
@@ -186,7 +197,7 @@ def test_builder_payment_weight_tracking(spec, state):
 
     sign_attestation(spec, state, attestation)
 
-    # Manually set up a non-zero builder pending payment for slot 0
+    # Manually set up a non-zero builder pending payment for genesis slot
     payment_slot_index = spec.SLOTS_PER_EPOCH + attestation_slot % spec.SLOTS_PER_EPOCH
     test_payment_amount = spec.Gwei(1000000000)
     state.builder_pending_payments[payment_slot_index] = spec.BuilderPendingPayment(
@@ -198,7 +209,7 @@ def test_builder_payment_weight_tracking(spec, state):
         ),
     )
 
-    # Store initial weight for slot 0
+    # Store initial weight
     initial_weight = state.builder_pending_payments[payment_slot_index].weight
 
     # Process attestation
@@ -221,12 +232,13 @@ def test_builder_payment_weight_no_double_counting(spec, state):
     Test that builder payment weights don't double count when will_set_new_flag is False
     (validator already has all eligible participation flags set).
     """
-    transition_to_slot_via_block(spec, state, 2)
+    genesis_slot = state.slot
+    transition_to_slot_via_block(spec, state, genesis_slot + 2)
 
-    # Create first attestation for slot 0 with single validator
-    attestation_slot = 0
+    # Create first attestation for genesis slot with single validator
+    attestation_slot = genesis_slot
     attestation1 = get_valid_attestation(spec, state, slot=attestation_slot)
-    attestation1.data.index = 0  # Same-slot (slot 0) must use index 0
+    attestation1.data.index = 0  # Same-slot (genesis slot) must use index 0
 
     # Get committee and set only first validator to attest
     committee = spec.get_beacon_committee(state, attestation_slot, 0)
@@ -238,7 +250,7 @@ def test_builder_payment_weight_no_double_counting(spec, state):
 
     sign_attestation(spec, state, attestation1)
 
-    # Manually set up a non-zero builder pending payment for slot 0
+    # Manually set up a non-zero builder pending payment for genesis slot
     payment_slot_index = spec.SLOTS_PER_EPOCH + attestation_slot % spec.SLOTS_PER_EPOCH
     test_payment_amount = spec.Gwei(1000000000)
     state.builder_pending_payments[payment_slot_index] = spec.BuilderPendingPayment(
@@ -250,7 +262,7 @@ def test_builder_payment_weight_no_double_counting(spec, state):
         ),
     )
 
-    # Store initial weight for slot 0
+    # Store initial weight
     initial_weight = state.builder_pending_payments[payment_slot_index].weight
 
     # Process first attestation (this should set flags and increase weight)
@@ -267,7 +279,7 @@ def test_builder_payment_weight_no_double_counting(spec, state):
 
     # Create second attestation with SAME validator (should not increase weight again)
     attestation2 = get_valid_attestation(spec, state, slot=attestation_slot)
-    attestation2.data.index = 0  # Same-slot (slot 0) must use index 0
+    attestation2.data.index = 0  # Same-slot (genesis slot) must use index 0
 
     # Set same validator to attest again
     for i in range(len(attestation2.aggregation_bits)):
@@ -290,14 +302,15 @@ def test_matching_payload_true_same_slot(spec, state):
     Test is_matching_payload = True path for same-slot attestations
     (same-slot always sets is_matching_payload = True regardless of availability bit).
     """
-    # Use slot 0 to trigger same-slot condition
-    transition_to_slot_via_block(spec, state, 2)
+    genesis_slot = state.slot
+    # Use genesis slot to trigger same-slot condition
+    transition_to_slot_via_block(spec, state, genesis_slot + 2)
 
-    # Set payload availability bit to 0 for slot 0 (payload not available)
-    attestation_slot = 0
+    # Set payload availability bit to 0 for genesis slot (payload not available)
+    attestation_slot = genesis_slot
     state.execution_payload_availability[attestation_slot % spec.SLOTS_PER_HISTORICAL_ROOT] = 0
 
-    # Create attestation for slot 0
+    # Create attestation for genesis slot
     attestation = get_valid_attestation(spec, state, slot=attestation_slot)
     attestation.data.index = 0  # Same-slot must use index 0
     sign_attestation(spec, state, attestation)
@@ -316,18 +329,19 @@ def test_matching_payload_true_historical_slot(spec, state):
     Test is_matching_payload = True path for historical slots
     (when data.index matches the payload availability bit).
     """
-    # Advance to slot 3 (only creates one block at slot 3)
-    transition_to_slot_via_block(spec, state, 3)
+    genesis_slot = state.slot
+    # Advance to genesis_slot+3 (only creates one block at genesis_slot+3)
+    transition_to_slot_via_block(spec, state, genesis_slot + 3)
 
     # Move forward to satisfy MIN_ATTESTATION_INCLUSION_DELAY requirement
     next_slots(spec, state, spec.MIN_ATTESTATION_INCLUSION_DELAY)
 
-    # Set payload availability bit to 1 for slot 1
-    availability_bit_index = 1
+    # Set payload availability bit to 1 for genesis_slot+1
+    availability_bit_index = (genesis_slot + 1) % spec.SLOTS_PER_HISTORICAL_ROOT
     state.execution_payload_availability[availability_bit_index] = 1
 
-    # Create attestation for slot 1 - should now satisfy inclusion delay and get head flag
-    historical_slot = 1
+    # Create attestation for genesis_slot+1
+    historical_slot = genesis_slot + 1
     attestation = get_valid_attestation(spec, state, slot=historical_slot)
     attestation.data.index = 1  # Should match the availability bit
     sign_attestation(spec, state, attestation)
@@ -361,18 +375,22 @@ def test_matching_payload_false_historical_slot(spec, state):
     Test is_matching_payload = False path for historical slots
     (when data.index does NOT match the payload availability bit).
     """
-    apply_empty_block(spec, state, 1)
-    apply_empty_block(spec, state, 2)
-    apply_empty_block(spec, state, 3)
+    genesis_slot = state.slot
+    apply_empty_block(spec, state, genesis_slot + 1)
+    apply_empty_block(spec, state, genesis_slot + 2)
+    apply_empty_block(spec, state, genesis_slot + 3)
     next_slots(spec, state, spec.MIN_ATTESTATION_INCLUSION_DELAY)
 
-    # Choose slot 2 which now has a real block root different from genesis
-    # Set payload availability bit to 0 for slot 2
-    state.execution_payload_availability[2] = 0
+    # Choose genesis_slot+2 which now has a real block root different from genesis
+    # Set payload availability bit to 0 for genesis_slot+2
+    state.execution_payload_availability[(genesis_slot + 2) % spec.SLOTS_PER_HISTORICAL_ROOT] = 0
 
-    # Create attestation for slot 2 but with slot 1's block root to make it historical (not same-slot)
-    slot_1_block_root = spec.get_block_root_at_slot(state, 1)
-    attestation = get_valid_attestation(spec, state, slot=2, beacon_block_root=slot_1_block_root)
+    # Create attestation for genesis_slot+2 but with genesis_slot+1's block root
+    # to make it historical (not same-slot)
+    slot_1_block_root = spec.get_block_root_at_slot(state, genesis_slot + 1)
+    attestation = get_valid_attestation(
+        spec, state, slot=genesis_slot + 2, beacon_block_root=slot_1_block_root
+    )
     attestation.data.index = 1  # Does not match the availability bit (0)
     sign_attestation(spec, state, attestation)
 
@@ -400,14 +418,17 @@ def test_matching_payload_gets_head_flag(spec, state):
     is_matching_payload = data.index == state.execution_payload_availability[data.slot % SLOTS_PER_HISTORICAL_ROOT]
     and is_matching_head = is_matching_blockroot and is_matching_payload.
     """
-    # Use missed slot scenario: blocks for slots 1, 2, 3 but skip slot 4
+    genesis_slot = state.slot
+    # Use missed slot scenario: blocks for slot+1, slot+2, slot+3 but skip slot+4
     slot_4_block_root = _setup_missed_slot_scenario(spec, state)
 
-    # Set payload availability bit to 1 for slot 4
-    state.execution_payload_availability[4] = 1
+    # Set payload availability bit to 1 for genesis_slot+4
+    state.execution_payload_availability[(genesis_slot + 4) % spec.SLOTS_PER_HISTORICAL_ROOT] = 1
 
     # Create attestation with index = 1 to match the availability bit
-    attestation = get_valid_attestation(spec, state, slot=4, beacon_block_root=slot_4_block_root)
+    attestation = get_valid_attestation(
+        spec, state, slot=genesis_slot + 4, beacon_block_root=slot_4_block_root
+    )
     attestation.data.index = 1  # Should match availability bit = 1
     sign_attestation(spec, state, attestation)
 
@@ -433,14 +454,17 @@ def test_mismatched_payload_no_head_flag(spec, state):
     """
     Test that mismatched payload prevents TIMELY_HEAD_FLAG even with matching blockroot.
     """
-    # Use missed slot scenario: blocks for slots 1, 2, 3 but skip slot 4
+    genesis_slot = state.slot
+    # Use missed slot scenario: blocks for slot+1, slot+2, slot+3 but skip slot+4
     slot_4_block_root = _setup_missed_slot_scenario(spec, state)
 
-    # Set payload availability bit to 0 for slot 4
-    state.execution_payload_availability[4] = 0
+    # Set payload availability bit to 0 for genesis_slot+4
+    state.execution_payload_availability[(genesis_slot + 4) % spec.SLOTS_PER_HISTORICAL_ROOT] = 0
 
     # Create attestation with index = 1 which does NOT match availability bit = 0
-    attestation = get_valid_attestation(spec, state, slot=4, beacon_block_root=slot_4_block_root)
+    attestation = get_valid_attestation(
+        spec, state, slot=genesis_slot + 4, beacon_block_root=slot_4_block_root
+    )
     attestation.data.index = 1  # Does NOT match availability bit = 0
     sign_attestation(spec, state, attestation)
 

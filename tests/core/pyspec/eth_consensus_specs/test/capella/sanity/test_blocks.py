@@ -546,8 +546,8 @@ def _insert_validator(spec, state, balance):
     validator = spec.Validator(
         pubkey=pubkeys[validator_index],
         withdrawal_credentials=spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX + b"\x00" * 11 + b"\x56" * 20,
-        activation_eligibility_epoch=1,
-        activation_epoch=2,
+        activation_eligibility_epoch=spec.get_current_epoch(state) + 1,
+        activation_epoch=spec.get_current_epoch(state) + 2,
         exit_epoch=spec.FAR_FUTURE_EPOCH,
         withdrawable_epoch=spec.FAR_FUTURE_EPOCH,
         effective_balance=effective_balance,
@@ -565,7 +565,9 @@ def _run_activate_and_partial_withdrawal(spec, state, initial_balance):
     validator_index = _insert_validator(spec, state, balance=initial_balance)
 
     # To make it eligible activation
-    transition_to(spec, state, spec.compute_start_slot_at_epoch(2) - 1)
+    transition_to(
+        spec, state, spec.compute_start_slot_at_epoch(spec.get_current_epoch(state) + 2) - 1
+    )
     assert not spec.is_active_validator(
         state.validators[validator_index], spec.get_current_epoch(state)
     )

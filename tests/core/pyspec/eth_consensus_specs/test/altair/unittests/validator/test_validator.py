@@ -170,8 +170,10 @@ def _get_expected_subnets_by_pubkey(sync_committee_members):
 @with_presets([MINIMAL], reason="too slow")
 @spec_state_test
 def test_compute_subnets_for_sync_committee(state, spec):
-    # Transition to the head of the next period
-    transition_to(spec, state, spec.SLOTS_PER_EPOCH * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
+    # Transition to the head of the next sync committee period
+    transition_to(
+        spec, state, state.slot + spec.SLOTS_PER_EPOCH * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+    )
 
     next_slot_epoch = spec.compute_epoch_at_slot(state.slot + 1)
     assert spec.compute_sync_committee_period(
@@ -198,8 +200,10 @@ def test_compute_subnets_for_sync_committee(state, spec):
 @with_presets([MINIMAL], reason="too slow")
 @spec_state_test
 def test_compute_subnets_for_sync_committee_slot_period_boundary(state, spec):
-    # Transition to the end of the period
-    transition_to(spec, state, spec.SLOTS_PER_EPOCH * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD - 1)
+    # Transition to the end of the current sync committee period
+    transition_to(
+        spec, state, state.slot + spec.SLOTS_PER_EPOCH * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD - 1
+    )
 
     next_slot_epoch = spec.compute_epoch_at_slot(state.slot + 1)
     assert spec.compute_sync_committee_period(

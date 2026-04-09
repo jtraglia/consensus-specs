@@ -11,6 +11,7 @@ from eth_consensus_specs.test.context import (
     with_custom_state,
 )
 from eth_consensus_specs.test.helpers.random import (
+    patch_state_to_leaking,
     patch_state_to_non_leaking,
     randomize_attestation_participation,
     randomize_state,
@@ -51,6 +52,7 @@ def test_full_random_4(spec, state):
     """
     rng = Random(5050)
     randomize_state(spec, state, rng)
+    patch_state_to_leaking(spec, state)
     assert spec.is_in_inactivity_leak(state)
     target_validators = get_unslashed_exited_validators(spec, state)
     assert len(target_validators) != 0
@@ -89,6 +91,7 @@ def test_full_random_misc_balances(spec, state):
 def test_full_random_without_leak_0(spec, state):
     rng = Random(1010)
     randomize_state(spec, state, rng)
+    patch_state_to_leaking(spec, state)
     assert spec.is_in_inactivity_leak(state)
     patch_state_to_non_leaking(spec, state)
     assert not spec.is_in_inactivity_leak(state)
@@ -107,6 +110,7 @@ def test_full_random_without_leak_and_current_exit_0(spec, state):
     """
     rng = Random(1011)
     randomize_state(spec, state, rng)
+    patch_state_to_leaking(spec, state)
     assert spec.is_in_inactivity_leak(state)
     patch_state_to_non_leaking(spec, state)
     assert not spec.is_in_inactivity_leak(state)

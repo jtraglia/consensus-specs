@@ -779,7 +779,7 @@ def test_high_proposer_index(spec, state):
         state.validators[i].exit_epoch = current_epoch
 
     # skip forward, get brand new proposers
-    state.slot = spec.SLOTS_PER_EPOCH * 2
+    state.slot = state.slot + spec.SLOTS_PER_EPOCH * 2
     block = build_empty_block_for_next_slot(spec, state)
     state_transition_and_sign_block(spec, state, block)
 
@@ -1177,7 +1177,7 @@ def test_historical_batch(spec, state):
 def test_eth1_data_votes_consensus(spec, state):
     voting_period_slots = spec.EPOCHS_PER_ETH1_VOTING_PERIOD * spec.SLOTS_PER_EPOCH
 
-    offset_block = build_empty_block(spec, state, slot=voting_period_slots - 1)
+    offset_block = build_empty_block(spec, state, slot=state.slot + voting_period_slots - 1)
     state_transition_and_sign_block(spec, state, offset_block)
     yield "pre", state
 
@@ -1220,7 +1220,7 @@ def test_eth1_data_votes_no_consensus(spec, state):
 
     pre_eth1_hash = state.eth1_data.block_hash
 
-    offset_block = build_empty_block(spec, state, slot=voting_period_slots - 1)
+    offset_block = build_empty_block(spec, state, slot=state.slot + voting_period_slots - 1)
     state_transition_and_sign_block(spec, state, offset_block)
     yield "pre", state
 

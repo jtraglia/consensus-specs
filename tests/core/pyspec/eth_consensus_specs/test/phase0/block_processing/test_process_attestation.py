@@ -124,11 +124,16 @@ def test_invalid_after_max_inclusion_slot(spec, state):
 @with_all_phases
 @spec_state_test
 def test_invalid_old_source_epoch(spec, state):
+    genesis_epoch = spec.get_current_epoch(state)
     next_slots(spec, state, spec.SLOTS_PER_EPOCH * 5)
-    state.finalized_checkpoint.epoch = 2
-    state.previous_justified_checkpoint.epoch = 3
-    state.current_justified_checkpoint.epoch = 4
-    attestation = get_valid_attestation(spec, state, slot=(spec.SLOTS_PER_EPOCH * 3) + 1)
+    state.finalized_checkpoint.epoch = genesis_epoch + 2
+    state.previous_justified_checkpoint.epoch = genesis_epoch + 3
+    state.current_justified_checkpoint.epoch = genesis_epoch + 4
+    attestation = get_valid_attestation(
+        spec,
+        state,
+        slot=spec.compute_start_slot_at_epoch(genesis_epoch + 3) + 1,
+    )
 
     # test logic sanity check: make sure the attestation is pointing to oldest known source epoch
     assert attestation.data.source.epoch == state.previous_justified_checkpoint.epoch
@@ -286,16 +291,23 @@ def test_invalid_source_root_is_target_root(spec, state):
 @with_all_phases
 @spec_state_test
 def test_invalid_current_source_root(spec, state):
+    genesis_epoch = spec.get_current_epoch(state)
     next_slots(spec, state, spec.SLOTS_PER_EPOCH * 5)
 
-    state.finalized_checkpoint.epoch = 2
+    state.finalized_checkpoint.epoch = genesis_epoch + 2
 
-    state.previous_justified_checkpoint = spec.Checkpoint(epoch=3, root=b"\x01" * 32)
-    state.current_justified_checkpoint = spec.Checkpoint(epoch=4, root=b"\x32" * 32)
+    state.previous_justified_checkpoint = spec.Checkpoint(
+        epoch=genesis_epoch + 3, root=b"\x01" * 32
+    )
+    state.current_justified_checkpoint = spec.Checkpoint(epoch=genesis_epoch + 4, root=b"\x32" * 32)
 
     next_slots(spec, state, spec.MIN_ATTESTATION_INCLUSION_DELAY)
 
-    attestation = get_valid_attestation(spec, state, slot=spec.SLOTS_PER_EPOCH * 5)
+    attestation = get_valid_attestation(
+        spec,
+        state,
+        slot=spec.compute_start_slot_at_epoch(genesis_epoch + 5),
+    )
 
     # Test logic sanity checks:
     assert attestation.data.target.epoch == spec.get_current_epoch(state)
@@ -313,14 +325,21 @@ def test_invalid_current_source_root(spec, state):
 @with_all_phases
 @spec_state_test
 def test_invalid_previous_source_root(spec, state):
+    genesis_epoch = spec.get_current_epoch(state)
     next_slots(spec, state, spec.SLOTS_PER_EPOCH * 5)
 
-    state.finalized_checkpoint.epoch = 2
+    state.finalized_checkpoint.epoch = genesis_epoch + 2
 
-    state.previous_justified_checkpoint = spec.Checkpoint(epoch=3, root=b"\x01" * 32)
-    state.current_justified_checkpoint = spec.Checkpoint(epoch=4, root=b"\x32" * 32)
+    state.previous_justified_checkpoint = spec.Checkpoint(
+        epoch=genesis_epoch + 3, root=b"\x01" * 32
+    )
+    state.current_justified_checkpoint = spec.Checkpoint(epoch=genesis_epoch + 4, root=b"\x32" * 32)
 
-    attestation = get_valid_attestation(spec, state, slot=(spec.SLOTS_PER_EPOCH * 4) + 1)
+    attestation = get_valid_attestation(
+        spec,
+        state,
+        slot=spec.compute_start_slot_at_epoch(genesis_epoch + 4) + 1,
+    )
     next_slots(spec, state, spec.MIN_ATTESTATION_INCLUSION_DELAY)
 
     # Test logic sanity checks:
@@ -415,7 +434,7 @@ def test_correct_attestation_included_at_one_epoch_delay(spec, state):
 @spec_state_test
 def test_correct_attestation_included_at_max_inclusion_slot(spec, state):
     attestation = get_valid_attestation(spec, state, signed=True)
-    next_slots(spec, state, compute_max_inclusion_slot(spec, attestation))
+    next_slots(spec, state, compute_max_inclusion_slot(spec, attestation) - state.slot)
 
     yield from run_attestation_processing(spec, state, attestation)
 
@@ -426,7 +445,7 @@ def test_invalid_correct_attestation_included_after_max_inclusion_slot(spec, sta
     attestation = get_valid_attestation(spec, state, signed=True)
 
     # increment past latest inclusion slot
-    next_slots(spec, state, compute_max_inclusion_slot(spec, attestation) + 1)
+    next_slots(spec, state, compute_max_inclusion_slot(spec, attestation) + 1 - state.slot)
 
     yield from run_attestation_processing(spec, state, attestation, valid=False)
 
@@ -464,7 +483,7 @@ def test_incorrect_head_included_at_sqrt_epoch_delay(spec, state):
 @spec_state_test
 def test_incorrect_head_included_at_max_inclusion_slot(spec, state):
     attestation = get_valid_attestation(spec, state, signed=False)
-    next_slots(spec, state, compute_max_inclusion_slot(spec, attestation))
+    next_slots(spec, state, compute_max_inclusion_slot(spec, attestation) - state.slot)
 
     attestation.data.beacon_block_root = b"\x42" * 32
     sign_attestation(spec, state, attestation)
@@ -478,7 +497,7 @@ def test_invalid_incorrect_head_included_after_max_inclusion_slot(spec, state):
     attestation = get_valid_attestation(spec, state, signed=False)
 
     # increment past latest inclusion slot
-    next_slots(spec, state, compute_max_inclusion_slot(spec, attestation) + 1)
+    next_slots(spec, state, compute_max_inclusion_slot(spec, attestation) + 1 - state.slot)
 
     attestation.data.beacon_block_root = b"\x42" * 32
     sign_attestation(spec, state, attestation)
@@ -535,7 +554,7 @@ def test_incorrect_head_and_target_included_at_epoch_delay(spec, state):
 def test_invalid_incorrect_head_and_target_included_after_max_inclusion_slot(spec, state):
     attestation = get_valid_attestation(spec, state, signed=False)
     # increment past latest inclusion slot
-    next_slots(spec, state, compute_max_inclusion_slot(spec, attestation) + 1)
+    next_slots(spec, state, compute_max_inclusion_slot(spec, attestation) + 1 - state.slot)
 
     attestation.data.beacon_block_root = b"\x42" * 32
     attestation.data.target.root = b"\x42" * 32
@@ -590,7 +609,7 @@ def test_incorrect_target_included_at_epoch_delay(spec, state):
 def test_invalid_incorrect_target_included_after_max_inclusion_slot(spec, state):
     attestation = get_valid_attestation(spec, state, signed=False)
     # increment past latest inclusion slot
-    next_slots(spec, state, compute_max_inclusion_slot(spec, attestation) + 1)
+    next_slots(spec, state, compute_max_inclusion_slot(spec, attestation) + 1 - state.slot)
 
     attestation.data.target.root = b"\x42" * 32
     sign_attestation(spec, state, attestation)

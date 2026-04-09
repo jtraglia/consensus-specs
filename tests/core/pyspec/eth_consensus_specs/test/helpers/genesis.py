@@ -7,6 +7,7 @@ from eth_consensus_specs.test.helpers.execution_payload import (
     compute_el_header_block_hash,
 )
 from eth_consensus_specs.test.helpers.forks import (
+    get_fork_epoch,
     get_fork_version,
     get_previous_fork_version,
     is_post_altair,
@@ -144,14 +145,24 @@ def create_genesis_state(spec, validator_balances, activation_threshold):
     previous_version = spec.config.GENESIS_FORK_VERSION
     current_version = spec.config.GENESIS_FORK_VERSION
 
+    # Determine genesis epoch from config fork epoch.
+    # When fork epochs have been overridden to realistic values (not FAR_FUTURE),
+    # the genesis state starts at the current fork's epoch.
+    genesis_epoch = spec.GENESIS_EPOCH
     if spec.fork != PHASE0:
         previous_version = get_previous_fork_version(spec, spec.fork)
         current_version = get_fork_version(spec, spec.fork)
+        fork_epoch = get_fork_epoch(spec, spec.fork)
+        if fork_epoch is not None and fork_epoch < spec.FAR_FUTURE_EPOCH:
+            genesis_epoch = fork_epoch
+
+    genesis_slot = spec.compute_start_slot_at_epoch(genesis_epoch)
 
     genesis_block_body = spec.BeaconBlockBody()
 
     state = spec.BeaconState(
         genesis_time=0,
+        slot=genesis_slot,
         eth1_deposit_index=len(validator_balances),
         eth1_data=spec.Eth1Data(
             deposit_root=deposit_root,
@@ -161,10 +172,11 @@ def create_genesis_state(spec, validator_balances, activation_threshold):
         fork=spec.Fork(
             previous_version=previous_version,
             current_version=current_version,
-            epoch=spec.GENESIS_EPOCH,
+            epoch=genesis_epoch,
         ),
         latest_block_header=spec.BeaconBlockHeader(
-            body_root=spec.hash_tree_root(genesis_block_body)
+            slot=genesis_slot,
+            body_root=spec.hash_tree_root(genesis_block_body),
         ),
         randao_mixes=[eth1_block_hash] * spec.EPOCHS_PER_HISTORICAL_VECTOR,
     )
@@ -190,6 +202,15 @@ def create_genesis_state(spec, validator_balances, activation_threshold):
     # Set genesis validators root for domain separation and chain versioning
     state.genesis_validators_root = spec.hash_tree_root(state.validators)
 
+    # Initialize justified and finalized checkpoints to the genesis epoch.
+    # This is needed when genesis is at a non-zero epoch to avoid spurious inactivity leaks
+    # (get_finality_delay would otherwise be genesis_epoch - 0 = large number).
+    if genesis_epoch > 0:
+        genesis_checkpoint = spec.Checkpoint(epoch=genesis_epoch, root=spec.Root())
+        state.current_justified_checkpoint = genesis_checkpoint
+        state.finalized_checkpoint = genesis_checkpoint
+        state.previous_justified_checkpoint = genesis_checkpoint
+
     if is_post_altair(spec):
         # Fill in sync committees
         # Note: A duplicate committee is assigned for the current and next committee at genesis
@@ -203,7 +224,7 @@ def create_genesis_state(spec, validator_balances, activation_threshold):
         # Initialize the execution payload header (with block number and genesis time set to 0)
         state.latest_execution_payload_header = get_sample_genesis_execution_payload_header(
             spec,
-            spec.compute_start_slot_at_epoch(spec.GENESIS_EPOCH),
+            genesis_slot,
             eth1_block_hash=eth1_block_hash,
         )
 

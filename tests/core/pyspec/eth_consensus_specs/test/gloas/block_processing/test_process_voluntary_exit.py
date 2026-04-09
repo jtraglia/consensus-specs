@@ -57,8 +57,8 @@ def test_builder_voluntary_exit__invalid__inactive_deposit_epoch(spec, state):
     pubkey = state.builders[builder_index].pubkey
     privkey = builder_pubkey_to_privkey[pubkey]
 
-    # Set builder's deposit epoch to a non-finalized epoch
-    state.builders[builder_index].deposit_epoch = spec.Epoch(1)
+    # Set builder's deposit epoch to a non-finalized epoch (relative to genesis)
+    state.builders[builder_index].deposit_epoch = spec.Epoch(state.fork.epoch + 1)
 
     advance_past_finalization(spec, state)
     assert state.finalized_checkpoint.epoch == state.builders[builder_index].deposit_epoch

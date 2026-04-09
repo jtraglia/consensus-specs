@@ -81,6 +81,7 @@ def test_should_override_forkchoice_update__false(spec, state):
 @spec_state_test
 def test_should_override_forkchoice_update__true(spec, state):
     test_steps = []
+    ge = spec.get_current_epoch(state)  # genesis epoch
     # Initialization
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
@@ -103,9 +104,9 @@ def test_should_override_forkchoice_update__true(spec, state):
             spec, state, store, True, True, test_steps=test_steps
         )
 
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 4
-    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 3
-    assert state.finalized_checkpoint.epoch == store.finalized_checkpoint.epoch == 2
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == ge + 4
+    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == ge + 3
+    assert state.finalized_checkpoint.epoch == store.finalized_checkpoint.epoch == ge + 2
 
     # Make an empty block
     block = build_empty_block_for_next_slot(spec, state)

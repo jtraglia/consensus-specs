@@ -340,3 +340,18 @@ def patch_state_to_non_leaking(spec, state):
         epoch=previous_previous_epoch,
         root=previous_previous_root,
     )
+
+
+def patch_state_to_leaking(spec, state):
+    """
+    Ensure the state is in an inactivity leak by setting the finalized checkpoint
+    far enough behind the current epoch.
+    """
+    if not spec.is_in_inactivity_leak(state):
+        target_epoch = spec.Epoch(
+            spec.get_previous_epoch(state) - spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY - 1
+        )
+        state.finalized_checkpoint = spec.Checkpoint(
+            epoch=target_epoch,
+            root=state.finalized_checkpoint.root,
+        )

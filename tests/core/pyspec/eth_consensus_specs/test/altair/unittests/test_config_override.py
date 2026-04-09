@@ -1,9 +1,11 @@
 from eth_consensus_specs.test.context import (
     spec_configured_state_test,
+    spec_state_test,
     spec_state_test_with_matching_config,
     spec_test,
     with_all_phases,
     with_config_overrides,
+    with_gloas_and_later,
     with_matching_spec_config,
     with_phases,
     with_state,
@@ -95,3 +97,42 @@ def test_config_override_across_phases(spec, phases, state):
     assert phases[ALTAIR].config.ALTAIR_FORK_VERSION == spec.Version("0x11111111")
     assert phases[BELLATRIX].config.ALTAIR_FORK_EPOCH == 0
     assert phases[BELLATRIX].config.BELLATRIX_FORK_EPOCH == 4
+
+
+@with_all_phases
+@spec_state_test
+def test_spec_state_test_fork_epochs(spec, state):
+    """Verify that spec_state_test applies incremental fork epoch overrides
+    and sets GENESIS_EPOCH to match the current fork's epoch."""
+    epoch = spec.get_current_epoch(state)
+
+    if spec.fork == PHASE0:
+        # Phase0 has no fork epoch overrides
+        assert epoch == 0
+        assert spec.GENESIS_EPOCH == 0
+    else:
+        # Non-Phase0 forks should have fork epoch set correctly
+        fork_epoch = get_fork_epoch(spec, spec.fork)
+        if fork_epoch is None:
+            # Experimental forks may not have a fork epoch config entry
+            return
+        assert fork_epoch < spec.FAR_FUTURE_EPOCH
+        # Genesis state should start at the fork's epoch
+        assert epoch == fork_epoch
+        assert spec.GENESIS_EPOCH == fork_epoch
+
+
+@with_gloas_and_later
+@spec_state_test
+def test_gloas_timing_active(spec, state):
+    """Verify that Gloas-specific timing behavior is correctly activated
+    when fork epoch overrides are applied."""
+    epoch = spec.get_current_epoch(state)
+    # The Gloas-specific timing should be active (epoch >= GLOAS_FORK_EPOCH)
+    gloas_fork_epoch = spec.config.GLOAS_FORK_EPOCH
+    assert epoch >= gloas_fork_epoch
+
+    # Verify Gloas timing returns GLOAS-specific values
+    attestation_due = spec.get_attestation_due_ms(epoch)
+    expected = spec.get_slot_component_duration_ms(spec.config.ATTESTATION_DUE_BPS_GLOAS)
+    assert attestation_due == expected

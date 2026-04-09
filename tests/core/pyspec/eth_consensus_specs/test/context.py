@@ -30,8 +30,9 @@ from .helpers.constants import (
     MINIMAL,
     PHASE0,
     POST_FORK_OF,
+    PREVIOUS_FORK_OF,
 )
-from .helpers.forks import is_post_electra, is_post_fork
+from .helpers.forks import get_fork_epoch, is_post_electra, is_post_fork
 from .helpers.genesis import create_genesis_state
 from .helpers.specs import (
     spec_targets,
@@ -49,6 +50,100 @@ DEFAULT_TEST_PRESET = MINIMAL
 
 # Without pytest CLI arg or pyspec-test-generator 'run-phase' argument, this will be the config to apply.
 DEFAULT_PYTEST_FORKS = ALL_PHASES
+
+# Fork epoch stride for test fork epoch overrides.
+# Each fork is assigned epoch = fork_depth * FORK_EPOCH_STRIDE.
+FORK_EPOCH_STRIDE = 1000
+
+
+def _get_fork_depth(fork):
+    """Count the number of forks from PHASE0 to this fork (exclusive of PHASE0)."""
+    depth = 0
+    current = fork
+    while current != PHASE0 and current is not None:
+        depth += 1
+        current = PREVIOUS_FORK_OF[current]
+    return depth
+
+
+def _compute_test_fork_epoch_overrides(spec):
+    """Compute fork epoch overrides for tests.
+
+    Only overrides fork epochs that are currently set to FAR_FUTURE_EPOCH (unscheduled).
+    For minimal preset (all FAR_FUTURE), assigns fork_depth * FORK_EPOCH_STRIDE.
+    For mainnet preset (some forks already scheduled), unscheduled forks get
+    previous_fork_epoch + FORK_EPOCH_STRIDE to maintain correct ordering.
+    """
+    overrides = {}
+    far_future = spec.FAR_FUTURE_EPOCH
+    last_epoch = 0  # Track the highest epoch seen so far
+    for fork in ALL_PHASES:
+        if fork == PHASE0:
+            continue
+        if not is_post_fork(spec.fork, fork):
+            continue
+        key = fork.upper() + "_FORK_EPOCH"
+        current_value = getattr(spec.config, key, None)
+        if current_value is None:
+            continue
+        if current_value == far_future:
+            # Unscheduled fork: assign based on last known epoch + stride
+            new_epoch = max(
+                _get_fork_depth(fork) * FORK_EPOCH_STRIDE, last_epoch + FORK_EPOCH_STRIDE
+            )
+            overrides[key] = new_epoch
+            last_epoch = new_epoch
+        else:
+            # Already scheduled fork: keep real epoch, track for ordering
+            last_epoch = max(last_epoch, int(current_value))
+    return overrides
+
+
+def _apply_genesis_epoch_to_spec(spec):
+    """Set GENESIS_EPOCH to match the current fork's epoch.
+
+    The spec's GENESIS_EPOCH must match the test genesis state's epoch
+    so that spec functions like get_previous_epoch, process_justification_and_finalization,
+    and filter_block_tree work correctly.
+
+    Note: GENESIS_SLOT is intentionally NOT changed. It stays at 0 because
+    get_current_slot(store) adds GENESIS_SLOT to get_slots_since_genesis,
+    and genesis_time=0 already accounts for the slot offset.
+    """
+    if spec.fork == PHASE0:
+        return
+    fork_epoch = get_fork_epoch(spec, spec.fork)
+    if fork_epoch is not None and fork_epoch < spec.FAR_FUTURE_EPOCH:
+        spec.GENESIS_EPOCH = spec.Epoch(fork_epoch)
+
+
+def _with_test_fork_epochs(fn):
+    """Decorator that applies incremental fork epoch overrides to the spec before state creation.
+
+    This ensures that epoch >= X_FORK_EPOCH checks in spec functions
+    correctly activate fork-specific behavior during tests.
+    """
+
+    def wrapper(*args, spec: Spec, **kw):
+        overrides = _compute_test_fork_epoch_overrides(spec)
+        if overrides:
+            spec, _ = spec_with_config_overrides(get_copy_of_spec(spec), overrides)
+            _apply_genesis_epoch_to_spec(spec)
+            if "phases" in kw:
+                phases = {}
+                for fork in kw["phases"]:
+                    phase_overrides = _compute_test_fork_epoch_overrides(kw["phases"][fork])
+                    if phase_overrides:
+                        phases[fork], _ = spec_with_config_overrides(
+                            get_copy_of_spec(kw["phases"][fork]), phase_overrides
+                        )
+                        _apply_genesis_epoch_to_spec(phases[fork])
+                    else:
+                        phases[fork] = kw["phases"][fork]
+                kw["phases"] = phases
+        return fn(*args, spec=spec, **kw)
+
+    return wrapper
 
 
 @dataclass(frozen=True)
@@ -319,8 +414,9 @@ def spec_test(fn):
 
 
 # shorthand for decorating @spec_test @with_state @single_phase
+# _with_test_fork_epochs applies incremental fork epoch overrides before state creation
 def spec_state_test(fn):
-    return spec_test(with_state(single_phase(fn)))
+    return spec_test(_with_test_fork_epochs(with_state(single_phase(fn))))
 
 
 def spec_configured_state_test(conf):

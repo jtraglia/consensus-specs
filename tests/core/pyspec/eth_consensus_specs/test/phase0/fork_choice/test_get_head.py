@@ -421,20 +421,21 @@ def test_discard_equivocations_on_attester_slashing(spec, state):
 @with_presets([MINIMAL], reason="too slow")
 def test_discard_equivocations_slashed_validator_censoring(spec, state):
     # Check that the store does not count LMD votes from validators that are slashed in the justified state
+    ge = spec.get_current_epoch(state)  # genesis epoch
     test_steps = []
     # Initialization
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
 
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 0
-    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 0
-    assert state.finalized_checkpoint.epoch == store.finalized_checkpoint.epoch == 0
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == ge
+    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == ge
+    assert state.finalized_checkpoint.epoch == store.finalized_checkpoint.epoch == ge
 
     # We will slash all validators voting at the 2nd slot of epoch 0
     current_slot = spec.get_current_slot(store)
     eqv_slot = current_slot + 1
     eqv_epoch = spec.compute_epoch_at_slot(eqv_slot)
     assert eqv_slot % spec.SLOTS_PER_EPOCH == 1
-    assert eqv_epoch == 0
+    assert eqv_epoch == ge
     slashed_validators = []
     comm_count = spec.get_committee_count_per_slot(state, eqv_epoch)
     for comm_index in range(comm_count):
@@ -442,14 +443,20 @@ def test_discard_equivocations_slashed_validator_censoring(spec, state):
         slashed_validators += comm
     assert len(slashed_validators) > 0
 
-    # Slash those validators in the state
+    # Slash those validators in the state, but not the proposer for eqv_slot
+    temp_state = state.copy()
+    spec.process_slots(temp_state, eqv_slot)
+    proposer_index = spec.get_beacon_proposer_index(temp_state)
     for val_index in slashed_validators:
-        state.validators[val_index].slashed = True
+        if val_index != proposer_index:
+            state.validators[val_index].slashed = True
 
     # Store this state as the anchor state
     anchor_state = state.copy()
     # Generate an anchor block with correct state root
-    anchor_block = spec.BeaconBlock(state_root=anchor_state.hash_tree_root())
+    anchor_block = spec.BeaconBlock(
+        slot=anchor_state.slot, state_root=anchor_state.hash_tree_root()
+    )
     if is_post_gloas(spec):
         anchor_block.body.signed_execution_payload_bid.message.block_hash = (
             anchor_state.latest_block_hash
@@ -530,6 +537,7 @@ def test_voting_source_within_two_epoch(spec, state):
     - store.voting_source[block_root].epoch + 2 >= current_epoch, and
     - store.finalized_checkpoint.root == get_checkpoint_block(store, block_root, store.finalized_checkpoint.epoch)
     """
+    ge = spec.get_current_epoch(state)  # genesis epoch
     test_steps = []
     # Initialization
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
@@ -553,9 +561,9 @@ def test_voting_source_within_two_epoch(spec, state):
             spec, state, store, True, True, test_steps=test_steps
         )
 
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 4
-    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 3
-    assert store.finalized_checkpoint.epoch == 2
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == ge + 4
+    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == ge + 3
+    assert store.finalized_checkpoint.epoch == ge + 2
 
     # Copy the state to use later
     fork_state = state.copy()
@@ -565,25 +573,25 @@ def test_voting_source_within_two_epoch(spec, state):
         spec, state, store, True, True, test_steps=test_steps
     )
 
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 5
-    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 4
-    assert store.finalized_checkpoint.epoch == 3
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == ge + 5
+    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == ge + 4
+    assert store.finalized_checkpoint.epoch == ge + 3
 
     # Create a fork from the earlier saved state
     next_epoch(spec, fork_state)
-    assert spec.compute_epoch_at_slot(fork_state.slot) == 5
+    assert spec.compute_epoch_at_slot(fork_state.slot) == ge + 5
     _, signed_blocks, fork_state = next_epoch_with_attestations(spec, fork_state, True, True)
     # Only keep the blocks from epoch 5, so discard the last generated block
     signed_blocks = signed_blocks[:-1]
     last_fork_block = signed_blocks[-1].message
-    assert spec.compute_epoch_at_slot(last_fork_block.slot) == 5
+    assert spec.compute_epoch_at_slot(last_fork_block.slot) == ge + 5
 
     # Now add the fork to the store
     for signed_block in signed_blocks:
         yield from tick_and_add_block(spec, store, signed_block, test_steps)
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 5
-    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 4
-    assert store.finalized_checkpoint.epoch == 3
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == ge + 5
+    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == ge + 4
+    assert store.finalized_checkpoint.epoch == ge + 3
 
     # Check that the last block from the fork is the head
     # LMD votes for the competing branch are overwritten so this fork should win
@@ -614,6 +622,7 @@ def test_voting_source_beyond_two_epoch(spec, state):
     - store.voting_source[block_root].epoch + 2 < current_epoch, and
     - store.finalized_checkpoint.root == get_checkpoint_block(store, block_root, store.finalized_checkpoint.epoch)
     """
+    ge = spec.get_current_epoch(state)  # genesis epoch
     test_steps = []
     # Initialization
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
@@ -637,9 +646,9 @@ def test_voting_source_beyond_two_epoch(spec, state):
             spec, state, store, True, True, test_steps=test_steps
         )
 
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 4
-    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 3
-    assert store.finalized_checkpoint.epoch == 2
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == ge + 4
+    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == ge + 3
+    assert store.finalized_checkpoint.epoch == ge + 2
 
     # Copy the state to use later
     fork_state = state.copy()
@@ -650,20 +659,20 @@ def test_voting_source_beyond_two_epoch(spec, state):
             spec, state, store, True, True, test_steps=test_steps
         )
 
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 6
-    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 5
-    assert store.finalized_checkpoint.epoch == 4
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == ge + 6
+    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == ge + 5
+    assert store.finalized_checkpoint.epoch == ge + 4
 
     # Create a fork from the earlier saved state
     for _ in range(2):
         next_epoch(spec, fork_state)
-    assert spec.compute_epoch_at_slot(fork_state.slot) == 6
-    assert fork_state.current_justified_checkpoint.epoch == 3
+    assert spec.compute_epoch_at_slot(fork_state.slot) == ge + 6
+    assert fork_state.current_justified_checkpoint.epoch == ge + 3
     _, signed_blocks, fork_state = next_epoch_with_attestations(spec, fork_state, True, True)
     # Only keep the blocks from epoch 6, so discard the last generated block
     signed_blocks = signed_blocks[:-1]
     last_fork_block = signed_blocks[-1].message
-    assert spec.compute_epoch_at_slot(last_fork_block.slot) == 6
+    assert spec.compute_epoch_at_slot(last_fork_block.slot) == ge + 6
 
     # Store the head before adding the fork to the store
     correct_head = spec.get_head(store)
@@ -673,13 +682,13 @@ def test_voting_source_beyond_two_epoch(spec, state):
     # Now add the fork to the store
     for signed_block in signed_blocks:
         yield from tick_and_add_block(spec, store, signed_block, test_steps)
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 6
-    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 5
-    assert store.finalized_checkpoint.epoch == 4
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == ge + 6
+    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == ge + 5
+    assert store.finalized_checkpoint.epoch == ge + 4
 
     last_fork_block_root = last_fork_block.hash_tree_root()
     last_fork_block_state = store.block_states[last_fork_block_root]
-    assert last_fork_block_state.current_justified_checkpoint.epoch == 3
+    assert last_fork_block_state.current_justified_checkpoint.epoch == ge + 3
 
     # Check that the head is unchanged
     # assert store.voting_source[last_fork_block_root].epoch != store.justified_checkpoint.epoch

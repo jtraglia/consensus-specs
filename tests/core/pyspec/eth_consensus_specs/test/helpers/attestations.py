@@ -359,9 +359,11 @@ def state_transition_with_full_block(
             )
     if fill_prev_epoch and state.slot >= spec.SLOTS_PER_EPOCH:
         slot_to_attest = state.slot - spec.SLOTS_PER_EPOCH + 1
-        _add_valid_attestations(
-            spec, state, block, slot_to_attest, participation_fn=participation_fn
-        )
+        genesis_slot = spec.compute_start_slot_at_epoch(spec.GENESIS_EPOCH)
+        if slot_to_attest >= genesis_slot:
+            _add_valid_attestations(
+                spec, state, block, slot_to_attest, participation_fn=participation_fn
+            )
     if sync_aggregate is not None:
         block.body.sync_aggregate = sync_aggregate
 
