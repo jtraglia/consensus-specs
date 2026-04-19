@@ -1,21 +1,16 @@
-from remerkleable.tree import gindex_bit_iter
+"""Merkle proof helpers.
+
+Remerkleable maintained a persistent node-tree backing for every value, so
+proofs could be built by walking down the tree. The ``ssz`` package uses a
+stateless, value-native Merkleization and does not yet expose a proof API.
+
+This module is a placeholder: call sites that need real proofs (altair light
+client generators) will fail loudly until a proof builder is ported.
+"""
 
 
 def build_proof(anchor, leaf_index):
-    if leaf_index <= 1:
-        return []  # Nothing to prove / invalid index
-    node = anchor
-    proof = []
-    # Walk down, top to bottom to the leaf
-    bit_iter, _ = gindex_bit_iter(leaf_index)
-    for bit in bit_iter:
-        # Always take the opposite hand for the proof.
-        # 1 = right as leaf, thus get left
-        if bit:
-            proof.append(node.get_left().merkle_root())
-            node = node.get_right()
-        else:
-            proof.append(node.get_right().merkle_root())
-            node = node.get_left()
-
-    return list(reversed(proof))
+    raise NotImplementedError(
+        "build_proof has not been ported to the ssz package; "
+        "tree-backed proof construction is pending"
+    )

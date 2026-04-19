@@ -12,6 +12,9 @@ from eth_consensus_specs.deneb import {preset_name} as deneb
 from eth_consensus_specs.utils.ssz.ssz_impl import ssz_serialize, ssz_deserialize
 """
 
+    # ssz_serialize/ssz_deserialize are re-exported from ssz_impl.py,
+    # which now wraps the ssz package.
+
     @classmethod
     def hardcoded_ssz_dep_constants(cls) -> dict[str, str]:
         return {

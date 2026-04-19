@@ -1,37 +1,42 @@
+"""Thin shim over the ``ssz`` package for compatibility with existing callers."""
+
+from copy import deepcopy
 from typing import TypeVar
 
-from remerkleable.basic import uint
-from remerkleable.byte_arrays import Bytes32
-from remerkleable.core import Type, View
+from ssz import (
+    deserialize as _deserialize,
+    hash_tree_root as _hash_tree_root,
+    serialize as _serialize,
+    SszObject,
+    uintN,
+)
+
+T = TypeVar("T", bound=SszObject)
 
 
-def ssz_serialize(obj: View) -> bytes:
-    return obj.encode_bytes()
+def ssz_serialize(obj: SszObject) -> bytes:
+    return _serialize(obj)
 
 
-def serialize(obj: View) -> bytes:
-    return ssz_serialize(obj)
+def serialize(obj: SszObject) -> bytes:
+    return _serialize(obj)
 
 
-def ssz_deserialize(typ: Type[View], data: bytes) -> View:
-    return typ.decode_bytes(data)
+def ssz_deserialize(typ: type[T], data: bytes) -> T:
+    return _deserialize(typ, data)
 
 
-def deserialize(typ: Type[View], data: bytes) -> View:
-    return ssz_deserialize(typ, data)
+def deserialize(typ: type[T], data: bytes) -> T:
+    return _deserialize(typ, data)
 
 
-def hash_tree_root(obj: View) -> Bytes32:
-    return Bytes32(obj.get_backing().merkle_root())
+def hash_tree_root(obj: SszObject) -> bytes:
+    return _hash_tree_root(obj)
 
 
-def uint_to_bytes(n: uint) -> bytes:
-    return serialize(n)
+def uint_to_bytes(n: uintN) -> bytes:
+    return _serialize(n)
 
 
-V = TypeVar("V", bound=View)
-
-
-# Helper method for typing copies, and avoiding a example_input.copy() method call, instead of copy(example_input)
-def copy(obj: V) -> V:
-    return obj.copy()
+def copy(obj: T) -> T:
+    return deepcopy(obj)

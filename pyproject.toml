@@ -11,7 +11,7 @@ readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.11, <3.15"
 urls = { homepage = "https://github.com/ethereum/consensus-specs" }
 dependencies = [
-  "eth-remerkleable==0.1.30",
+  "ssz-specs",
   "eth-utils==6.0.0",
   "frozendict==2.4.7",
   "lru-dict==1.4.1",
@@ -22,6 +22,9 @@ dependencies = [
   "ruamel.yaml==0.19.1",
   "setuptools==82.0.1",
 ]
+
+[tool.uv.sources]
+ssz-specs = { path = "../ssz-specs", editable = true }
 
 [project.optional-dependencies]
 test = [
@@ -72,6 +75,16 @@ warn_unused_ignores = true
 warn_unused_configs = true
 warn_redundant_casts = true
 ignore_missing_imports = true
+
+# The `ssz` package provides runtime-parameterized types (e.g.
+# `List[T, N]`, `Vector[T, N]`) via `__class_getitem__`. Static type
+# checkers can't model these in standard generic form, so we skip mypy
+# analysis of the generated-spec references to them, matching how the
+# untyped `remerkleable` package was treated before.
+[[tool.mypy.overrides]]
+module = "ssz.*"
+follow_imports = "skip"
+ignore_errors = true
 
 [tool.ruff]
 line-length = 100
