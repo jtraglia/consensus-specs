@@ -8,8 +8,8 @@ from ssz import (
     hash_tree_root as _hash_tree_root,
     serialize as _serialize,
     SszObject,
-    uintN,
 )
+from ssz.basic import uintN  # not part of ssz's public API; only used here.
 
 T = TypeVar("T", bound=SszObject)
 
