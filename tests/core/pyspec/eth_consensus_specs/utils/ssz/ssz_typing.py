@@ -59,26 +59,49 @@ BasicView = SszObject
 # haven't ported yet. Any actual use will raise NotImplementedError.
 
 
-def _stub_factory(name: str):
-    class _Stub:
-        __name__ = name
+def _stub_factory(name: str, *, allow_call: bool = False):
+    """Lazy stub for SSZ features not yet ported to the ``ssz`` package.
+
+    Inherits from SszObject so it passes type-annotation checks on Container
+    fields. Subscript (``Foo[T]``) and factory-call (``Foo(args=...)``) return
+    a new subclass (so class-level declarations succeed at import time).
+    Actual instantiation of a concrete stub value raises NotImplementedError.
+    """
+
+    class _Stub(SszObject):
+        FIXED_SIZE = None
+        _is_stub_base = True
 
         def __class_getitem__(cls, item):
             return cls
 
-        def __init__(self, *args, **kwargs) -> None:
-            raise NotImplementedError(f"{name} has not been ported to the ssz package yet")
-
-        def __init_subclass__(cls, *args, **kwargs) -> None:
-            raise NotImplementedError(f"{name} has not been ported to the ssz package yet")
+        def __init__(self, *args, **kwargs):
+            if getattr(type(self), "_is_stub_base", False):
+                raise NotImplementedError(
+                    f"{name} has not been ported to the ssz package yet"
+                )
+            raise NotImplementedError(
+                f"{name} has not been ported to the ssz package yet"
+            )
 
     _Stub.__name__ = name
     _Stub.__qualname__ = name
+
+    if allow_call:
+        # Support ``ProgressiveContainer(active_fields=[...])`` factory-call
+        # pattern used as a class base: returns a subclass so ``class X(Foo(...))``
+        # succeeds at import time.
+        def _call_factory(*args, **kwargs):
+            sub = type(name, (_Stub,), {"_is_stub_base": False})
+            return sub
+
+        return _call_factory
+
     return _Stub
 
 
 Union = _stub_factory("Union")
-CompatibleUnion = _stub_factory("CompatibleUnion")
+CompatibleUnion = _stub_factory("CompatibleUnion", allow_call=True)
 ProgressiveList = _stub_factory("ProgressiveList")
 ProgressiveBitlist = _stub_factory("ProgressiveBitlist")
-ProgressiveContainer = _stub_factory("ProgressiveContainer")
+ProgressiveContainer = _stub_factory("ProgressiveContainer", allow_call=True)

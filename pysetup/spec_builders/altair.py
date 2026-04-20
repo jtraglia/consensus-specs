@@ -11,14 +11,8 @@ class AltairSpecBuilder(BaseSpecBuilder):
 from typing import NewType, Union as PyUnion
 
 from eth_consensus_specs.phase0 import {preset_name} as phase0
-from eth_consensus_specs.test.helpers.merkle import build_proof
-from eth_consensus_specs.utils.ssz.ssz_typing import Path
+from ssz import Path
 """
-
-    # NOTE: `Path` is currently a NotImplementedError stub in ssz_typing.py.
-    # Generalized-index / proof construction hasn't been ported to the `ssz`
-    # package yet. Light-client proof generators will fail at runtime until
-    # that work lands.
 
     @classmethod
     def preparations(cls):

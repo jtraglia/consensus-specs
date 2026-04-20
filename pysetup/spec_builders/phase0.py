@@ -33,11 +33,12 @@ from typing import (
 from ssz import (
     SszObject,
     boolean, Container, List, Vector,
-    uint8, uint16, uint32, uint64, uint128, uint256,
+    uintN, uint8, uint16, uint32, uint64, uint128, uint256,
     Bytes1, Bytes4, Bytes8, Bytes20, Bytes31, Bytes32, Bytes48, Bytes96,
     ByteList, ByteVector,
     Bitlist, Bitvector,
     serialize, deserialize, hash_tree_root,
+    ZERO_HASHES,
 )
 
 from eth_consensus_specs.utils import bls
