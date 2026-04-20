@@ -38,7 +38,7 @@ from ssz import (
     ByteList, ByteVector,
     Bitlist, Bitvector,
     serialize, deserialize, hash_tree_root,
-    ZERO_HASHES,
+    get_power_of_two_ceil,
 )
 
 from eth_consensus_specs.utils import bls

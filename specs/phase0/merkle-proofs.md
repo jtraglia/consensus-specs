@@ -3,22 +3,29 @@
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
-- [Constants](#constants)
 - [Generalized-index helpers](#generalized-index-helpers)
-  - [`get_power_of_two_ceil`](#get_power_of_two_ceil)
   - [`get_generalized_index_length`](#get_generalized_index_length)
   - [`get_generalized_index_bit`](#get_generalized_index_bit)
   - [`generalized_index_sibling`](#generalized_index_sibling)
   - [`generalized_index_child`](#generalized_index_child)
   - [`generalized_index_parent`](#generalized_index_parent)
+- [Type introspection](#type-introspection)
+  - [`zero_hash`](#zero_hash)
+  - [`item_length`](#item_length)
+  - [`chunk_count`](#chunk_count)
+  - [`get_field_type`](#get_field_type)
+  - [`get_item_position`](#get_item_position)
+- [`get_generalized_index`](#get_generalized_index)
 - [Proof construction](#proof-construction)
-  - [Layout helpers](#layout-helpers)
+  - [Leaf layout](#leaf-layout)
     - [`get_subtree_siblings`](#get_subtree_siblings)
     - [`get_container_leaves`](#get_container_leaves)
     - [`get_basic_vector_chunks`](#get_basic_vector_chunks)
     - [`get_basic_list_chunks`](#get_basic_list_chunks)
     - [`get_bitfield_chunks`](#get_bitfield_chunks)
     - [`get_byte_chunks`](#get_byte_chunks)
+    - [`merkleize_chunks`](#merkleize_chunks)
+    - [`list_contents_root`](#list_contents_root)
   - [Structural descent](#structural-descent)
     - [`descend_proof`](#descend_proof)
     - [`descend_container`](#descend_container)
@@ -28,7 +35,7 @@
     - [`descend_byte_list`](#descend_byte_list)
     - [`descend_bitvector`](#descend_bitvector)
     - [`descend_bitlist`](#descend_bitlist)
-  - [`build_proof`](#build_proof)
+  - [`compute_merkle_proof`](#compute_merkle_proof)
 - [Proof verification](#proof-verification)
   - [`calculate_merkle_root`](#calculate_merkle_root)
   - [`verify_merkle_proof`](#verify_merkle_proof)
@@ -37,45 +44,29 @@
 
 ## Introduction
 
-This document is the executable Python specification of Merkle proof
-construction and verification over SSZ values.
+This document is the executable Python specification of Merkle proofs over
+SSZ values. Two independent pieces live here:
 
-Proofs are computed against the implicit Merkle tree an SSZ value Merkleizes
-to (see [`hash_tree_root`](../../ssz/simple-serialize.md#merkleization)). A
-proof for a generalized index `gindex` consists of the sibling hashes along
-the path from the root to the node at `gindex`, ordered from the deepest
-sibling (closest to the target) up toward the root.
+1. **Generalized-index computation** -- `get_generalized_index(typ, *path)`
+   produces the generalized index (a 1-based node position in the implicit
+   Merkle tree) for a nested access path like
+   `get_generalized_index(BeaconState, "finalized_checkpoint", "root")`.
 
-All functions below are pure and take SSZ values as arguments. Nothing here
-maintains persistent tree state.
+2. **Proof construction and verification** -- `compute_merkle_proof(value,
+   gindex)` builds the list of sibling hashes from the leaf at `gindex` up
+   to the root; `verify_merkle_proof(leaf, proof, gindex, root)` checks it.
 
-## Constants
-
-A pre-computed list of zero-subtree roots is used to cheaply expand missing
-nodes at any depth. `ZERO_HASHES[0]` is a 32-byte zero chunk; `ZERO_HASHES[d]`
-is the root of a perfect binary tree of `2**d` zero chunks. It is imported
-from the `ssz` package.
+Everything is a pure function. SSZ types are imported from the `ssz`
+package; nothing here carries state across calls.
 
 ## Generalized-index helpers
-
-### `get_power_of_two_ceil`
-
-```python
-def get_power_of_two_ceil(x: int) -> int:
-    """
-    Smallest power of two >= x, with x <= 1 mapping to 1.
-    """
-    if x <= 1:
-        return 1
-    return 1 << (x - 1).bit_length()
-```
 
 ### `get_generalized_index_length`
 
 ```python
 def get_generalized_index_length(index: int) -> int:
     """
-    Return the depth of `index` in the implicit Merkle tree.
+    Return the depth of ``index`` in the implicit Merkle tree.
     """
     return index.bit_length() - 1
 ```
@@ -111,25 +102,161 @@ def generalized_index_parent(index: int) -> int:
     return index // 2
 ```
 
+## Type introspection
+
+These helpers compute layout properties of SSZ types that both generalized-
+index computation and proof construction depend on.
+
+### `zero_hash`
+
+```python
+def zero_hash(depth: int) -> bytes:
+    """
+    Root of a perfect binary tree of ``2**depth`` zero chunks.
+    """
+    h = b"\x00" * 32
+    for _ in range(depth):
+        h = hash(h + h)
+    return h
+```
+
+### `item_length`
+
+```python
+def item_length(typ: Type[SszObject]) -> int:
+    """
+    Byte length of a basic element, or 32 (a full chunk) for composite
+    elements packed one per chunk.
+    """
+    if issubclass(typ, (uintN, boolean)):
+        return typ.type_byte_length()
+    return 32
+```
+
+### `chunk_count`
+
+```python
+def chunk_count(typ: Type[SszObject]) -> int:
+    """
+    Number of 32-byte chunks in the leaf layer of ``typ``'s Merkle tree.
+    """
+    if issubclass(typ, (uintN, boolean)):
+        return 1
+    if issubclass(typ, Bitvector):
+        return (typ.LENGTH + 255) // 256
+    if issubclass(typ, Bitlist):
+        return (typ.LIMIT + 255) // 256
+    if issubclass(typ, ByteVector):
+        return (typ.LENGTH + 31) // 32
+    if issubclass(typ, ByteList):
+        return (typ.LIMIT + 31) // 32
+    if issubclass(typ, Vector):
+        return (typ.LENGTH * item_length(typ.ELEMENT_TYPE) + 31) // 32
+    if issubclass(typ, List):
+        return (typ.LIMIT * item_length(typ.ELEMENT_TYPE) + 31) // 32
+    if issubclass(typ, Container):
+        return len(typ._FIELDS)
+    raise Exception(f"chunk_count: unsupported type {typ}")
+```
+
+### `get_field_type`
+
+```python
+def get_field_type(
+    typ: Type[SszObject], index_or_name
+) -> Type[SszObject]:
+    """
+    Return the type of the child reached by ``index_or_name``:
+    a field type for Containers, the element type otherwise.
+    """
+    if issubclass(typ, Container):
+        for name, field_type in typ._FIELDS:
+            if name == index_or_name:
+                return field_type
+        raise KeyError(f"field {index_or_name!r} not in {typ.__name__}")
+    return typ.ELEMENT_TYPE
+```
+
+### `get_item_position`
+
+```python
+def get_item_position(
+    typ: Type[SszObject], index_or_name
+) -> Tuple[int, int, int]:
+    """
+    Return ``(chunk_index, start_byte, end_byte)`` locating the child
+    within ``typ``'s leaf layer. For composite element types the child
+    occupies a full chunk (start=0, end=32).
+    """
+    if issubclass(typ, Container):
+        names = [n for n, _ in typ._FIELDS]
+        pos = names.index(index_or_name)
+        return pos, 0, item_length(get_field_type(typ, index_or_name))
+    if issubclass(typ, (Vector, List)):
+        idx = int(index_or_name)
+        size = item_length(typ.ELEMENT_TYPE)
+        start = idx * size
+        return start // 32, start % 32, start % 32 + size
+    if issubclass(typ, (Bitvector, Bitlist, ByteVector, ByteList)):
+        idx = int(index_or_name)
+        size = 1 if issubclass(typ, (ByteVector, ByteList)) else 1
+        # Bitfields pack 256 bits per chunk; byte arrays pack 32 bytes per chunk.
+        per_chunk = 256 if issubclass(typ, (Bitvector, Bitlist)) else 32
+        return idx // per_chunk, 0, size
+    raise Exception(f"get_item_position: unsupported type {typ}")
+```
+
+## `get_generalized_index`
+
+```python
+def get_generalized_index(typ: Type[SszObject], *path) -> int:
+    """
+    Convert a path like ``("finalized_checkpoint", "root")`` or
+    ``("blob_kzg_commitments", 7)`` into the generalized index for that
+    position in ``typ``'s Merkle tree.
+
+    A path element of ``"__len__"`` targets the length leaf of a List or
+    Bitlist.
+    """
+    root = 1
+    for p in path:
+        assert not issubclass(typ, (uintN, boolean)), (
+            "cannot descend past a basic type"
+        )
+        if p == "__len__":
+            assert issubclass(typ, (List, Bitlist, ByteList)), (
+                "__len__ is only valid on variable-length types"
+            )
+            typ = uint64
+            root = root * 2 + 1
+        else:
+            pos, _, _ = get_item_position(typ, p)
+            base = 2 if issubclass(typ, (List, Bitlist, ByteList)) else 1
+            root = root * base * get_power_of_two_ceil(chunk_count(typ)) + pos
+            typ = get_field_type(typ, p)
+    return root
+```
+
 ## Proof construction
 
-### Layout helpers
+To build a proof for a generalized index `gindex` that addresses a deeply
+nested value, we walk the value from the outside in, emitting sibling
+hashes at each level. The bit path is the binary expansion of `gindex`
+with the leading `1` stripped, read top-down.
 
-These helpers materialize the leaf-chunk layer of each SSZ composite type's
-Merkle subtree. They do not touch the tree above the leaves -- that is done
-by [`get_subtree_siblings`](#get_subtree_siblings).
+### Leaf layout
 
 #### `get_subtree_siblings`
-
-Given a power-of-two list of leaf hashes and a top-down bit path through the
-subtree, return the list of sibling hashes along the path (bottom-up) and
-the final leaf position the path lands on.
 
 ```python
 def get_subtree_siblings(
     leaves: Sequence[bytes], bits: Sequence[int]
 ) -> Tuple[Sequence[bytes], int]:
-    # Materialize all tree layers, bottom-up.
+    """
+    Given a power-of-two sequence of leaf hashes and a top-down bit path,
+    return ``(siblings_bottom_up, final_position)``. ``final_position`` is
+    the leaf (or internal-node) index the path lands on.
+    """
     levels: list[list[bytes]] = [list(leaves)]
     while len(levels[-1]) > 1:
         prev = levels[-1]
@@ -142,10 +269,9 @@ def get_subtree_siblings(
     pos = 0
     for i, bit in enumerate(bits):
         below = levels[depth - i - 1]
-        child_pos = pos * 2 + bit
-        siblings_top_down.append(below[child_pos ^ 1])
-        pos = child_pos
-    # Return bottom-up: deepest sibling first.
+        child = pos * 2 + bit
+        siblings_top_down.append(below[child ^ 1])
+        pos = child
     return list(reversed(siblings_top_down)), pos
 ```
 
@@ -153,14 +279,10 @@ def get_subtree_siblings(
 
 ```python
 def get_container_leaves(value: Container) -> Sequence[bytes]:
-    """
-    Return the leaf layer for a Container: the hash_tree_root of each field,
-    padded with zero chunks to the next power of two.
-    """
     roots = [getattr(value, name).hash_tree_root() for name, _ in value._FIELDS]
     width = get_power_of_two_ceil(max(1, len(roots)))
     while len(roots) < width:
-        roots.append(ZERO_HASHES[0])
+        roots.append(zero_hash(0))
     return roots
 ```
 
@@ -168,16 +290,12 @@ def get_container_leaves(value: Container) -> Sequence[bytes]:
 
 ```python
 def get_basic_vector_chunks(value: Vector) -> Sequence[bytes]:
-    """
-    Pack a Vector of basic elements into 32-byte chunks, right-padded, and
-    extend to the next power of two.
-    """
     joined = b"".join(e.encode_bytes() for e in value)
     padded = joined + b"\x00" * (-len(joined) % 32)
     chunks = [padded[i : i + 32] for i in range(0, len(padded), 32)]
     width = get_power_of_two_ceil(max(1, len(chunks)))
     while len(chunks) < width:
-        chunks.append(ZERO_HASHES[0])
+        chunks.append(zero_hash(0))
     return chunks
 ```
 
@@ -185,10 +303,6 @@ def get_basic_vector_chunks(value: Vector) -> Sequence[bytes]:
 
 ```python
 def get_basic_list_chunks(value: List) -> Sequence[bytes]:
-    """
-    Pack a List of basic elements into 32-byte chunks, right-padded, and
-    extend to the next power of two of the List's chunk limit.
-    """
     joined = b"".join(e.encode_bytes() for e in value)
     padded = joined + b"\x00" * (-len(joined) % 32)
     chunks = [padded[i : i + 32] for i in range(0, len(padded), 32)]
@@ -196,7 +310,7 @@ def get_basic_list_chunks(value: List) -> Sequence[bytes]:
     chunk_limit = (value.LIMIT * basic_size + 31) // 32
     width = get_power_of_two_ceil(max(1, chunk_limit))
     while len(chunks) < width:
-        chunks.append(ZERO_HASHES[0])
+        chunks.append(zero_hash(0))
     return chunks
 ```
 
@@ -204,10 +318,6 @@ def get_basic_list_chunks(value: List) -> Sequence[bytes]:
 
 ```python
 def get_bitfield_chunks(bits: Sequence[bool], chunk_limit: int) -> Sequence[bytes]:
-    """
-    Pack a sequence of bits into 32-byte chunks and extend to the next power
-    of two of `chunk_limit`.
-    """
     n = len(bits)
     packed = bytearray((n + 7) // 8)
     for i, b in enumerate(bits):
@@ -217,7 +327,7 @@ def get_bitfield_chunks(bits: Sequence[bool], chunk_limit: int) -> Sequence[byte
     chunks = [joined[i : i + 32] for i in range(0, len(joined), 32)]
     width = get_power_of_two_ceil(max(1, chunk_limit))
     while len(chunks) < width:
-        chunks.append(ZERO_HASHES[0])
+        chunks.append(zero_hash(0))
     return chunks
 ```
 
@@ -225,24 +335,62 @@ def get_bitfield_chunks(bits: Sequence[bool], chunk_limit: int) -> Sequence[byte
 
 ```python
 def get_byte_chunks(data: bytes, chunk_limit: int) -> Sequence[bytes]:
-    """
-    Pack raw bytes into 32-byte chunks and extend to the next power of two
-    of `chunk_limit`.
-    """
     padded = data + b"\x00" * (-len(data) % 32) if data else b""
     chunks = [padded[i : i + 32] for i in range(0, len(padded), 32)]
     width = get_power_of_two_ceil(max(1, chunk_limit))
     while len(chunks) < width:
-        chunks.append(ZERO_HASHES[0])
+        chunks.append(zero_hash(0))
     return chunks
 ```
 
-### Structural descent
+#### `merkleize_chunks`
 
-To build a proof for a generalized index `gindex` that addresses a deeply
-nested value, we walk the type structure of the value from the outside in,
-emitting siblings at each level. The bit path is the binary expansion of
-`gindex` with the leading `1` stripped, read top-down.
+```python
+def merkleize_chunks(chunks: Sequence[bytes], limit: int) -> bytes:
+    """
+    Merkleize ``chunks`` padded with zero chunks to ``next_pow_of_two(limit)``.
+    """
+    assert limit >= len(chunks), "chunk count exceeds limit"
+    width = get_power_of_two_ceil(max(1, limit))
+    if len(chunks) == 0:
+        return zero_hash(max(0, width.bit_length() - 1))
+    if width == 1:
+        return bytes(chunks[0])
+    layer = list(chunks)
+    depth = 0
+    while (1 << depth) < width:
+        if len(layer) % 2 == 1:
+            layer.append(zero_hash(depth))
+        layer = [hash(layer[i] + layer[i + 1]) for i in range(0, len(layer), 2)]
+        depth += 1
+        while len(layer) == 1 and (1 << depth) < width:
+            layer = [hash(layer[0] + zero_hash(depth))]
+            depth += 1
+    return layer[0]
+```
+
+#### `list_contents_root`
+
+```python
+def list_contents_root(value: List) -> bytes:
+    """
+    Merkle root of a List's contents subtree, excluding the length mix-in.
+    Used only as a sibling when a caller requests the length leaf itself.
+    """
+    elem_type = value.ELEMENT_TYPE
+    if issubclass(elem_type, (uintN, boolean)):
+        basic_size = elem_type.type_byte_length()
+        chunk_limit = (value.LIMIT * basic_size + 31) // 32
+        joined = b"".join(e.encode_bytes() for e in value)
+        padded = joined + b"\x00" * (-len(joined) % 32)
+        chunks = [padded[i : i + 32] for i in range(0, len(padded), 32)]
+    else:
+        chunks = [e.hash_tree_root() for e in value]
+        chunk_limit = value.LIMIT
+    return merkleize_chunks(chunks, chunk_limit)
+```
+
+### Structural descent
 
 #### `descend_proof`
 
@@ -296,7 +444,7 @@ def descend_list(value: List, bits: Sequence[int]) -> Sequence[bytes]:
     # bit 0 -> contents subtree; bit 1 -> length leaf.
     if bits[0] == 1:
         assert len(bits) == 1, "gindex descends past length leaf"
-        return [hash_tree_root_contents_only(value)]
+        return [list_contents_root(value)]
     length_leaf = len(value).to_bytes(32, "little")
     contents_bits = list(bits[1:])
     elem_type = value.ELEMENT_TYPE
@@ -310,55 +458,12 @@ def descend_list(value: List, bits: Sequence[int]) -> Sequence[bytes]:
     remaining = contents_bits[depth:]
     roots = [e.hash_tree_root() for e in value]
     while len(roots) < width:
-        roots.append(ZERO_HASHES[0])
+        roots.append(zero_hash(0))
     siblings, idx = get_subtree_siblings(roots, inner_bits)
     if len(remaining) > 0:
         assert idx < len(value), "gindex addresses a padded list slot"
         return list(descend_proof(value[idx], remaining)) + list(siblings) + [length_leaf]
     return list(siblings) + [length_leaf]
-```
-
-The helper `hash_tree_root_contents_only` computes the contents-subtree root
-of a list (without the length mix-in), needed only as the sibling when the
-caller requests the length leaf itself:
-
-```python
-def hash_tree_root_contents_only(value: List) -> bytes:
-    elem_type = value.ELEMENT_TYPE
-    if issubclass(elem_type, (uintN, boolean)):
-        basic_size = elem_type.type_byte_length()
-        chunk_limit = (value.LIMIT * basic_size + 31) // 32
-        joined = b"".join(e.encode_bytes() for e in value)
-        padded = joined + b"\x00" * (-len(joined) % 32)
-        chunks = [padded[i : i + 32] for i in range(0, len(padded), 32)]
-    else:
-        chunks = [e.hash_tree_root() for e in value]
-        chunk_limit = value.LIMIT
-    return _merkleize_chunks(chunks, chunk_limit)
-```
-
-```python
-def _merkleize_chunks(chunks: Sequence[bytes], limit: int) -> bytes:
-    """
-    Merkleize `chunks` padded with zero chunks to `next_pow_of_two(limit)`.
-    """
-    assert limit >= len(chunks), "chunk count exceeds limit"
-    width = get_power_of_two_ceil(max(1, limit))
-    if len(chunks) == 0:
-        return ZERO_HASHES[max(0, width.bit_length() - 1)]
-    if width == 1:
-        return bytes(chunks[0])
-    layer = list(chunks)
-    depth = 0
-    while (1 << depth) < width:
-        if len(layer) % 2 == 1:
-            layer.append(ZERO_HASHES[depth])
-        layer = [hash(layer[i] + layer[i + 1]) for i in range(0, len(layer), 2)]
-        depth += 1
-        while len(layer) == 1 and (1 << depth) < width:
-            layer = [hash(layer[0] + ZERO_HASHES[depth])]
-            depth += 1
-    return layer[0]
 ```
 
 #### `descend_vector`
@@ -377,7 +482,7 @@ def descend_vector(value: Vector, bits: Sequence[int]) -> Sequence[bytes]:
     remaining = list(bits[depth:])
     roots = [e.hash_tree_root() for e in value]
     while len(roots) < width:
-        roots.append(ZERO_HASHES[0])
+        roots.append(zero_hash(0))
     siblings, idx = get_subtree_siblings(roots, inner_bits)
     if len(remaining) > 0:
         assert idx < length, "gindex addresses a padded vector slot"
@@ -404,7 +509,7 @@ def descend_byte_list(value: ByteList, bits: Sequence[int]) -> Sequence[bytes]:
         chunk_limit = (value.LIMIT + 31) // 32
         joined = bytes(value) + b"\x00" * (-len(value) % 32) if len(value) > 0 else b""
         chunks = [joined[i : i + 32] for i in range(0, len(joined), 32)]
-        return [_merkleize_chunks(chunks, chunk_limit)]
+        return [merkleize_chunks(chunks, chunk_limit)]
     length_leaf = len(value).to_bytes(32, "little")
     chunk_limit = (value.LIMIT + 31) // 32
     chunks = list(get_byte_chunks(bytes(value), chunk_limit))
@@ -429,9 +534,8 @@ def descend_bitlist(value: Bitlist, bits: Sequence[int]) -> Sequence[bytes]:
     if bits[0] == 1:
         assert len(bits) == 1, "gindex descends past length leaf"
         chunk_limit = (value.LIMIT + 255) // 256
-        # Only `chunk_limit` chunks of the bit-packed payload (length excluded).
         chunks = list(get_bitfield_chunks(list(value), chunk_limit))
-        return [_merkleize_chunks(chunks, chunk_limit)]
+        return [merkleize_chunks(chunks, chunk_limit)]
     length_leaf = len(value).to_bytes(32, "little")
     chunk_limit = (value.LIMIT + 255) // 256
     chunks = list(get_bitfield_chunks(list(value), chunk_limit))
@@ -439,13 +543,13 @@ def descend_bitlist(value: Bitlist, bits: Sequence[int]) -> Sequence[bytes]:
     return list(siblings) + [length_leaf]
 ```
 
-### `build_proof`
+### `compute_merkle_proof`
 
 ```python
-def build_proof(anchor: SszObject, gindex: int) -> Sequence[bytes]:
+def compute_merkle_proof(value: SszObject, gindex: int) -> Sequence[bytes]:
     """
-    Build the Merkle proof for the node at `gindex` in `anchor`'s hash tree.
-    Returns the siblings ordered leaf-closest-first.
+    Build the Merkle proof for the node at ``gindex`` in ``value``'s hash
+    tree. Returns siblings ordered leaf-closest-first.
     """
     if gindex == 1:
         return []
@@ -456,14 +560,10 @@ def build_proof(anchor: SszObject, gindex: int) -> Sequence[bytes]:
         bits.append(g & 1)
         g >>= 1
     bits.reverse()
-    return descend_proof(anchor, bits)
+    return descend_proof(value, bits)
 ```
 
 ## Proof verification
-
-Given a leaf hash, a generalized index, and the proof returned by
-[`build_proof`](#build_proof), reconstruct the tree root and check it against
-an expected root.
 
 ### `calculate_merkle_root`
 

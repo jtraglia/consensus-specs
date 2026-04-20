@@ -24,12 +24,9 @@ light clients to sync with the network.
 
 ### `compute_merkle_proof`
 
-This function return the Merkle proof of the given SSZ object `object` at
-generalized index `index`.
-
-```python
-def compute_merkle_proof(object: SSZObject, index: GeneralizedIndex) -> Sequence[Bytes32]: ...
-```
+Returns the Merkle proof of the given SSZ object at generalized index
+`index`. Defined in
+[`specs/phase0/merkle-proofs.md`](../../phase0/merkle-proofs.md#compute_merkle_proof).
 
 ### `block_to_light_client_header`
 

@@ -27,7 +27,6 @@ from ssz import (
     ByteVector,
     Container,
     List,
-    Path,
     SszObject,
     uint8,
     uint16,
@@ -42,12 +41,6 @@ from ssz import (
 # Historical alias: remerkleable used "View" as the base class name.
 View = SszObject
 uint = uintN
-
-# `Path` is provided by remerkleable for gindex/proof machinery. Our ssz
-# package does not yet implement it. Callers that need generalized-index or
-# proof helpers (altair light client) should import the missing bits from a
-# dedicated module once implemented. For now, reference ``Path`` raises.
-
 
 # BasicView was an internal remerkleable name. Preserved as an alias for any
 # external caller still referencing it.
