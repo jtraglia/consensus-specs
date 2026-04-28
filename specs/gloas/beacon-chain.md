@@ -305,7 +305,6 @@ class ExecutionPayloadEnvelope(Container):
     execution_requests: ExecutionRequests
     builder_index: BuilderIndex
     beacon_block_root: Root
-    parent_beacon_block_root: Root
 ```
 
 #### `SignedExecutionPayloadEnvelope`
