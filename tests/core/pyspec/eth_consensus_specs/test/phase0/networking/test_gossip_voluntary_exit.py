@@ -53,8 +53,9 @@ def test_gossip_voluntary_exit__valid(spec, state):
 
     seen = get_seen(spec)
 
-    # Advance state past SHARD_COMMITTEE_PERIOD
+    # Advance state past SHARD_COMMITTEE_PERIOD so validators can exit
     state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+
     yield "state", state
 
     # Pick a validator to exit
@@ -85,6 +86,7 @@ def test_gossip_voluntary_exit__ignore_already_seen(spec, state):
 
     # Advance state past SHARD_COMMITTEE_PERIOD
     state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+
     yield "state", state
 
     # Pick a validator to exit
@@ -117,12 +119,12 @@ def test_gossip_voluntary_exit__reject_validator_index_out_of_range(spec, state)
     Test that a voluntary exit with validator index out of range is rejected.
     """
     yield "topic", "meta", "voluntary_exit"
+    yield "state", state
 
     seen = get_seen(spec)
 
     # Advance state past SHARD_COMMITTEE_PERIOD
     state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
-    yield "state", state
 
     # Create voluntary exit with invalid validator index
     invalid_index = len(state.validators) + 100
@@ -153,6 +155,7 @@ def test_gossip_voluntary_exit__reject_validator_not_active(spec, state):
     Test that a voluntary exit for a non-active validator is rejected.
     """
     yield "topic", "meta", "voluntary_exit"
+    yield "state", state
 
     seen = get_seen(spec)
 
@@ -162,7 +165,6 @@ def test_gossip_voluntary_exit__reject_validator_not_active(spec, state):
     # Pick a validator and make it inactive by setting activation_epoch to far future
     validator_index = 0
     state.validators[validator_index].activation_epoch = spec.FAR_FUTURE_EPOCH
-    yield "state", state
 
     # Create voluntary exit
     signed_exit = create_signed_voluntary_exit(spec, state, validator_index)
@@ -187,6 +189,7 @@ def test_gossip_voluntary_exit__reject_already_initiated_exit(spec, state):
     Test that a voluntary exit for a validator that has already initiated exit is rejected.
     """
     yield "topic", "meta", "voluntary_exit"
+    yield "state", state
 
     seen = get_seen(spec)
 
@@ -196,7 +199,6 @@ def test_gossip_voluntary_exit__reject_already_initiated_exit(spec, state):
     # Pick a validator and set their exit_epoch (simulating already initiated exit)
     validator_index = 0
     state.validators[validator_index].exit_epoch = spec.get_current_epoch(state) + 10
-    yield "state", state
 
     # Create voluntary exit
     signed_exit = create_signed_voluntary_exit(spec, state, validator_index)
@@ -221,12 +223,12 @@ def test_gossip_voluntary_exit__reject_epoch_in_future(spec, state):
     Test that a voluntary exit with epoch in the future is rejected.
     """
     yield "topic", "meta", "voluntary_exit"
+    yield "state", state
 
     seen = get_seen(spec)
 
     # Advance state past SHARD_COMMITTEE_PERIOD
     state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
-    yield "state", state
 
     # Pick a validator
     validator_index = 0
@@ -255,6 +257,7 @@ def test_gossip_voluntary_exit__reject_not_active_long_enough(spec, state):
     Test that a voluntary exit for a validator not active long enough is rejected.
     """
     yield "topic", "meta", "voluntary_exit"
+    yield "state", state
 
     seen = get_seen(spec)
 
@@ -262,7 +265,6 @@ def test_gossip_voluntary_exit__reject_not_active_long_enough(spec, state):
     # Just advance a few epochs
     next_epoch_via_block(spec, state)
     next_epoch_via_block(spec, state)
-    yield "state", state
 
     # Pick a validator
     validator_index = 0
@@ -291,12 +293,12 @@ def test_gossip_voluntary_exit__reject_invalid_signature(spec, state):
     Test that a voluntary exit with invalid signature is rejected.
     """
     yield "topic", "meta", "voluntary_exit"
+    yield "state", state
 
     seen = get_seen(spec)
 
     # Advance state past SHARD_COMMITTEE_PERIOD
     state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
-    yield "state", state
 
     # Pick a validator
     validator_index = 0
