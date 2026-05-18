@@ -97,7 +97,7 @@ def test_gossip_beacon_block__reject_too_many_kzg_commitments(spec, state):
         spec, seen, store, state, signed_block, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "too many blob kzg commitments"
+    assert reason == spec.BeaconBlockGossipError.TOO_MANY_BLOB_KZG_COMMITMENTS
 
     yield (
         "messages",

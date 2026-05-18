@@ -102,7 +102,7 @@ def test_gossip_beacon_block__ignore_future_slot(spec, state):
         spec, seen, store, state, signed_block, current_time_ms
     )
     assert result == "ignore"
-    assert reason == "block is from a future slot"
+    assert reason == spec.BeaconBlockGossipError.BLOCK_FROM_FUTURE_SLOT
 
     yield (
         "messages",
@@ -196,7 +196,7 @@ def test_gossip_beacon_block__ignore_already_seen_proposer_slot(spec, state):
         spec, seen, store, state, signed_block, block_time_ms + 600
     )
     assert result == "ignore"
-    assert reason == "block is not the first valid block for this proposer and slot"
+    assert reason == spec.BeaconBlockGossipError.BLOCK_ALREADY_SEEN
     messages.append(
         {
             "offset_ms": 600,
@@ -265,7 +265,7 @@ def test_gossip_beacon_block__ignore_slot_not_greater_than_finalized(spec, state
         spec, seen, store, state, signed_block, block_time_ms + 500
     )
     assert result == "ignore"
-    assert reason == "block is not from a slot greater than the latest finalized slot"
+    assert reason == spec.BeaconBlockGossipError.BLOCK_NOT_AFTER_FINALIZED
 
     yield (
         "messages",
@@ -320,7 +320,7 @@ def test_gossip_beacon_block__ignore_parent_not_seen(spec, state):
         spec, seen, store, state, signed_block, block_time_ms + 500
     )
     assert result == "ignore"
-    assert reason == "block's parent has not been seen"
+    assert reason == spec.BeaconBlockGossipError.PARENT_NOT_SEEN
 
     yield (
         "messages",
@@ -407,9 +407,9 @@ def test_gossip_beacon_block__reject_parent_failed_validation(spec, state):
     )
     assert result == "reject"
     if is_post_bellatrix(spec):
-        assert reason == "block's parent is invalid and execution is not enabled"
+        assert reason == spec.BeaconBlockGossipError.PARENT_INVALID_EXECUTION_NOT_ENABLED
     else:
-        assert reason == "block's parent is invalid"
+        assert reason == spec.BeaconBlockGossipError.PARENT_INVALID
 
     yield (
         "messages",
@@ -483,7 +483,7 @@ def test_gossip_beacon_block__reject_slot_not_higher_than_parent(spec, state):
         spec, seen, store, state, signed_block, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "block is not from a higher slot than its parent"
+    assert reason == spec.BeaconBlockGossipError.BLOCK_NOT_AFTER_PARENT
 
     yield (
         "messages",
@@ -568,7 +568,7 @@ def test_gossip_beacon_block__reject_finalized_checkpoint_not_ancestor(spec, sta
         spec, seen, store, state, signed_child, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "finalized checkpoint is not an ancestor of block"
+    assert reason == spec.BeaconBlockGossipError.FINALIZED_NOT_ANCESTOR
 
     yield (
         "messages",
@@ -617,7 +617,7 @@ def test_gossip_beacon_block__reject_invalid_proposer_signature(spec, state):
         spec, seen, store, state, signed_block, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "invalid proposer signature"
+    assert reason == spec.BeaconBlockGossipError.INVALID_PROPOSER_SIGNATURE
 
     yield (
         "messages",
@@ -665,7 +665,7 @@ def test_gossip_beacon_block__reject_invalid_proposer_index(spec, state):
         spec, seen, store, state, signed_block, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "proposer index out of range"
+    assert reason == spec.BeaconBlockGossipError.PROPOSER_INDEX_OUT_OF_RANGE
 
     yield (
         "messages",
@@ -719,7 +719,7 @@ def test_gossip_beacon_block__reject_wrong_proposer_index(spec, state):
         spec, seen, store, state, signed_block, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "block proposer_index does not match expected proposer"
+    assert reason == spec.BeaconBlockGossipError.PROPOSER_MISMATCH
 
     yield (
         "messages",

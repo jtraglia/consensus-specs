@@ -163,7 +163,7 @@ def test_gossip_beacon_attestation__reject_committee_index_out_of_range(spec, st
         spec, seen, store, state, attestation, subnet_id, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "committee index out of range"
+    assert reason == spec.BeaconAttestationGossipError.COMMITTEE_INDEX_OUT_OF_RANGE
 
     yield (
         "messages",
@@ -216,7 +216,7 @@ def test_gossip_beacon_attestation__reject_wrong_subnet(spec, state):
         spec, seen, store, state, attestation, wrong_subnet, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "attestation is for wrong subnet"
+    assert reason == spec.BeaconAttestationGossipError.WRONG_SUBNET
 
     yield (
         "messages",
@@ -277,7 +277,7 @@ def test_gossip_beacon_attestation__ignore_slot_not_in_range(spec, state):
         spec, seen, store, state, attestation, subnet_id, current_time_ms
     )
     assert result == "ignore"
-    assert reason == "attestation slot not within propagation range"
+    assert reason == spec.BeaconAttestationGossipError.SLOT_NOT_WITHIN_PROPAGATION_RANGE
 
     yield (
         "messages",
@@ -465,7 +465,7 @@ def test_gossip_beacon_attestation__ignore_slot_too_old(spec, state):
         spec, seen, store, state, attestation, subnet_id, current_time_ms
     )
     assert result == "ignore"
-    assert reason == "attestation slot not within propagation range"
+    assert reason == spec.BeaconAttestationGossipError.SLOT_NOT_WITHIN_PROPAGATION_RANGE
 
     yield (
         "messages",
@@ -520,7 +520,7 @@ def test_gossip_beacon_attestation__reject_epoch_mismatch(spec, state):
         spec, seen, store, state, attestation, subnet_id, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "attestation epoch does not match target epoch"
+    assert reason == spec.BeaconAttestationGossipError.EPOCH_MISMATCH
 
     yield (
         "messages",
@@ -578,7 +578,7 @@ def test_gossip_beacon_attestation__reject_not_unaggregated(spec, state):
         spec, seen, store, state, attestation, subnet_id, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "attestation is not unaggregated"
+    assert reason == spec.BeaconAttestationGossipError.NOT_UNAGGREGATED
 
     yield (
         "messages",
@@ -634,7 +634,7 @@ def test_gossip_beacon_attestation__reject_aggregation_bits_size_mismatch(spec, 
         spec, seen, store, state, attestation, subnet_id, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "aggregation bits length does not match committee size"
+    assert reason == spec.BeaconAttestationGossipError.AGGREGATION_BITS_LENGTH_MISMATCH
 
     yield (
         "messages",
@@ -713,7 +713,7 @@ def test_gossip_beacon_attestation__ignore_already_seen(spec, state):
         spec, seen, store, state, attestation, subnet_id, block_time_ms + 600
     )
     assert result == "ignore"
-    assert reason == "already seen attestation from this validator for this epoch"
+    assert reason == spec.BeaconAttestationGossipError.ALREADY_SEEN
     messages.append(
         {
             "subnet_id": int(subnet_id),
@@ -775,7 +775,7 @@ def test_gossip_beacon_attestation__ignore_block_not_seen(spec, state):
         spec, seen, store, state, attestation, subnet_id, block_time_ms + 500
     )
     assert result == "ignore"
-    assert reason == "block being voted for has not been seen"
+    assert reason == spec.BeaconAttestationGossipError.BLOCK_NOT_SEEN
 
     yield (
         "messages",
@@ -853,7 +853,7 @@ def test_gossip_beacon_attestation__reject_block_failed_validation(spec, state):
         spec, seen, store, state, attestation, subnet_id, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "block being voted for failed validation"
+    assert reason == spec.BeaconAttestationGossipError.BLOCK_FAILED_VALIDATION
 
     yield (
         "messages",
@@ -915,7 +915,7 @@ def test_gossip_beacon_attestation__reject_invalid_signature(spec, state):
         spec, seen, store, state, attestation, subnet_id, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "invalid attestation signature"
+    assert reason == spec.BeaconAttestationGossipError.INVALID_SIGNATURE
 
     yield (
         "messages",
@@ -980,7 +980,7 @@ def test_gossip_beacon_attestation__reject_target_not_ancestor(spec, state):
         spec, seen, store, state, attestation, subnet_id, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "target block is not an ancestor of LMD vote block"
+    assert reason == spec.BeaconAttestationGossipError.TARGET_NOT_ANCESTOR_OF_LMD_VOTE
 
     yield (
         "messages",
@@ -1067,7 +1067,7 @@ def test_gossip_beacon_attestation__ignore_finalized_not_ancestor(spec, state):
         spec, seen, store, state, attestation, subnet_id, block_time_ms + 500
     )
     assert result == "ignore"
-    assert reason == "finalized checkpoint is not an ancestor of block"
+    assert reason == spec.BeaconAttestationGossipError.FINALIZED_NOT_ANCESTOR
 
     yield (
         "messages",

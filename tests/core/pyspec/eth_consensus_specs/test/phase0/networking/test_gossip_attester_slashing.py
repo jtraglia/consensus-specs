@@ -77,7 +77,7 @@ def test_gossip_attester_slashing__ignore_already_seen(spec, state):
     # Second validation should be ignored (all indices already seen)
     result, reason = run_validate_attester_slashing_gossip(spec, seen, state, attester_slashing)
     assert result == "ignore"
-    assert reason == "all attester slashing indices already seen"
+    assert reason == spec.AttesterSlashingGossipError.ALL_INDICES_ALREADY_SEEN
     messages.append(
         {
             "message": get_filename(attester_slashing),
@@ -110,7 +110,7 @@ def test_gossip_attester_slashing__reject_not_slashable_data(spec, state):
 
     result, reason = run_validate_attester_slashing_gossip(spec, seen, state, attester_slashing)
     assert result == "reject"
-    assert reason == "attestation data is not slashable"
+    assert reason == spec.AttesterSlashingGossipError.ATTESTATION_DATA_NOT_SLASHABLE
 
     yield (
         "messages",
@@ -144,7 +144,7 @@ def test_gossip_attester_slashing__reject_invalid_attestation_1(spec, state):
 
     result, reason = run_validate_attester_slashing_gossip(spec, seen, state, attester_slashing)
     assert result == "reject"
-    assert reason == "invalid indexed attestation 1"
+    assert reason == spec.AttesterSlashingGossipError.INVALID_INDEXED_ATTESTATION_1
 
     yield (
         "messages",
@@ -178,7 +178,7 @@ def test_gossip_attester_slashing__reject_invalid_attestation_2(spec, state):
 
     result, reason = run_validate_attester_slashing_gossip(spec, seen, state, attester_slashing)
     assert result == "reject"
-    assert reason == "invalid indexed attestation 2"
+    assert reason == spec.AttesterSlashingGossipError.INVALID_INDEXED_ATTESTATION_2
 
     yield (
         "messages",
@@ -214,7 +214,7 @@ def test_gossip_attester_slashing__reject_attesting_index_out_of_range_1(spec, s
 
     result, reason = run_validate_attester_slashing_gossip(spec, seen, state, attester_slashing)
     assert result == "reject"
-    assert reason == "validator index out of range in indexed attestation 1"
+    assert reason == spec.AttesterSlashingGossipError.VALIDATOR_INDEX_OUT_OF_RANGE_1
 
     yield (
         "messages",
@@ -250,7 +250,7 @@ def test_gossip_attester_slashing__reject_attesting_index_out_of_range_2(spec, s
 
     result, reason = run_validate_attester_slashing_gossip(spec, seen, state, attester_slashing)
     assert result == "reject"
-    assert reason == "validator index out of range in indexed attestation 2"
+    assert reason == spec.AttesterSlashingGossipError.VALIDATOR_INDEX_OUT_OF_RANGE_2
 
     yield (
         "messages",
@@ -283,7 +283,7 @@ def test_gossip_attester_slashing__ignore_empty_attesting_indices_1(spec, state)
 
     result, reason = run_validate_attester_slashing_gossip(spec, seen, state, attester_slashing)
     assert result == "ignore"
-    assert reason == "all attester slashing indices already seen"
+    assert reason == spec.AttesterSlashingGossipError.ALL_INDICES_ALREADY_SEEN
 
     yield (
         "messages",
@@ -316,7 +316,7 @@ def test_gossip_attester_slashing__ignore_empty_attesting_indices_2(spec, state)
 
     result, reason = run_validate_attester_slashing_gossip(spec, seen, state, attester_slashing)
     assert result == "ignore"
-    assert reason == "all attester slashing indices already seen"
+    assert reason == spec.AttesterSlashingGossipError.ALL_INDICES_ALREADY_SEEN
 
     yield (
         "messages",
@@ -357,7 +357,7 @@ def test_gossip_attester_slashing__reject_unsorted_indices_1(spec, state):
 
     result, reason = run_validate_attester_slashing_gossip(spec, seen, state, attester_slashing)
     assert result == "reject"
-    assert reason == "invalid indexed attestation 1"
+    assert reason == spec.AttesterSlashingGossipError.INVALID_INDEXED_ATTESTATION_1
 
     yield (
         "messages",
@@ -393,7 +393,7 @@ def test_gossip_attester_slashing__reject_unsorted_indices_2(spec, state):
 
     result, reason = run_validate_attester_slashing_gossip(spec, seen, state, attester_slashing)
     assert result == "reject"
-    assert reason == "invalid indexed attestation 2"
+    assert reason == spec.AttesterSlashingGossipError.INVALID_INDEXED_ATTESTATION_2
 
     yield (
         "messages",
@@ -433,7 +433,7 @@ def test_gossip_attester_slashing__reject_no_slashable_validators(spec, state):
 
     result, reason = run_validate_attester_slashing_gossip(spec, seen, state, attester_slashing)
     assert result == "reject"
-    assert reason == "no slashable validators in intersection"
+    assert reason == spec.AttesterSlashingGossipError.NO_SLASHABLE_VALIDATORS
 
     yield (
         "messages",

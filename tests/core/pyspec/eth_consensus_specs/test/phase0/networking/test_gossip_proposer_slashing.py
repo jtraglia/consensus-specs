@@ -77,7 +77,7 @@ def test_gossip_proposer_slashing__ignore_already_seen(spec, state):
     # Second validation should be ignored
     result, reason = run_validate_proposer_slashing_gossip(spec, seen, state, proposer_slashing)
     assert result == "ignore"
-    assert reason == "already seen proposer slashing for this proposer"
+    assert reason == spec.ProposerSlashingGossipError.ALREADY_SEEN
     messages.append(
         {
             "message": get_filename(proposer_slashing),
@@ -112,7 +112,7 @@ def test_gossip_proposer_slashing__reject_slots_not_matching(spec, state):
 
     result, reason = run_validate_proposer_slashing_gossip(spec, seen, state, proposer_slashing)
     assert result == "reject"
-    assert reason == "header slots do not match"
+    assert reason == spec.ProposerSlashingGossipError.HEADER_SLOTS_DO_NOT_MATCH
 
     yield (
         "messages",
@@ -150,7 +150,7 @@ def test_gossip_proposer_slashing__reject_proposer_indices_not_matching(spec, st
 
     result, reason = run_validate_proposer_slashing_gossip(spec, seen, state, proposer_slashing)
     assert result == "reject"
-    assert reason == "header proposer indices do not match"
+    assert reason == spec.ProposerSlashingGossipError.HEADER_PROPOSER_INDICES_DO_NOT_MATCH
 
     yield (
         "messages",
@@ -186,7 +186,7 @@ def test_gossip_proposer_slashing__reject_headers_identical(spec, state):
 
     result, reason = run_validate_proposer_slashing_gossip(spec, seen, state, proposer_slashing)
     assert result == "reject"
-    assert reason == "headers are not different"
+    assert reason == spec.ProposerSlashingGossipError.HEADERS_ARE_NOT_DIFFERENT
 
     yield (
         "messages",
@@ -224,7 +224,7 @@ def test_gossip_proposer_slashing__reject_proposer_index_out_of_range(spec, stat
 
     result, reason = run_validate_proposer_slashing_gossip(spec, seen, state, proposer_slashing)
     assert result == "reject"
-    assert reason == "proposer index out of range"
+    assert reason == spec.ProposerSlashingGossipError.PROPOSER_INDEX_OUT_OF_RANGE
 
     yield (
         "messages",
@@ -261,7 +261,7 @@ def test_gossip_proposer_slashing__reject_proposer_not_slashable(spec, state):
 
     result, reason = run_validate_proposer_slashing_gossip(spec, seen, state, proposer_slashing)
     assert result == "reject"
-    assert reason == "proposer is not slashable"
+    assert reason == spec.ProposerSlashingGossipError.PROPOSER_NOT_SLASHABLE
 
     yield (
         "messages",
@@ -295,7 +295,7 @@ def test_gossip_proposer_slashing__reject_invalid_signature_1(spec, state):
 
     result, reason = run_validate_proposer_slashing_gossip(spec, seen, state, proposer_slashing)
     assert result == "reject"
-    assert reason == "invalid proposer slashing signature"
+    assert reason == spec.ProposerSlashingGossipError.INVALID_SIGNATURE
 
     yield (
         "messages",
@@ -329,7 +329,7 @@ def test_gossip_proposer_slashing__reject_invalid_signature_2(spec, state):
 
     result, reason = run_validate_proposer_slashing_gossip(spec, seen, state, proposer_slashing)
     assert result == "reject"
-    assert reason == "invalid proposer slashing signature"
+    assert reason == spec.ProposerSlashingGossipError.INVALID_SIGNATURE
 
     yield (
         "messages",

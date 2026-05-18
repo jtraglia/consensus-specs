@@ -176,7 +176,7 @@ def test_gossip_beacon_aggregate_and_proof__ignores_first_slot_before_epoch_wind
         spec, seen, store, state, signed_agg, current_time_ms
     )
     assert result == "ignore"
-    assert reason == "aggregate slot is from a future slot"
+    assert reason == spec.BeaconAggregateAndProofGossipError.SLOT_FROM_FUTURE
 
     yield "messages", "meta", [build_message(signed_agg, current_time_ms, 0, "ignore", reason)]
 
@@ -264,7 +264,7 @@ def test_gossip_beacon_aggregate_and_proof__ignores_first_slot_after_epoch_windo
         spec, seen, store, state, signed_agg, current_time_ms
     )
     assert result == "ignore"
-    assert reason == "aggregate epoch is not previous or current epoch"
+    assert reason == spec.BeaconAggregateAndProofGossipError.EPOCH_NOT_PREVIOUS_OR_CURRENT
 
     yield "messages", "meta", [build_message(signed_agg, current_time_ms, 0, "ignore", reason)]
 
@@ -397,6 +397,6 @@ def test_gossip_beacon_aggregate_and_proof__ignores_last_slot_after_epoch_window
         spec, seen, store, state, signed_agg, current_time_ms
     )
     assert result == "ignore"
-    assert reason == "aggregate epoch is not previous or current epoch"
+    assert reason == spec.BeaconAggregateAndProofGossipError.EPOCH_NOT_PREVIOUS_OR_CURRENT
 
     yield "messages", "meta", [build_message(signed_agg, current_time_ms, 0, "ignore", reason)]

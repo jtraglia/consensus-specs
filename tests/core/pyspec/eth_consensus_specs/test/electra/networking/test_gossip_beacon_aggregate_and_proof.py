@@ -160,7 +160,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_nonzero_data_index(spec, stat
         spec, seen, store, state, signed_agg, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "aggregate data index is non-zero"
+    assert reason == spec.BeaconAggregateAndProofGossipError.DATA_INDEX_NON_ZERO
 
     yield (
         "messages",
@@ -203,7 +203,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_zero_committees(spec, state):
         spec, seen, store, state, signed_agg, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "aggregate committee bits must specify exactly one committee"
+    assert reason == spec.BeaconAggregateAndProofGossipError.INVALID_COMMITTEE_BITS
 
     yield (
         "messages",
@@ -252,7 +252,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_multiple_committees(spec, sta
         spec, seen, store, state, signed_agg, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "aggregate committee bits must specify exactly one committee"
+    assert reason == spec.BeaconAggregateAndProofGossipError.INVALID_COMMITTEE_BITS
 
     yield (
         "messages",

@@ -24,6 +24,7 @@ from dataclasses import (
     dataclass,
     field,
 )
+from enum import StrEnum, auto
 from typing import (
     Any, Callable, Dict, DefaultDict, Set, Sequence, Tuple, Optional, TypeAlias, TypeVar, NamedTuple, Final
 )

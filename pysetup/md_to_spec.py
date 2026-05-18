@@ -40,6 +40,7 @@ class MarkdownToSpec:
             "constant_vars": {},
             "custom_types": {},
             "dataclasses": {},
+            "enums": {},
             "func_dep_presets": {},
             "functions": {},
             "preset_dep_constant_vars": {},
@@ -173,6 +174,11 @@ class MarkdownToSpec:
         Processes a class definition and updates the spec.
         """
         class_name, parent_class = _get_class_info_from_ast(cls)
+
+        # Enum classes don't need their own heading section and aren't SSZ objects.
+        if parent_class in ("Enum", "StrEnum"):
+            self.spec["enums"][class_name] = source
+            return
 
         # check consistency with spec
         if class_name != self.current_heading_name:
@@ -456,6 +462,7 @@ class MarkdownToSpec:
             protocols=self.spec["protocols"],
             ssz_dep_constants=self.spec["ssz_dep_constants"],
             ssz_objects=self.spec["ssz_objects"],
+            enums=self.spec["enums"],
         )
 
 

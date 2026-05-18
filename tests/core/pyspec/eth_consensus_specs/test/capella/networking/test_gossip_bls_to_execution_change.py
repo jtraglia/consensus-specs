@@ -92,7 +92,7 @@ def test_gossip_bls_to_execution_change__ignore_pre_capella(spec, state):
         spec, seen, state, signed_bls_to_execution_change, current_time_ms
     )
     assert result == "ignore"
-    assert reason == "current epoch is pre-capella"
+    assert reason == spec.BLSToExecutionChangeGossipError.PRE_CAPELLA
 
     yield (
         "messages",
@@ -142,7 +142,7 @@ def test_gossip_bls_to_execution_change__ignore_already_seen(spec, state):
         spec, seen, state, signed_bls_to_execution_change, current_time_ms
     )
     assert result == "ignore"
-    assert reason == "already seen BLS to execution change for this validator"
+    assert reason == spec.BLSToExecutionChangeGossipError.ALREADY_SEEN
     messages.append(
         {
             "offset_ms": 0,
@@ -177,7 +177,7 @@ def test_gossip_bls_to_execution_change__reject_validator_index_out_of_range(spe
         spec, seen, state, signed_bls_to_execution_change, current_time_ms
     )
     assert result == "reject"
-    assert reason == "validator index out of range"
+    assert reason == spec.BLSToExecutionChangeGossipError.VALIDATOR_INDEX_OUT_OF_RANGE
 
     yield (
         "messages",
@@ -218,7 +218,7 @@ def test_gossip_bls_to_execution_change__reject_not_bls_credentials(spec, state)
         spec, seen, state, signed_bls_to_execution_change, current_time_ms
     )
     assert result == "reject"
-    assert reason == "validator does not have BLS withdrawal credentials"
+    assert reason == spec.BLSToExecutionChangeGossipError.NOT_BLS_WITHDRAWAL_CREDENTIALS
 
     yield (
         "messages",
@@ -260,7 +260,7 @@ def test_gossip_bls_to_execution_change__reject_pubkey_mismatch(spec, state):
         spec, seen, state, signed_bls_to_execution_change, current_time_ms
     )
     assert result == "reject"
-    assert reason == "pubkey does not match validator withdrawal credentials"
+    assert reason == spec.BLSToExecutionChangeGossipError.PUBKEY_CREDENTIALS_MISMATCH
 
     yield (
         "messages",
@@ -298,7 +298,7 @@ def test_gossip_bls_to_execution_change__reject_bad_signature(spec, state):
         spec, seen, state, signed_bls_to_execution_change, current_time_ms
     )
     assert result == "reject"
-    assert reason == "invalid BLS to execution change signature"
+    assert reason == spec.BLSToExecutionChangeGossipError.INVALID_SIGNATURE
 
     yield (
         "messages",

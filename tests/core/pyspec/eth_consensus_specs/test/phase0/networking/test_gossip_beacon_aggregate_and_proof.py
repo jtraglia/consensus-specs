@@ -182,7 +182,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_committee_index_out_of_range(
         spec, seen, store, state, signed_agg, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "committee index out of range"
+    assert reason == spec.BeaconAggregateAndProofGossipError.COMMITTEE_INDEX_OUT_OF_RANGE
 
     yield (
         "messages",
@@ -232,7 +232,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_slot_not_within_range(spec, s
         spec, seen, store, state, signed_agg, current_time_ms
     )
     assert result == "ignore"
-    assert reason == "attestation slot not within propagation range"
+    assert reason == spec.BeaconAggregateAndProofGossipError.SLOT_NOT_WITHIN_PROPAGATION_RANGE
 
     yield (
         "messages",
@@ -332,7 +332,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_epoch_mismatch(spec, state):
         spec, seen, store, state, signed_agg, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "attestation epoch does not match target epoch"
+    assert reason == spec.BeaconAggregateAndProofGossipError.EPOCH_MISMATCH
 
     yield (
         "messages",
@@ -389,7 +389,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_already_seen_aggregate(spec, 
         spec, seen, store, state, signed_agg, block_time_ms + 600
     )
     assert result == "ignore"
-    assert reason == "already seen aggregate for this data"
+    assert reason == spec.BeaconAggregateAndProofGossipError.AGGREGATE_ALREADY_SEEN
     messages.append(
         {
             "offset_ms": 600,
@@ -493,7 +493,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_same_data_root_without_supers
         spec, seen, store, state, signed_agg_2, block_time_ms + 600
     )
     assert result == "ignore"
-    assert reason == "already seen aggregate from this aggregator for this epoch"
+    assert reason == spec.BeaconAggregateAndProofGossipError.AGGREGATOR_ALREADY_SEEN
     messages.append(
         {
             "offset_ms": 600,
@@ -628,7 +628,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_block_not_seen(spec, state):
         spec, seen, store, state, signed_agg, block_time_ms + 500
     )
     assert result == "ignore"
-    assert reason == "block being voted for has not been seen"
+    assert reason == spec.BeaconAggregateAndProofGossipError.BLOCK_NOT_SEEN
 
     yield (
         "messages",
@@ -685,7 +685,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_aggregation_bits_size_mismatc
         spec, seen, store, state, signed_agg, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "aggregation bits length does not match committee size"
+    assert reason == spec.BeaconAggregateAndProofGossipError.AGGREGATION_BITS_LENGTH_MISMATCH
 
     yield (
         "messages",
@@ -740,7 +740,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_no_participants(spec, state):
         spec, seen, store, state, signed_agg, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "aggregate has no participants"
+    assert reason == spec.BeaconAggregateAndProofGossipError.NO_PARTICIPANTS
 
     yield (
         "messages",
@@ -806,7 +806,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_already_seen_aggregator(spec,
         spec, seen, store, state, signed_agg2, block_time_ms + 600
     )
     assert result == "ignore"
-    assert reason == "already seen aggregate from this aggregator for this epoch"
+    assert reason == spec.BeaconAggregateAndProofGossipError.AGGREGATOR_ALREADY_SEEN
     messages.append(
         {
             "offset_ms": 600,
@@ -892,7 +892,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_not_aggregator(spec, state):
         spec, seen, store, state, signed_agg, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "validator is not selected as aggregator"
+    assert reason == spec.BeaconAggregateAndProofGossipError.NOT_AGGREGATOR
 
     yield (
         "messages",
@@ -951,7 +951,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_aggregator_not_in_committee(s
         spec, seen, store, state, signed_agg, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "aggregator index not in committee"
+    assert reason == spec.BeaconAggregateAndProofGossipError.AGGREGATOR_NOT_IN_COMMITTEE
 
     yield (
         "messages",
@@ -1001,7 +1001,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_aggregator_index_out_of_range
         spec, seen, store, state, signed_agg, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "aggregator index not in committee"
+    assert reason == spec.BeaconAggregateAndProofGossipError.AGGREGATOR_NOT_IN_COMMITTEE
 
     yield (
         "messages",
@@ -1053,7 +1053,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_invalid_selection_proof(spec,
         spec, seen, store, state, signed_agg, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "invalid selection proof signature"
+    assert reason == spec.BeaconAggregateAndProofGossipError.INVALID_SELECTION_PROOF_SIGNATURE
 
     yield (
         "messages",
@@ -1105,7 +1105,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_invalid_aggregator_signature(
         spec, seen, store, state, signed_agg, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "invalid aggregator signature"
+    assert reason == spec.BeaconAggregateAndProofGossipError.INVALID_AGGREGATOR_SIGNATURE
 
     yield (
         "messages",
@@ -1157,7 +1157,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_invalid_aggregate_signature(s
         spec, seen, store, state, signed_agg, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "invalid aggregate signature"
+    assert reason == spec.BeaconAggregateAndProofGossipError.INVALID_AGGREGATE_SIGNATURE
 
     yield (
         "messages",
@@ -1221,7 +1221,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_block_failed_validation(spec,
         spec, seen, store, state, signed_agg, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "block being voted for failed validation"
+    assert reason == spec.BeaconAggregateAndProofGossipError.BLOCK_FAILED_VALIDATION
 
     yield (
         "messages",
@@ -1273,7 +1273,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_target_not_ancestor(spec, sta
         spec, seen, store, state, signed_agg, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "target block is not an ancestor of LMD vote block"
+    assert reason == spec.BeaconAggregateAndProofGossipError.TARGET_NOT_ANCESTOR_OF_LMD_VOTE
 
     yield (
         "messages",
@@ -1329,7 +1329,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_finalized_not_ancestor(spec, 
         spec, seen, store, state, signed_agg, block_time_ms + 500
     )
     assert result == "ignore"
-    assert reason == "finalized checkpoint is not an ancestor of block"
+    assert reason == spec.BeaconAggregateAndProofGossipError.FINALIZED_NOT_ANCESTOR
 
     yield (
         "messages",

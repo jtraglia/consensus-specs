@@ -267,7 +267,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_future_slot(spec, 
         current_time_ms,
     )
     assert result == "ignore"
-    assert reason == "contribution is not for the current slot"
+    assert reason == spec.SyncCommitteeContributionAndProofGossipError.NOT_CURRENT_SLOT
 
     yield (
         "messages",
@@ -323,7 +323,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_past_slot(spec, st
         current_time_ms,
     )
     assert result == "ignore"
-    assert reason == "contribution is not for the current slot"
+    assert reason == spec.SyncCommitteeContributionAndProofGossipError.NOT_CURRENT_SLOT
 
     yield (
         "messages",
@@ -378,7 +378,9 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_subcommitt
         current_time_ms + 500,
     )
     assert result == "reject"
-    assert reason == "subcommittee index out of range"
+    assert (
+        reason == spec.SyncCommitteeContributionAndProofGossipError.SUBCOMMITTEE_INDEX_OUT_OF_RANGE
+    )
 
     yield (
         "messages",
@@ -432,7 +434,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_no_participants(sp
         current_time_ms + 500,
     )
     assert result == "reject"
-    assert reason == "contribution has no participants"
+    assert reason == spec.SyncCommitteeContributionAndProofGossipError.NO_PARTICIPANTS
 
     yield (
         "messages",
@@ -503,7 +505,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_not_aggregator(spe
         current_time_ms + 500,
     )
     assert result == "reject"
-    assert reason == "validator is not selected as aggregator"
+    assert reason == spec.SyncCommitteeContributionAndProofGossipError.NOT_AGGREGATOR
 
     yield (
         "messages",
@@ -561,7 +563,9 @@ def test_gossip_sync_committee_contribution_and_proof__reject_aggregator_not_in_
         current_time_ms + 500,
     )
     assert result == "reject"
-    assert reason == "aggregator not in subcommittee"
+    assert (
+        reason == spec.SyncCommitteeContributionAndProofGossipError.AGGREGATOR_NOT_IN_SUBCOMMITTEE
+    )
 
     yield (
         "messages",
@@ -615,7 +619,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_aggregator_index_o
         current_time_ms + 500,
     )
     assert result == "reject"
-    assert reason == "aggregator index out of range"
+    assert reason == spec.SyncCommitteeContributionAndProofGossipError.AGGREGATOR_INDEX_OUT_OF_RANGE
 
     yield (
         "messages",
@@ -742,7 +746,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_superset_contribut
         current_time_ms + 600,
     )
     assert result == "ignore"
-    assert reason == "already seen contribution for this data"
+    assert reason == spec.SyncCommitteeContributionAndProofGossipError.CONTRIBUTION_ALREADY_SEEN
     messages.append(
         {
             "offset_ms": 600,
@@ -938,7 +942,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_duplicate_aggregat
         current_time_ms + 600,
     )
     assert result == "ignore"
-    assert reason == "already seen contribution from this aggregator"
+    assert reason == spec.SyncCommitteeContributionAndProofGossipError.AGGREGATOR_ALREADY_SEEN
     messages.append(
         {
             "offset_ms": 600,
@@ -996,7 +1000,10 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_selection_
         current_time_ms + 500,
     )
     assert result == "reject"
-    assert reason == "invalid selection proof signature"
+    assert (
+        reason
+        == spec.SyncCommitteeContributionAndProofGossipError.INVALID_SELECTION_PROOF_SIGNATURE
+    )
 
     yield (
         "messages",
@@ -1056,7 +1063,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_aggregator
         current_time_ms + 500,
     )
     assert result == "reject"
-    assert reason == "invalid aggregator signature"
+    assert reason == spec.SyncCommitteeContributionAndProofGossipError.INVALID_AGGREGATOR_SIGNATURE
 
     yield (
         "messages",
@@ -1123,7 +1130,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_aggregate_
         current_time_ms + 500,
     )
     assert result == "reject"
-    assert reason == "invalid aggregate signature"
+    assert reason == spec.SyncCommitteeContributionAndProofGossipError.INVALID_AGGREGATE_SIGNATURE
 
     yield (
         "messages",

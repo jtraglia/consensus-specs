@@ -121,7 +121,7 @@ def build_spec(
         spec_object = combine_spec_objects(spec_object, value)
     spec_object = finalized_spec_object(spec_object)
 
-    class_objects = {**spec_object.ssz_objects, **spec_object.dataclasses}
+    class_objects = {**spec_object.enums, **spec_object.ssz_objects, **spec_object.dataclasses}
 
     # Ensure it's ordered after multiple forks
     new_objects: dict[str, str] = {}

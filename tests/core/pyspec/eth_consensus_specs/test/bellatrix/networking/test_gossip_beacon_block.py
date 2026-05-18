@@ -145,7 +145,7 @@ def test_gossip_beacon_block__reject_incorrect_execution_payload_timestamp(spec,
         spec, seen, store, state, signed_block, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "incorrect execution payload timestamp"
+    assert reason == spec.BeaconBlockGossipError.INCORRECT_EXECUTION_PAYLOAD_TIMESTAMP
 
     yield (
         "messages",
@@ -234,7 +234,7 @@ def test_gossip_beacon_block__reject_parent_consensus_failed_execution_not_verif
         },
     )
     assert result == "reject"
-    assert reason == "block's parent is invalid and EL result is unknown"
+    assert reason == spec.BeaconBlockGossipError.PARENT_INVALID_EL_RESULT_UNKNOWN
 
     yield (
         "messages",
@@ -322,7 +322,7 @@ def test_gossip_beacon_block__ignore_parent_consensus_failed_execution_known(spe
         block_payload_statuses=block_payload_statuses,
     )
     assert result == "ignore"
-    assert reason == "block's parent is invalid and EL result is known"
+    assert reason == spec.BeaconBlockGossipError.PARENT_INVALID_EL_RESULT_KNOWN
 
     yield (
         "messages",
@@ -412,7 +412,7 @@ def test_gossip_beacon_block__ignore_parent_execution_verified_invalid(spec, sta
         block_payload_statuses=block_payload_statuses,
     )
     assert result == "ignore"
-    assert reason == "block's parent is valid and EL result is invalid"
+    assert reason == spec.BeaconBlockGossipError.PARENT_VALID_EL_RESULT_INVALID
 
     yield (
         "messages",

@@ -300,6 +300,7 @@ ignored_dependencies = [
     "DefaultDict",
     "dict",
     "Dict",
+    "Enum",
     "field",
     "floorlog2",
     "list",
@@ -309,6 +310,7 @@ ignored_dependencies = [
     "ProgressiveList",
     "Sequence",
     "Set",
+    "StrEnum",
     "Tuple",
     "uint128",
     "uint16",
@@ -378,6 +380,7 @@ def combine_spec_objects(spec0: SpecObject, spec1: SpecObject) -> SpecObject:
     func_dep_presets = combine_dicts(spec0.func_dep_presets, spec1.func_dep_presets)
     ssz_objects = combine_ssz_objects(spec0.ssz_objects, spec1.ssz_objects)
     dataclasses = combine_dicts(spec0.dataclasses, spec1.dataclasses)
+    enums = combine_dicts(spec0.enums, spec1.enums)
     return SpecObject(
         functions=functions,
         protocols=protocols,
@@ -390,6 +393,7 @@ def combine_spec_objects(spec0: SpecObject, spec1: SpecObject) -> SpecObject:
         func_dep_presets=func_dep_presets,
         ssz_objects=ssz_objects,
         dataclasses=dataclasses,
+        enums=enums,
     )
 
 
@@ -425,6 +429,7 @@ def finalized_spec_object(spec_object: SpecObject) -> SpecObject:
         func_dep_presets=spec_object.func_dep_presets,
         ssz_objects=ssz_objects,
         dataclasses=spec_object.dataclasses,
+        enums=spec_object.enums,
     )
 
 

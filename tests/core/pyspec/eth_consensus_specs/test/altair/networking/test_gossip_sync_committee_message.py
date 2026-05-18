@@ -128,7 +128,7 @@ def test_gossip_sync_committee_message__ignore_future_slot(spec, state):
         current_time_ms,
     )
     assert result == "ignore"
-    assert reason == "message is not for the current slot"
+    assert reason == spec.SyncCommitteeMessageGossipError.NOT_CURRENT_SLOT
 
     yield (
         "messages",
@@ -178,7 +178,7 @@ def test_gossip_sync_committee_message__ignore_past_slot(spec, state):
         current_time_ms,
     )
     assert result == "ignore"
-    assert reason == "message is not for the current slot"
+    assert reason == spec.SyncCommitteeMessageGossipError.NOT_CURRENT_SLOT
 
     yield (
         "messages",
@@ -224,7 +224,7 @@ def test_gossip_sync_committee_message__reject_wrong_subnet(spec, state):
         current_time_ms + 500,
     )
     assert result == "reject"
-    assert reason == "subnet_id is not valid for the validator"
+    assert reason == spec.SyncCommitteeMessageGossipError.INVALID_SUBNET
 
     yield (
         "messages",
@@ -269,7 +269,7 @@ def test_gossip_sync_committee_message__reject_validator_index_out_of_range(spec
         current_time_ms + 500,
     )
     assert result == "reject"
-    assert reason == "validator index out of range"
+    assert reason == spec.SyncCommitteeMessageGossipError.VALIDATOR_INDEX_OUT_OF_RANGE
 
     yield (
         "messages",
@@ -334,7 +334,7 @@ def test_gossip_sync_committee_message__ignore_duplicate(spec, state):
         current_time_ms + 600,
     )
     assert result == "ignore"
-    assert reason == "already seen message from this validator for this slot and subnet"
+    assert reason == spec.SyncCommitteeMessageGossipError.ALREADY_SEEN
     messages.append(
         {
             "offset_ms": 600,
@@ -390,7 +390,7 @@ def test_gossip_sync_committee_message__reject_invalid_signature(spec, state):
         current_time_ms + 500,
     )
     assert result == "reject"
-    assert reason == "invalid sync committee message signature"
+    assert reason == spec.SyncCommitteeMessageGossipError.INVALID_SIGNATURE
 
     yield (
         "messages",

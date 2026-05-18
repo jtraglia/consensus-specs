@@ -75,7 +75,7 @@ def test_gossip_voluntary_exit__reject_deneb_signature(spec, state):
 
     result, reason = run_validate_voluntary_exit_gossip(spec, seen, state, signed_exit)
     assert result == "reject"
-    assert reason == "invalid voluntary exit signature"
+    assert reason == spec.VoluntaryExitGossipError.INVALID_SIGNATURE
 
     yield (
         "messages",

@@ -111,7 +111,7 @@ def test_gossip_voluntary_exit__ignore_already_seen(spec, state):
     # Second validation should be ignored
     result, reason = run_validate_voluntary_exit_gossip(spec, seen, state, signed_exit)
     assert result == "ignore"
-    assert reason == "already seen voluntary exit for this validator"
+    assert reason == spec.VoluntaryExitGossipError.ALREADY_SEEN
     messages.append({"message": get_filename(signed_exit), "expected": "ignore", "reason": reason})
 
     yield "messages", "meta", messages
@@ -144,7 +144,7 @@ def test_gossip_voluntary_exit__reject_validator_index_out_of_range(spec, state)
 
     result, reason = run_validate_voluntary_exit_gossip(spec, seen, state, signed_exit)
     assert result == "reject"
-    assert reason == "validator index out of range"
+    assert reason == spec.VoluntaryExitGossipError.VALIDATOR_INDEX_OUT_OF_RANGE
 
     yield (
         "messages",
@@ -178,7 +178,7 @@ def test_gossip_voluntary_exit__reject_validator_not_active(spec, state):
 
     result, reason = run_validate_voluntary_exit_gossip(spec, seen, state, signed_exit)
     assert result == "reject"
-    assert reason == "validator is not active"
+    assert reason == spec.VoluntaryExitGossipError.VALIDATOR_NOT_ACTIVE
 
     yield (
         "messages",
@@ -212,7 +212,7 @@ def test_gossip_voluntary_exit__reject_already_initiated_exit(spec, state):
 
     result, reason = run_validate_voluntary_exit_gossip(spec, seen, state, signed_exit)
     assert result == "reject"
-    assert reason == "validator has already initiated exit"
+    assert reason == spec.VoluntaryExitGossipError.ALREADY_INITIATED_EXIT
 
     yield (
         "messages",
@@ -246,7 +246,7 @@ def test_gossip_voluntary_exit__reject_epoch_in_future(spec, state):
 
     result, reason = run_validate_voluntary_exit_gossip(spec, seen, state, signed_exit)
     assert result == "reject"
-    assert reason == "voluntary exit epoch is in the future"
+    assert reason == spec.VoluntaryExitGossipError.EPOCH_IN_FUTURE
 
     yield (
         "messages",
@@ -281,7 +281,7 @@ def test_gossip_voluntary_exit__reject_not_active_long_enough(spec, state):
 
     result, reason = run_validate_voluntary_exit_gossip(spec, seen, state, signed_exit)
     assert result == "reject"
-    assert reason == "validator has not been active long enough"
+    assert reason == spec.VoluntaryExitGossipError.NOT_ACTIVE_LONG_ENOUGH
 
     yield (
         "messages",
@@ -321,7 +321,7 @@ def test_gossip_voluntary_exit__reject_invalid_signature(spec, state):
 
     result, reason = run_validate_voluntary_exit_gossip(spec, seen, state, signed_exit)
     assert result == "reject"
-    assert reason == "invalid voluntary exit signature"
+    assert reason == spec.VoluntaryExitGossipError.INVALID_SIGNATURE
 
     yield (
         "messages",

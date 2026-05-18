@@ -107,6 +107,38 @@ further details.
 unconditionally enabled after The Merge, which happens before Capella.
 
 ```python
+class BeaconBlockGossipError(StrEnum):
+    """Gossip validation errors for ``beacon_block``."""
+
+    BLOCK_ALREADY_SEEN = auto()
+    """The block is not the first valid block for this proposer and slot."""
+    BLOCK_FROM_FUTURE_SLOT = auto()
+    """The block is from a future slot."""
+    BLOCK_NOT_AFTER_FINALIZED = auto()
+    """The block is not from a slot greater than the latest finalized slot."""
+    BLOCK_NOT_AFTER_PARENT = auto()
+    """The block is not from a higher slot than its parent."""
+    FINALIZED_NOT_ANCESTOR = auto()
+    """The finalized checkpoint is not an ancestor of the block."""
+    INCORRECT_EXECUTION_PAYLOAD_TIMESTAMP = auto()
+    """The execution payload timestamp is incorrect."""
+    INVALID_PROPOSER_SIGNATURE = auto()
+    """The proposer signature is invalid."""
+    PARENT_INVALID_EL_RESULT_KNOWN = auto()
+    """The block's parent is invalid and EL result is known."""
+    PARENT_INVALID_EL_RESULT_UNKNOWN = auto()
+    """The block's parent is invalid and EL result is unknown."""
+    PARENT_NOT_SEEN = auto()
+    """The block's parent has not been seen."""
+    PARENT_VALID_EL_RESULT_INVALID = auto()
+    """The block's parent is valid and EL result is invalid."""
+    PROPOSER_INDEX_OUT_OF_RANGE = auto()
+    """The proposer index is out of range."""
+    PROPOSER_MISMATCH = auto()
+    """The block's proposer index does not match the expected proposer."""
+```
+
+```python
 def validate_beacon_block_gossip(
     seen: Seen,
     store: Store,
@@ -125,38 +157,39 @@ def validate_beacon_block_gossip(
     # [IGNORE] The block is not from a future slot
     # (MAY be queued for processing at the appropriate slot)
     if not is_not_from_future_slot(state, block.slot, current_time_ms):
-        raise GossipIgnore("block is from a future slot")
+        raise GossipIgnore(BeaconBlockGossipError.BLOCK_FROM_FUTURE_SLOT)
 
     # [IGNORE] The block is from a slot greater than the latest finalized slot
     # (MAY choose to validate and store such blocks for additional purposes
     # -- e.g. slashing detection, archive nodes, etc)
     finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
     if block.slot <= finalized_slot:
-        raise GossipIgnore("block is not from a slot greater than the latest finalized slot")
+        raise GossipIgnore(BeaconBlockGossipError.BLOCK_NOT_AFTER_FINALIZED)
 
-    # [IGNORE] The block is the first block with valid signature received for the proposer for the slot
+    # [IGNORE] The block is the first block with valid signature received for
+    # the proposer for the slot
     if (block.proposer_index, block.slot) in seen.proposer_slots:
-        raise GossipIgnore("block is not the first valid block for this proposer and slot")
+        raise GossipIgnore(BeaconBlockGossipError.BLOCK_ALREADY_SEEN)
 
     # [REJECT] The proposer index is a valid validator index
     if block.proposer_index >= len(state.validators):
-        raise GossipReject("proposer index out of range")
+        raise GossipReject(BeaconBlockGossipError.PROPOSER_INDEX_OUT_OF_RANGE)
 
     # [REJECT] The proposer signature is valid
     proposer = state.validators[block.proposer_index]
     domain = get_domain(state, DOMAIN_BEACON_PROPOSER, compute_epoch_at_slot(block.slot))
     signing_root = compute_signing_root(block, domain)
     if not bls.Verify(proposer.pubkey, signing_root, signed_beacon_block.signature):
-        raise GossipReject("invalid proposer signature")
+        raise GossipReject(BeaconBlockGossipError.INVALID_PROPOSER_SIGNATURE)
 
     # [IGNORE] The block's parent has been seen (via gossip or non-gossip sources)
     # (MAY be queued until parent is retrieved)
     if block.parent_root not in store.blocks:
-        raise GossipIgnore("block's parent has not been seen")
+        raise GossipIgnore(BeaconBlockGossipError.PARENT_NOT_SEEN)
 
     # [REJECT] The block's execution payload timestamp is correct with respect to the slot
     if execution_payload.timestamp != compute_time_at_slot(state, block.slot):
-        raise GossipReject("incorrect execution payload timestamp")
+        raise GossipReject(BeaconBlockGossipError.INCORRECT_EXECUTION_PAYLOAD_TIMESTAMP)
 
     parent_payload_status = PAYLOAD_STATUS_NOT_VALIDATED
     if block.parent_root in block_payload_statuses:
@@ -165,25 +198,25 @@ def validate_beacon_block_gossip(
     if block.parent_root not in store.block_states:
         if parent_payload_status == PAYLOAD_STATUS_NOT_VALIDATED:
             # [REJECT] The block's parent passes validation
-            raise GossipReject("block's parent is invalid and EL result is unknown")
+            raise GossipReject(BeaconBlockGossipError.PARENT_INVALID_EL_RESULT_UNKNOWN)
 
         # [IGNORE] The block's parent passes validation
-        raise GossipIgnore("block's parent is invalid and EL result is known")
+        raise GossipIgnore(BeaconBlockGossipError.PARENT_INVALID_EL_RESULT_KNOWN)
 
     # [IGNORE] The block's parent's execution payload passes validation
     if parent_payload_status == PAYLOAD_STATUS_INVALIDATED:
-        raise GossipIgnore("block's parent is valid and EL result is invalid")
+        raise GossipIgnore(BeaconBlockGossipError.PARENT_VALID_EL_RESULT_INVALID)
 
     # [REJECT] The block is from a higher slot than its parent
     if block.slot <= store.blocks[block.parent_root].slot:
-        raise GossipReject("block is not from a higher slot than its parent")
+        raise GossipReject(BeaconBlockGossipError.BLOCK_NOT_AFTER_PARENT)
 
     # [REJECT] The current finalized checkpoint is an ancestor of the block
     checkpoint_block = get_checkpoint_block(
         store, block.parent_root, store.finalized_checkpoint.epoch
     )
     if checkpoint_block != store.finalized_checkpoint.root:
-        raise GossipReject("finalized checkpoint is not an ancestor of block")
+        raise GossipReject(BeaconBlockGossipError.FINALIZED_NOT_ANCESTOR)
 
     # [REJECT] The block is proposed by the expected proposer for the slot
     # (if shuffling is not available, IGNORE instead and MAY be queued for later)
@@ -191,7 +224,7 @@ def validate_beacon_block_gossip(
     process_slots(parent_state, block.slot)
     expected_proposer = get_beacon_proposer_index(parent_state)
     if block.proposer_index != expected_proposer:
-        raise GossipReject("block proposer_index does not match expected proposer")
+        raise GossipReject(BeaconBlockGossipError.PROPOSER_MISMATCH)
 
     # Mark this block as seen
     seen.proposer_slots.add((block.proposer_index, block.slot))
@@ -202,6 +235,24 @@ def validate_beacon_block_gossip(
 The `bls_to_execution_change` topic is used solely for propagating signed BLS to
 execution change messages on the network. Signed messages are sent in their
 entirety. The `state` parameter is the head state.
+
+```python
+class BLSToExecutionChangeGossipError(StrEnum):
+    """Gossip validation errors for ``bls_to_execution_change``."""
+
+    ALREADY_SEEN = auto()
+    """A BLS to execution change for this validator has already been seen."""
+    INVALID_SIGNATURE = auto()
+    """The BLS to execution change signature is invalid."""
+    NOT_BLS_WITHDRAWAL_CREDENTIALS = auto()
+    """The validator does not have BLS withdrawal credentials."""
+    PRE_CAPELLA = auto()
+    """The current epoch is before the Capella fork epoch."""
+    PUBKEY_CREDENTIALS_MISMATCH = auto()
+    """The pubkey does not match the validator's withdrawal credentials."""
+    VALIDATOR_INDEX_OUT_OF_RANGE = auto()
+    """The validator index is out of range."""
+```
 
 ```python
 def validate_bls_to_execution_change_gossip(
@@ -223,25 +274,25 @@ def validate_bls_to_execution_change_gossip(
     current_slot = Slot(time_since_genesis_ms // SLOT_DURATION_MS)
     current_epoch = compute_epoch_at_slot(current_slot)
     if current_epoch < CAPELLA_FORK_EPOCH:
-        raise GossipIgnore("current epoch is pre-capella")
+        raise GossipIgnore(BLSToExecutionChangeGossipError.PRE_CAPELLA)
 
     # [IGNORE] This is the first valid bls_to_execution_change received for the validator
     if validator_index in seen.bls_to_execution_change_indices:
-        raise GossipIgnore("already seen BLS to execution change for this validator")
+        raise GossipIgnore(BLSToExecutionChangeGossipError.ALREADY_SEEN)
 
     # [REJECT] The validator index is valid
     if validator_index >= len(state.validators):
-        raise GossipReject("validator index out of range")
+        raise GossipReject(BLSToExecutionChangeGossipError.VALIDATOR_INDEX_OUT_OF_RANGE)
 
     validator = state.validators[validator_index]
 
     # [REJECT] The validator has BLS withdrawal credentials
     if validator.withdrawal_credentials[:1] != BLS_WITHDRAWAL_PREFIX:
-        raise GossipReject("validator does not have BLS withdrawal credentials")
+        raise GossipReject(BLSToExecutionChangeGossipError.NOT_BLS_WITHDRAWAL_CREDENTIALS)
 
     # [REJECT] The bls_to_execution_change is for the validator's withdrawal pubkey
     if validator.withdrawal_credentials[1:] != hash(bls_to_execution_change.from_bls_pubkey)[1:]:
-        raise GossipReject("pubkey does not match validator withdrawal credentials")
+        raise GossipReject(BLSToExecutionChangeGossipError.PUBKEY_CREDENTIALS_MISMATCH)
 
     # [REJECT] The signature is valid
     domain = compute_domain(
@@ -253,7 +304,7 @@ def validate_bls_to_execution_change_gossip(
         signing_root,
         signed_bls_to_execution_change.signature,
     ):
-        raise GossipReject("invalid BLS to execution change signature")
+        raise GossipReject(BLSToExecutionChangeGossipError.INVALID_SIGNATURE)
 
     # Mark this bls_to_execution_change as seen
     seen.bls_to_execution_change_indices.add(validator_index)

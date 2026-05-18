@@ -73,7 +73,7 @@ def test_gossip_beacon_attestation__reject_nonzero_data_index(spec, state):
         spec, seen, store, state, attestation, subnet_id, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "attestation data index is non-zero"
+    assert reason == spec.BeaconAttestationGossipError.DATA_INDEX_NON_ZERO
 
     yield (
         "messages",
@@ -124,7 +124,7 @@ def test_gossip_beacon_attestation__reject_attester_not_in_committee(spec, state
         spec, seen, store, state, attestation, subnet_id, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "attester is not a member of the committee"
+    assert reason == spec.BeaconAttestationGossipError.ATTESTER_NOT_IN_COMMITTEE
 
     yield (
         "messages",

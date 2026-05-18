@@ -150,7 +150,7 @@ def test_gossip_blob_sidecar__reject_index_out_of_range(spec, state):
         spec, seen, store, state, blob_sidecar, subnet_id, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "blob index out of range"
+    assert reason == spec.BlobSidecarGossipError.INDEX_OUT_OF_RANGE
 
     yield (
         "messages",
@@ -198,7 +198,7 @@ def test_gossip_blob_sidecar__reject_wrong_subnet(spec, state):
         spec, seen, store, state, blob_sidecar, wrong_subnet, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "blob sidecar is for wrong subnet"
+    assert reason == spec.BlobSidecarGossipError.WRONG_SUBNET
 
     yield (
         "messages",
@@ -248,7 +248,7 @@ def test_gossip_blob_sidecar__reject_invalid_proposer_signature(spec, state):
         spec, seen, store, state, blob_sidecar, subnet_id, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "invalid proposer signature on blob sidecar block header"
+    assert reason == spec.BlobSidecarGossipError.INVALID_PROPOSER_SIGNATURE
 
     yield (
         "messages",
@@ -299,7 +299,7 @@ def test_gossip_blob_sidecar__reject_invalid_inclusion_proof(spec, state):
         spec, seen, store, state, blob_sidecar, subnet_id, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "invalid blob sidecar inclusion proof"
+    assert reason == spec.BlobSidecarGossipError.INVALID_INCLUSION_PROOF
 
     yield (
         "messages",
@@ -348,7 +348,7 @@ def test_gossip_blob_sidecar__reject_invalid_kzg_proof(spec, state):
         spec, seen, store, state, blob_sidecar, subnet_id, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "invalid blob kzg proof"
+    assert reason == spec.BlobSidecarGossipError.INVALID_KZG_PROOF
 
     yield (
         "messages",
@@ -396,7 +396,7 @@ def test_gossip_blob_sidecar__ignore_future_slot(spec, state):
         spec, seen, store, state, blob_sidecar, subnet_id, current_time_ms
     )
     assert result == "ignore"
-    assert reason == "blob sidecar is from a future slot"
+    assert reason == spec.BlobSidecarGossipError.SLOT_FROM_FUTURE
 
     yield (
         "messages",
@@ -504,7 +504,7 @@ def test_gossip_blob_sidecar__ignore_not_later_than_finalized_slot(spec, state):
         spec, seen, store, state, blob_sidecar, subnet_id, block_time_ms + 500
     )
     assert result == "ignore"
-    assert reason == "blob sidecar is not from a slot greater than the latest finalized slot"
+    assert reason == spec.BlobSidecarGossipError.SLOT_NOT_AFTER_FINALIZED
 
     yield (
         "messages",
@@ -554,7 +554,7 @@ def test_gossip_blob_sidecar__reject_proposer_index_out_of_range(spec, state):
         spec, seen, store, state, blob_sidecar, subnet_id, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "proposer index out of range"
+    assert reason == spec.BlobSidecarGossipError.PROPOSER_INDEX_OUT_OF_RANGE
 
     yield (
         "messages",
@@ -605,7 +605,7 @@ def test_gossip_blob_sidecar__ignore_parent_not_seen(spec, state):
         spec, seen, store, state, blob_sidecar, subnet_id, block_time_ms + 500
     )
     assert result == "ignore"
-    assert reason == "blob sidecar's parent has not been seen"
+    assert reason == spec.BlobSidecarGossipError.PARENT_NOT_SEEN
 
     yield (
         "messages",
@@ -673,7 +673,7 @@ def test_gossip_blob_sidecar__reject_parent_failed_validation(spec, state):
         spec, seen, store, state, blob_sidecar, subnet_id, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "blob sidecar's parent failed validation"
+    assert reason == spec.BlobSidecarGossipError.PARENT_FAILED_VALIDATION
 
     yield (
         "messages",
@@ -740,7 +740,7 @@ def test_gossip_blob_sidecar__ignore_already_seen_tuple(spec, state):
         spec, seen, store, state, blob_sidecar, subnet_id, block_time_ms + 600
     )
     assert result == "ignore"
-    assert reason == "already seen blob sidecar from this proposer for this slot and index"
+    assert reason == spec.BlobSidecarGossipError.ALREADY_SEEN
     messages.append(
         {
             "subnet_id": int(subnet_id),
@@ -807,7 +807,7 @@ def test_gossip_blob_sidecar__reject_slot_not_higher_than_parent(spec, state):
         spec, seen, store, state, blob_sidecar, subnet_id, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "blob sidecar is not from a higher slot than its parent"
+    assert reason == spec.BlobSidecarGossipError.SLOT_NOT_AFTER_PARENT
 
     yield (
         "messages",
@@ -861,7 +861,7 @@ def test_gossip_blob_sidecar__reject_non_ancestor_finalized_checkpoint(spec, sta
         spec, seen, store, state, blob_sidecar, subnet_id, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "finalized checkpoint is not an ancestor of blob sidecar's block"
+    assert reason == spec.BlobSidecarGossipError.FINALIZED_NOT_ANCESTOR
 
     yield (
         "messages",
@@ -913,7 +913,7 @@ def test_gossip_blob_sidecar__reject_wrong_proposer_index(spec, state):
         spec, seen, store, state, blob_sidecar, subnet_id, block_time_ms + 500
     )
     assert result == "reject"
-    assert reason == "blob sidecar proposer_index does not match expected proposer"
+    assert reason == spec.BlobSidecarGossipError.PROPOSER_MISMATCH
 
     yield (
         "messages",

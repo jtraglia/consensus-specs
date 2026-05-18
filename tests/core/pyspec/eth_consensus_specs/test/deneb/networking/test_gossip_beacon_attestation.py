@@ -172,7 +172,7 @@ def test_gossip_beacon_attestation__ignores_first_slot_before_epoch_window_opens
         spec, seen, store, state, attestation, subnet_id, current_time_ms
     )
     assert result == "ignore"
-    assert reason == "attestation slot is from a future slot"
+    assert reason == spec.BeaconAttestationGossipError.SLOT_FROM_FUTURE
 
     yield (
         "messages",
@@ -263,7 +263,7 @@ def test_gossip_beacon_attestation__ignores_first_slot_after_epoch_window_closes
         spec, seen, store, state, attestation, subnet_id, current_time_ms
     )
     assert result == "ignore"
-    assert reason == "attestation epoch is not previous or current epoch"
+    assert reason == spec.BeaconAttestationGossipError.EPOCH_NOT_PREVIOUS_OR_CURRENT
 
     yield (
         "messages",
@@ -392,7 +392,7 @@ def test_gossip_beacon_attestation__ignores_last_slot_after_epoch_window_closes(
         spec, seen, store, state, attestation, subnet_id, current_time_ms
     )
     assert result == "ignore"
-    assert reason == "attestation epoch is not previous or current epoch"
+    assert reason == spec.BeaconAttestationGossipError.EPOCH_NOT_PREVIOUS_OR_CURRENT
 
     yield (
         "messages",

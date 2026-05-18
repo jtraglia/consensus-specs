@@ -215,6 +215,34 @@ This topic is used to propagate partially aggregated sync committee messages to
 be included in future blocks. The `state` parameter is the head state.
 
 ```python
+class SyncCommitteeContributionAndProofGossipError(StrEnum):
+    """Gossip validation errors for ``sync_committee_contribution_and_proof``."""
+
+    AGGREGATOR_ALREADY_SEEN = auto()
+    """A contribution has already been seen from this aggregator."""
+    AGGREGATOR_INDEX_OUT_OF_RANGE = auto()
+    """The aggregator index is out of range."""
+    AGGREGATOR_NOT_IN_SUBCOMMITTEE = auto()
+    """The aggregator is not in the subcommittee."""
+    CONTRIBUTION_ALREADY_SEEN = auto()
+    """A contribution with a superset of these aggregation bits has already been seen."""
+    INVALID_AGGREGATE_SIGNATURE = auto()
+    """The aggregate signature is invalid."""
+    INVALID_AGGREGATOR_SIGNATURE = auto()
+    """The aggregator signature is invalid."""
+    INVALID_SELECTION_PROOF_SIGNATURE = auto()
+    """The selection proof signature is invalid."""
+    NOT_AGGREGATOR = auto()
+    """The validator is not selected as an aggregator."""
+    NOT_CURRENT_SLOT = auto()
+    """The contribution is not for the current slot."""
+    NO_PARTICIPANTS = auto()
+    """The contribution has no participants."""
+    SUBCOMMITTEE_INDEX_OUT_OF_RANGE = auto()
+    """The subcommittee index is out of range."""
+```
+
+```python
 def validate_sync_committee_contribution_and_proof_gossip(
     seen: Seen,
     state: BeaconState,
@@ -230,30 +258,36 @@ def validate_sync_committee_contribution_and_proof_gossip(
 
     # [IGNORE] The contribution's slot is for the current slot
     if not is_current_slot(state, contribution.slot, current_time_ms):
-        raise GossipIgnore("contribution is not for the current slot")
+        raise GossipIgnore(SyncCommitteeContributionAndProofGossipError.NOT_CURRENT_SLOT)
 
     # [REJECT] The subcommittee index is in the allowed range
     if contribution.subcommittee_index >= SYNC_COMMITTEE_SUBNET_COUNT:
-        raise GossipReject("subcommittee index out of range")
+        raise GossipReject(
+            SyncCommitteeContributionAndProofGossipError.SUBCOMMITTEE_INDEX_OUT_OF_RANGE
+        )
 
     # [REJECT] The contribution has participants
     if not any(contribution.aggregation_bits):
-        raise GossipReject("contribution has no participants")
+        raise GossipReject(SyncCommitteeContributionAndProofGossipError.NO_PARTICIPANTS)
 
     # [REJECT] The selection_proof selects the validator as an aggregator for the slot
     if not is_sync_committee_aggregator(contribution_and_proof.selection_proof):
-        raise GossipReject("validator is not selected as aggregator")
+        raise GossipReject(SyncCommitteeContributionAndProofGossipError.NOT_AGGREGATOR)
 
     # [REJECT] The aggregator index is valid
     if contribution_and_proof.aggregator_index >= len(state.validators):
-        raise GossipReject("aggregator index out of range")
+        raise GossipReject(
+            SyncCommitteeContributionAndProofGossipError.AGGREGATOR_INDEX_OUT_OF_RANGE
+        )
 
     # [REJECT] The aggregator's validator index is in the declared subcommittee
     # of the current sync committee
     aggregator_pubkey = state.validators[contribution_and_proof.aggregator_index].pubkey
     subcommittee_pubkeys = get_sync_subcommittee_pubkeys(state, contribution.subcommittee_index)
     if aggregator_pubkey not in subcommittee_pubkeys:
-        raise GossipReject("aggregator not in subcommittee")
+        raise GossipReject(
+            SyncCommitteeContributionAndProofGossipError.AGGREGATOR_NOT_IN_SUBCOMMITTEE
+        )
 
     # [IGNORE] A valid sync committee contribution with equal slot, beacon_block_root
     # and subcommittee_index whose aggregation_bits is non-strict superset
@@ -266,7 +300,7 @@ def validate_sync_committee_contribution_and_proof_gossip(
     contribution_bits = tuple(bool(bit) for bit in contribution.aggregation_bits)
     seen_bits = seen.sync_contribution_data.get(contribution_key, set())
     if is_non_strict_superset(seen_bits, contribution_bits):
-        raise GossipIgnore("already seen contribution for this data")
+        raise GossipIgnore(SyncCommitteeContributionAndProofGossipError.CONTRIBUTION_ALREADY_SEEN)
 
     # [IGNORE] The sync committee contribution is the first valid contribution received
     # for the aggregator with index contribution_and_proof.aggregator_index
@@ -277,7 +311,7 @@ def validate_sync_committee_contribution_and_proof_gossip(
         contribution.subcommittee_index,
     )
     if aggregator_key in seen.sync_contribution_aggregator_slots:
-        raise GossipIgnore("already seen contribution from this aggregator")
+        raise GossipIgnore(SyncCommitteeContributionAndProofGossipError.AGGREGATOR_ALREADY_SEEN)
 
     # [REJECT] The contribution_and_proof.selection_proof is a valid signature
     # of the SyncAggregatorSelectionData derived from the contribution
@@ -291,7 +325,9 @@ def validate_sync_committee_contribution_and_proof_gossip(
     )
     signing_root = compute_signing_root(selection_data, domain)
     if not bls.Verify(aggregator_pubkey, signing_root, contribution_and_proof.selection_proof):
-        raise GossipReject("invalid selection proof signature")
+        raise GossipReject(
+            SyncCommitteeContributionAndProofGossipError.INVALID_SELECTION_PROOF_SIGNATURE
+        )
 
     # [REJECT] The aggregator signature, signed_contribution_and_proof.signature, is valid
     domain = get_domain(
@@ -299,7 +335,9 @@ def validate_sync_committee_contribution_and_proof_gossip(
     )
     signing_root = compute_signing_root(contribution_and_proof, domain)
     if not bls.Verify(aggregator_pubkey, signing_root, signed_contribution_and_proof.signature):
-        raise GossipReject("invalid aggregator signature")
+        raise GossipReject(
+            SyncCommitteeContributionAndProofGossipError.INVALID_AGGREGATOR_SIGNATURE
+        )
 
     # [REJECT] The aggregate signature is valid for the message beacon_block_root
     # and aggregate pubkey derived from the participation info in aggregation_bits
@@ -310,7 +348,7 @@ def validate_sync_committee_contribution_and_proof_gossip(
     domain = get_domain(state, DOMAIN_SYNC_COMMITTEE, compute_epoch_at_slot(contribution.slot))
     signing_root = compute_signing_root(contribution.beacon_block_root, domain)
     if not eth_fast_aggregate_verify(participant_pubkeys, signing_root, contribution.signature):
-        raise GossipReject("invalid aggregate signature")
+        raise GossipReject(SyncCommitteeContributionAndProofGossipError.INVALID_AGGREGATE_SIGNATURE)
 
     # Mark this contribution as seen
     seen.sync_contribution_aggregator_slots.add(aggregator_key)
@@ -332,6 +370,22 @@ gossiped to the global `sync_committee_contribution_and_proof` topic. The
 `state` parameter is the head state.
 
 ```python
+class SyncCommitteeMessageGossipError(StrEnum):
+    """Gossip validation errors for ``sync_committee_{subnet_id}``."""
+
+    ALREADY_SEEN = auto()
+    """A message from this validator for this slot and subnet has already been seen."""
+    INVALID_SIGNATURE = auto()
+    """The sync committee message signature is invalid."""
+    INVALID_SUBNET = auto()
+    """The subnet_id is not valid for the validator."""
+    NOT_CURRENT_SLOT = auto()
+    """The message is not for the current slot."""
+    VALIDATOR_INDEX_OUT_OF_RANGE = auto()
+    """The validator index is out of range."""
+```
+
+```python
 def validate_sync_committee_message_gossip(
     seen: Seen,
     state: BeaconState,
@@ -345,11 +399,11 @@ def validate_sync_committee_message_gossip(
     """
     # [IGNORE] The message's slot is for the current slot
     if not is_current_slot(state, sync_committee_message.slot, current_time_ms):
-        raise GossipIgnore("message is not for the current slot")
+        raise GossipIgnore(SyncCommitteeMessageGossipError.NOT_CURRENT_SLOT)
 
     # [REJECT] The validator index is valid
     if sync_committee_message.validator_index >= len(state.validators):
-        raise GossipReject("validator index out of range")
+        raise GossipReject(SyncCommitteeMessageGossipError.VALIDATOR_INDEX_OUT_OF_RANGE)
 
     # [REJECT] The subnet_id is valid for the given validator
     # (this implies the validator is part of the broader current sync committee
@@ -358,7 +412,7 @@ def validate_sync_committee_message_gossip(
         state, sync_committee_message.validator_index
     )
     if subnet_id not in valid_subnets:
-        raise GossipReject("subnet_id is not valid for the validator")
+        raise GossipReject(SyncCommitteeMessageGossipError.INVALID_SUBNET)
 
     # [IGNORE] There has been no other valid sync committee message for the declared slot
     # for the validator referenced by sync_committee_message.validator_index
@@ -366,7 +420,7 @@ def validate_sync_committee_message_gossip(
     # forwarded with the same validator_index as long as the subnet_ids are distinct)
     message_key = (sync_committee_message.slot, sync_committee_message.validator_index, subnet_id)
     if message_key in seen.sync_message_validator_slots:
-        raise GossipIgnore("already seen message from this validator for this slot and subnet")
+        raise GossipIgnore(SyncCommitteeMessageGossipError.ALREADY_SEEN)
 
     # [REJECT] The signature is valid for the message beacon_block_root
     # for the validator referenced by validator_index
@@ -376,7 +430,7 @@ def validate_sync_committee_message_gossip(
     )
     signing_root = compute_signing_root(sync_committee_message.beacon_block_root, domain)
     if not bls.Verify(validator.pubkey, signing_root, sync_committee_message.signature):
-        raise GossipReject("invalid sync committee message signature")
+        raise GossipReject(SyncCommitteeMessageGossipError.INVALID_SIGNATURE)
 
     # Mark this message as seen
     seen.sync_message_validator_slots.add(message_key)
