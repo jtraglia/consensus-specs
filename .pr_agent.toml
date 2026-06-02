@@ -1,0 +1,11 @@
+[config]
+model = "anthropic/claude-opus-4-8"
+fallback_models = ["anthropic/claude-opus-4-7"]
+
+[pr_code_suggestions]
+commitable_code_suggestions = true
+enable_chat_text = false
+enable_help_text = false
+focus_only_on_problems = true
+publish_output_no_suggestions = false
+suggestions_score_threshold = 8

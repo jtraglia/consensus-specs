@@ -1,0 +1,29 @@
+name: PR Agent
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
+  # Allow maintainers to invoke tools manually via comments, e.g. "/improve" or "/review".
+  issue_comment:
+    types: [created]
+
+jobs:
+  pr_agent:
+    # Skip bot-authored events to avoid feedback loops, and skip drafts.
+    if: ${{ github.event.sender.type != 'Bot' }}
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: PR Agent
+        uses: qodo-ai/pr-agent@ffe1f89a4dafc7d8e88b9cf010a3233e30b49f43 # v0.36.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC.KEY: ${{ secrets.ANTHROPIC_KEY }}
+          # Only run the `improve` tool automatically. It posts inline comments
+          # on specific code chunks. `describe` and `review` (the summary table)
+          # are intentionally disabled. All other behavior lives in .pr_agent.toml.
+          github_action_config.auto_describe: "false"
+          github_action_config.auto_review: "false"
+          github_action_config.auto_improve: "true"
