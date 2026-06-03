@@ -65,21 +65,38 @@ class OperationType(Enum):
     CONSOLIDATION_REQUEST = auto()
 
 
-# TODO(jtraglia): Pretty sure this doesn't play well with Gloas. Needs some work.
-def _set_operations_by_dict(spec, block, operation_dict, state):
+def _get_execution_requests_from_dict(spec, operation_dict):
+    requests = spec.ExecutionRequests()
     for key, value in operation_dict.items():
-        # to handle e.g. `execution_requests.deposits` and `deposits`
-        obj = block.body
-        for attr in key.split(".")[:-1]:
-            obj = getattr(obj, attr)
-        setattr(obj, key.split(".")[-1], value)
+        prefix, _, field = key.partition(".")
+        if prefix == "execution_requests" and field:
+            setattr(requests, field, value)
+    return requests
+
+
+def _set_operations_by_dict(spec, block, operation_dict, state):
     if is_post_gloas(spec):
+        # In Gloas, execution requests are no longer part of the beacon block
+        # body. The block's bid commits to the requests root and the requests
+        # themselves are delivered by the next block's
+        # `parent_execution_requests`.
+        for key, value in operation_dict.items():
+            if not key.startswith("execution_requests."):
+                setattr(block.body, key, value)
+        requests = _get_execution_requests_from_dict(spec, operation_dict)
         payload = build_empty_execution_payload(spec, state)
-        block.body.signed_execution_payload_bid.message.block_hash = compute_el_block_hash(
-            spec, payload, state
-        )
-    elif is_post_bellatrix(spec):
-        block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
+        bid = block.body.signed_execution_payload_bid.message
+        bid.block_hash = compute_el_block_hash(spec, payload, state)
+        bid.execution_requests_root = spec.hash_tree_root(requests)
+    else:
+        for key, value in operation_dict.items():
+            # to handle e.g. `execution_requests.deposits` and `deposits`
+            obj = block.body
+            for attr in key.split(".")[:-1]:
+                obj = getattr(obj, attr)
+            setattr(obj, key.split(".")[-1], value)
+        if is_post_bellatrix(spec):
+            block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
 
 
 def _state_transition_and_sign_block_at_slot(spec, state, sync_aggregate=None, operation_dict=None):
@@ -362,6 +379,11 @@ def run_transition_with_operation(
         OperationType.PROPOSER_SLASHING,
         OperationType.ATTESTER_SLASHING,
     )
+    is_execution_request_operation = operation_type in (
+        OperationType.DEPOSIT_REQUEST,
+        OperationType.WITHDRAWAL_REQUEST,
+        OperationType.CONSOLIDATION_REQUEST,
+    )
     # prepare operation
     selected_validator_index = None
     if is_slashing_operation:
@@ -494,6 +516,20 @@ def run_transition_with_operation(
     blocks.append(post_tag(block))
 
     if is_at_fork:
+        if is_post_gloas(post_spec) and is_execution_request_operation:
+            # In Gloas, the at-fork block's bid only commits to the execution
+            # requests. Deliver them with the next block so that they are
+            # actually processed.
+            block = build_empty_block_for_next_slot(post_spec, state)
+            block.body.parent_execution_requests = _get_execution_requests_from_dict(
+                post_spec, operation_dict
+            )
+            block.body.signed_execution_payload_bid.message.parent_block_hash = (
+                state.latest_execution_payload_bid.block_hash
+            )
+            signed_block = state_transition_and_sign_block(post_spec, state, block)
+            blocks.append(post_tag(signed_block))
+
         _check_state()
 
     # after the fork
