@@ -856,21 +856,20 @@ def find_latest_confirmed_descendant(
     current_epoch = get_current_store_epoch(store)
     confirmed_root = latest_confirmed_root
 
-    if (
-        get_block_epoch(store, confirmed_root) + 1 == current_epoch
-        and get_voting_source(store, fcr_store.previous_slot_head).epoch + 2 >= current_epoch
-        and (
-            is_start_slot_at_epoch(get_current_slot(store))
-            or (
-                will_no_conflicting_checkpoint_be_justified(store)
-                and (
+    should_advance = False
+    if get_block_epoch(store, confirmed_root) + 1 == current_epoch:
+        if get_voting_source(store, fcr_store.previous_slot_head).epoch + 2 >= current_epoch:
+            if is_start_slot_at_epoch(get_current_slot(store)):
+                should_advance = True
+            elif will_no_conflicting_checkpoint_be_justified(store):
+                if (
                     store.unrealized_justifications[fcr_store.previous_slot_head].epoch + 1
                     >= current_epoch
-                    or store.unrealized_justifications[head].epoch + 1 >= current_epoch
-                )
-            )
-        )
-    ):
+                ):
+                    should_advance = True
+                elif store.unrealized_justifications[head].epoch + 1 >= current_epoch:
+                    should_advance = True
+    if should_advance:
         # Get suffix of the canonical chain
         canonical_roots = get_ancestor_roots(store, head, confirmed_root)
 
@@ -899,10 +898,7 @@ def find_latest_confirmed_descendant(
 
             confirmed_root = block_root
 
-    if (
-        is_start_slot_at_epoch(get_current_slot(store))
-        or store.unrealized_justifications[head].epoch + 1 >= current_epoch
-    ):
+    if is_start_slot_at_epoch(get_current_slot(store)):
         # Get suffix of the canonical chain
         canonical_roots = get_ancestor_roots(store, head, confirmed_root)
 
@@ -927,14 +923,45 @@ def find_latest_confirmed_descendant(
 
         # The tentative_confirmed_root can only be confirmed
         # if it is for sure not going to be reorged out in either the current or next epoch.
-        if get_block_epoch(store, tentative_confirmed_root) == current_epoch or (
-            get_voting_source(store, tentative_confirmed_root).epoch + 2 >= current_epoch
-            and (
-                is_start_slot_at_epoch(get_current_slot(store))
-                or will_no_conflicting_checkpoint_be_justified(store)
-            )
-        ):
+        if get_block_epoch(store, tentative_confirmed_root) == current_epoch:
             confirmed_root = tentative_confirmed_root
+        elif get_voting_source(store, tentative_confirmed_root).epoch + 2 >= current_epoch:
+            if is_start_slot_at_epoch(get_current_slot(store)):
+                confirmed_root = tentative_confirmed_root
+            elif will_no_conflicting_checkpoint_be_justified(store):
+                confirmed_root = tentative_confirmed_root
+    elif store.unrealized_justifications[head].epoch + 1 >= current_epoch:
+        # Get suffix of the canonical chain
+        canonical_roots = get_ancestor_roots(store, head, confirmed_root)
+
+        tentative_confirmed_root = confirmed_root
+
+        for block_root in canonical_roots:
+            block_epoch = get_block_epoch(store, block_root)
+            tentative_confirmed_epoch = get_block_epoch(store, tentative_confirmed_root)
+
+            # The following condition can only be true the first time
+            # the algorithm advances to a block from the current epoch
+            if block_epoch > tentative_confirmed_epoch:
+                # To confirm blocks from the current epoch ensure that
+                # current epoch target will be justified
+                if not will_current_target_be_justified(store):
+                    break
+
+            if not is_one_confirmed(store, get_current_balance_source(fcr_store), block_root):
+                break
+
+            tentative_confirmed_root = block_root
+
+        # The tentative_confirmed_root can only be confirmed
+        # if it is for sure not going to be reorged out in either the current or next epoch.
+        if get_block_epoch(store, tentative_confirmed_root) == current_epoch:
+            confirmed_root = tentative_confirmed_root
+        elif get_voting_source(store, tentative_confirmed_root).epoch + 2 >= current_epoch:
+            if is_start_slot_at_epoch(get_current_slot(store)):
+                confirmed_root = tentative_confirmed_root
+            elif will_no_conflicting_checkpoint_be_justified(store):
+                confirmed_root = tentative_confirmed_root
 
     return confirmed_root
 ```
@@ -979,15 +1006,13 @@ def get_latest_confirmed(fcr_store: FastConfirmationStore) -> Root:
     # 3) the confirmed chain starting from the current epoch observed justified checkpoint
     #    cannot be re-confirmed at the start of the current epoch.
     head = get_head(store).root
-    if (
-        get_block_epoch(store, confirmed_root) + 1 < current_epoch
-        or not is_ancestor(store, get_node_for_root(head), get_node_for_root(confirmed_root))
-        or (
-            is_start_slot_at_epoch(get_current_slot(store))
-            and not is_confirmed_chain_safe(fcr_store, confirmed_root)
-        )
-    ):
+    if get_block_epoch(store, confirmed_root) + 1 < current_epoch:
         confirmed_root = store.finalized_checkpoint.root
+    elif not is_ancestor(store, get_node_for_root(head), get_node_for_root(confirmed_root)):
+        confirmed_root = store.finalized_checkpoint.root
+    elif is_start_slot_at_epoch(get_current_slot(store)):
+        if not is_confirmed_chain_safe(fcr_store, confirmed_root):
+            confirmed_root = store.finalized_checkpoint.root
 
     # Restart the confirmation chain if each of the following conditions are true:
     # 1) it is the start of the current epoch,
@@ -1006,13 +1031,11 @@ def get_latest_confirmed(fcr_store: FastConfirmationStore) -> Root:
         == store.unrealized_justifications[head]
     )
     is_confirmed_block_stale = get_block_slot(store, confirmed_root) < observed_justified_block_slot
-    if (
-        is_epoch_start
-        and is_observed_justified_block_epoch_ok
-        and is_head_unrealized_justified_ok
-        and is_confirmed_block_stale
-    ):
-        confirmed_root = fcr_store.current_epoch_observed_justified_checkpoint.root
+    if is_epoch_start:
+        if is_observed_justified_block_epoch_ok:
+            if is_head_unrealized_justified_ok:
+                if is_confirmed_block_stale:
+                    confirmed_root = fcr_store.current_epoch_observed_justified_checkpoint.root
 
     # Attempt to further advance the latest confirmed block
     if get_block_epoch(store, confirmed_root) + 1 >= current_epoch:

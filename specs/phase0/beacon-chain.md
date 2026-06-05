@@ -770,7 +770,9 @@ def is_valid_indexed_attestation(
     """
     # Verify indices are sorted and unique
     indices = indexed_attestation.attesting_indices
-    if len(indices) == 0 or indices != sorted(set(indices)):
+    if len(indices) == 0:
+        return False
+    if indices != sorted(set(indices)):
         return False
     # Verify aggregate signature
     pubkeys = [state.validators[i].pubkey for i in indices]
@@ -1542,17 +1544,21 @@ def weigh_justification_and_finalization(
     # Process finalizations
     bits = state.justification_bits
     # The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
-    if all(bits[1:4]) and old_previous_justified_checkpoint.epoch + 3 == current_epoch:
-        state.finalized_checkpoint = old_previous_justified_checkpoint
+    if all(bits[1:4]):
+        if old_previous_justified_checkpoint.epoch + 3 == current_epoch:
+            state.finalized_checkpoint = old_previous_justified_checkpoint
     # The 2nd/3rd most recent epochs are justified, the 2nd using the 3rd as source
-    if all(bits[1:3]) and old_previous_justified_checkpoint.epoch + 2 == current_epoch:
-        state.finalized_checkpoint = old_previous_justified_checkpoint
+    if all(bits[1:3]):
+        if old_previous_justified_checkpoint.epoch + 2 == current_epoch:
+            state.finalized_checkpoint = old_previous_justified_checkpoint
     # The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
-    if all(bits[0:3]) and old_current_justified_checkpoint.epoch + 2 == current_epoch:
-        state.finalized_checkpoint = old_current_justified_checkpoint
+    if all(bits[0:3]):
+        if old_current_justified_checkpoint.epoch + 2 == current_epoch:
+            state.finalized_checkpoint = old_current_justified_checkpoint
     # The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
-    if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
-        state.finalized_checkpoint = old_current_justified_checkpoint
+    if all(bits[0:2]):
+        if old_current_justified_checkpoint.epoch + 1 == current_epoch:
+            state.finalized_checkpoint = old_current_justified_checkpoint
 ```
 
 #### Rewards and penalties
@@ -1761,11 +1767,9 @@ def process_registry_updates(state: BeaconState) -> None:
         if is_eligible_for_activation_queue(validator):
             validator.activation_eligibility_epoch = get_current_epoch(state) + 1
 
-        if (
-            is_active_validator(validator, get_current_epoch(state))
-            and validator.effective_balance <= EJECTION_BALANCE
-        ):
-            initiate_validator_exit(state, ValidatorIndex(index))
+        if is_active_validator(validator, get_current_epoch(state)):
+            if validator.effective_balance <= EJECTION_BALANCE:
+                initiate_validator_exit(state, ValidatorIndex(index))
 
     # Queue validators eligible for activation and not yet dequeued for activation
     activation_queue = sorted(
@@ -1793,16 +1797,14 @@ def process_slashings(state: BeaconState) -> None:
         sum(state.slashings) * PROPORTIONAL_SLASHING_MULTIPLIER, total_balance
     )
     for index, validator in enumerate(state.validators):
-        if (
-            validator.slashed
-            and epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch
-        ):
-            increment = EFFECTIVE_BALANCE_INCREMENT  # Factored out from penalty numerator to avoid uint64 overflow
-            penalty_numerator = (
-                validator.effective_balance // increment * adjusted_total_slashing_balance
-            )
-            penalty = penalty_numerator // total_balance * increment
-            decrease_balance(state, ValidatorIndex(index), penalty)
+        if validator.slashed:
+            if epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch:
+                increment = EFFECTIVE_BALANCE_INCREMENT  # Factored out from penalty numerator to avoid uint64 overflow
+                penalty_numerator = (
+                    validator.effective_balance // increment * adjusted_total_slashing_balance
+                )
+                penalty = penalty_numerator // total_balance * increment
+                decrease_balance(state, ValidatorIndex(index), penalty)
 ```
 
 #### Eth1 data votes updates
@@ -1825,10 +1827,11 @@ def process_effective_balance_updates(state: BeaconState) -> None:
         HYSTERESIS_INCREMENT = uint64(EFFECTIVE_BALANCE_INCREMENT // HYSTERESIS_QUOTIENT)
         DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER
         UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER
-        if (
-            balance + DOWNWARD_THRESHOLD < validator.effective_balance
-            or validator.effective_balance + UPWARD_THRESHOLD < balance
-        ):
+        if balance + DOWNWARD_THRESHOLD < validator.effective_balance:
+            validator.effective_balance = min(
+                balance - balance % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE
+            )
+        elif validator.effective_balance + UPWARD_THRESHOLD < balance:
             validator.effective_balance = min(
                 balance - balance % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE
             )

@@ -437,9 +437,10 @@ def filter_block_tree(store: Store, block_root: Root, blocks: Dict[Root, BeaconB
     )
 
     # If expected finalized/justified, add to viable block-tree and signal viability to parent.
-    if correct_justified and correct_finalized:
-        blocks[block_root] = block
-        return True
+    if correct_justified:
+        if correct_finalized:
+            blocks[block_root] = block
+            return True
 
     # Otherwise, branch not viable
     return False
@@ -796,10 +797,11 @@ def on_tick_per_slot(store: Store, time: uint64) -> None:
         store.proposer_boost_root = Root()
 
     # If a new epoch, pull-up justification and finalization from previous epoch
-    if current_slot > previous_slot and compute_slots_since_epoch_start(current_slot) == 0:
-        update_checkpoints(
-            store, store.unrealized_justified_checkpoint, store.unrealized_finalized_checkpoint
-        )
+    if current_slot > previous_slot:
+        if compute_slots_since_epoch_start(current_slot) == 0:
+            update_checkpoints(
+                store, store.unrealized_justified_checkpoint, store.unrealized_finalized_checkpoint
+            )
 ```
 
 #### `on_attestation` helpers
@@ -878,7 +880,9 @@ def update_latest_messages(
         i for i in attesting_indices if i not in store.equivocating_indices
     ]
     for i in non_equivocating_attesting_indices:
-        if i not in store.latest_messages or target.epoch > store.latest_messages[i].epoch:
+        if i not in store.latest_messages:
+            store.latest_messages[i] = LatestMessage(epoch=target.epoch, root=beacon_block_root)
+        elif target.epoch > store.latest_messages[i].epoch:
             store.latest_messages[i] = LatestMessage(epoch=target.epoch, root=beacon_block_root)
 ```
 
@@ -921,8 +925,10 @@ def update_proposer_boost_root(store: Store, head: Root, root: Root) -> None:
 
     # Add proposer score boost if the block is timely, not conflicting with an
     # existing block, with the same dependent root as the canonical chain head.
-    if is_timely and is_first_block and is_same_dependent_root:
-        store.proposer_boost_root = root
+    if is_timely:
+        if is_first_block:
+            if is_same_dependent_root:
+                store.proposer_boost_root = root
 ```
 
 ### Handlers

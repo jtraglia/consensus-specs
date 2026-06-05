@@ -157,9 +157,9 @@ def verify_data_column_sidecar(sidecar: DataColumnSidecar) -> bool:
         return False
 
     # The column length must be equal to the number of commitments/proofs
-    if len(sidecar.column) != len(sidecar.kzg_commitments) or len(sidecar.column) != len(
-        sidecar.kzg_proofs
-    ):
+    if len(sidecar.column) != len(sidecar.kzg_commitments):
+        return False
+    if len(sidecar.column) != len(sidecar.kzg_proofs):
         return False
 
     return True

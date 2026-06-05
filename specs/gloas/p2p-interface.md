@@ -197,9 +197,9 @@ def verify_data_column_sidecar(
 
     # [Modified in Gloas:EIP7732]
     # The column length must be equal to the number of commitments/proofs
-    if len(sidecar.column) != len(kzg_commitments) or len(sidecar.column) != len(
-        sidecar.kzg_proofs
-    ):
+    if len(sidecar.column) != len(kzg_commitments):
+        return False
+    if len(sidecar.column) != len(sidecar.kzg_proofs):
         return False
 
     return True
@@ -405,8 +405,9 @@ def is_gas_limit_target_compatible(
     min_gas_limit = parent_gas_limit - max_gas_limit_difference
     max_gas_limit = parent_gas_limit + max_gas_limit_difference
 
-    if target_gas_limit >= min_gas_limit and target_gas_limit <= max_gas_limit:
-        return gas_limit == target_gas_limit
+    if target_gas_limit >= min_gas_limit:
+        if target_gas_limit <= max_gas_limit:
+            return gas_limit == target_gas_limit
     if target_gas_limit > max_gas_limit:
         return gas_limit == max_gas_limit
     return gas_limit == min_gas_limit

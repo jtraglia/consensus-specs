@@ -126,6 +126,7 @@ ignore = [
   "SIM102",  # https://docs.astral.sh/ruff/rules/collapsible-if/
   "SIM103",  # https://docs.astral.sh/ruff/rules/needless-bool/
   "SIM108",  # https://docs.astral.sh/ruff/rules/if-else-block-instead-of-if-exp/
+  "SIM114",  # https://docs.astral.sh/ruff/rules/if-with-same-arms/
 ]
 
 [tool.ruff.lint.per-file-ignores]

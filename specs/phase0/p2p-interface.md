@@ -367,9 +367,10 @@ def is_non_strict_superset(
     for prior_bits in seen_bits_set:
         is_superset = True
         for prior_bit, new_bit in zip(prior_bits, new_bits, strict=True):
-            if new_bit and not prior_bit:
-                is_superset = False
-                break
+            if new_bit:
+                if not prior_bit:
+                    is_superset = False
+                    break
         if is_superset:
             return True
     return False

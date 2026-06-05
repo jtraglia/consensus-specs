@@ -63,7 +63,8 @@ def eth_fast_aggregate_verify(
     """
     Wrapper to ``bls.FastAggregateVerify`` accepting the ``G2_POINT_AT_INFINITY`` signature when ``pubkeys`` is empty.
     """
-    if len(pubkeys) == 0 and signature == G2_POINT_AT_INFINITY:
-        return True
+    if len(pubkeys) == 0:
+        if signature == G2_POINT_AT_INFINITY:
+            return True
     return bls.FastAggregateVerify(pubkeys, message, signature)
 ```

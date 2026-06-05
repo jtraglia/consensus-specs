@@ -226,8 +226,9 @@ def is_better_update(new_update: LightClientUpdate, old_update: LightClientUpdat
     old_has_supermajority = old_num_active_participants * 3 >= max_active_participants * 2
     if new_has_supermajority != old_has_supermajority:
         return new_has_supermajority
-    if not new_has_supermajority and new_num_active_participants != old_num_active_participants:
-        return new_num_active_participants > old_num_active_participants
+    if not new_has_supermajority:
+        if new_num_active_participants != old_num_active_participants:
+            return new_num_active_participants > old_num_active_participants
 
     # Compare presence of relevant sync committee
     new_has_relevant_sync_committee = is_sync_committee_update(new_update) and (
@@ -408,10 +409,9 @@ def validate_light_client_update(
     update_has_next_sync_committee = not is_next_sync_committee_known(store) and (
         is_sync_committee_update(update) and update_attested_period == store_period
     )
-    if not (
-        update_attested_slot > store.finalized_header.beacon.slot or update_has_next_sync_committee
-    ):
-        raise AssertionError
+    if update_attested_slot <= store.finalized_header.beacon.slot:
+        if not update_has_next_sync_committee:
+            raise AssertionError
 
     # Verify that the `finality_branch`, if present, confirms `finalized_header`
     # to match the finalized checkpoint root saved in the state of `attested_header`.
@@ -444,9 +444,10 @@ def validate_light_client_update(
         if update.next_sync_committee != SyncCommittee():
             raise AssertionError
     else:
-        if update_attested_period == store_period and is_next_sync_committee_known(store):
-            if update.next_sync_committee != store.next_sync_committee:
-                raise AssertionError
+        if update_attested_period == store_period:
+            if is_next_sync_committee_known(store):
+                if update.next_sync_committee != store.next_sync_committee:
+                    raise AssertionError
         if not (
             is_valid_normalized_merkle_branch(
                 leaf=hash_tree_root(update.next_sync_committee),
@@ -508,21 +509,19 @@ def apply_light_client_update(store: LightClientStore, update: LightClientUpdate
 
 ```python
 def process_light_client_store_force_update(store: LightClientStore, current_slot: Slot) -> None:
-    if (
-        current_slot > store.finalized_header.beacon.slot + UPDATE_TIMEOUT
-        and store.best_valid_update is not None
-    ):
-        # Forced best update when the update timeout has elapsed.
-        # Because the apply logic waits for `finalized_header.beacon.slot` to indicate sync committee finality,
-        # the `attested_header` may be treated as `finalized_header` in extended periods of non-finality
-        # to guarantee progression into later sync committee periods according to `is_better_update`.
-        if (
-            store.best_valid_update.finalized_header.beacon.slot
-            <= store.finalized_header.beacon.slot
-        ):
-            store.best_valid_update.finalized_header = store.best_valid_update.attested_header
-        apply_light_client_update(store, store.best_valid_update)
-        store.best_valid_update = None
+    if current_slot > store.finalized_header.beacon.slot + UPDATE_TIMEOUT:
+        if store.best_valid_update is not None:
+            # Forced best update when the update timeout has elapsed.
+            # Because the apply logic waits for `finalized_header.beacon.slot` to indicate sync committee finality,
+            # the `attested_header` may be treated as `finalized_header` in extended periods of non-finality
+            # to guarantee progression into later sync committee periods according to `is_better_update`.
+            if (
+                store.best_valid_update.finalized_header.beacon.slot
+                <= store.finalized_header.beacon.slot
+            ):
+                store.best_valid_update.finalized_header = store.best_valid_update.attested_header
+            apply_light_client_update(store, store.best_valid_update)
+            store.best_valid_update = None
 ```
 
 ### `process_light_client_update`
@@ -539,7 +538,9 @@ def process_light_client_update(
     sync_committee_bits = update.sync_aggregate.sync_committee_bits
 
     # Update the best update in case we have to force-update to it if the timeout elapses
-    if store.best_valid_update is None or is_better_update(update, store.best_valid_update):
+    if store.best_valid_update is None:
+        store.best_valid_update = update
+    elif is_better_update(update, store.best_valid_update):
         store.best_valid_update = update
 
     # Track the maximum number of active participants in the committee signatures
@@ -549,11 +550,9 @@ def process_light_client_update(
     )
 
     # Update the optimistic header
-    if (
-        sum(sync_committee_bits) > get_safety_threshold(store)
-        and update.attested_header.beacon.slot > store.optimistic_header.beacon.slot
-    ):
-        store.optimistic_header = update.attested_header
+    if sum(sync_committee_bits) > get_safety_threshold(store):
+        if update.attested_header.beacon.slot > store.optimistic_header.beacon.slot:
+            store.optimistic_header = update.attested_header
 
     # Update finalized header
     update_has_finalized_next_sync_committee = (
@@ -565,13 +564,14 @@ def process_light_client_update(
             == compute_sync_committee_period_at_slot(update.attested_header.beacon.slot)
         )
     )
-    if sum(sync_committee_bits) * 3 >= len(sync_committee_bits) * 2 and (
-        update.finalized_header.beacon.slot > store.finalized_header.beacon.slot
-        or update_has_finalized_next_sync_committee
-    ):
+    if sum(sync_committee_bits) * 3 >= len(sync_committee_bits) * 2:
         # Normal update through 2/3 threshold
-        apply_light_client_update(store, update)
-        store.best_valid_update = None
+        if update.finalized_header.beacon.slot > store.finalized_header.beacon.slot:
+            apply_light_client_update(store, update)
+            store.best_valid_update = None
+        elif update_has_finalized_next_sync_committee:
+            apply_light_client_update(store, update)
+            store.best_valid_update = None
 ```
 
 ### `process_light_client_finality_update`

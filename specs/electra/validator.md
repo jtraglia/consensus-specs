@@ -245,8 +245,9 @@ def get_execution_requests(execution_requests_list: Sequence[bytes]) -> Executio
             raise AssertionError
         # Check that requests are in strictly ascending order
         # Each successive type must be greater than the last with no duplicates
-        if not (prev_request_type is None or prev_request_type < request_type):
-            raise AssertionError
+        if prev_request_type is not None:
+            if prev_request_type >= request_type:
+                raise AssertionError
         prev_request_type = request_type
 
         if request_type == DEPOSIT_REQUEST_TYPE:

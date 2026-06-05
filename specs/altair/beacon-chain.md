@@ -384,12 +384,15 @@ def get_attestation_participation_flag_indices(
         raise AssertionError
 
     participation_flag_indices = []
-    if is_matching_source and inclusion_delay <= integer_squareroot(SLOTS_PER_EPOCH):
-        participation_flag_indices.append(TIMELY_SOURCE_FLAG_INDEX)
-    if is_matching_target and inclusion_delay <= SLOTS_PER_EPOCH:
-        participation_flag_indices.append(TIMELY_TARGET_FLAG_INDEX)
-    if is_matching_head and inclusion_delay == MIN_ATTESTATION_INCLUSION_DELAY:
-        participation_flag_indices.append(TIMELY_HEAD_FLAG_INDEX)
+    if is_matching_source:
+        if inclusion_delay <= integer_squareroot(SLOTS_PER_EPOCH):
+            participation_flag_indices.append(TIMELY_SOURCE_FLAG_INDEX)
+    if is_matching_target:
+        if inclusion_delay <= SLOTS_PER_EPOCH:
+            participation_flag_indices.append(TIMELY_TARGET_FLAG_INDEX)
+    if is_matching_head:
+        if inclusion_delay == MIN_ATTESTATION_INCLUSION_DELAY:
+            participation_flag_indices.append(TIMELY_HEAD_FLAG_INDEX)
 
     return participation_flag_indices
 ```
@@ -542,11 +545,10 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     proposer_reward_numerator = 0
     for index in get_attesting_indices(state, attestation):
         for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
-            if flag_index in participation_flag_indices and not has_flag(
-                epoch_participation[index], flag_index
-            ):
-                epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
-                proposer_reward_numerator += get_base_reward(state, index) * weight
+            if flag_index in participation_flag_indices:
+                if not has_flag(epoch_participation[index], flag_index):
+                    epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
+                    proposer_reward_numerator += get_base_reward(state, index) * weight
 
     # Reward proposer
     proposer_reward_denominator = (
@@ -760,16 +762,14 @@ def process_slashings(state: BeaconState) -> None:
         sum(state.slashings) * PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR, total_balance
     )
     for index, validator in enumerate(state.validators):
-        if (
-            validator.slashed
-            and epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch
-        ):
-            increment = EFFECTIVE_BALANCE_INCREMENT  # Factored out from penalty numerator to avoid uint64 overflow
-            penalty_numerator = (
-                validator.effective_balance // increment * adjusted_total_slashing_balance
-            )
-            penalty = penalty_numerator // total_balance * increment
-            decrease_balance(state, ValidatorIndex(index), penalty)
+        if validator.slashed:
+            if epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch:
+                increment = EFFECTIVE_BALANCE_INCREMENT  # Factored out from penalty numerator to avoid uint64 overflow
+                penalty_numerator = (
+                    validator.effective_balance // increment * adjusted_total_slashing_balance
+                )
+                penalty = penalty_numerator // total_balance * increment
+                decrease_balance(state, ValidatorIndex(index), penalty)
 ```
 
 #### Participation flags updates

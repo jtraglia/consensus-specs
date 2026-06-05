@@ -175,8 +175,9 @@ def validate_partial_data_column_sidecar_gossip(
     has_cells = num_cells_present > 0
 
     # [REJECT] A header and/or cells are present in the message
-    if not (has_header or has_cells):
-        raise GossipReject("partial message is semantically empty")
+    if not has_header:
+        if not has_cells:
+            raise GossipReject("partial message is semantically empty")
 
     # [REJECT] The cell count equals the number of bits set in cells_present_bitmap
     if len(sidecar.partial_column) != num_cells_present:
@@ -192,8 +193,9 @@ def validate_partial_data_column_sidecar_gossip(
 
         # [REJECT] The received header MUST equal any previously validated header for this block
         prior_header = seen.partial_data_column_headers.get(block_root)
-        if prior_header is not None and prior_header != header:
-            raise GossipReject("header differs from previously validated header")
+        if prior_header is not None:
+            if prior_header != header:
+                raise GossipReject("header differs from previously validated header")
 
         # [REJECT] The signed_block_header hash matches the partial message's group id
         if hash_tree_root(block_header) != block_root:

@@ -442,14 +442,12 @@ def process_slashings(state: BeaconState) -> None:
         total_balance,
     )
     for index, validator in enumerate(state.validators):
-        if (
-            validator.slashed
-            and epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch
-        ):
-            increment = EFFECTIVE_BALANCE_INCREMENT  # Factored out from penalty numerator to avoid uint64 overflow
-            penalty_numerator = (
-                validator.effective_balance // increment * adjusted_total_slashing_balance
-            )
-            penalty = penalty_numerator // total_balance * increment
-            decrease_balance(state, ValidatorIndex(index), penalty)
+        if validator.slashed:
+            if epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch:
+                increment = EFFECTIVE_BALANCE_INCREMENT  # Factored out from penalty numerator to avoid uint64 overflow
+                penalty_numerator = (
+                    validator.effective_balance // increment * adjusted_total_slashing_balance
+                )
+                penalty = penalty_numerator // total_balance * increment
+                decrease_balance(state, ValidatorIndex(index), penalty)
 ```

@@ -523,7 +523,9 @@ def is_valid_indexed_payload_attestation(
     """
     # Verify indices are non-empty and sorted
     indices = attestation.attesting_indices
-    if len(indices) == 0 or indices != sorted(indices):
+    if len(indices) == 0:
+        return False
+    if indices != sorted(indices):
         return False
 
     # Verify aggregate signature
@@ -772,12 +774,14 @@ def get_attestation_participation_flag_indices(
         raise AssertionError
 
     participation_flag_indices = []
-    if is_matching_source and inclusion_delay <= integer_squareroot(SLOTS_PER_EPOCH):
-        participation_flag_indices.append(TIMELY_SOURCE_FLAG_INDEX)
+    if is_matching_source:
+        if inclusion_delay <= integer_squareroot(SLOTS_PER_EPOCH):
+            participation_flag_indices.append(TIMELY_SOURCE_FLAG_INDEX)
     if is_matching_target:
         participation_flag_indices.append(TIMELY_TARGET_FLAG_INDEX)
-    if is_matching_head and inclusion_delay == MIN_ATTESTATION_INCLUSION_DELAY:
-        participation_flag_indices.append(TIMELY_HEAD_FLAG_INDEX)
+    if is_matching_head:
+        if inclusion_delay == MIN_ATTESTATION_INCLUSION_DELAY:
+            participation_flag_indices.append(TIMELY_HEAD_FLAG_INDEX)
 
     return participation_flag_indices
 ```
@@ -1262,16 +1266,17 @@ def get_builders_sweep_withdrawals(
             break
 
         builder = state.builders[builder_index]
-        if builder.withdrawable_epoch <= epoch and builder.balance > 0:
-            withdrawals.append(
-                Withdrawal(
-                    index=withdrawal_index,
-                    validator_index=convert_builder_index_to_validator_index(builder_index),
-                    address=builder.execution_address,
-                    amount=builder.balance,
+        if builder.withdrawable_epoch <= epoch:
+            if builder.balance > 0:
+                withdrawals.append(
+                    Withdrawal(
+                        index=withdrawal_index,
+                        validator_index=convert_builder_index_to_validator_index(builder_index),
+                        address=builder.execution_address,
+                        amount=builder.balance,
+                    )
                 )
-            )
-            withdrawal_index += WithdrawalIndex(1)
+                withdrawal_index += WithdrawalIndex(1)
 
         builder_index = BuilderIndex((builder_index + 1) % len(state.builders))
         processed_count += 1
@@ -1551,8 +1556,9 @@ def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
 ```python
 def get_index_for_new_builder(state: BeaconState) -> BuilderIndex:
     for index, builder in enumerate(state.builders):
-        if builder.withdrawable_epoch <= get_current_epoch(state) and builder.balance == 0:
-            return BuilderIndex(index)
+        if builder.withdrawable_epoch <= get_current_epoch(state):
+            if builder.balance == 0:
+                return BuilderIndex(index)
     return BuilderIndex(len(state.builders))
 ```
 
@@ -1622,11 +1628,14 @@ def process_deposit_request(state: BeaconState, deposit_request: DepositRequest)
     # already exists with this pubkey, apply the deposit to their balance
     is_builder = deposit_request.pubkey in builder_pubkeys
     is_validator = deposit_request.pubkey in validator_pubkeys
-    if is_builder or (
-        is_builder_withdrawal_credential(deposit_request.withdrawal_credentials)
-        and not is_validator
-        and not is_pending_validator(state.pending_deposits, deposit_request.pubkey)
-    ):
+    apply_builder = False
+    if is_builder:
+        apply_builder = True
+    elif is_builder_withdrawal_credential(deposit_request.withdrawal_credentials):
+        if not is_validator:
+            if not is_pending_validator(state.pending_deposits, deposit_request.pubkey):
+                apply_builder = True
+    if apply_builder:
         # Apply builder deposits immediately
         apply_deposit_for_builder(
             state,
@@ -1770,23 +1779,20 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
         will_set_new_flag = False
 
         for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
-            if flag_index in participation_flag_indices and not has_flag(
-                epoch_participation[index], flag_index
-            ):
-                epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
-                proposer_reward_numerator += get_base_reward(state, index) * weight
-                # [New in Gloas:EIP7732]
-                will_set_new_flag = True
+            if flag_index in participation_flag_indices:
+                if not has_flag(epoch_participation[index], flag_index):
+                    epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
+                    proposer_reward_numerator += get_base_reward(state, index) * weight
+                    # [New in Gloas:EIP7732]
+                    will_set_new_flag = True
 
         # [New in Gloas:EIP7732]
         # Add weight for same-slot attestations when any new flag is set.
         # This ensures each validator contributes exactly once per slot.
-        if (
-            will_set_new_flag
-            and is_attestation_same_slot(state, data)
-            and payment.withdrawal.amount > 0
-        ):
-            payment.weight += state.validators[index].effective_balance
+        if will_set_new_flag:
+            if is_attestation_same_slot(state, data):
+                if payment.withdrawal.amount > 0:
+                    payment.weight += state.validators[index].effective_balance
 
     # Reward proposer
     proposer_reward_denominator = (

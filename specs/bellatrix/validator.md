@@ -156,9 +156,10 @@ def prepare_execution_payload(
         is_activation_epoch_reached = (
             get_current_epoch(state) >= TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
         )
-        if is_terminal_block_hash_set and not is_activation_epoch_reached:
-            # Terminal block hash is set but activation epoch is not yet reached, no prepare payload call is needed
-            return None
+        if is_terminal_block_hash_set:
+            if not is_activation_epoch_reached:
+                # Terminal block hash is set but activation epoch is not yet reached, no prepare payload call is needed
+                return None
 
         terminal_pow_block = get_terminal_pow_block(pow_chain)
         if terminal_pow_block is None:

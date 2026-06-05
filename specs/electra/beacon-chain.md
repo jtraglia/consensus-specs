@@ -916,12 +916,12 @@ def process_registry_updates(state: BeaconState) -> None:
         # [Modified in Electra:EIP7251]
         if is_eligible_for_activation_queue(validator):
             validator.activation_eligibility_epoch = current_epoch + 1
-        elif (
-            is_active_validator(validator, current_epoch)
-            and validator.effective_balance <= EJECTION_BALANCE
-        ):
-            # [Modified in Electra:EIP7251]
-            initiate_validator_exit(state, ValidatorIndex(index))
+        elif is_active_validator(validator, current_epoch):
+            if validator.effective_balance <= EJECTION_BALANCE:
+                # [Modified in Electra:EIP7251]
+                initiate_validator_exit(state, ValidatorIndex(index))
+            elif is_eligible_for_activation(state, validator):
+                validator.activation_epoch = activation_epoch
         elif is_eligible_for_activation(state, validator):
             validator.activation_epoch = activation_epoch
 ```
@@ -945,14 +945,12 @@ def process_slashings(state: BeaconState) -> None:
         total_balance // increment
     )
     for index, validator in enumerate(state.validators):
-        if (
-            validator.slashed
-            and epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch
-        ):
-            effective_balance_increments = validator.effective_balance // increment
-            # [Modified in Electra:EIP7251]
-            penalty = penalty_per_effective_balance_increment * effective_balance_increments
-            decrease_balance(state, ValidatorIndex(index), penalty)
+        if validator.slashed:
+            if epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch:
+                effective_balance_increments = validator.effective_balance // increment
+                # [Modified in Electra:EIP7251]
+                penalty = penalty_per_effective_balance_increment * effective_balance_increments
+                decrease_balance(state, ValidatorIndex(index), penalty)
 ```
 
 #### New `apply_pending_deposit`
@@ -1001,14 +999,9 @@ def process_pending_deposits(state: BeaconState) -> None:
 
     for deposit in state.pending_deposits:
         # Do not process deposit requests if Eth1 bridge deposits are not yet applied.
-        if (
-            # Is deposit request
-            deposit.slot > GENESIS_SLOT
-            and
-            # There are pending Eth1 bridge deposits
-            state.eth1_deposit_index < state.deposit_requests_start_index
-        ):
-            break
+        if deposit.slot > GENESIS_SLOT:
+            if state.eth1_deposit_index < state.deposit_requests_start_index:
+                break
 
         # Check if deposit has been finalized, otherwise, stop processing.
         if deposit.slot > finalized_slot:
@@ -1098,10 +1091,11 @@ def process_effective_balance_updates(state: BeaconState) -> None:
         # [Modified in Electra:EIP7251]
         max_effective_balance = get_max_effective_balance(validator)
 
-        if (
-            balance + DOWNWARD_THRESHOLD < validator.effective_balance
-            or validator.effective_balance + UPWARD_THRESHOLD < balance
-        ):
+        if balance + DOWNWARD_THRESHOLD < validator.effective_balance:
+            validator.effective_balance = min(
+                balance - balance % EFFECTIVE_BALANCE_INCREMENT, max_effective_balance
+            )
+        elif validator.effective_balance + UPWARD_THRESHOLD < balance:
             validator.effective_balance = min(
                 balance - balance % EFFECTIVE_BALANCE_INCREMENT, max_effective_balance
             )
@@ -1239,7 +1233,9 @@ def get_pending_partial_withdrawals(
         all_withdrawals = prior_withdrawals + withdrawals
         is_withdrawable = withdrawal.withdrawable_epoch <= epoch
         has_reached_limit = len(all_withdrawals) >= withdrawals_limit
-        if not is_withdrawable or has_reached_limit:
+        if not is_withdrawable:
+            break
+        if has_reached_limit:
             break
 
         validator_index = withdrawal.validator_index
@@ -1568,11 +1564,10 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     proposer_reward_numerator = 0
     for index in get_attesting_indices(state, attestation):
         for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
-            if flag_index in participation_flag_indices and not has_flag(
-                epoch_participation[index], flag_index
-            ):
-                epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
-                proposer_reward_numerator += get_base_reward(state, index) * weight
+            if flag_index in participation_flag_indices:
+                if not has_flag(epoch_participation[index], flag_index):
+                    epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
+                    proposer_reward_numerator += get_base_reward(state, index) * weight
 
     # Reward proposer
     proposer_reward_denominator = (
@@ -1764,11 +1759,9 @@ def process_withdrawal_request(state: BeaconState, withdrawal_request: Withdrawa
     is_full_exit_request = amount == FULL_EXIT_REQUEST_AMOUNT
 
     # If partial withdrawal queue is full, only full exits are processed
-    if (
-        len(state.pending_partial_withdrawals) == PENDING_PARTIAL_WITHDRAWALS_LIMIT
-        and not is_full_exit_request
-    ):
-        return
+    if len(state.pending_partial_withdrawals) == PENDING_PARTIAL_WITHDRAWALS_LIMIT:
+        if not is_full_exit_request:
+            return
 
     validator_pubkeys = [v.pubkey for v in state.validators]
     # Verify pubkey exists
@@ -1783,7 +1776,9 @@ def process_withdrawal_request(state: BeaconState, withdrawal_request: Withdrawa
     is_correct_source_address = (
         validator.withdrawal_credentials[12:] == withdrawal_request.source_address
     )
-    if not (has_correct_credential and is_correct_source_address):
+    if not has_correct_credential:
+        return
+    if not is_correct_source_address:
         return
     # Verify the validator is active
     if not is_active_validator(validator, get_current_epoch(state)):
@@ -1809,23 +1804,22 @@ def process_withdrawal_request(state: BeaconState, withdrawal_request: Withdrawa
     )
 
     # Only allow partial withdrawals with compounding withdrawal credentials
-    if (
-        has_compounding_withdrawal_credential(validator)
-        and has_sufficient_effective_balance
-        and has_excess_balance
-    ):
-        to_withdraw = min(
-            state.balances[index] - MIN_ACTIVATION_BALANCE - pending_balance_to_withdraw, amount
-        )
-        exit_queue_epoch = compute_exit_epoch_and_update_churn(state, to_withdraw)
-        withdrawable_epoch = Epoch(exit_queue_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
-        state.pending_partial_withdrawals.append(
-            PendingPartialWithdrawal(
-                validator_index=index,
-                amount=to_withdraw,
-                withdrawable_epoch=withdrawable_epoch,
-            )
-        )
+    if has_compounding_withdrawal_credential(validator):
+        if has_sufficient_effective_balance:
+            if has_excess_balance:
+                to_withdraw = min(
+                    state.balances[index] - MIN_ACTIVATION_BALANCE - pending_balance_to_withdraw,
+                    amount,
+                )
+                exit_queue_epoch = compute_exit_epoch_and_update_churn(state, to_withdraw)
+                withdrawable_epoch = Epoch(exit_queue_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
+                state.pending_partial_withdrawals.append(
+                    PendingPartialWithdrawal(
+                        validator_index=index,
+                        amount=to_withdraw,
+                        withdrawable_epoch=withdrawable_epoch,
+                    )
+                )
 ```
 
 ##### Deposit requests
@@ -1930,7 +1924,9 @@ def process_consolidation_request(
     is_correct_source_address = (
         source_validator.withdrawal_credentials[12:] == consolidation_request.source_address
     )
-    if not (has_correct_credential and is_correct_source_address):
+    if not has_correct_credential:
+        return
+    if not is_correct_source_address:
         return
 
     # Verify that target has compounding withdrawal credentials

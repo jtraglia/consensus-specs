@@ -258,13 +258,15 @@ def get_attestation_participation_flag_indices(
         raise AssertionError
 
     participation_flag_indices = []
-    if is_matching_source and inclusion_delay <= integer_squareroot(SLOTS_PER_EPOCH):
-        participation_flag_indices.append(TIMELY_SOURCE_FLAG_INDEX)
+    if is_matching_source:
+        if inclusion_delay <= integer_squareroot(SLOTS_PER_EPOCH):
+            participation_flag_indices.append(TIMELY_SOURCE_FLAG_INDEX)
     # [Modified in Deneb:EIP7045]
     if is_matching_target:
         participation_flag_indices.append(TIMELY_TARGET_FLAG_INDEX)
-    if is_matching_head and inclusion_delay == MIN_ATTESTATION_INCLUSION_DELAY:
-        participation_flag_indices.append(TIMELY_HEAD_FLAG_INDEX)
+    if is_matching_head:
+        if inclusion_delay == MIN_ATTESTATION_INCLUSION_DELAY:
+            participation_flag_indices.append(TIMELY_HEAD_FLAG_INDEX)
 
     return participation_flag_indices
 ```
@@ -413,11 +415,10 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     proposer_reward_numerator = 0
     for index in get_attesting_indices(state, attestation):
         for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
-            if flag_index in participation_flag_indices and not has_flag(
-                epoch_participation[index], flag_index
-            ):
-                epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
-                proposer_reward_numerator += get_base_reward(state, index) * weight
+            if flag_index in participation_flag_indices:
+                if not has_flag(epoch_participation[index], flag_index):
+                    epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
+                    proposer_reward_numerator += get_base_reward(state, index) * weight
 
     # Reward proposer
     proposer_reward_denominator = (
@@ -548,11 +549,9 @@ def process_registry_updates(state: BeaconState) -> None:
         if is_eligible_for_activation_queue(validator):
             validator.activation_eligibility_epoch = get_current_epoch(state) + 1
 
-        if (
-            is_active_validator(validator, get_current_epoch(state))
-            and validator.effective_balance <= EJECTION_BALANCE
-        ):
-            initiate_validator_exit(state, ValidatorIndex(index))
+        if is_active_validator(validator, get_current_epoch(state)):
+            if validator.effective_balance <= EJECTION_BALANCE:
+                initiate_validator_exit(state, ValidatorIndex(index))
 
     # Queue validators eligible for activation and not yet dequeued for activation
     activation_queue = sorted(

@@ -162,7 +162,14 @@ def update_latest_messages(
         i for i in attesting_indices if i not in store.equivocating_indices
     ]
     for i in non_equivocating_attesting_indices:
-        if i not in store.latest_messages or slot > store.latest_messages[i].slot:
+        if i not in store.latest_messages:
+            # [Modified in Gloas:EIP7732]
+            store.latest_messages[i] = LatestMessage(
+                slot=slot,
+                root=beacon_block_root,
+                payload_present=payload_present,
+            )
+        elif slot > store.latest_messages[i].slot:
             # [Modified in Gloas:EIP7732]
             store.latest_messages[i] = LatestMessage(
                 slot=slot,
