@@ -452,15 +452,21 @@ def should_extend_payload(store: Store, root: Root) -> bool:
     assert store.blocks[root].slot + 1 == get_current_slot(store)
     if not is_payload_verified(store, root):
         return False
-    proposer_root = store.proposer_boost_root
-    payload_is_timely = payload_timeliness(store, root, timely=True)
-    payload_data_is_available = payload_data_availability(store, root, available=True)
-    return (
-        (payload_is_timely and payload_data_is_available)
-        or proposer_root == Root()
-        or store.blocks[proposer_root].parent_root != root
-        or is_parent_node_full(store, store.blocks[proposer_root])
-    )
+    if store.proposer_boost_root == Root():
+        return True
+
+    proposer_boost_block = store.blocks[store.proposer_boost_root]
+
+    if proposer_boost_block.parent_root != root:
+        return True
+    if is_parent_node_full(store, proposer_boost_block):
+        return True
+
+    if not payload_timeliness(store, root, timely=True):
+        return False
+    if not payload_data_availability(store, root, available=True):
+        return False
+    return True
 ```
 
 ### New `get_payload_status_tiebreaker`
@@ -640,15 +646,20 @@ def get_dependent_root(store: Store, root: Root) -> Root:
 
 ```python
 def update_proposer_boost_root(store: Store, head: Root, root: Root) -> None:
-    is_first_block = store.proposer_boost_root == Root()
-    # [Modified in Gloas:EIP7732]
-    is_timely = store.block_timeliness[root][ATTESTATION_TIMELINESS_INDEX]
-    is_same_dependent_root = get_dependent_root(store, root) == get_dependent_root(store, head)
+    # The block does not conflict with an existing block
+    if store.proposer_boost_root != Root():
+        return
 
-    # Add proposer score boost if the block is timely, not conflicting with an
-    # existing block, with the same dependent root as the canonical chain head.
-    if is_timely and is_first_block and is_same_dependent_root:
-        store.proposer_boost_root = root
+    # [Modified in Gloas:EIP7732]
+    # The block was received before the deadline
+    if not store.block_timeliness[root][ATTESTATION_TIMELINESS_INDEX]:
+        return
+
+    # The block has the same dependent root as the canonical chain head
+    if get_dependent_root(store, root) != get_dependent_root(store, head):
+        return
+
+    store.proposer_boost_root = root
 ```
 
 ### Modified `validate_on_attestation`

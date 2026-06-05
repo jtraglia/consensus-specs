@@ -25,12 +25,12 @@ def is_data_available(beacon_block_root: Root) -> bool:
     # sidecars to sample, or raises an exception if they are not available.
     # The p2p network does not guarantee sidecar retrieval outside of
     # `MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS` epochs.
-    column_sidecars = retrieve_column_sidecars(beacon_block_root)
-    return all(
-        verify_data_column_sidecar(column_sidecar)
-        and verify_data_column_sidecar_kzg_proofs(column_sidecar)
-        for column_sidecar in column_sidecars
-    )
+    for column_sidecar in retrieve_column_sidecars(beacon_block_root):
+        if not verify_data_column_sidecar(column_sidecar):
+            return False
+        if not verify_data_column_sidecar_kzg_proofs(column_sidecar):
+            return False
+    return True
 ```
 
 ## Handlers

@@ -47,6 +47,8 @@
       - [`is_head_weak`](#is_head_weak)
       - [`is_parent_strong`](#is_parent_strong)
       - [`is_proposer_equivocation`](#is_proposer_equivocation)
+      - [`should_reorg_late_block`](#should_reorg_late_block)
+      - [`should_reorg_equivocation`](#should_reorg_equivocation)
       - [`get_proposer_head`](#get_proposer_head)
     - [Pull-up tip helpers](#pull-up-tip-helpers)
       - [`compute_pulled_up_tip`](#compute_pulled_up_tip)
@@ -658,65 +660,99 @@ def is_proposer_equivocation(store: Store, root: Root) -> bool:
     return len(matching_roots) > 1
 ```
 
+##### `should_reorg_late_block`
+
+*Note*: The ordering of conditions is a suggestion only. Implementations are
+free to optimize by re-ordering the conditions from least to most expensive and
+by returning early if any of the early conditions are `False`.
+
+```python
+def should_reorg_late_block(store: Store, head_root: Root, slot: Slot) -> bool:
+    head_block = store.blocks[head_root]
+    parent_root = head_block.parent_root
+    parent_block = store.blocks[parent_root]
+
+    # Do not re-org if the block arrived within the attestation deadline
+    if not is_head_late(store, head_root):
+        return False
+
+    # Do not re-org on an epoch boundary where the proposer shuffling could change
+    if not is_shuffling_stable(slot):
+        return False
+
+    # Do not re-org if the FFG information of the new head will be competitive with the current head
+    if not is_ffg_competitive(store, head_root, parent_root):
+        return False
+
+    # Do not re-org if the chain is not finalizing with acceptable frequency
+    if not is_finalization_ok(store, slot):
+        return False
+
+    # Only re-org if we are proposing on-time.
+    if not is_proposing_on_time(store):
+        return False
+
+    # Only re-org if the head block immediately follows its parent
+    if parent_block.slot + 1 != head_block.slot:
+        return False
+
+    # Only re-org if we are proposing in the slot immediately after the head
+    if head_block.slot + 1 != slot:
+        return False
+
+    # Check that the head has few enough votes to be overpowered by our proposer boost
+    if not is_head_weak(store, head_root):
+        return False
+
+    # Check that the missing votes are assigned to the parent and not being hoarded
+    if not is_parent_strong(store, head_root):
+        return False
+
+    return True
+```
+
+##### `should_reorg_equivocation`
+
+*Note*: The ordering of conditions is a suggestion only. Implementations are
+free to optimize by re-ordering the conditions from least to most expensive and
+by returning early if any of the early conditions are `False`.
+
+```python
+def should_reorg_equivocation(store: Store, head_root: Root, slot: Slot) -> bool:
+    head_block = store.blocks[head_root]
+
+    # Only re-org if we are proposing in the slot immediately after the head
+    if head_block.slot + 1 != slot:
+        return False
+
+    # Check that the head has few enough votes to be overpowered by our proposer boost
+    if not is_head_weak(store, head_root):
+        return False
+
+    # Only re-org if there is a proposer equivocation in the previous slot
+    if not is_proposer_equivocation(store, head_root):
+        return False
+
+    return True
+```
+
 ##### `get_proposer_head`
 
 ```python
 def get_proposer_head(store: Store, head_root: Root, slot: Slot) -> Root:
     head_block = store.blocks[head_root]
     parent_root = head_block.parent_root
-    parent_block = store.blocks[parent_root]
 
-    # Only re-org the head block if it arrived later than the attestation deadline.
-    head_late = is_head_late(store, head_root)
+    # Proposer boost must have worn off
+    assert store.proposer_boost_root != head_root
 
-    # Do not re-org on an epoch boundary where the proposer shuffling could change.
-    shuffling_stable = is_shuffling_stable(slot)
-
-    # Ensure that the FFG information of the new head will be competitive with the current head.
-    ffg_competitive = is_ffg_competitive(store, head_root, parent_root)
-
-    # Do not re-org if the chain is not finalizing with acceptable frequency.
-    finalization_ok = is_finalization_ok(store, slot)
-
-    # Only re-org if we are proposing on-time.
-    proposing_on_time = is_proposing_on_time(store)
-
-    # Only re-org a single slot at most.
-    parent_slot_ok = parent_block.slot + 1 == head_block.slot
-    current_time_ok = head_block.slot + 1 == slot
-    single_slot_reorg = parent_slot_ok and current_time_ok
-
-    # Check that the head has few enough votes to be overpowered by our proposer boost.
-    assert store.proposer_boost_root != head_root  # ensure boost has worn off
-    head_weak = is_head_weak(store, head_root)
-
-    # Check that the missing votes are assigned to the parent and not being hoarded.
-    parent_strong = is_parent_strong(store, head_root)
-
-    # Re-org more aggressively if there is a proposer equivocation in the previous slot.
-    proposer_equivocation = is_proposer_equivocation(store, head_root)
-
-    if all([
-        head_late,
-        shuffling_stable,
-        ffg_competitive,
-        finalization_ok,
-        proposing_on_time,
-        single_slot_reorg,
-        head_weak,
-        parent_strong,
-    ]):
-        # We can re-org the current head by building upon its parent block.
+    if should_reorg_late_block(store, head_root, slot):
         return parent_root
-    elif all([head_weak, current_time_ok, proposer_equivocation]):
+    if should_reorg_equivocation(store, head_root, slot):
         return parent_root
-    else:
-        return head_root
+
+    return head_root
 ```
-
-*Note*: The ordering of conditions is a suggestion only. Implementations are
-free to optimize by re-ordering the conditions from least to most expensive and
-by returning early if any of the early conditions are `False`.
 
 #### Pull-up tip helpers
 
