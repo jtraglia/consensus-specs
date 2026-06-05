@@ -156,7 +156,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
-          enable-cache: true
+          enable-cache: false
 
       - name: Generate tests
         run: make test component=pyspec preset=${{ matrix.preset }} fork=${{ matrix.fork }} reftests=true coverage=${{ matrix.preset != 'general' && 'true' || 'false' }}
