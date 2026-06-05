@@ -390,7 +390,8 @@ def get_validators_sweep_withdrawals(
     validators_limit = min(len(state.validators), MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
     withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD
     # There must be at least one space reserved for validator sweep withdrawals
-    assert len(prior_withdrawals) < withdrawals_limit
+    if len(prior_withdrawals) >= withdrawals_limit:
+        raise AssertionError
 
     processed_count: uint64 = 0
     withdrawals: List[Withdrawal] = []
@@ -493,7 +494,8 @@ def update_next_withdrawal_validator_index(
 def process_withdrawals(state: BeaconState, payload: ExecutionPayload) -> None:
     # Get expected withdrawals
     expected = get_expected_withdrawals(state)
-    assert payload.withdrawals == expected.withdrawals
+    if payload.withdrawals != expected.withdrawals:
+        raise AssertionError
 
     # Apply expected withdrawals
     apply_withdrawals(state, expected.withdrawals)
@@ -517,15 +519,19 @@ def process_execution_payload(
     # [Modified in Capella]
     # Removed `is_merge_transition_complete` check
     # Verify consistency of the parent hash with respect to the previous execution payload header
-    assert payload.parent_hash == state.latest_execution_payload_header.block_hash
+    if payload.parent_hash != state.latest_execution_payload_header.block_hash:
+        raise AssertionError
     # Verify prev_randao
-    assert payload.prev_randao == get_randao_mix(state, get_current_epoch(state))
+    if payload.prev_randao != get_randao_mix(state, get_current_epoch(state)):
+        raise AssertionError
     # Verify timestamp
-    assert payload.timestamp == compute_time_at_slot(state, state.slot)
+    if payload.timestamp != compute_time_at_slot(state, state.slot):
+        raise AssertionError
     # Verify the execution payload is valid
-    assert execution_engine.verify_and_notify_new_payload(
-        NewPayloadRequest(execution_payload=payload)
-    )
+    if not (
+        execution_engine.verify_and_notify_new_payload(NewPayloadRequest(execution_payload=payload))
+    ):
+        raise AssertionError
     # Cache execution payload header
     state.latest_execution_payload_header = ExecutionPayloadHeader(
         parent_hash=payload.parent_hash,
@@ -555,9 +561,10 @@ def process_execution_payload(
 ```python
 def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
     # Verify that outstanding deposits are processed up to the maximum number of deposits
-    assert len(body.deposits) == min(
+    if len(body.deposits) != min(
         MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index
-    )
+    ):
+        raise AssertionError
 
     def for_ops(operations: Sequence[Any], fn: Callable[[BeaconState, Any], None]) -> None:
         for operation in operations:
@@ -580,19 +587,25 @@ def process_bls_to_execution_change(
 ) -> None:
     address_change = signed_address_change.message
 
-    assert address_change.validator_index < len(state.validators)
+    if address_change.validator_index >= len(state.validators):
+        raise AssertionError
 
     validator = state.validators[address_change.validator_index]
 
-    assert validator.withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX
-    assert validator.withdrawal_credentials[1:] == hash(address_change.from_bls_pubkey)[1:]
+    if validator.withdrawal_credentials[:1] != BLS_WITHDRAWAL_PREFIX:
+        raise AssertionError
+    if validator.withdrawal_credentials[1:] != hash(address_change.from_bls_pubkey)[1:]:
+        raise AssertionError
 
     # Fork-agnostic domain since address changes are valid across forks
     domain = compute_domain(
         DOMAIN_BLS_TO_EXECUTION_CHANGE, genesis_validators_root=state.genesis_validators_root
     )
     signing_root = compute_signing_root(address_change, domain)
-    assert bls.Verify(address_change.from_bls_pubkey, signing_root, signed_address_change.signature)
+    if not (
+        bls.Verify(address_change.from_bls_pubkey, signing_root, signed_address_change.signature)
+    ):
+        raise AssertionError
 
     validator.withdrawal_credentials = (
         ETH1_ADDRESS_WITHDRAWAL_PREFIX + b"\x00" * 11 + address_change.to_execution_address

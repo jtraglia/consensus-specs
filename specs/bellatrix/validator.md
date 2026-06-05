@@ -150,7 +150,8 @@ def prepare_execution_payload(
     pow_chain: Optional[Dict[Hash32, PowBlock]] = None,
 ) -> Optional[PayloadId]:
     if not is_merge_transition_complete(state):
-        assert pow_chain is not None
+        if pow_chain is None:
+            raise AssertionError
         is_terminal_block_hash_set = TERMINAL_BLOCK_HASH != EMPTY_BLOCK_HASH
         is_activation_epoch_reached = (
             get_current_epoch(state) >= TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH

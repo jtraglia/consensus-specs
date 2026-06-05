@@ -88,7 +88,8 @@ def get_inclusion_list_committee_assignment(
     Returns None if no assignment is found.
     """
     next_epoch = Epoch(get_current_epoch(state) + 1)
-    assert epoch <= next_epoch
+    if epoch > next_epoch:
+        raise AssertionError
 
     start_slot = compute_start_slot_at_epoch(epoch)
     for slot in range(start_slot, start_slot + SLOTS_PER_EPOCH):

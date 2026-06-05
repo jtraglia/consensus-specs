@@ -214,7 +214,8 @@ def get_data_column_sidecars(
     Given a signed block header and the commitments, inclusion proof, cells/proofs associated with
     each blob in the block, assemble the sidecars which can be distributed to peers.
     """
-    assert len(cells_and_kzg_proofs) == len(kzg_commitments)
+    if len(cells_and_kzg_proofs) != len(kzg_commitments):
+        raise AssertionError
 
     sidecars = []
     for column_index in range(NUMBER_OF_COLUMNS):
@@ -275,7 +276,8 @@ def get_data_column_sidecars_from_column_sidecar(
     Given a data column sidecar and the cells/proofs associated with each blob corresponding
     to the commitments it contains, assemble all sidecars for distribution to peers.
     """
-    assert len(cells_and_kzg_proofs) == len(sidecar.kzg_commitments)
+    if len(cells_and_kzg_proofs) != len(sidecar.kzg_commitments):
+        raise AssertionError
 
     return get_data_column_sidecars(
         sidecar.signed_block_header,

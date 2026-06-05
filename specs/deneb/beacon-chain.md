@@ -254,7 +254,8 @@ def get_attestation_participation_flag_indices(
     head_root_matches = data.beacon_block_root == head_root
     is_matching_head = is_matching_target and head_root_matches
 
-    assert is_matching_source
+    if not is_matching_source:
+        raise AssertionError
 
     participation_flag_indices = []
     if is_matching_source and inclusion_delay <= integer_squareroot(SLOTS_PER_EPOCH):
@@ -380,14 +381,19 @@ the extended attestation inclusion range for EIP-7045.
 ```python
 def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     data = attestation.data
-    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
-    assert data.target.epoch == compute_epoch_at_slot(data.slot)
+    if data.target.epoch not in (get_previous_epoch(state), get_current_epoch(state)):
+        raise AssertionError
+    if data.target.epoch != compute_epoch_at_slot(data.slot):
+        raise AssertionError
     # [Modified in Deneb:EIP7045]
-    assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot
-    assert data.index < get_committee_count_per_slot(state, data.target.epoch)
+    if data.slot + MIN_ATTESTATION_INCLUSION_DELAY > state.slot:
+        raise AssertionError
+    if data.index >= get_committee_count_per_slot(state, data.target.epoch):
+        raise AssertionError
 
     committee = get_beacon_committee(state, data.slot, data.index)
-    assert len(attestation.aggregation_bits) == len(committee)
+    if len(attestation.aggregation_bits) != len(committee):
+        raise AssertionError
 
     # Participation flag indices
     participation_flag_indices = get_attestation_participation_flag_indices(
@@ -395,7 +401,8 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     )
 
     # Verify signature
-    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
+    if not is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation)):
+        raise AssertionError
 
     # Update epoch participation flags
     if data.target.epoch == get_current_epoch(state):
@@ -436,14 +443,18 @@ def process_execution_payload(
     payload = body.execution_payload
 
     # Verify consistency of the parent hash with respect to the previous execution payload header
-    assert payload.parent_hash == state.latest_execution_payload_header.block_hash
+    if payload.parent_hash != state.latest_execution_payload_header.block_hash:
+        raise AssertionError
     # Verify prev_randao
-    assert payload.prev_randao == get_randao_mix(state, get_current_epoch(state))
+    if payload.prev_randao != get_randao_mix(state, get_current_epoch(state)):
+        raise AssertionError
     # Verify timestamp
-    assert payload.timestamp == compute_time_at_slot(state, state.slot)
+    if payload.timestamp != compute_time_at_slot(state, state.slot):
+        raise AssertionError
     # [New in Deneb:EIP4844]
     # Verify commitments are under limit
-    assert len(body.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK
+    if len(body.blob_kzg_commitments) > MAX_BLOBS_PER_BLOCK:
+        raise AssertionError
 
     # [New in Deneb:EIP4844]
     # Compute list of versioned hashes
@@ -452,15 +463,18 @@ def process_execution_payload(
     ]
 
     # Verify the execution payload is valid
-    assert execution_engine.verify_and_notify_new_payload(
-        NewPayloadRequest(
-            execution_payload=payload,
-            # [New in Deneb:EIP4844]
-            versioned_hashes=versioned_hashes,
-            # [New in Deneb:EIP4788]
-            parent_beacon_block_root=state.latest_block_header.parent_root,
+    if not (
+        execution_engine.verify_and_notify_new_payload(
+            NewPayloadRequest(
+                execution_payload=payload,
+                # [New in Deneb:EIP4844]
+                versioned_hashes=versioned_hashes,
+                # [New in Deneb:EIP4788]
+                parent_beacon_block_root=state.latest_block_header.parent_root,
+            )
         )
-    )
+    ):
+        raise AssertionError
 
     # Cache execution payload header
     state.latest_execution_payload_header = ExecutionPayloadHeader(
@@ -496,20 +510,25 @@ def process_voluntary_exit(state: BeaconState, signed_voluntary_exit: SignedVolu
     voluntary_exit = signed_voluntary_exit.message
     validator = state.validators[voluntary_exit.validator_index]
     # Verify the validator is active
-    assert is_active_validator(validator, get_current_epoch(state))
+    if not is_active_validator(validator, get_current_epoch(state)):
+        raise AssertionError
     # Verify exit has not been initiated
-    assert validator.exit_epoch == FAR_FUTURE_EPOCH
+    if validator.exit_epoch != FAR_FUTURE_EPOCH:
+        raise AssertionError
     # Exits must specify an epoch when they become valid; they are not valid before then
-    assert get_current_epoch(state) >= voluntary_exit.epoch
+    if get_current_epoch(state) < voluntary_exit.epoch:
+        raise AssertionError
     # Verify the validator has been active long enough
-    assert get_current_epoch(state) >= validator.activation_epoch + SHARD_COMMITTEE_PERIOD
+    if get_current_epoch(state) < validator.activation_epoch + SHARD_COMMITTEE_PERIOD:
+        raise AssertionError
     # Verify signature
     # [Modified in Deneb:EIP7044]
     domain = compute_domain(
         DOMAIN_VOLUNTARY_EXIT, CAPELLA_FORK_VERSION, state.genesis_validators_root
     )
     signing_root = compute_signing_root(voluntary_exit, domain)
-    assert bls.Verify(validator.pubkey, signing_root, signed_voluntary_exit.signature)
+    if not bls.Verify(validator.pubkey, signing_root, signed_voluntary_exit.signature):
+        raise AssertionError
     # Initiate exit
     initiate_validator_exit(state, voluntary_exit.validator_index)
 ```

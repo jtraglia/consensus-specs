@@ -453,7 +453,8 @@ def compute_proposer_index(
     """
     Return from ``indices`` a random index sampled by effective balance.
     """
-    assert len(indices) > 0
+    if len(indices) <= 0:
+        raise AssertionError
     # [Modified in Electra]
     MAX_RANDOM_VALUE = 2**16 - 1
     i = uint64(0)
@@ -1229,7 +1230,8 @@ def get_pending_partial_withdrawals(
         len(prior_withdrawals) + MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
         MAX_WITHDRAWALS_PER_PAYLOAD - 1,
     )
-    assert len(prior_withdrawals) <= withdrawals_limit
+    if len(prior_withdrawals) > withdrawals_limit:
+        raise AssertionError
 
     processed_count: uint64 = 0
     withdrawals: List[Withdrawal] = []
@@ -1275,7 +1277,8 @@ def get_validators_sweep_withdrawals(
     validators_limit = min(len(state.validators), MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
     withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD
     # There must be at least one space reserved for validator sweep withdrawals
-    assert len(prior_withdrawals) < withdrawals_limit
+    if len(prior_withdrawals) >= withdrawals_limit:
+        raise AssertionError
 
     processed_count: uint64 = 0
     withdrawals: List[Withdrawal] = []
@@ -1365,7 +1368,8 @@ def update_pending_partial_withdrawals(
 def process_withdrawals(state: BeaconState, payload: ExecutionPayload) -> None:
     # Get expected withdrawals
     expected = get_expected_withdrawals(state)
-    assert payload.withdrawals == expected.withdrawals
+    if payload.withdrawals != expected.withdrawals:
+        raise AssertionError
 
     # Apply expected withdrawals
     apply_withdrawals(state, expected.withdrawals)
@@ -1412,14 +1416,18 @@ def process_execution_payload(
     payload = body.execution_payload
 
     # Verify consistency of the parent hash with respect to the previous execution payload header
-    assert payload.parent_hash == state.latest_execution_payload_header.block_hash
+    if payload.parent_hash != state.latest_execution_payload_header.block_hash:
+        raise AssertionError
     # Verify prev_randao
-    assert payload.prev_randao == get_randao_mix(state, get_current_epoch(state))
+    if payload.prev_randao != get_randao_mix(state, get_current_epoch(state)):
+        raise AssertionError
     # Verify timestamp
-    assert payload.timestamp == compute_time_at_slot(state, state.slot)
+    if payload.timestamp != compute_time_at_slot(state, state.slot):
+        raise AssertionError
     # [Modified in Electra:EIP7691]
     # Verify commitments are under limit
-    assert len(body.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK_ELECTRA
+    if len(body.blob_kzg_commitments) > MAX_BLOBS_PER_BLOCK_ELECTRA:
+        raise AssertionError
 
     # Compute list of versioned hashes
     versioned_hashes = [
@@ -1427,15 +1435,18 @@ def process_execution_payload(
     ]
 
     # Verify the execution payload is valid
-    assert execution_engine.verify_and_notify_new_payload(
-        NewPayloadRequest(
-            execution_payload=payload,
-            versioned_hashes=versioned_hashes,
-            parent_beacon_block_root=state.latest_block_header.parent_root,
-            # [New in Electra]
-            execution_requests=body.execution_requests,
+    if not (
+        execution_engine.verify_and_notify_new_payload(
+            NewPayloadRequest(
+                execution_payload=payload,
+                versioned_hashes=versioned_hashes,
+                parent_beacon_block_root=state.latest_block_header.parent_root,
+                # [New in Electra]
+                execution_requests=body.execution_requests,
+            )
         )
-    )
+    ):
+        raise AssertionError
 
     # Cache execution payload header
     state.latest_execution_payload_header = ExecutionPayloadHeader(
@@ -1474,11 +1485,12 @@ def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
         state.eth1_data.deposit_count, state.deposit_requests_start_index
     )
     if state.eth1_deposit_index < eth1_deposit_index_limit:
-        assert len(body.deposits) == min(
+        if len(body.deposits) != min(
             MAX_DEPOSITS, eth1_deposit_index_limit - state.eth1_deposit_index
-        )
-    else:
-        assert len(body.deposits) == 0
+        ):
+            raise AssertionError
+    elif len(body.deposits) != 0:
+        raise AssertionError
 
     def for_ops(operations: Sequence[Any], fn: Callable[[BeaconState, Any], None]) -> None:
         for operation in operations:
@@ -1509,27 +1521,34 @@ def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
 ```python
 def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     data = attestation.data
-    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
-    assert data.target.epoch == compute_epoch_at_slot(data.slot)
-    assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot
+    if data.target.epoch not in (get_previous_epoch(state), get_current_epoch(state)):
+        raise AssertionError
+    if data.target.epoch != compute_epoch_at_slot(data.slot):
+        raise AssertionError
+    if data.slot + MIN_ATTESTATION_INCLUSION_DELAY > state.slot:
+        raise AssertionError
 
     # [Modified in Electra:EIP7549]
-    assert data.index == 0
+    if data.index != 0:
+        raise AssertionError
     committee_indices = get_committee_indices(attestation.committee_bits)
     committee_offset = 0
     for committee_index in committee_indices:
-        assert committee_index < get_committee_count_per_slot(state, data.target.epoch)
+        if committee_index >= get_committee_count_per_slot(state, data.target.epoch):
+            raise AssertionError
         committee = get_beacon_committee(state, data.slot, committee_index)
         committee_attesters = {
             attester_index
             for i, attester_index in enumerate(committee)
             if attestation.aggregation_bits[committee_offset + i]
         }
-        assert len(committee_attesters) > 0
+        if len(committee_attesters) <= 0:
+            raise AssertionError
         committee_offset += len(committee)
 
     # Bitfield length matches total number of participants
-    assert len(attestation.aggregation_bits) == committee_offset
+    if len(attestation.aggregation_bits) != committee_offset:
+        raise AssertionError
 
     # Participation flag indices
     participation_flag_indices = get_attestation_participation_flag_indices(
@@ -1537,7 +1556,8 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     )
 
     # Verify signature
-    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
+    if not is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation)):
+        raise AssertionError
 
     # Update epoch participation flags
     if data.target.epoch == get_current_epoch(state):
@@ -1671,14 +1691,17 @@ def is_valid_deposit_signature(
 ```python
 def process_deposit(state: BeaconState, deposit: Deposit) -> None:
     # Verify the Merkle branch
-    assert is_valid_merkle_branch(
-        leaf=hash_tree_root(deposit.data),
-        branch=deposit.proof,
-        # Add 1 for the List length mix-in
-        depth=DEPOSIT_CONTRACT_TREE_DEPTH + 1,
-        index=state.eth1_deposit_index,
-        root=state.eth1_data.deposit_root,
-    )
+    if not (
+        is_valid_merkle_branch(
+            leaf=hash_tree_root(deposit.data),
+            branch=deposit.proof,
+            # Add 1 for the List length mix-in
+            depth=DEPOSIT_CONTRACT_TREE_DEPTH + 1,
+            index=state.eth1_deposit_index,
+            root=state.eth1_data.deposit_root,
+        )
+    ):
+        raise AssertionError
 
     # Deposits must be processed in order
     state.eth1_deposit_index += 1
@@ -1705,22 +1728,28 @@ def process_voluntary_exit(state: BeaconState, signed_voluntary_exit: SignedVolu
     voluntary_exit = signed_voluntary_exit.message
     validator = state.validators[voluntary_exit.validator_index]
     # Verify the validator is active
-    assert is_active_validator(validator, get_current_epoch(state))
+    if not is_active_validator(validator, get_current_epoch(state)):
+        raise AssertionError
     # Verify exit has not been initiated
-    assert validator.exit_epoch == FAR_FUTURE_EPOCH
+    if validator.exit_epoch != FAR_FUTURE_EPOCH:
+        raise AssertionError
     # Exits must specify an epoch when they become valid; they are not valid before then
-    assert get_current_epoch(state) >= voluntary_exit.epoch
+    if get_current_epoch(state) < voluntary_exit.epoch:
+        raise AssertionError
     # Verify the validator has been active long enough
-    assert get_current_epoch(state) >= validator.activation_epoch + SHARD_COMMITTEE_PERIOD
+    if get_current_epoch(state) < validator.activation_epoch + SHARD_COMMITTEE_PERIOD:
+        raise AssertionError
     # [New in Electra:EIP7251]
     # Only exit validator if it has no pending withdrawals in the queue
-    assert get_pending_balance_to_withdraw(state, voluntary_exit.validator_index) == 0
+    if get_pending_balance_to_withdraw(state, voluntary_exit.validator_index) != 0:
+        raise AssertionError
     # Verify signature
     domain = compute_domain(
         DOMAIN_VOLUNTARY_EXIT, CAPELLA_FORK_VERSION, state.genesis_validators_root
     )
     signing_root = compute_signing_root(voluntary_exit, domain)
-    assert bls.Verify(validator.pubkey, signing_root, signed_voluntary_exit.signature)
+    if not bls.Verify(validator.pubkey, signing_root, signed_voluntary_exit.signature):
+        raise AssertionError
     # Initiate exit
     initiate_validator_exit(state, voluntary_exit.validator_index)
 ```

@@ -132,7 +132,8 @@ def reverse_bits(n: int, order: int) -> int:
     """
     Reverse the bit order of an integer ``n``.
     """
-    assert is_power_of_two(order)
+    if not is_power_of_two(order):
+        raise AssertionError
     # Convert n to binary with the same number of bits as "order" - 1, then reverse its bit order
     return int(("{:0" + str(order.bit_length() - 1) + "b}").format(n)[::-1], 2)
 ```
@@ -172,7 +173,8 @@ def bytes_to_bls_field(b: Bytes32) -> BLSFieldElement:
     This function does not accept inputs greater than the BLS modulus.
     """
     field_element = int.from_bytes(b, KZG_ENDIANNESS)
-    assert field_element < BLS_MODULUS
+    if field_element >= BLS_MODULUS:
+        raise AssertionError
     return BLSFieldElement(field_element)
 ```
 
@@ -193,7 +195,8 @@ def validate_kzg_g1(b: Bytes48) -> None:
     if b == G1_POINT_AT_INFINITY:
         return
 
-    assert bls.KeyValidate(b)
+    if not bls.KeyValidate(b):
+        raise AssertionError
 ```
 
 #### `bytes_to_kzg_commitment`
@@ -262,7 +265,8 @@ def g1_lincomb(
     """
     BLS multiscalar multiplication in G1. This can be naively implemented using double-and-add.
     """
-    assert len(points) == len(scalars)
+    if len(points) != len(scalars):
+        raise AssertionError
 
     if len(points) == 0:
         return bls.G1_to_bytes48(bls.Z1())
@@ -297,7 +301,8 @@ def compute_roots_of_unity(order: uint64) -> Sequence[BLSFieldElement]:
     """
     Return roots of unity of ``order``.
     """
-    assert (BLS_MODULUS - 1) % int(order) == 0
+    if (BLS_MODULUS - 1) % int(order) != 0:
+        raise AssertionError
     root_of_unity = BLSFieldElement(
         pow(PRIMITIVE_ROOT_OF_UNITY, (BLS_MODULUS - 1) // int(order), BLS_MODULUS)
     )
@@ -320,7 +325,8 @@ def evaluate_polynomial_in_evaluation_form(
        f(z) = (z**WIDTH - 1) / WIDTH  *  sum_(i=0)^(WIDTH-1) (f(DOMAIN[i]) * DOMAIN[i]) / (z - DOMAIN[i])
     """
     width = len(polynomial)
-    assert width == FIELD_ELEMENTS_PER_BLOB
+    if width != FIELD_ELEMENTS_PER_BLOB:
+        raise AssertionError
     inverse_width = BLSFieldElement(width).inverse()
 
     roots_of_unity_brp = bit_reversal_permutation(compute_roots_of_unity(FIELD_ELEMENTS_PER_BLOB))
@@ -349,7 +355,8 @@ def blob_to_kzg_commitment(blob: Blob) -> KZGCommitment:
     """
     Public method.
     """
-    assert len(blob) == BYTES_PER_BLOB
+    if len(blob) != BYTES_PER_BLOB:
+        raise AssertionError
     return g1_lincomb(bit_reversal_permutation(KZG_SETUP_G1_LAGRANGE), blob_to_polynomial(blob))
 ```
 
@@ -364,10 +371,14 @@ def verify_kzg_proof(
     Receives inputs as bytes.
     Public method.
     """
-    assert len(commitment_bytes) == BYTES_PER_COMMITMENT
-    assert len(z_bytes) == BYTES_PER_FIELD_ELEMENT
-    assert len(y_bytes) == BYTES_PER_FIELD_ELEMENT
-    assert len(proof_bytes) == BYTES_PER_PROOF
+    if len(commitment_bytes) != BYTES_PER_COMMITMENT:
+        raise AssertionError
+    if len(z_bytes) != BYTES_PER_FIELD_ELEMENT:
+        raise AssertionError
+    if len(y_bytes) != BYTES_PER_FIELD_ELEMENT:
+        raise AssertionError
+    if len(proof_bytes) != BYTES_PER_PROOF:
+        raise AssertionError
 
     return verify_kzg_proof_impl(
         bytes_to_kzg_commitment(commitment_bytes),
@@ -411,7 +422,8 @@ def verify_kzg_proof_batch(
     Verify multiple KZG proofs efficiently.
     """
 
-    assert len(commitments) == len(zs) == len(ys) == len(proofs)
+    if not (len(commitments) == len(zs) == len(ys) == len(proofs)):
+        raise AssertionError
 
     # Compute a random challenge. Note that it does not have to be computed from a hash,
     # r just has to be random.
@@ -460,8 +472,10 @@ def compute_kzg_proof(blob: Blob, z_bytes: Bytes32) -> Tuple[KZGProof, Bytes32]:
     Do this by computing the quotient polynomial in evaluation form: q(x) = (p(x) - p(z)) / (x - z).
     Public method.
     """
-    assert len(blob) == BYTES_PER_BLOB
-    assert len(z_bytes) == BYTES_PER_FIELD_ELEMENT
+    if len(blob) != BYTES_PER_BLOB:
+        raise AssertionError
+    if len(z_bytes) != BYTES_PER_FIELD_ELEMENT:
+        raise AssertionError
     polynomial = blob_to_polynomial(blob)
     proof, y = compute_kzg_proof_impl(polynomial, bytes_to_bls_field(z_bytes))
     return proof, int(y).to_bytes(BYTES_PER_FIELD_ELEMENT, KZG_ENDIANNESS)
@@ -538,8 +552,10 @@ def compute_blob_kzg_proof(blob: Blob, commitment_bytes: Bytes48) -> KZGProof:
     This method does not verify that the commitment is correct with respect to `blob`.
     Public method.
     """
-    assert len(blob) == BYTES_PER_BLOB
-    assert len(commitment_bytes) == BYTES_PER_COMMITMENT
+    if len(blob) != BYTES_PER_BLOB:
+        raise AssertionError
+    if len(commitment_bytes) != BYTES_PER_COMMITMENT:
+        raise AssertionError
     commitment = bytes_to_kzg_commitment(commitment_bytes)
     polynomial = blob_to_polynomial(blob)
     evaluation_challenge = compute_challenge(blob, commitment)
@@ -556,9 +572,12 @@ def verify_blob_kzg_proof(blob: Blob, commitment_bytes: Bytes48, proof_bytes: By
 
     Public method.
     """
-    assert len(blob) == BYTES_PER_BLOB
-    assert len(commitment_bytes) == BYTES_PER_COMMITMENT
-    assert len(proof_bytes) == BYTES_PER_PROOF
+    if len(blob) != BYTES_PER_BLOB:
+        raise AssertionError
+    if len(commitment_bytes) != BYTES_PER_COMMITMENT:
+        raise AssertionError
+    if len(proof_bytes) != BYTES_PER_PROOF:
+        raise AssertionError
 
     commitment = bytes_to_kzg_commitment(commitment_bytes)
 
@@ -585,15 +604,19 @@ def verify_blob_kzg_proof_batch(
     Public method.
     """
 
-    assert len(blobs) == len(commitments_bytes) == len(proofs_bytes)
+    if not (len(blobs) == len(commitments_bytes) == len(proofs_bytes)):
+        raise AssertionError
 
     commitments, evaluation_challenges, ys, proofs = [], [], [], []
     for blob, commitment_bytes, proof_bytes in zip(
         blobs, commitments_bytes, proofs_bytes, strict=True
     ):
-        assert len(blob) == BYTES_PER_BLOB
-        assert len(commitment_bytes) == BYTES_PER_COMMITMENT
-        assert len(proof_bytes) == BYTES_PER_PROOF
+        if len(blob) != BYTES_PER_BLOB:
+            raise AssertionError
+        if len(commitment_bytes) != BYTES_PER_COMMITMENT:
+            raise AssertionError
+        if len(proof_bytes) != BYTES_PER_PROOF:
+            raise AssertionError
         commitment = bytes_to_kzg_commitment(commitment_bytes)
         commitments.append(commitment)
         polynomial = blob_to_polynomial(blob)

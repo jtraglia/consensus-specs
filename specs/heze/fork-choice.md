@@ -138,7 +138,8 @@ class Store:
 
 ```python
 def get_forkchoice_store(anchor_state: BeaconState, anchor_block: BeaconBlock) -> Store:
-    assert anchor_block.state_root == hash_tree_root(anchor_state)
+    if anchor_block.state_root != hash_tree_root(anchor_state):
+        raise AssertionError
     anchor_root = hash_tree_root(anchor_block)
     anchor_epoch = get_current_epoch(anchor_state)
     justified_checkpoint = Checkpoint(epoch=anchor_epoch, root=anchor_root)
@@ -202,7 +203,8 @@ def is_payload_inclusion_list_satisfied(store: Store, root: Root) -> bool:
     satisfied the inclusion list constraints, and was locally determined to be available.
     """
     # The beacon block root must be known
-    assert root in store.payload_inclusion_list_satisfaction
+    if root not in store.payload_inclusion_list_satisfaction:
+        raise AssertionError
 
     # If the payload is not locally available, the payload
     # is not considered to satisfy the inclusion list constraints
@@ -278,11 +280,13 @@ def on_execution_payload_envelope(
     """
     envelope = signed_envelope.message
     # The corresponding beacon block root needs to be known
-    assert envelope.beacon_block_root in store.block_states
+    if envelope.beacon_block_root not in store.block_states:
+        raise AssertionError
 
     # Check if blob data is available
     # If not, this payload MAY be queued and subsequently considered when blob data becomes available
-    assert is_data_available(envelope.beacon_block_root)
+    if not is_data_available(envelope.beacon_block_root):
+        raise AssertionError
 
     state = store.block_states[envelope.beacon_block_root]
 

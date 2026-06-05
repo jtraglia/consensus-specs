@@ -392,15 +392,19 @@ def process_execution_payload(
 
     # Verify consistency of the parent hash with respect to the previous execution payload header
     if is_merge_transition_complete(state):
-        assert payload.parent_hash == state.latest_execution_payload_header.block_hash
+        if payload.parent_hash != state.latest_execution_payload_header.block_hash:
+            raise AssertionError
     # Verify prev_randao
-    assert payload.prev_randao == get_randao_mix(state, get_current_epoch(state))
+    if payload.prev_randao != get_randao_mix(state, get_current_epoch(state)):
+        raise AssertionError
     # Verify timestamp
-    assert payload.timestamp == compute_time_at_slot(state, state.slot)
+    if payload.timestamp != compute_time_at_slot(state, state.slot):
+        raise AssertionError
     # Verify the execution payload is valid
-    assert execution_engine.verify_and_notify_new_payload(
-        NewPayloadRequest(execution_payload=payload)
-    )
+    if not (
+        execution_engine.verify_and_notify_new_payload(NewPayloadRequest(execution_payload=payload))
+    ):
+        raise AssertionError
     # Cache execution payload header
     state.latest_execution_payload_header = ExecutionPayloadHeader(
         parent_hash=payload.parent_hash,

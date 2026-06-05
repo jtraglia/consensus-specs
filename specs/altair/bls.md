@@ -42,9 +42,11 @@ def eth_aggregate_pubkeys(pubkeys: Sequence[BLSPubkey]) -> BLSPubkey:
     This implementation is for demonstrative purposes only and ignores encoding/decoding concerns.
     Refer to the BLS signature draft standard for more information.
     """
-    assert len(pubkeys) > 0
+    if len(pubkeys) <= 0:
+        raise AssertionError
     # Ensure that the given inputs are valid pubkeys
-    assert all(bls.KeyValidate(pubkey) for pubkey in pubkeys)
+    if not all(bls.KeyValidate(pubkey) for pubkey in pubkeys):
+        raise AssertionError
 
     result = copy(pubkeys[0])
     for pubkey in pubkeys[1:]:

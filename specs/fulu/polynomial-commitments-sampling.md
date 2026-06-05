@@ -276,7 +276,8 @@ def multiply_polynomialcoeff(a: PolynomialCoeff, b: PolynomialCoeff) -> Polynomi
     """
     Multiplies the coefficient form polynomials ``a`` and ``b``.
     """
-    assert len(a) + len(b) <= FIELD_ELEMENTS_PER_EXT_BLOB
+    if len(a) + len(b) > FIELD_ELEMENTS_PER_EXT_BLOB:
+        raise AssertionError
 
     r = PolynomialCoeff([BLSFieldElement(0)])
     for power, coef in enumerate(a):
@@ -317,7 +318,8 @@ def interpolate_polynomialcoeff(
     Lagrange interpolation: Finds the lowest degree polynomial that takes the value ``ys[i]`` at ``x[i]`` for all i.
     Outputs a coefficient form polynomial. Leading coefficients may be zero.
     """
-    assert len(xs) == len(ys)
+    if len(xs) != len(ys):
+        raise AssertionError
 
     r = PolynomialCoeff([BLSFieldElement(0)])
     for i in range(len(xs)):
@@ -415,10 +417,13 @@ def verify_cell_kzg_proof_batch_impl(
 
     This function is the internal implementation of ``verify_cell_kzg_proof_batch``.
     """
-    assert len(commitment_indices) == len(cell_indices) == len(cosets_evals) == len(proofs)
-    assert len(commitments) == len(set(commitments))
+    if not (len(commitment_indices) == len(cell_indices) == len(cosets_evals) == len(proofs)):
+        raise AssertionError
+    if len(commitments) != len(set(commitments)):
+        raise AssertionError
     for commitment_index in commitment_indices:
-        assert commitment_index < len(commitments)
+        if commitment_index >= len(commitments):
+            raise AssertionError
 
     # The verification equation that we will check is pairing (LL, LR) = pairing (RL, [1]), where
     # LL = sum_k r^k proofs[k],
@@ -515,7 +520,8 @@ def coset_shift_for_cell(cell_index: CellIndex) -> BLSFieldElement:
     Then, the coset is defined as h * G = {h, hg, hg^2, ...} for an element h.
     This function returns h.
     """
-    assert cell_index < CELLS_PER_EXT_BLOB
+    if cell_index >= CELLS_PER_EXT_BLOB:
+        raise AssertionError
     roots_of_unity_brp = bit_reversal_permutation(
         compute_roots_of_unity(FIELD_ELEMENTS_PER_EXT_BLOB)
     )
@@ -533,7 +539,8 @@ def coset_for_cell(cell_index: CellIndex) -> Coset:
     Then, the coset is defined as h * G = {h, hg, hg^2, ...}.
     This function, returns the coset.
     """
-    assert cell_index < CELLS_PER_EXT_BLOB
+    if cell_index >= CELLS_PER_EXT_BLOB:
+        raise AssertionError
     roots_of_unity_brp = bit_reversal_permutation(
         compute_roots_of_unity(FIELD_ELEMENTS_PER_EXT_BLOB)
     )
@@ -557,7 +564,8 @@ def compute_cells(blob: Blob) -> Vector[Cell, CELLS_PER_EXT_BLOB]:
 
     Public method.
     """
-    assert len(blob) == BYTES_PER_BLOB
+    if len(blob) != BYTES_PER_BLOB:
+        raise AssertionError
 
     polynomial = blob_to_polynomial(blob)
     polynomial_coeff = polynomial_eval_to_coeff(polynomial)
@@ -601,7 +609,8 @@ def compute_cells_and_kzg_proofs(
 
     Public method.
     """
-    assert len(blob) == BYTES_PER_BLOB
+    if len(blob) != BYTES_PER_BLOB:
+        raise AssertionError
 
     polynomial = blob_to_polynomial(blob)
     polynomial_coeff = polynomial_eval_to_coeff(polynomial)
@@ -632,15 +641,20 @@ def verify_cell_kzg_proof_batch(
     Public method.
     """
 
-    assert len(commitments_bytes) == len(cells) == len(proofs_bytes) == len(cell_indices)
+    if not (len(commitments_bytes) == len(cells) == len(proofs_bytes) == len(cell_indices)):
+        raise AssertionError
     for commitment_bytes in commitments_bytes:
-        assert len(commitment_bytes) == BYTES_PER_COMMITMENT
+        if len(commitment_bytes) != BYTES_PER_COMMITMENT:
+            raise AssertionError
     for cell_index in cell_indices:
-        assert cell_index < CELLS_PER_EXT_BLOB
+        if cell_index >= CELLS_PER_EXT_BLOB:
+            raise AssertionError
     for cell in cells:
-        assert len(cell) == BYTES_PER_CELL
+        if len(cell) != BYTES_PER_CELL:
+            raise AssertionError
     for proof_bytes in proofs_bytes:
-        assert len(proof_bytes) == BYTES_PER_PROOF
+        if len(proof_bytes) != BYTES_PER_PROOF:
+            raise AssertionError
 
     # Create the list of deduplicated commitments we are dealing with
     deduplicated_commitments = [
@@ -790,19 +804,25 @@ def recover_cells_and_kzg_proofs(
     Public method.
     """
     # Check we have the same number of cells and indices
-    assert len(cell_indices) == len(cells)
+    if len(cell_indices) != len(cells):
+        raise AssertionError
     # Check we have enough cells to be able to perform the reconstruction
-    assert CELLS_PER_EXT_BLOB // 2 <= len(cell_indices) <= CELLS_PER_EXT_BLOB
+    if not (CELLS_PER_EXT_BLOB // 2 <= len(cell_indices) <= CELLS_PER_EXT_BLOB):
+        raise AssertionError
     # Check for duplicates
-    assert len(cell_indices) == len(set(cell_indices))
+    if len(cell_indices) != len(set(cell_indices)):
+        raise AssertionError
     # Check that indices are in ascending order
-    assert cell_indices == sorted(cell_indices)
+    if cell_indices != sorted(cell_indices):
+        raise AssertionError
     # Check that the cell indices are within bounds
     for cell_index in cell_indices:
-        assert cell_index < CELLS_PER_EXT_BLOB
+        if cell_index >= CELLS_PER_EXT_BLOB:
+            raise AssertionError
     # Check that each cell is the correct length
     for cell in cells:
-        assert len(cell) == BYTES_PER_CELL
+        if len(cell) != BYTES_PER_CELL:
+            raise AssertionError
 
     # Convert cells to coset evaluations
     cosets_evals = [cell_to_coset_evals(cell) for cell in cells]

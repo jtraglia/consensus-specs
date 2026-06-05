@@ -40,27 +40,39 @@ def verify_execution_payload_envelope(
     payload = envelope.payload
 
     # Verify signature
-    assert verify_execution_payload_envelope_signature(state, signed_envelope)
+    if not verify_execution_payload_envelope_signature(state, signed_envelope):
+        raise AssertionError
 
     # Verify consistency with the beacon block
     header = copy(state.latest_block_header)
     header.state_root = hash_tree_root(state)
-    assert envelope.beacon_block_root == hash_tree_root(header)
-    assert envelope.parent_beacon_block_root == state.latest_block_header.parent_root
+    if envelope.beacon_block_root != hash_tree_root(header):
+        raise AssertionError
+    if envelope.parent_beacon_block_root != state.latest_block_header.parent_root:
+        raise AssertionError
 
     # Verify consistency with the committed bid
     bid = state.latest_execution_payload_bid
-    assert envelope.builder_index == bid.builder_index
-    assert payload.prev_randao == bid.prev_randao
-    assert payload.gas_limit == bid.gas_limit
-    assert payload.block_hash == bid.block_hash
-    assert hash_tree_root(envelope.execution_requests) == bid.execution_requests_root
+    if envelope.builder_index != bid.builder_index:
+        raise AssertionError
+    if payload.prev_randao != bid.prev_randao:
+        raise AssertionError
+    if payload.gas_limit != bid.gas_limit:
+        raise AssertionError
+    if payload.block_hash != bid.block_hash:
+        raise AssertionError
+    if hash_tree_root(envelope.execution_requests) != bid.execution_requests_root:
+        raise AssertionError
 
     # Verify the execution payload is valid
-    assert payload.slot_number == state.slot
-    assert payload.parent_hash == state.latest_block_hash
-    assert payload.timestamp == compute_time_at_slot(state, state.slot)
-    assert hash_tree_root(payload.withdrawals) == hash_tree_root(state.payload_expected_withdrawals)
+    if payload.slot_number != state.slot:
+        raise AssertionError
+    if payload.parent_hash != state.latest_block_hash:
+        raise AssertionError
+    if payload.timestamp != compute_time_at_slot(state, state.slot):
+        raise AssertionError
+    if hash_tree_root(payload.withdrawals) != hash_tree_root(state.payload_expected_withdrawals):
+        raise AssertionError
 
     new_payload_request = NewPayloadRequest(
         execution_payload=payload,
@@ -72,7 +84,8 @@ def verify_execution_payload_envelope(
     )
 
     # Verify the execution payload is valid via ExecutionEngine
-    assert execution_engine.verify_and_notify_new_payload(new_payload_request)
+    if not execution_engine.verify_and_notify_new_payload(new_payload_request):
+        raise AssertionError
 
     # [New in EIP8025]
     # Notify ProofEngine of the new execution payload
@@ -94,11 +107,13 @@ def on_execution_payload_envelope(
     """
     envelope = signed_envelope.message
     # The corresponding beacon block root needs to be known
-    assert envelope.beacon_block_root in store.block_states
+    if envelope.beacon_block_root not in store.block_states:
+        raise AssertionError
 
     # Check if blob data is available
     # If not, this payload MAY be queued and subsequently considered when blob data becomes available
-    assert is_data_available(envelope.beacon_block_root)
+    if not is_data_available(envelope.beacon_block_root):
+        raise AssertionError
 
     state = store.block_states[envelope.beacon_block_root]
 

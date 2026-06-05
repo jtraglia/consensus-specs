@@ -47,27 +47,32 @@ def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
     """
     block = signed_block.message
     # Parent block must be known
-    assert block.parent_root in store.block_states
+    if block.parent_root not in store.block_states:
+        raise AssertionError
     # Make a copy of the state to avoid mutability issues
     state = copy(store.block_states[block.parent_root])
     # Blocks cannot be in the future. If they are, their consideration must be delayed until they are in the past.
-    assert get_current_slot(store) >= block.slot
+    if get_current_slot(store) < block.slot:
+        raise AssertionError
 
     # Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
     finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
-    assert block.slot > finalized_slot
+    if block.slot <= finalized_slot:
+        raise AssertionError
     # Check block is a descendant of the finalized block at the checkpoint finalized slot
     finalized_checkpoint_block = get_checkpoint_block(
         store,
         block.parent_root,
         store.finalized_checkpoint.epoch,
     )
-    assert store.finalized_checkpoint.root == finalized_checkpoint_block
+    if store.finalized_checkpoint.root != finalized_checkpoint_block:
+        raise AssertionError
 
     # [Modified in Fulu:EIP7594]
     # Check if blob data is available
     # If not, this payload MAY be queued and subsequently considered when blob data becomes available
-    assert is_data_available(hash_tree_root(block))
+    if not is_data_available(hash_tree_root(block)):
+        raise AssertionError
 
     # Check the block is valid and compute the post-state
     block_root = hash_tree_root(block)

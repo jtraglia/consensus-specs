@@ -151,18 +151,23 @@ def validate_merge_block(block: BeaconBlock) -> None:
     """
     if TERMINAL_BLOCK_HASH != EMPTY_BLOCK_HASH:
         # If `TERMINAL_BLOCK_HASH` is used as an override, the activation epoch must be reached.
-        assert compute_epoch_at_slot(block.slot) >= TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
-        assert block.body.execution_payload.parent_hash == TERMINAL_BLOCK_HASH
+        if compute_epoch_at_slot(block.slot) < TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH:
+            raise AssertionError
+        if block.body.execution_payload.parent_hash != TERMINAL_BLOCK_HASH:
+            raise AssertionError
         return
 
     pow_block = get_pow_block(block.body.execution_payload.parent_hash)
     # Check if `pow_block` is available
-    assert pow_block is not None
+    if pow_block is None:
+        raise AssertionError
     pow_parent = get_pow_block(pow_block.parent_hash)
     # Check if `pow_parent` is available
-    assert pow_parent is not None
+    if pow_parent is None:
+        raise AssertionError
     # Check if `pow_block` is a valid terminal PoW block
-    assert is_valid_terminal_pow_block(pow_block, pow_parent)
+    if not is_valid_terminal_pow_block(pow_block, pow_parent):
+        raise AssertionError
 ```
 
 ## Handlers
@@ -182,22 +187,26 @@ def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
     """
     block = signed_block.message
     # Parent block must be known
-    assert block.parent_root in store.block_states
+    if block.parent_root not in store.block_states:
+        raise AssertionError
     # Make a copy of the state to avoid mutability issues
     pre_state = copy(store.block_states[block.parent_root])
     # Blocks cannot be in the future. If they are, their consideration must be delayed until they are in the past.
-    assert get_current_slot(store) >= block.slot
+    if get_current_slot(store) < block.slot:
+        raise AssertionError
 
     # Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
     finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
-    assert block.slot > finalized_slot
+    if block.slot <= finalized_slot:
+        raise AssertionError
     # Check block is a descendant of the finalized block at the checkpoint finalized slot
     finalized_checkpoint_block = get_checkpoint_block(
         store,
         block.parent_root,
         store.finalized_checkpoint.epoch,
     )
-    assert store.finalized_checkpoint.root == finalized_checkpoint_block
+    if store.finalized_checkpoint.root != finalized_checkpoint_block:
+        raise AssertionError
 
     # Check the block is valid and compute the post-state
     state = pre_state.copy()

@@ -90,17 +90,21 @@ def process_execution_payload(
     payload = body.execution_payload
 
     # Verify consistency of the parent hash with respect to the previous execution payload header
-    assert payload.parent_hash == state.latest_execution_payload_header.block_hash
+    if payload.parent_hash != state.latest_execution_payload_header.block_hash:
+        raise AssertionError
     # Verify prev_randao
-    assert payload.prev_randao == get_randao_mix(state, get_current_epoch(state))
+    if payload.prev_randao != get_randao_mix(state, get_current_epoch(state)):
+        raise AssertionError
     # Verify timestamp
-    assert payload.timestamp == compute_time_at_slot(state, state.slot)
+    if payload.timestamp != compute_time_at_slot(state, state.slot):
+        raise AssertionError
     # [Modified in Fulu:EIP7892]
     # Verify commitments are under limit
-    assert (
+    if (
         len(body.blob_kzg_commitments)
-        <= get_blob_parameters(get_current_epoch(state)).max_blobs_per_block
-    )
+        > get_blob_parameters(get_current_epoch(state)).max_blobs_per_block
+    ):
+        raise AssertionError
 
     # Compute list of versioned hashes
     versioned_hashes = [
@@ -108,14 +112,17 @@ def process_execution_payload(
     ]
 
     # Verify the execution payload is valid
-    assert execution_engine.verify_and_notify_new_payload(
-        NewPayloadRequest(
-            execution_payload=payload,
-            versioned_hashes=versioned_hashes,
-            parent_beacon_block_root=state.latest_block_header.parent_root,
-            execution_requests=body.execution_requests,
+    if not (
+        execution_engine.verify_and_notify_new_payload(
+            NewPayloadRequest(
+                execution_payload=payload,
+                versioned_hashes=versioned_hashes,
+                parent_beacon_block_root=state.latest_block_header.parent_root,
+                execution_requests=body.execution_requests,
+            )
         )
-    )
+    ):
+        raise AssertionError
 
     # Cache execution payload header
     state.latest_execution_payload_header = ExecutionPayloadHeader(
@@ -149,7 +156,8 @@ former deposit mechanism.
 ```python
 def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
     # [Modified in Fulu]
-    assert len(body.deposits) == 0
+    if len(body.deposits) != 0:
+        raise AssertionError
 
     def for_ops(operations: Sequence[Any], fn: Callable[[BeaconState, Any], None]) -> None:
         for operation in operations:

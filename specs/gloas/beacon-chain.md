@@ -621,7 +621,8 @@ def compute_balance_weighted_selection(
     """
     MAX_RANDOM_VALUE = 2**16 - 1
     total = uint64(len(indices))
-    assert total > 0
+    if total <= 0:
+        raise AssertionError
     effective_balances = [state.validators[index].effective_balance for index in indices]
     selected: List[ValidatorIndex] = []
     i = uint64(0)
@@ -753,7 +754,8 @@ def get_attestation_participation_flag_indices(
 
     # [New in Gloas:EIP7732]
     if is_attestation_same_slot(state, data):
-        assert data.index == 0
+        if data.index != 0:
+            raise AssertionError
         payload_matches = True
     else:
         slot_index = data.slot % SLOTS_PER_HISTORICAL_ROOT
@@ -766,7 +768,8 @@ def get_attestation_participation_flag_indices(
     # [Modified in Gloas:EIP7732]
     is_matching_head = is_matching_target and head_root_matches and payload_matches
 
-    assert is_matching_source
+    if not is_matching_source:
+        raise AssertionError
 
     participation_flag_indices = []
     if is_matching_source and inclusion_delay <= integer_squareroot(SLOTS_PER_EPOCH):
@@ -791,9 +794,11 @@ def get_ptc(state: BeaconState, slot: Slot) -> Vector[ValidatorIndex, PTC_SIZE]:
     epoch = compute_epoch_at_slot(slot)
     state_epoch = get_current_epoch(state)
     if epoch < state_epoch:
-        assert epoch + 1 == state_epoch
+        if epoch + 1 != state_epoch:
+            raise AssertionError
         return state.ptc_window[slot % SLOTS_PER_EPOCH]
-    assert epoch <= state_epoch + MIN_SEED_LOOKAHEAD
+    if epoch > state_epoch + MIN_SEED_LOOKAHEAD:
+        raise AssertionError
     offset = (epoch - state_epoch + 1) * SLOTS_PER_EPOCH
     return state.ptc_window[offset + slot % SLOTS_PER_EPOCH]
 ```
@@ -928,7 +933,8 @@ def initiate_builder_exit(state: BeaconState, builder_index: BuilderIndex) -> No
 
 ```python
 def settle_builder_payment(state: BeaconState, payment_index: uint64) -> None:
-    assert payment_index < len(state.builder_pending_payments)
+    if payment_index >= len(state.builder_pending_payments):
+        raise AssertionError
     payment = state.builder_pending_payments[payment_index]
     if payment.withdrawal.amount > 0:
         state.builder_pending_withdrawals.append(payment.withdrawal)
@@ -1185,11 +1191,13 @@ def process_parent_execution_payload(state: BeaconState, block: BeaconBlock) -> 
 
     if bid.parent_block_hash != parent_bid.block_hash:
         # Parent was EMPTY -- no execution requests expected
-        assert requests == ExecutionRequests()
+        if requests != ExecutionRequests():
+            raise AssertionError
         return
 
     # Parent was FULL -- verify the bid commitment and apply the payload
-    assert hash_tree_root(requests) == parent_bid.execution_requests_root
+    if hash_tree_root(requests) != parent_bid.execution_requests_root:
+        raise AssertionError
     apply_parent_execution_payload(state, requests)
 ```
 
@@ -1204,7 +1212,8 @@ def get_builder_withdrawals(
     prior_withdrawals: Sequence[Withdrawal],
 ) -> Tuple[Sequence[Withdrawal], WithdrawalIndex, uint64]:
     withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD - 1
-    assert len(prior_withdrawals) <= withdrawals_limit
+    if len(prior_withdrawals) > withdrawals_limit:
+        raise AssertionError
 
     processed_count: uint64 = 0
     withdrawals: List[Withdrawal] = []
@@ -1240,7 +1249,8 @@ def get_builders_sweep_withdrawals(
     epoch = get_current_epoch(state)
     builders_limit = min(len(state.builders), MAX_BUILDERS_PER_WITHDRAWALS_SWEEP)
     withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD - 1
-    assert len(prior_withdrawals) <= withdrawals_limit
+    if len(prior_withdrawals) > withdrawals_limit:
+        raise AssertionError
 
     processed_count: uint64 = 0
     withdrawals: List[Withdrawal] = []
@@ -1448,28 +1458,38 @@ def process_execution_payload_bid(state: BeaconState, block: BeaconBlock) -> Non
 
     # For self-builds, amount must be zero regardless of withdrawal credential prefix
     if builder_index == BUILDER_INDEX_SELF_BUILD:
-        assert amount == 0
-        assert signed_bid.signature == bls.G2_POINT_AT_INFINITY
+        if amount != 0:
+            raise AssertionError
+        if signed_bid.signature != bls.G2_POINT_AT_INFINITY:
+            raise AssertionError
     else:
         # Verify that the builder is active
-        assert is_active_builder(state, builder_index)
+        if not is_active_builder(state, builder_index):
+            raise AssertionError
         # Verify that the builder has funds to cover the bid
-        assert can_builder_cover_bid(state, builder_index, amount)
+        if not can_builder_cover_bid(state, builder_index, amount):
+            raise AssertionError
         # Verify that the bid signature is valid
-        assert verify_execution_payload_bid_signature(state, signed_bid)
+        if not verify_execution_payload_bid_signature(state, signed_bid):
+            raise AssertionError
 
     # Verify commitments are under limit
-    assert (
+    if (
         len(bid.blob_kzg_commitments)
-        <= get_blob_parameters(get_current_epoch(state)).max_blobs_per_block
-    )
+        > get_blob_parameters(get_current_epoch(state)).max_blobs_per_block
+    ):
+        raise AssertionError
 
     # Verify that the bid is for the current slot
-    assert bid.slot == block.slot
+    if bid.slot != block.slot:
+        raise AssertionError
     # Verify that the bid is for the right parent block
-    assert bid.parent_block_hash == state.latest_block_hash
-    assert bid.parent_block_root == block.parent_root
-    assert bid.prev_randao == get_randao_mix(state, get_current_epoch(state))
+    if bid.parent_block_hash != state.latest_block_hash:
+        raise AssertionError
+    if bid.parent_block_root != block.parent_root:
+        raise AssertionError
+    if bid.prev_randao != get_randao_mix(state, get_current_epoch(state)):
+        raise AssertionError
 
     # Record the pending payment if there is some payment
     if amount > 0:
@@ -1499,7 +1519,8 @@ calls to `process_deposit_request`, `process_withdrawal_request`, and
 
 ```python
 def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
-    assert len(body.deposits) == 0
+    if len(body.deposits) != 0:
+        raise AssertionError
 
     def for_ops(operations: Sequence[Any], fn: Callable[[BeaconState, Any], None]) -> None:
         for operation in operations:
@@ -1642,33 +1663,42 @@ def process_voluntary_exit(state: BeaconState, signed_voluntary_exit: SignedVolu
     signing_root = compute_signing_root(voluntary_exit, domain)
 
     # Exits must specify an epoch when they become valid; they are not valid before then
-    assert get_current_epoch(state) >= voluntary_exit.epoch
+    if get_current_epoch(state) < voluntary_exit.epoch:
+        raise AssertionError
 
     # [New in Gloas:EIP7732]
     if is_builder_index(voluntary_exit.validator_index):
         builder_index = convert_validator_index_to_builder_index(voluntary_exit.validator_index)
         # Verify the builder is active
-        assert is_active_builder(state, builder_index)
+        if not is_active_builder(state, builder_index):
+            raise AssertionError
         # Only exit builder if it has no pending withdrawals in the queue
-        assert get_pending_balance_to_withdraw_for_builder(state, builder_index) == 0
+        if get_pending_balance_to_withdraw_for_builder(state, builder_index) != 0:
+            raise AssertionError
         # Verify signature
         pubkey = state.builders[builder_index].pubkey
-        assert bls.Verify(pubkey, signing_root, signed_voluntary_exit.signature)
+        if not bls.Verify(pubkey, signing_root, signed_voluntary_exit.signature):
+            raise AssertionError
         # Initiate exit
         initiate_builder_exit(state, builder_index)
         return
 
     validator = state.validators[voluntary_exit.validator_index]
     # Verify the validator is active
-    assert is_active_validator(validator, get_current_epoch(state))
+    if not is_active_validator(validator, get_current_epoch(state)):
+        raise AssertionError
     # Verify exit has not been initiated
-    assert validator.exit_epoch == FAR_FUTURE_EPOCH
+    if validator.exit_epoch != FAR_FUTURE_EPOCH:
+        raise AssertionError
     # Verify the validator has been active long enough
-    assert get_current_epoch(state) >= validator.activation_epoch + SHARD_COMMITTEE_PERIOD
+    if get_current_epoch(state) < validator.activation_epoch + SHARD_COMMITTEE_PERIOD:
+        raise AssertionError
     # Only exit validator if it has no pending withdrawals in the queue
-    assert get_pending_balance_to_withdraw(state, voluntary_exit.validator_index) == 0
+    if get_pending_balance_to_withdraw(state, voluntary_exit.validator_index) != 0:
+        raise AssertionError
     # Verify signature
-    assert bls.Verify(validator.pubkey, signing_root, signed_voluntary_exit.signature)
+    if not bls.Verify(validator.pubkey, signing_root, signed_voluntary_exit.signature):
+        raise AssertionError
     # Initiate exit
     initiate_validator_exit(state, voluntary_exit.validator_index)
 ```
@@ -1684,27 +1714,34 @@ payload availability.
 ```python
 def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     data = attestation.data
-    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
-    assert data.target.epoch == compute_epoch_at_slot(data.slot)
-    assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot
+    if data.target.epoch not in (get_previous_epoch(state), get_current_epoch(state)):
+        raise AssertionError
+    if data.target.epoch != compute_epoch_at_slot(data.slot):
+        raise AssertionError
+    if data.slot + MIN_ATTESTATION_INCLUSION_DELAY > state.slot:
+        raise AssertionError
 
     # [Modified in Gloas:EIP7732]
-    assert data.index < 2
+    if data.index >= 2:
+        raise AssertionError
     committee_indices = get_committee_indices(attestation.committee_bits)
     committee_offset = 0
     for committee_index in committee_indices:
-        assert committee_index < get_committee_count_per_slot(state, data.target.epoch)
+        if committee_index >= get_committee_count_per_slot(state, data.target.epoch):
+            raise AssertionError
         committee = get_beacon_committee(state, data.slot, committee_index)
         committee_attesters = {
             attester_index
             for i, attester_index in enumerate(committee)
             if attestation.aggregation_bits[committee_offset + i]
         }
-        assert len(committee_attesters) > 0
+        if len(committee_attesters) <= 0:
+            raise AssertionError
         committee_offset += len(committee)
 
     # Bitfield length matches total number of participants
-    assert len(attestation.aggregation_bits) == committee_offset
+    if len(attestation.aggregation_bits) != committee_offset:
+        raise AssertionError
 
     # Participation flag indices
     participation_flag_indices = get_attestation_participation_flag_indices(
@@ -1712,7 +1749,8 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     )
 
     # Verify signature
-    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
+    if not is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation)):
+        raise AssertionError
 
     # [Modified in Gloas:EIP7732]
     if data.target.epoch == get_current_epoch(state):
@@ -1776,12 +1814,15 @@ def process_payload_attestation(
     data = payload_attestation.data
 
     # Check that the attestation is for the parent beacon block
-    assert data.beacon_block_root == state.latest_block_header.parent_root
+    if data.beacon_block_root != state.latest_block_header.parent_root:
+        raise AssertionError
     # Check that the attestation is for the previous slot
-    assert data.slot + 1 == state.slot
+    if data.slot + 1 != state.slot:
+        raise AssertionError
     # Verify signature
     indexed_payload_attestation = get_indexed_payload_attestation(state, payload_attestation)
-    assert is_valid_indexed_payload_attestation(state, indexed_payload_attestation)
+    if not is_valid_indexed_payload_attestation(state, indexed_payload_attestation):
+        raise AssertionError
 ```
 
 ##### Proposer slashing
@@ -1794,21 +1835,26 @@ def process_proposer_slashing(state: BeaconState, proposer_slashing: ProposerSla
     header_2 = proposer_slashing.signed_header_2.message
 
     # Verify header slots match
-    assert header_1.slot == header_2.slot
+    if header_1.slot != header_2.slot:
+        raise AssertionError
     # Verify header proposer indices match
-    assert header_1.proposer_index == header_2.proposer_index
+    if header_1.proposer_index != header_2.proposer_index:
+        raise AssertionError
     # Verify the headers are different
-    assert header_1 != header_2
+    if header_1 == header_2:
+        raise AssertionError
     # Verify the proposer is slashable
     proposer = state.validators[header_1.proposer_index]
-    assert is_slashable_validator(proposer, get_current_epoch(state))
+    if not is_slashable_validator(proposer, get_current_epoch(state)):
+        raise AssertionError
     # Verify signatures
     for signed_header in (proposer_slashing.signed_header_1, proposer_slashing.signed_header_2):
         domain = get_domain(
             state, DOMAIN_BEACON_PROPOSER, compute_epoch_at_slot(signed_header.message.slot)
         )
         signing_root = compute_signing_root(signed_header.message, domain)
-        assert bls.Verify(proposer.pubkey, signing_root, signed_header.signature)
+        if not bls.Verify(proposer.pubkey, signing_root, signed_header.signature):
+            raise AssertionError
 
     # [New in Gloas:EIP7732]
     # Remove the BuilderPendingPayment corresponding to

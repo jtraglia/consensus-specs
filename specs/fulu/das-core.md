@@ -99,7 +99,8 @@ class MatrixEntry(Container):
 
 ```python
 def get_custody_groups(node_id: NodeID, custody_group_count: uint64) -> Sequence[CustodyIndex]:
-    assert custody_group_count <= NUMBER_OF_CUSTODY_GROUPS
+    if custody_group_count > NUMBER_OF_CUSTODY_GROUPS:
+        raise AssertionError
 
     # Skip computation if all groups are custodied
     if custody_group_count == NUMBER_OF_CUSTODY_GROUPS:
@@ -119,7 +120,8 @@ def get_custody_groups(node_id: NodeID, custody_group_count: uint64) -> Sequence
         else:
             current_id += 1
 
-    assert len(custody_groups) == len(set(custody_groups))
+    if len(custody_groups) != len(set(custody_groups)):
+        raise AssertionError
     return sorted(custody_groups)
 ```
 
@@ -127,7 +129,8 @@ def get_custody_groups(node_id: NodeID, custody_group_count: uint64) -> Sequence
 
 ```python
 def compute_columns_for_custody_group(custody_group: CustodyIndex) -> Sequence[ColumnIndex]:
-    assert custody_group < NUMBER_OF_CUSTODY_GROUPS
+    if custody_group >= NUMBER_OF_CUSTODY_GROUPS:
+        raise AssertionError
     columns_per_group = NUMBER_OF_COLUMNS // NUMBER_OF_CUSTODY_GROUPS
     return [
         ColumnIndex(NUMBER_OF_CUSTODY_GROUPS * i + custody_group) for i in range(columns_per_group)

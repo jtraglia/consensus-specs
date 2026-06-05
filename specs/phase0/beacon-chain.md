@@ -849,7 +849,8 @@ def compute_shuffled_index(index: uint64, index_count: uint64, seed: Bytes32) ->
     """
     Return the shuffled index corresponding to ``seed`` (and ``index_count``).
     """
-    assert index < index_count
+    if index >= index_count:
+        raise AssertionError
     return compute_shuffled_permutation(index_count, seed)[index]
 ```
 
@@ -862,7 +863,8 @@ def compute_proposer_index(
     """
     Return from ``indices`` a random index sampled by effective balance.
     """
-    assert len(indices) > 0
+    if len(indices) <= 0:
+        raise AssertionError
     MAX_RANDOM_BYTE = 2**8 - 1
     i = uint64(0)
     total = uint64(len(indices))
@@ -1022,7 +1024,8 @@ def get_block_root_at_slot(state: BeaconState, slot: Slot) -> Root:
     """
     Return the block root at a recent ``slot``.
     """
-    assert slot < state.slot <= slot + SLOTS_PER_HISTORICAL_ROOT
+    if not (slot < state.slot <= slot + SLOTS_PER_HISTORICAL_ROOT):
+        raise AssertionError
     return state.block_roots[slot % SLOTS_PER_HISTORICAL_ROOT]
 ```
 
@@ -1375,12 +1378,14 @@ def state_transition(
     process_slots(state, block.slot)
     # Verify signature
     if validate_result:
-        assert verify_block_signature(state, signed_block)
+        if not verify_block_signature(state, signed_block):
+            raise AssertionError
     # Process block
     process_block(state, block)
     # Verify state root
     if validate_result:
-        assert block.state_root == hash_tree_root(state)
+        if block.state_root != hash_tree_root(state):
+            raise AssertionError
 ```
 
 ```python
@@ -1394,7 +1399,8 @@ def verify_block_signature(state: BeaconState, signed_block: SignedBeaconBlock) 
 
 ```python
 def process_slots(state: BeaconState, slot: Slot) -> None:
-    assert state.slot < slot
+    if state.slot >= slot:
+        raise AssertionError
     while state.slot < slot:
         process_slot(state)
         # Process epoch on the start slot of the next epoch
@@ -1438,7 +1444,8 @@ def process_epoch(state: BeaconState) -> None:
 def get_matching_source_attestations(
     state: BeaconState, epoch: Epoch
 ) -> Sequence[PendingAttestation]:
-    assert epoch in (get_previous_epoch(state), get_current_epoch(state))
+    if epoch not in (get_previous_epoch(state), get_current_epoch(state)):
+        raise AssertionError
     return (
         state.current_epoch_attestations
         if epoch == get_current_epoch(state)
@@ -1885,13 +1892,17 @@ def process_block(state: BeaconState, block: BeaconBlock) -> None:
 ```python
 def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
     # Verify that the slots match
-    assert block.slot == state.slot
+    if block.slot != state.slot:
+        raise AssertionError
     # Verify that the block is newer than latest block header
-    assert block.slot > state.latest_block_header.slot
+    if block.slot <= state.latest_block_header.slot:
+        raise AssertionError
     # Verify that proposer index is the correct index
-    assert block.proposer_index == get_beacon_proposer_index(state)
+    if block.proposer_index != get_beacon_proposer_index(state):
+        raise AssertionError
     # Verify that the parent matches
-    assert block.parent_root == hash_tree_root(state.latest_block_header)
+    if block.parent_root != hash_tree_root(state.latest_block_header):
+        raise AssertionError
     # Cache current block as the new latest block
     state.latest_block_header = BeaconBlockHeader(
         slot=block.slot,
@@ -1903,7 +1914,8 @@ def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
 
     # Verify proposer is not slashed
     proposer = state.validators[block.proposer_index]
-    assert not proposer.slashed
+    if proposer.slashed:
+        raise AssertionError
 ```
 
 #### RANDAO
@@ -1914,7 +1926,8 @@ def process_randao(state: BeaconState, body: BeaconBlockBody) -> None:
     # Verify RANDAO reveal
     proposer = state.validators[get_beacon_proposer_index(state)]
     signing_root = compute_signing_root(epoch, get_domain(state, DOMAIN_RANDAO))
-    assert bls.Verify(proposer.pubkey, signing_root, body.randao_reveal)
+    if not bls.Verify(proposer.pubkey, signing_root, body.randao_reveal):
+        raise AssertionError
     # Mix in RANDAO reveal
     mix = xor(get_randao_mix(state, epoch), hash(body.randao_reveal))
     state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = mix
@@ -1937,9 +1950,10 @@ def process_eth1_data(state: BeaconState, body: BeaconBlockBody) -> None:
 ```python
 def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
     # Verify that outstanding deposits are processed up to the maximum number of deposits
-    assert len(body.deposits) == min(
+    if len(body.deposits) != min(
         MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index
-    )
+    ):
+        raise AssertionError
 
     def for_ops(operations: Sequence[Any], fn: Callable[[BeaconState, Any], None]) -> None:
         for operation in operations:
@@ -1960,21 +1974,26 @@ def process_proposer_slashing(state: BeaconState, proposer_slashing: ProposerSla
     header_2 = proposer_slashing.signed_header_2.message
 
     # Verify header slots match
-    assert header_1.slot == header_2.slot
+    if header_1.slot != header_2.slot:
+        raise AssertionError
     # Verify header proposer indices match
-    assert header_1.proposer_index == header_2.proposer_index
+    if header_1.proposer_index != header_2.proposer_index:
+        raise AssertionError
     # Verify the headers are different
-    assert header_1 != header_2
+    if header_1 == header_2:
+        raise AssertionError
     # Verify the proposer is slashable
     proposer = state.validators[header_1.proposer_index]
-    assert is_slashable_validator(proposer, get_current_epoch(state))
+    if not is_slashable_validator(proposer, get_current_epoch(state)):
+        raise AssertionError
     # Verify signatures
     for signed_header in (proposer_slashing.signed_header_1, proposer_slashing.signed_header_2):
         domain = get_domain(
             state, DOMAIN_BEACON_PROPOSER, compute_epoch_at_slot(signed_header.message.slot)
         )
         signing_root = compute_signing_root(signed_header.message, domain)
-        assert bls.Verify(proposer.pubkey, signing_root, signed_header.signature)
+        if not bls.Verify(proposer.pubkey, signing_root, signed_header.signature):
+            raise AssertionError
 
     slash_validator(state, header_1.proposer_index)
 ```
@@ -1985,9 +2004,12 @@ def process_proposer_slashing(state: BeaconState, proposer_slashing: ProposerSla
 def process_attester_slashing(state: BeaconState, attester_slashing: AttesterSlashing) -> None:
     attestation_1 = attester_slashing.attestation_1
     attestation_2 = attester_slashing.attestation_2
-    assert is_slashable_attestation_data(attestation_1.data, attestation_2.data)
-    assert is_valid_indexed_attestation(state, attestation_1)
-    assert is_valid_indexed_attestation(state, attestation_2)
+    if not is_slashable_attestation_data(attestation_1.data, attestation_2.data):
+        raise AssertionError
+    if not is_valid_indexed_attestation(state, attestation_1):
+        raise AssertionError
+    if not is_valid_indexed_attestation(state, attestation_2):
+        raise AssertionError
 
     slashed_any = False
     indices = set(attestation_1.attesting_indices).intersection(attestation_2.attesting_indices)
@@ -1995,7 +2017,8 @@ def process_attester_slashing(state: BeaconState, attester_slashing: AttesterSla
         if is_slashable_validator(state.validators[index], get_current_epoch(state)):
             slash_validator(state, index)
             slashed_any = True
-    assert slashed_any
+    if not slashed_any:
+        raise AssertionError
 ```
 
 ##### Attestations
@@ -2003,13 +2026,20 @@ def process_attester_slashing(state: BeaconState, attester_slashing: AttesterSla
 ```python
 def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     data = attestation.data
-    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
-    assert data.target.epoch == compute_epoch_at_slot(data.slot)
-    assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
-    assert data.index < get_committee_count_per_slot(state, data.target.epoch)
+    if data.target.epoch not in (get_previous_epoch(state), get_current_epoch(state)):
+        raise AssertionError
+    if data.target.epoch != compute_epoch_at_slot(data.slot):
+        raise AssertionError
+    if not (
+        data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
+    ):
+        raise AssertionError
+    if data.index >= get_committee_count_per_slot(state, data.target.epoch):
+        raise AssertionError
 
     committee = get_beacon_committee(state, data.slot, data.index)
-    assert len(attestation.aggregation_bits) == len(committee)
+    if len(attestation.aggregation_bits) != len(committee):
+        raise AssertionError
 
     pending_attestation = PendingAttestation(
         aggregation_bits=attestation.aggregation_bits,
@@ -2019,14 +2049,17 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     )
 
     if data.target.epoch == get_current_epoch(state):
-        assert data.source == state.current_justified_checkpoint
+        if data.source != state.current_justified_checkpoint:
+            raise AssertionError
         state.current_epoch_attestations.append(pending_attestation)
     else:
-        assert data.source == state.previous_justified_checkpoint
+        if data.source != state.previous_justified_checkpoint:
+            raise AssertionError
         state.previous_epoch_attestations.append(pending_attestation)
 
     # Verify signature
-    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
+    if not is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation)):
+        raise AssertionError
 ```
 
 ##### Deposits
@@ -2087,14 +2120,17 @@ def apply_deposit(
 ```python
 def process_deposit(state: BeaconState, deposit: Deposit) -> None:
     # Verify the Merkle branch
-    assert is_valid_merkle_branch(
-        leaf=hash_tree_root(deposit.data),
-        branch=deposit.proof,
-        # Add 1 for the List length mix-in
-        depth=DEPOSIT_CONTRACT_TREE_DEPTH + 1,
-        index=state.eth1_deposit_index,
-        root=state.eth1_data.deposit_root,
-    )
+    if not (
+        is_valid_merkle_branch(
+            leaf=hash_tree_root(deposit.data),
+            branch=deposit.proof,
+            # Add 1 for the List length mix-in
+            depth=DEPOSIT_CONTRACT_TREE_DEPTH + 1,
+            index=state.eth1_deposit_index,
+            root=state.eth1_data.deposit_root,
+        )
+    ):
+        raise AssertionError
 
     # Deposits must be processed in order
     state.eth1_deposit_index += 1
@@ -2115,17 +2151,22 @@ def process_voluntary_exit(state: BeaconState, signed_voluntary_exit: SignedVolu
     voluntary_exit = signed_voluntary_exit.message
     validator = state.validators[voluntary_exit.validator_index]
     # Verify the validator is active
-    assert is_active_validator(validator, get_current_epoch(state))
+    if not is_active_validator(validator, get_current_epoch(state)):
+        raise AssertionError
     # Verify exit has not been initiated
-    assert validator.exit_epoch == FAR_FUTURE_EPOCH
+    if validator.exit_epoch != FAR_FUTURE_EPOCH:
+        raise AssertionError
     # Exits must specify an epoch when they become valid; they are not valid before then
-    assert get_current_epoch(state) >= voluntary_exit.epoch
+    if get_current_epoch(state) < voluntary_exit.epoch:
+        raise AssertionError
     # Verify the validator has been active long enough
-    assert get_current_epoch(state) >= validator.activation_epoch + SHARD_COMMITTEE_PERIOD
+    if get_current_epoch(state) < validator.activation_epoch + SHARD_COMMITTEE_PERIOD:
+        raise AssertionError
     # Verify signature
     domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, voluntary_exit.epoch)
     signing_root = compute_signing_root(voluntary_exit, domain)
-    assert bls.Verify(validator.pubkey, signing_root, signed_voluntary_exit.signature)
+    if not bls.Verify(validator.pubkey, signing_root, signed_voluntary_exit.signature):
+        raise AssertionError
     # Initiate exit
     initiate_validator_exit(state, voluntary_exit.validator_index)
 ```

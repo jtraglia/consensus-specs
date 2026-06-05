@@ -67,7 +67,8 @@ def get_ptc_assignment(
     assignment is found.
     """
     max_epoch = Epoch(get_current_epoch(state) + MIN_SEED_LOOKAHEAD)
-    assert epoch <= max_epoch
+    if epoch > max_epoch:
+        raise AssertionError
 
     start_slot = compute_start_slot_at_epoch(epoch)
     for slot in range(start_slot, start_slot + SLOTS_PER_EPOCH):

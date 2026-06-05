@@ -205,7 +205,8 @@ class Store:
 
 ```python
 def get_forkchoice_store(anchor_state: BeaconState, anchor_block: BeaconBlock) -> Store:
-    assert anchor_block.state_root == hash_tree_root(anchor_state)
+    if anchor_block.state_root != hash_tree_root(anchor_state):
+        raise AssertionError
     anchor_root = hash_tree_root(anchor_block)
     anchor_epoch = get_current_epoch(anchor_state)
     justified_checkpoint = Checkpoint(epoch=anchor_epoch, root=anchor_root)
@@ -283,7 +284,8 @@ def payload_timeliness(store: Store, root: Root, timely: bool) -> bool:
     consideration local availability and PTC votes.
     """
     # The beacon block root must be known
-    assert root in store.payload_timeliness_vote
+    if root not in store.payload_timeliness_vote:
+        raise AssertionError
 
     # If the payload is not locally available, the payload
     # is not considered available regardless of the PTC vote
@@ -304,7 +306,8 @@ def payload_data_availability(store: Store, root: Root, available: bool) -> bool
     consideration local availability and PTC votes.
     """
     # The beacon block root must be known
-    assert root in store.payload_data_availability_vote
+    if root not in store.payload_data_availability_vote:
+        raise AssertionError
 
     # If the payload is not locally available, the blob data
     # is not considered available regardless of the PTC vote
@@ -674,37 +677,44 @@ def validate_on_attestation(store: Store, attestation: Attestation, is_from_bloc
         validate_target_epoch_against_current_time(store, attestation)
 
     # Check that the epoch number and slot number are matching.
-    assert target.epoch == compute_epoch_at_slot(attestation.data.slot)
+    if target.epoch != compute_epoch_at_slot(attestation.data.slot):
+        raise AssertionError
 
     # Attestation target must be for a known block. If target block
     # is unknown, delay consideration until block is found.
-    assert target.root in store.blocks
+    if target.root not in store.blocks:
+        raise AssertionError
 
     # Attestations must be for a known block. If block
     # is unknown, delay consideration until the block is found.
-    assert attestation.data.beacon_block_root in store.blocks
+    if attestation.data.beacon_block_root not in store.blocks:
+        raise AssertionError
     # Attestations must not be for blocks in the future.
     # If not, the attestation should not be considered.
     block_slot = store.blocks[attestation.data.beacon_block_root].slot
-    assert block_slot <= attestation.data.slot
+    if block_slot > attestation.data.slot:
+        raise AssertionError
 
     # [New in Gloas:EIP7732]
-    assert attestation.data.index in [0, 1]
+    if attestation.data.index not in [0, 1]:
+        raise AssertionError
     if block_slot == attestation.data.slot:
-        assert attestation.data.index == 0
+        if attestation.data.index != 0:
+            raise AssertionError
     # [New in Gloas:EIP7732]
     # If attesting for a full node, the payload must be known
     if attestation.data.index == 1:
-        assert is_payload_verified(store, attestation.data.beacon_block_root)
+        if not is_payload_verified(store, attestation.data.beacon_block_root):
+            raise AssertionError
 
     # LMD vote must be consistent with FFG vote target
-    assert target.root == get_checkpoint_block(
-        store, attestation.data.beacon_block_root, target.epoch
-    )
+    if target.root != get_checkpoint_block(store, attestation.data.beacon_block_root, target.epoch):
+        raise AssertionError
 
     # Attestations can only affect the fork-choice of subsequent slots.
     # Delay consideration in the fork-choice until their slot is in the past.
-    assert get_current_slot(store) >= attestation.data.slot + 1
+    if get_current_slot(store) < attestation.data.slot + 1:
+        raise AssertionError
 ```
 
 ### Modified `is_head_late`
@@ -849,38 +859,53 @@ def verify_execution_payload_envelope(
     payload = envelope.payload
 
     # Verify signature
-    assert verify_execution_payload_envelope_signature(state, signed_envelope)
+    if not verify_execution_payload_envelope_signature(state, signed_envelope):
+        raise AssertionError
 
     # Verify consistency with the beacon block
     header = copy(state.latest_block_header)
     header.state_root = hash_tree_root(state)
-    assert envelope.beacon_block_root == hash_tree_root(header)
-    assert envelope.parent_beacon_block_root == state.latest_block_header.parent_root
+    if envelope.beacon_block_root != hash_tree_root(header):
+        raise AssertionError
+    if envelope.parent_beacon_block_root != state.latest_block_header.parent_root:
+        raise AssertionError
 
     # Verify consistency with the committed bid
     bid = state.latest_execution_payload_bid
-    assert envelope.builder_index == bid.builder_index
-    assert payload.prev_randao == bid.prev_randao
-    assert payload.gas_limit == bid.gas_limit
-    assert payload.block_hash == bid.block_hash
-    assert hash_tree_root(envelope.execution_requests) == bid.execution_requests_root
+    if envelope.builder_index != bid.builder_index:
+        raise AssertionError
+    if payload.prev_randao != bid.prev_randao:
+        raise AssertionError
+    if payload.gas_limit != bid.gas_limit:
+        raise AssertionError
+    if payload.block_hash != bid.block_hash:
+        raise AssertionError
+    if hash_tree_root(envelope.execution_requests) != bid.execution_requests_root:
+        raise AssertionError
 
     # Verify the execution payload is valid
-    assert payload.slot_number == state.slot
-    assert payload.parent_hash == state.latest_block_hash
-    assert payload.timestamp == compute_time_at_slot(state, state.slot)
-    assert hash_tree_root(payload.withdrawals) == hash_tree_root(state.payload_expected_withdrawals)
-    assert execution_engine.verify_and_notify_new_payload(
-        NewPayloadRequest(
-            execution_payload=payload,
-            versioned_hashes=[
-                kzg_commitment_to_versioned_hash(commitment)
-                for commitment in bid.blob_kzg_commitments
-            ],
-            parent_beacon_block_root=envelope.parent_beacon_block_root,
-            execution_requests=envelope.execution_requests,
+    if payload.slot_number != state.slot:
+        raise AssertionError
+    if payload.parent_hash != state.latest_block_hash:
+        raise AssertionError
+    if payload.timestamp != compute_time_at_slot(state, state.slot):
+        raise AssertionError
+    if hash_tree_root(payload.withdrawals) != hash_tree_root(state.payload_expected_withdrawals):
+        raise AssertionError
+    if not (
+        execution_engine.verify_and_notify_new_payload(
+            NewPayloadRequest(
+                execution_payload=payload,
+                versioned_hashes=[
+                    kzg_commitment_to_versioned_hash(commitment)
+                    for commitment in bid.blob_kzg_commitments
+                ],
+                parent_beacon_block_root=envelope.parent_beacon_block_root,
+                execution_requests=envelope.execution_requests,
+            )
         )
-    )
+    ):
+        raise AssertionError
 ```
 
 ## Handlers
@@ -899,27 +924,32 @@ def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
     """
     block = signed_block.message
     # Parent block must be known
-    assert block.parent_root in store.block_states
+    if block.parent_root not in store.block_states:
+        raise AssertionError
 
     # If this block builds on the parent's full payload, that payload must
     # have been verified by on_execution_payload_envelope
     if is_parent_node_full(store, block):
-        assert is_payload_verified(store, block.parent_root)
+        if not is_payload_verified(store, block.parent_root):
+            raise AssertionError
 
     # Blocks cannot be in the future. If they are, their consideration must be delayed until they are in the past.
     current_slot = get_current_slot(store)
-    assert current_slot >= block.slot
+    if current_slot < block.slot:
+        raise AssertionError
 
     # Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
     finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
-    assert block.slot > finalized_slot
+    if block.slot <= finalized_slot:
+        raise AssertionError
     # Check block is a descendant of the finalized block at the checkpoint finalized slot
     finalized_checkpoint_block = get_checkpoint_block(
         store,
         block.parent_root,
         store.finalized_checkpoint.epoch,
     )
-    assert store.finalized_checkpoint.root == finalized_checkpoint_block
+    if store.finalized_checkpoint.root != finalized_checkpoint_block:
+        raise AssertionError
 
     # Make a copy of the state to avoid mutability issues
     state = copy(store.block_states[block.parent_root])
@@ -985,11 +1015,13 @@ def on_execution_payload_envelope(
     """
     envelope = signed_envelope.message
     # The corresponding beacon block root needs to be known
-    assert envelope.beacon_block_root in store.block_states
+    if envelope.beacon_block_root not in store.block_states:
+        raise AssertionError
 
     # Check if blob data is available
     # If not, this payload MAY be queued and subsequently considered when blob data becomes available
-    assert is_data_available(envelope.beacon_block_root)
+    if not is_data_available(envelope.beacon_block_root):
+        raise AssertionError
 
     state = store.block_states[envelope.beacon_block_root]
 
@@ -1013,7 +1045,8 @@ def on_payload_attestation_message(
     data = ptc_message.data
 
     # PTC attestation must be for a known block. If block is unknown, delay consideration until the block is found
-    assert data.beacon_block_root in store.block_states
+    if data.beacon_block_root not in store.block_states:
+        raise AssertionError
     state = store.block_states[data.beacon_block_root]
 
     # PTC votes can only change the vote for their assigned beacon block, return early otherwise
@@ -1028,21 +1061,26 @@ def on_payload_attestation_message(
             ptc_indices.append(ptc_index)
 
     # Check that the attester is from the PTC
-    assert len(ptc_indices) > 0
+    if len(ptc_indices) <= 0:
+        raise AssertionError
 
     # Verify the signature and check that its for the current slot if it is coming from the wire
     if not is_from_block:
         # Check that the attestation is for the current slot
-        assert data.slot == get_current_slot(store)
+        if data.slot != get_current_slot(store):
+            raise AssertionError
         # Verify the signature
-        assert is_valid_indexed_payload_attestation(
-            state,
-            IndexedPayloadAttestation(
-                attesting_indices=[ptc_message.validator_index],
-                data=data,
-                signature=ptc_message.signature,
-            ),
-        )
+        if not (
+            is_valid_indexed_payload_attestation(
+                state,
+                IndexedPayloadAttestation(
+                    attesting_indices=[ptc_message.validator_index],
+                    data=data,
+                    signature=ptc_message.signature,
+                ),
+            )
+        ):
+            raise AssertionError
 
     # Update the votes for the block
     payload_timeliness_vote = store.payload_timeliness_vote[data.beacon_block_root]

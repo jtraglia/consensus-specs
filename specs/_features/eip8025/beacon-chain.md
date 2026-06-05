@@ -97,12 +97,15 @@ def process_execution_proof(
 
     # Verify prover is an active validator
     validator = state.validators[signed_proof.validator_index]
-    assert is_active_validator(validator, get_current_epoch(state))
+    if not is_active_validator(validator, get_current_epoch(state)):
+        raise AssertionError
 
     domain = get_domain(state, DOMAIN_EXECUTION_PROOF, compute_epoch_at_slot(state.slot))
     signing_root = compute_signing_root(proof_message, domain)
-    assert bls.Verify(validator.pubkey, signing_root, signed_proof.signature)
+    if not bls.Verify(validator.pubkey, signing_root, signed_proof.signature):
+        raise AssertionError
 
     # Verify the execution proof
-    assert proof_engine.verify_execution_proof(proof_message)
+    if not proof_engine.verify_execution_proof(proof_message):
+        raise AssertionError
 ```

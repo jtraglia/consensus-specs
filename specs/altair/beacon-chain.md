@@ -341,7 +341,8 @@ def get_unslashed_participating_indices(
     """
     Return the set of validator indices that are both active and unslashed for the given ``flag_index`` and ``epoch``.
     """
-    assert epoch in (get_previous_epoch(state), get_current_epoch(state))
+    if epoch not in (get_previous_epoch(state), get_current_epoch(state)):
+        raise AssertionError
     if epoch == get_current_epoch(state):
         epoch_participation = state.current_epoch_participation
     else:
@@ -379,7 +380,8 @@ def get_attestation_participation_flag_indices(
     head_root_matches = data.beacon_block_root == head_root
     is_matching_head = is_matching_target and head_root_matches
 
-    assert is_matching_source
+    if not is_matching_source:
+        raise AssertionError
 
     participation_flag_indices = []
     if is_matching_source and inclusion_delay <= integer_squareroot(SLOTS_PER_EPOCH):
@@ -507,13 +509,20 @@ accounting with epoch participation flags.
 ```python
 def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     data = attestation.data
-    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
-    assert data.target.epoch == compute_epoch_at_slot(data.slot)
-    assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
-    assert data.index < get_committee_count_per_slot(state, data.target.epoch)
+    if data.target.epoch not in (get_previous_epoch(state), get_current_epoch(state)):
+        raise AssertionError
+    if data.target.epoch != compute_epoch_at_slot(data.slot):
+        raise AssertionError
+    if not (
+        data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
+    ):
+        raise AssertionError
+    if data.index >= get_committee_count_per_slot(state, data.target.epoch):
+        raise AssertionError
 
     committee = get_beacon_committee(state, data.slot, data.index)
-    assert len(attestation.aggregation_bits) == len(committee)
+    if len(attestation.aggregation_bits) != len(committee):
+        raise AssertionError
 
     # Participation flag indices
     participation_flag_indices = get_attestation_participation_flag_indices(
@@ -521,7 +530,8 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     )
 
     # Verify signature
-    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
+    if not is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation)):
+        raise AssertionError
 
     # Update epoch participation flags
     if data.target.epoch == get_current_epoch(state):
@@ -606,9 +616,12 @@ def process_sync_aggregate(state: BeaconState, sync_aggregate: SyncAggregate) ->
     domain = get_domain(state, DOMAIN_SYNC_COMMITTEE, compute_epoch_at_slot(previous_slot))
     signing_root = compute_signing_root(get_block_root_at_slot(state, previous_slot), domain)
     # Note: eth_fast_aggregate_verify works with a singleton list containing an aggregated key
-    assert eth_fast_aggregate_verify(
-        participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature
-    )
+    if not (
+        eth_fast_aggregate_verify(
+            participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature
+        )
+    ):
+        raise AssertionError
 
     # Compute participant and proposer rewards
     total_active_increments = get_total_active_balance(state) // EFFECTIVE_BALANCE_INCREMENT

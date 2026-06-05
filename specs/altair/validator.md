@@ -172,7 +172,8 @@ def is_assigned_to_sync_committee(
     current_epoch = get_current_epoch(state)
     current_sync_committee_period = compute_sync_committee_period(current_epoch)
     next_sync_committee_period = current_sync_committee_period + 1
-    assert sync_committee_period in (current_sync_committee_period, next_sync_committee_period)
+    if sync_committee_period not in (current_sync_committee_period, next_sync_committee_period):
+        raise AssertionError
 
     pubkey = state.validators[validator_index].pubkey
     if sync_committee_period == current_sync_committee_period:

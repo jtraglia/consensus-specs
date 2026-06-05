@@ -292,7 +292,8 @@ def get_committee_assignment(
     Return None if no assignment.
     """
     next_epoch = Epoch(get_current_epoch(state) + 1)
-    assert epoch <= next_epoch
+    if epoch > next_epoch:
+        raise AssertionError
 
     start_slot = compute_start_slot_at_epoch(epoch)
     committee_count_per_slot = get_committee_count_per_slot(state, epoch)

@@ -215,7 +215,8 @@ fork choice.
 
 ```python
 def get_forkchoice_store(anchor_state: BeaconState, anchor_block: BeaconBlock) -> Store:
-    assert anchor_block.state_root == hash_tree_root(anchor_state)
+    if anchor_block.state_root != hash_tree_root(anchor_state):
+        raise AssertionError
     anchor_root = hash_tree_root(anchor_block)
     anchor_epoch = get_current_epoch(anchor_state)
     justified_checkpoint = Checkpoint(epoch=anchor_epoch, root=anchor_root)
@@ -744,7 +745,8 @@ def get_proposer_head(store: Store, head_root: Root, slot: Slot) -> Root:
     parent_root = head_block.parent_root
 
     # Proposer boost must have worn off
-    assert store.proposer_boost_root != head_root
+    if store.proposer_boost_root == head_root:
+        raise AssertionError
 
     if should_reorg_late_block(store, head_root, slot):
         return parent_root
@@ -813,7 +815,8 @@ def validate_target_epoch_against_current_time(store: Store, attestation: Attest
     # Use GENESIS_EPOCH for previous when genesis to avoid underflow
     previous_epoch = current_epoch - 1 if current_epoch > GENESIS_EPOCH else GENESIS_EPOCH
     # If attestation target is from a future epoch, delay consideration until the epoch arrives
-    assert target.epoch in [current_epoch, previous_epoch]
+    if target.epoch not in [current_epoch, previous_epoch]:
+        raise AssertionError
 ```
 
 ##### `validate_on_attestation`
@@ -827,24 +830,28 @@ def validate_on_attestation(store: Store, attestation: Attestation, is_from_bloc
         validate_target_epoch_against_current_time(store, attestation)
 
     # Check that the epoch number and slot number are matching
-    assert target.epoch == compute_epoch_at_slot(attestation.data.slot)
+    if target.epoch != compute_epoch_at_slot(attestation.data.slot):
+        raise AssertionError
 
     # Attestation target must be for a known block. If target block is unknown, delay consideration until block is found
-    assert target.root in store.blocks
+    if target.root not in store.blocks:
+        raise AssertionError
 
     # Attestations must be for a known block. If block is unknown, delay consideration until the block is found
-    assert attestation.data.beacon_block_root in store.blocks
+    if attestation.data.beacon_block_root not in store.blocks:
+        raise AssertionError
     # Attestations must not be for blocks in the future. If not, the attestation should not be considered
-    assert store.blocks[attestation.data.beacon_block_root].slot <= attestation.data.slot
+    if store.blocks[attestation.data.beacon_block_root].slot > attestation.data.slot:
+        raise AssertionError
 
     # LMD vote must be consistent with FFG vote target
-    assert target.root == get_checkpoint_block(
-        store, attestation.data.beacon_block_root, target.epoch
-    )
+    if target.root != get_checkpoint_block(store, attestation.data.beacon_block_root, target.epoch):
+        raise AssertionError
 
     # Attestations can only affect the fork choice of subsequent slots.
     # Delay consideration in the fork choice until their slot is in the past.
-    assert get_current_slot(store) >= attestation.data.slot + 1
+    if get_current_slot(store) < attestation.data.slot + 1:
+        raise AssertionError
 ```
 
 ##### `store_target_checkpoint_state`
@@ -941,22 +948,26 @@ def on_tick(store: Store, time: uint64) -> None:
 def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
     block = signed_block.message
     # Parent block must be known
-    assert block.parent_root in store.block_states
+    if block.parent_root not in store.block_states:
+        raise AssertionError
     # Make a copy of the state to avoid mutability issues
     pre_state = copy(store.block_states[block.parent_root])
     # Blocks cannot be in the future. If they are, their consideration must be delayed until they are in the past.
-    assert get_current_slot(store) >= block.slot
+    if get_current_slot(store) < block.slot:
+        raise AssertionError
 
     # Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
     finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
-    assert block.slot > finalized_slot
+    if block.slot <= finalized_slot:
+        raise AssertionError
     # Check block is a descendant of the finalized block at the checkpoint finalized slot
     finalized_checkpoint_block = get_checkpoint_block(
         store,
         block.parent_root,
         store.finalized_checkpoint.epoch,
     )
-    assert store.finalized_checkpoint.root == finalized_checkpoint_block
+    if store.finalized_checkpoint.root != finalized_checkpoint_block:
+        raise AssertionError
 
     # Check the block is valid and compute the post-state
     state = pre_state.copy()
@@ -997,7 +1008,8 @@ def on_attestation(store: Store, attestation: Attestation, is_from_block: bool =
     # Get state at the `target` to fully validate attestation
     target_state = store.checkpoint_states[attestation.data.target]
     indexed_attestation = get_indexed_attestation(target_state, attestation)
-    assert is_valid_indexed_attestation(target_state, indexed_attestation)
+    if not is_valid_indexed_attestation(target_state, indexed_attestation):
+        raise AssertionError
 
     # Update latest messages for attesting indices
     update_latest_messages(store, indexed_attestation.attesting_indices, attestation)
@@ -1017,10 +1029,13 @@ def on_attester_slashing(store: Store, attester_slashing: AttesterSlashing) -> N
     """
     attestation_1 = attester_slashing.attestation_1
     attestation_2 = attester_slashing.attestation_2
-    assert is_slashable_attestation_data(attestation_1.data, attestation_2.data)
+    if not is_slashable_attestation_data(attestation_1.data, attestation_2.data):
+        raise AssertionError
     state = store.block_states[store.justified_checkpoint.root]
-    assert is_valid_indexed_attestation(state, attestation_1)
-    assert is_valid_indexed_attestation(state, attestation_2)
+    if not is_valid_indexed_attestation(state, attestation_1):
+        raise AssertionError
+    if not is_valid_indexed_attestation(state, attestation_2):
+        raise AssertionError
 
     indices = set(attestation_1.attesting_indices).intersection(attestation_2.attesting_indices)
     for index in indices:
