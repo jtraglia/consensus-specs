@@ -1,15 +1,20 @@
 from eth_consensus_specs.test.context import (
     spec_state_test,
-    with_phases,
+    with_all_phases_from_to,
 )
 from eth_consensus_specs.test.helpers.attestations import (
     get_valid_attestation,
 )
-from eth_consensus_specs.test.helpers.constants import DENEB, ELECTRA, FULU
+from eth_consensus_specs.test.helpers.constants import DENEB, GLOAS
 from eth_consensus_specs.test.helpers.fork_choice import (
     get_genesis_forkchoice_store_and_block,
 )
-from eth_consensus_specs.test.helpers.gossip import get_filename, get_seen, wrap_genesis_block
+from eth_consensus_specs.test.helpers.gossip import (
+    get_filename,
+    get_seen,
+    run_validate_gossip,
+    wrap_genesis_block,
+)
 from eth_consensus_specs.test.helpers.keys import privkeys
 from eth_consensus_specs.test.helpers.state import transition_to
 
@@ -37,20 +42,6 @@ def create_signed_aggregate_and_proof(spec, state, attestation):
     signature = spec.get_aggregate_and_proof_signature(state, aggregate_and_proof, privkey)
 
     return spec.SignedAggregateAndProof(message=aggregate_and_proof, signature=signature)
-
-
-def run_validate_beacon_aggregate_and_proof_gossip(
-    spec, seen, store, state, signed_aggregate_and_proof, current_time_ms
-):
-    try:
-        spec.validate_beacon_aggregate_and_proof_gossip(
-            seen, store, state, signed_aggregate_and_proof, current_time_ms
-        )
-        return "valid", None
-    except spec.GossipIgnore as e:
-        return "ignore", str(e)
-    except spec.GossipReject as e:
-        return "reject", str(e)
 
 
 def build_signed_aggregate_and_proof(spec, state, beacon_block_root):
@@ -96,7 +87,7 @@ def build_message(signed_agg, current_time_ms, offset_ms, expected, reason=None)
     return message
 
 
-@with_phases([DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(DENEB, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__accepts_one_millisecond_before_slot_start(spec, state):
     """Test that an aggregate is accepted one millisecond before its slot starts."""
@@ -114,8 +105,13 @@ def test_gossip_beacon_aggregate_and_proof__accepts_one_millisecond_before_slot_
     yield "current_time_ms", "meta", int(current_time_ms)
 
     seen = get_seen(spec)
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, current_time_ms
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=current_time_ms,
     )
     assert result == "valid"
     assert reason is None
@@ -123,7 +119,7 @@ def test_gossip_beacon_aggregate_and_proof__accepts_one_millisecond_before_slot_
     yield "messages", "meta", [build_message(signed_agg, current_time_ms, 0, "valid")]
 
 
-@with_phases([DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(DENEB, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__accepts_at_slot_start(spec, state):
     """Test that an aggregate is accepted exactly at its slot start."""
@@ -139,8 +135,13 @@ def test_gossip_beacon_aggregate_and_proof__accepts_at_slot_start(spec, state):
     yield "current_time_ms", "meta", int(current_time_ms)
 
     seen = get_seen(spec)
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, current_time_ms
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=current_time_ms,
     )
     assert result == "valid"
     assert reason is None
@@ -148,7 +149,7 @@ def test_gossip_beacon_aggregate_and_proof__accepts_at_slot_start(spec, state):
     yield "messages", "meta", [build_message(signed_agg, current_time_ms, 0, "valid")]
 
 
-@with_phases([DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(DENEB, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__ignores_first_slot_before_epoch_window_opens(
     spec, state
@@ -172,8 +173,13 @@ def test_gossip_beacon_aggregate_and_proof__ignores_first_slot_before_epoch_wind
     yield "current_time_ms", "meta", int(current_time_ms)
 
     seen = get_seen(spec)
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, current_time_ms
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=current_time_ms,
     )
     assert result == "ignore"
     assert reason == "aggregate slot is from a future slot"
@@ -181,7 +187,7 @@ def test_gossip_beacon_aggregate_and_proof__ignores_first_slot_before_epoch_wind
     yield "messages", "meta", [build_message(signed_agg, current_time_ms, 0, "ignore", reason)]
 
 
-@with_phases([DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(DENEB, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__accepts_first_slot_when_epoch_window_opens(spec, state):
     """Test that a first-slot aggregate is accepted when the Deneb epoch window opens."""
@@ -200,8 +206,13 @@ def test_gossip_beacon_aggregate_and_proof__accepts_first_slot_when_epoch_window
     yield "current_time_ms", "meta", int(current_time_ms)
 
     seen = get_seen(spec)
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, current_time_ms
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=current_time_ms,
     )
     assert result == "valid"
     assert reason is None
@@ -209,7 +220,7 @@ def test_gossip_beacon_aggregate_and_proof__accepts_first_slot_when_epoch_window
     yield "messages", "meta", [build_message(signed_agg, current_time_ms, 0, "valid")]
 
 
-@with_phases([DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(DENEB, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__accepts_first_slot_when_epoch_window_closes(
     spec, state
@@ -230,8 +241,13 @@ def test_gossip_beacon_aggregate_and_proof__accepts_first_slot_when_epoch_window
     yield "current_time_ms", "meta", int(current_time_ms)
 
     seen = get_seen(spec)
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, current_time_ms
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=current_time_ms,
     )
     assert result == "valid"
     assert reason is None
@@ -239,7 +255,7 @@ def test_gossip_beacon_aggregate_and_proof__accepts_first_slot_when_epoch_window
     yield "messages", "meta", [build_message(signed_agg, current_time_ms, 0, "valid")]
 
 
-@with_phases([DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(DENEB, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__ignores_first_slot_after_epoch_window_closes(
     spec, state
@@ -260,8 +276,13 @@ def test_gossip_beacon_aggregate_and_proof__ignores_first_slot_after_epoch_windo
     yield "current_time_ms", "meta", int(current_time_ms)
 
     seen = get_seen(spec)
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, current_time_ms
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=current_time_ms,
     )
     assert result == "ignore"
     assert reason == "aggregate epoch is not previous or current epoch"
@@ -269,7 +290,7 @@ def test_gossip_beacon_aggregate_and_proof__ignores_first_slot_after_epoch_windo
     yield "messages", "meta", [build_message(signed_agg, current_time_ms, 0, "ignore", reason)]
 
 
-@with_phases([DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(DENEB, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__accepts_last_slot_one_millisecond_before_slot_start(
     spec, state
@@ -298,8 +319,13 @@ def test_gossip_beacon_aggregate_and_proof__accepts_last_slot_one_millisecond_be
     yield "current_time_ms", "meta", int(current_time_ms)
 
     seen = get_seen(spec)
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, current_time_ms
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=current_time_ms,
     )
     assert result == "valid"
     assert reason is None
@@ -307,7 +333,7 @@ def test_gossip_beacon_aggregate_and_proof__accepts_last_slot_one_millisecond_be
     yield "messages", "meta", [build_message(signed_agg, current_time_ms, 0, "valid")]
 
 
-@with_phases([DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(DENEB, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__accepts_last_slot_at_slot_start(spec, state):
     """Test that a last-slot aggregate is accepted exactly at its slot start."""
@@ -329,8 +355,13 @@ def test_gossip_beacon_aggregate_and_proof__accepts_last_slot_at_slot_start(spec
     yield "current_time_ms", "meta", int(current_time_ms)
 
     seen = get_seen(spec)
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, current_time_ms
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=current_time_ms,
     )
     assert result == "valid"
     assert reason is None
@@ -338,7 +369,7 @@ def test_gossip_beacon_aggregate_and_proof__accepts_last_slot_at_slot_start(spec
     yield "messages", "meta", [build_message(signed_agg, current_time_ms, 0, "valid")]
 
 
-@with_phases([DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(DENEB, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__accepts_last_slot_when_epoch_window_closes(spec, state):
     """Test that a last-slot aggregate is accepted at the last valid Deneb epoch time."""
@@ -360,8 +391,13 @@ def test_gossip_beacon_aggregate_and_proof__accepts_last_slot_when_epoch_window_
     yield "current_time_ms", "meta", int(current_time_ms)
 
     seen = get_seen(spec)
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, current_time_ms
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=current_time_ms,
     )
     assert result == "valid"
     assert reason is None
@@ -369,7 +405,7 @@ def test_gossip_beacon_aggregate_and_proof__accepts_last_slot_when_epoch_window_
     yield "messages", "meta", [build_message(signed_agg, current_time_ms, 0, "valid")]
 
 
-@with_phases([DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(DENEB, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__ignores_last_slot_after_epoch_window_closes(
     spec, state
@@ -393,8 +429,13 @@ def test_gossip_beacon_aggregate_and_proof__ignores_last_slot_after_epoch_window
     yield "current_time_ms", "meta", int(current_time_ms)
 
     seen = get_seen(spec)
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, current_time_ms
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=current_time_ms,
     )
     assert result == "ignore"
     assert reason == "aggregate epoch is not previous or current epoch"

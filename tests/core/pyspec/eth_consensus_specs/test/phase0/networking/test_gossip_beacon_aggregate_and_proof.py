@@ -4,8 +4,8 @@ from eth_consensus_specs.test.context import (
     single_phase,
     spec_state_test,
     spec_test,
+    with_all_phases_from_to,
     with_custom_state,
-    with_phases,
     with_presets,
 )
 from eth_consensus_specs.test.helpers.attestations import (
@@ -16,12 +16,8 @@ from eth_consensus_specs.test.helpers.block import (
     build_empty_block_for_next_slot,
 )
 from eth_consensus_specs.test.helpers.constants import (
-    ALTAIR,
-    BELLATRIX,
-    CAPELLA,
     DENEB,
-    ELECTRA,
-    FULU,
+    GLOAS,
     MAINNET,
     PHASE0,
 )
@@ -29,7 +25,12 @@ from eth_consensus_specs.test.helpers.fork_choice import (
     get_genesis_forkchoice_store_and_block,
 )
 from eth_consensus_specs.test.helpers.forks import is_post_electra
-from eth_consensus_specs.test.helpers.gossip import get_filename, get_seen, wrap_genesis_block
+from eth_consensus_specs.test.helpers.gossip import (
+    get_filename,
+    get_seen,
+    run_validate_gossip,
+    wrap_genesis_block,
+)
 from eth_consensus_specs.test.helpers.keys import privkeys
 from eth_consensus_specs.test.helpers.state import (
     next_slot,
@@ -77,26 +78,7 @@ def create_signed_aggregate_and_proof(spec, state, attestation, aggregator_index
     )
 
 
-def run_validate_beacon_aggregate_and_proof_gossip(
-    spec, seen, store, state, signed_aggregate_and_proof, current_time_ms
-):
-    """
-    Run validate_beacon_aggregate_and_proof_gossip and return the result.
-    Returns: tuple of (result, reason) where result is "valid", "ignore", or "reject"
-             and reason is the exception message (or None for valid).
-    """
-    try:
-        spec.validate_beacon_aggregate_and_proof_gossip(
-            seen, store, state, signed_aggregate_and_proof, current_time_ms
-        )
-        return "valid", None
-    except spec.GossipIgnore as e:
-        return "ignore", str(e)
-    except spec.GossipReject as e:
-        return "reject", str(e)
-
-
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__valid(spec, state):
     """
@@ -124,8 +106,13 @@ def test_gossip_beacon_aggregate_and_proof__valid(spec, state):
 
     yield "current_time_ms", "meta", int(block_time_ms)
 
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "valid"
     assert reason is None
@@ -137,7 +124,7 @@ def test_gossip_beacon_aggregate_and_proof__valid(spec, state):
     )
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__reject_committee_index_out_of_range(spec, state):
     """
@@ -179,8 +166,13 @@ def test_gossip_beacon_aggregate_and_proof__reject_committee_index_out_of_range(
 
     yield "current_time_ms", "meta", int(block_time_ms)
 
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "reject"
     assert reason == "committee index out of range"
@@ -199,7 +191,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_committee_index_out_of_range(
     )
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA])
+@with_all_phases_from_to(PHASE0, DENEB)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__ignore_slot_not_within_range(spec, state):
     """
@@ -229,8 +221,13 @@ def test_gossip_beacon_aggregate_and_proof__ignore_slot_not_within_range(spec, s
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, current_time_ms
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=current_time_ms,
     )
     assert result == "ignore"
     assert reason == "attestation slot not within propagation range"
@@ -249,7 +246,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_slot_not_within_range(spec, s
     )
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__valid_within_clock_disparity(spec, state):
     """
@@ -279,8 +276,13 @@ def test_gossip_beacon_aggregate_and_proof__valid_within_clock_disparity(spec, s
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, current_time_ms
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=current_time_ms,
     )
     assert result == "valid"
     assert reason is None
@@ -298,7 +300,7 @@ def test_gossip_beacon_aggregate_and_proof__valid_within_clock_disparity(spec, s
     )
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__reject_epoch_mismatch(spec, state):
     """
@@ -329,8 +331,13 @@ def test_gossip_beacon_aggregate_and_proof__reject_epoch_mismatch(spec, state):
 
     yield "current_time_ms", "meta", int(block_time_ms)
 
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "reject"
     assert reason == "attestation epoch does not match target epoch"
@@ -349,7 +356,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_epoch_mismatch(spec, state):
     )
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__ignore_already_seen_aggregate(spec, state):
     """
@@ -379,15 +386,25 @@ def test_gossip_beacon_aggregate_and_proof__ignore_already_seen_aggregate(spec, 
     yield "current_time_ms", "meta", int(block_time_ms)
 
     # First validation should pass
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "valid"
     messages.append({"offset_ms": 500, "message": get_filename(signed_agg), "expected": "valid"})
 
     # Second validation should be ignored (already seen aggregate data)
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, block_time_ms + 600
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=block_time_ms + 600,
     )
     assert result == "ignore"
     assert reason == "already seen aggregate for this data"
@@ -403,7 +420,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_already_seen_aggregate(spec, 
     yield "messages", "meta", messages
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__ignore_same_data_root_without_superset(spec, state):
     """
@@ -440,8 +457,13 @@ def test_gossip_beacon_aggregate_and_proof__ignore_same_data_root_without_supers
     yield "current_time_ms", "meta", int(block_time_ms)
 
     # First validation should pass and seed dedup state.
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg_1, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg_1,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "valid"
     assert reason is None
@@ -490,8 +512,13 @@ def test_gossip_beacon_aggregate_and_proof__ignore_same_data_root_without_supers
 
     # Dedup should not trigger here; the ignore result is from the aggregator
     # uniqueness rule because aggregator/epoch are unchanged.
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg_2, block_time_ms + 600
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg_2,
+        current_time_ms=block_time_ms + 600,
     )
     assert result == "ignore"
     assert reason == "already seen aggregate from this aggregator for this epoch"
@@ -507,7 +534,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_same_data_root_without_supers
     yield "messages", "meta", messages
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__valid_two_aggregators_same_data(spec, state):
     """
@@ -573,16 +600,26 @@ def test_gossip_beacon_aggregate_and_proof__valid_two_aggregators_same_data(spec
     yield "current_time_ms", "meta", int(block_time_ms)
 
     # First aggregate should pass
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg_1, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg_1,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "valid"
     assert reason is None
     messages.append({"offset_ms": 500, "message": get_filename(signed_agg_1), "expected": "valid"})
 
     # Second aggregate (different aggregator, same data root) should also pass
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg_2, block_time_ms + 600
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg_2,
+        current_time_ms=block_time_ms + 600,
     )
     assert result == "valid"
     assert reason is None
@@ -591,7 +628,7 @@ def test_gossip_beacon_aggregate_and_proof__valid_two_aggregators_same_data(spec
     yield "messages", "meta", messages
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__ignore_block_not_seen(spec, state):
     """
@@ -625,8 +662,13 @@ def test_gossip_beacon_aggregate_and_proof__ignore_block_not_seen(spec, state):
 
     yield "current_time_ms", "meta", int(block_time_ms)
 
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "ignore"
     assert reason == "block being voted for has not been seen"
@@ -645,7 +687,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_block_not_seen(spec, state):
     )
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__reject_aggregation_bits_size_mismatch(spec, state):
     """
@@ -682,8 +724,13 @@ def test_gossip_beacon_aggregate_and_proof__reject_aggregation_bits_size_mismatc
 
     yield "current_time_ms", "meta", int(block_time_ms)
 
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "reject"
     assert reason == "aggregation bits length does not match committee size"
@@ -702,7 +749,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_aggregation_bits_size_mismatc
     )
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__reject_no_participants(spec, state):
     """
@@ -737,8 +784,13 @@ def test_gossip_beacon_aggregate_and_proof__reject_no_participants(spec, state):
 
     yield "current_time_ms", "meta", int(block_time_ms)
 
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "reject"
     assert reason == "aggregate has no participants"
@@ -757,7 +809,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_no_participants(spec, state):
     )
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__ignore_already_seen_aggregator(spec, state):
     """
@@ -787,8 +839,13 @@ def test_gossip_beacon_aggregate_and_proof__ignore_already_seen_aggregator(spec,
     yield "current_time_ms", "meta", int(block_time_ms)
 
     # First validation should pass
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg1, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg1,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "valid"
     messages.append({"offset_ms": 500, "message": get_filename(signed_agg1), "expected": "valid"})
@@ -803,8 +860,13 @@ def test_gossip_beacon_aggregate_and_proof__ignore_already_seen_aggregator(spec,
     yield get_filename(signed_agg2), signed_agg2
 
     # Second validation should be ignored (same aggregator, same epoch)
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg2, block_time_ms + 600
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg2,
+        current_time_ms=block_time_ms + 600,
     )
     assert result == "ignore"
     assert reason == "already seen aggregate from this aggregator for this epoch"
@@ -820,7 +882,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_already_seen_aggregator(spec,
     yield "messages", "meta", messages
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @with_presets([MAINNET], reason="minimal preset has committees < 16, so everyone is an aggregator")
 @spec_test
 @with_custom_state(
@@ -889,8 +951,13 @@ def test_gossip_beacon_aggregate_and_proof__reject_not_aggregator(spec, state):
 
     yield "current_time_ms", "meta", int(block_time_ms)
 
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "reject"
     assert reason == "validator is not selected as aggregator"
@@ -909,7 +976,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_not_aggregator(spec, state):
     )
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__reject_aggregator_not_in_committee(spec, state):
     """
@@ -948,8 +1015,13 @@ def test_gossip_beacon_aggregate_and_proof__reject_aggregator_not_in_committee(s
 
     yield "current_time_ms", "meta", int(block_time_ms)
 
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "reject"
     assert reason == "aggregator index not in committee"
@@ -968,7 +1040,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_aggregator_not_in_committee(s
     )
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__reject_aggregator_index_out_of_range(spec, state):
     """
@@ -998,8 +1070,13 @@ def test_gossip_beacon_aggregate_and_proof__reject_aggregator_index_out_of_range
 
     yield "current_time_ms", "meta", int(block_time_ms)
 
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "reject"
     assert reason == "aggregator index not in committee"
@@ -1018,7 +1095,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_aggregator_index_out_of_range
     )
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 @always_bls
 def test_gossip_beacon_aggregate_and_proof__reject_invalid_selection_proof(spec, state):
@@ -1050,8 +1127,13 @@ def test_gossip_beacon_aggregate_and_proof__reject_invalid_selection_proof(spec,
 
     yield "current_time_ms", "meta", int(block_time_ms)
 
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "reject"
     assert reason == "invalid selection proof signature"
@@ -1070,7 +1152,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_invalid_selection_proof(spec,
     )
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 @always_bls
 def test_gossip_beacon_aggregate_and_proof__reject_invalid_aggregator_signature(spec, state):
@@ -1102,8 +1184,13 @@ def test_gossip_beacon_aggregate_and_proof__reject_invalid_aggregator_signature(
 
     yield "current_time_ms", "meta", int(block_time_ms)
 
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "reject"
     assert reason == "invalid aggregator signature"
@@ -1122,7 +1209,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_invalid_aggregator_signature(
     )
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 @always_bls
 def test_gossip_beacon_aggregate_and_proof__reject_invalid_aggregate_signature(spec, state):
@@ -1154,8 +1241,13 @@ def test_gossip_beacon_aggregate_and_proof__reject_invalid_aggregate_signature(s
 
     yield "current_time_ms", "meta", int(block_time_ms)
 
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "reject"
     assert reason == "invalid aggregate signature"
@@ -1174,7 +1266,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_invalid_aggregate_signature(s
     )
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__reject_block_failed_validation(spec, state):
     """
@@ -1218,8 +1310,13 @@ def test_gossip_beacon_aggregate_and_proof__reject_block_failed_validation(spec,
 
     yield "current_time_ms", "meta", int(block_time_ms)
 
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "reject"
     assert reason == "block being voted for failed validation"
@@ -1238,7 +1335,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_block_failed_validation(spec,
     )
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__reject_target_not_ancestor(spec, state):
     """
@@ -1270,8 +1367,13 @@ def test_gossip_beacon_aggregate_and_proof__reject_target_not_ancestor(spec, sta
 
     yield "current_time_ms", "meta", int(block_time_ms)
 
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "reject"
     assert reason == "target block is not an ancestor of LMD vote block"
@@ -1290,7 +1392,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_target_not_ancestor(spec, sta
     )
 
 
-@with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
+@with_all_phases_from_to(PHASE0, GLOAS)
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__ignore_finalized_not_ancestor(spec, state):
     """
@@ -1326,8 +1428,13 @@ def test_gossip_beacon_aggregate_and_proof__ignore_finalized_not_ancestor(spec, 
 
     yield "current_time_ms", "meta", int(block_time_ms)
 
-    result, reason = run_validate_beacon_aggregate_and_proof_gossip(
-        spec, seen, store, state, signed_agg, block_time_ms + 500
+    result, reason = run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        state=state,
+        signed_aggregate_and_proof=signed_agg,
+        current_time_ms=block_time_ms + 500,
     )
     assert result == "ignore"
     assert reason == "finalized checkpoint is not an ancestor of block"
