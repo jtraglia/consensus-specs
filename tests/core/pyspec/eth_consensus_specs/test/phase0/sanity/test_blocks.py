@@ -36,6 +36,7 @@ from eth_consensus_specs.test.helpers.execution_payload import (
     compute_el_block_hash_for_block,
 )
 from eth_consensus_specs.test.helpers.forks import (
+    get_min_activation_balance,
     is_post_altair,
     is_post_bellatrix,
     is_post_capella,
@@ -821,7 +822,7 @@ def test_deposit_in_block(spec, state):
     initial_balances_len = len(state.balances)
 
     validator_index = len(state.validators)
-    amount = spec.MAX_EFFECTIVE_BALANCE
+    amount = get_min_activation_balance(spec)
     deposit = prepare_state_and_deposit(spec, state, validator_index, amount, signed=True)
 
     yield "pre", state
@@ -840,7 +841,7 @@ def test_deposit_in_block(spec, state):
 
     assert len(state.validators) == initial_registry_len + 1
     assert len(state.balances) == initial_balances_len + 1
-    assert balance == spec.MAX_EFFECTIVE_BALANCE
+    assert balance == get_min_activation_balance(spec)
     assert state.validators[validator_index].pubkey == pubkeys[validator_index]
 
 
@@ -848,7 +849,7 @@ def test_deposit_in_block(spec, state):
 @spec_state_test
 def test_invalid_duplicate_deposit_same_block(spec, state):
     validator_index = len(state.validators)
-    amount = spec.MAX_EFFECTIVE_BALANCE
+    amount = get_min_activation_balance(spec)
     deposit = prepare_state_and_deposit(spec, state, validator_index, amount, signed=True)
 
     yield "pre", state
@@ -869,7 +870,7 @@ def test_invalid_duplicate_deposit_same_block(spec, state):
 @spec_state_test
 def test_deposit_top_up(spec, state):
     validator_index = 0
-    amount = spec.MAX_EFFECTIVE_BALANCE // 4
+    amount = get_min_activation_balance(spec) // 4
     deposit = prepare_state_and_deposit(spec, state, validator_index, amount)
 
     initial_registry_len = len(state.validators)

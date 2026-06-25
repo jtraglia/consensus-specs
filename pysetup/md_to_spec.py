@@ -8,13 +8,29 @@ from functools import cache
 from pathlib import Path
 from typing import cast
 
-from marko.block import BlankLine, Document, FencedCode, Heading, HTMLBlock
+from marko.block import BlankLine, Document, FencedCode, Heading, HTMLBlock, List as MarkdownList
 from marko.element import Element
 from marko.ext.gfm import gfm
 from marko.ext.gfm.elements import Table, TableCell, TableRow
 from marko.inline import CodeSpan
 
 from .typing import ProtocolDefinition, SpecObject, VariableDefinition
+
+# Maps a "Removed" subsection heading (lowercased) to the spec item type it
+# drops. There is one entry per kind of item a spec file can define.
+REMOVED_CATEGORIES = {
+    "types": "custom_types",
+    "constants": "constants",
+    "presets": "presets",
+    # A preset whose value is retained but whose generated derivation check is
+    # dropped (e.g. when the structure it was derived from no longer exists).
+    "preset verifications": "preset_verifications",
+    "configuration": "configuration",
+    "containers": "containers",
+    "dataclasses": "dataclasses",
+    "functions": "functions",
+    "protocols": "protocols",
+}
 
 
 class MarkdownToSpec:
@@ -35,6 +51,10 @@ class MarkdownToSpec:
         self.document_iterator: Iterator[Element] = self._parse_document(file_name)
         self.current_heading_name: str | None = None
 
+        # State for parsing the "Removed" section (see _process_heading).
+        self.removed_section_level: int | None = None
+        self.removed_category: str | None = None
+
         # Use a single dict to hold all SpecObject fields
         self.spec: dict[str, dict] = {
             "config_vars": {},
@@ -48,6 +68,7 @@ class MarkdownToSpec:
             "protocols": {},
             "ssz_dep_constants": {},
             "ssz_objects": {},
+            "removed": {category: set() for category in REMOVED_CATEGORIES.values()},
         }
 
     def run(self) -> SpecObject:
@@ -101,12 +122,48 @@ class MarkdownToSpec:
                 self._process_table(child)
             case HTMLBlock():
                 self._process_html_block(child)
+            case MarkdownList():
+                self._process_list(child)
 
     def _process_heading(self, heading: Heading) -> None:
         """
         Extracts the section name from the heading and updates current_heading_name for context.
+        Also tracks the "Removed" section and its item-type subsections.
         """
         self.current_heading_name = _get_name_from_heading(heading)
+
+        # A heading whose text is "Removed" opens the removed section. Its
+        # subsections name the item types ("Constants", "Functions", etc.) whose
+        # bullet lists enumerate items dropped by this fork.
+        if _get_text_from_heading(heading) == "Removed":
+            self.removed_section_level = heading.level
+            self.removed_category = None
+            return
+
+        if self.removed_section_level is not None:
+            if heading.level <= self.removed_section_level:
+                # A sibling or parent heading closes the removed section.
+                self.removed_section_level = None
+                self.removed_category = None
+            else:
+                heading_text = _get_text_from_heading(heading).lower()
+                if heading_text not in REMOVED_CATEGORIES:
+                    raise Exception(f"unknown removed item type: {heading_text}")
+                self.removed_category = REMOVED_CATEGORIES[heading_text]
+
+    def _process_list(self, md_list: MarkdownList) -> None:
+        """
+        Processes a bullet list. Outside the "Removed" section lists carry no
+        spec content and are ignored. Inside it, each item names a removed item
+        of the current item type via an inline code span, e.g. ``- `foo` ``.
+        """
+        if self.removed_category is None:
+            return
+        for item in md_list.children:
+            name = _get_code_span_from_element(item)
+            if name is None:
+                raise Exception("expected an inline code span in removed item list")
+            self.spec["removed"][self.removed_category].add(name)
 
     def _process_code_block(self, code_block: FencedCode) -> None:
         """
@@ -457,6 +514,7 @@ class MarkdownToSpec:
             protocols=self.spec["protocols"],
             ssz_dep_constants=self.spec["ssz_dep_constants"],
             ssz_objects=self.spec["ssz_objects"],
+            removed=self.spec["removed"],
         )
 
 
@@ -465,6 +523,36 @@ def _get_name_from_heading(heading: Heading) -> str | None:
     last_child = heading.children[-1]
     if isinstance(last_child, CodeSpan):
         return last_child.children
+    return None
+
+
+def _get_text_from_heading(heading: Heading) -> str:
+    """Returns the heading's plain text, ignoring any inline formatting."""
+    return _get_element_text(heading).strip()
+
+
+def _get_element_text(element: Element | str) -> str:
+    """Concatenates the text content of an element and its descendants."""
+    if isinstance(element, str):
+        return element
+    children = getattr(element, "children", None)
+    if isinstance(children, str):
+        return children
+    if isinstance(children, list):
+        return "".join(_get_element_text(child) for child in children)
+    return ""
+
+
+def _get_code_span_from_element(element: Element) -> str | None:
+    """Returns the text of the first inline code span found, or None."""
+    if isinstance(element, CodeSpan):
+        return cast("str", element.children)
+    children = getattr(element, "children", None)
+    if isinstance(children, list):
+        for child in children:
+            found = _get_code_span_from_element(child)
+            if found is not None:
+                return found
     return None
 
 

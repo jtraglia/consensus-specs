@@ -18,6 +18,8 @@
     - [New `is_valid_inclusion_list_signature`](#new-is_valid_inclusion_list_signature)
   - [Beacon state accessors](#beacon-state-accessors)
     - [New `get_inclusion_list_committee`](#new-get_inclusion_list_committee)
+- [Removed](#removed)
+  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -109,3 +111,10 @@ def get_inclusion_list_committee(
         indices[i % len(indices)] for i in range(INCLUSION_LIST_COMMITTEE_SIZE)
     ])
 ```
+
+## Removed
+
+### Functions
+
+- `is_builder_withdrawal_credential`
+- `is_pending_validator`

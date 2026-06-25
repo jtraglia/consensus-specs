@@ -12,7 +12,7 @@ from eth_consensus_specs.test.helpers.fork_transition import (
     transition_to_next_epoch_and_append_blocks,
     transition_until_fork,
 )
-from eth_consensus_specs.test.helpers.forks import is_post_electra
+from eth_consensus_specs.test.helpers.forks import get_min_activation_balance, is_post_electra
 from eth_consensus_specs.test.helpers.keys import pubkeys
 
 
@@ -29,10 +29,10 @@ def mock_activated_validators(spec, state, mock_activations):
             activation_epoch=spec.FAR_FUTURE_EPOCH,
             exit_epoch=spec.FAR_FUTURE_EPOCH,
             withdrawable_epoch=spec.FAR_FUTURE_EPOCH,
-            effective_balance=spec.MAX_EFFECTIVE_BALANCE,
+            effective_balance=get_min_activation_balance(spec),
         )
         state.validators.append(validator)
-        state.balances.append(spec.MAX_EFFECTIVE_BALANCE)
+        state.balances.append(get_min_activation_balance(spec))
         state.previous_epoch_participation.append(spec.ParticipationFlags(0b0000_0000))
         state.current_epoch_participation.append(spec.ParticipationFlags(0b0000_0000))
         state.inactivity_scores.append(0)

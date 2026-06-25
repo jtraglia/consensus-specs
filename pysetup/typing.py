@@ -26,6 +26,10 @@ class SpecObject(NamedTuple):
     func_dep_presets: dict[str, str]  # the constants that depend on functions
     ssz_objects: dict[str, str]
     dataclasses: dict[str, str]
+    # Names of items defined in a previous fork that this fork removes, keyed by
+    # item type (e.g. "custom_types", "constants", "presets", "configuration",
+    # "containers", "dataclasses", "functions", "protocols").
+    removed: dict[str, set[str]]
 
 
 class BuildTarget(NamedTuple):

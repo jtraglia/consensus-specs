@@ -96,9 +96,28 @@ comments cannot. A note should not simply restate how the item now behaves,
 since that is clear from reading the item itself. Use a note only to call out a
 subtle change the reader might otherwise miss.
 
-### Deprecations
+### Removals
 
-If an existing spec item is no longer needed in a newer spec, mark it as
-deprecated by adding its name to the deprecation list for that item's type in
-that spec's `SpecBuilder` class. Define a deprecation only in the spec where the
-item is first dropped. Later specs inherit it automatically.
+If an existing spec item is no longer needed in a newer spec, record it in a
+`## Removed` section at the bottom of the file. Add the section to the file in
+the fork that drops the item, matching the file where it was previously defined.
+The section has a subsection for each item type that is dropped: `Types`,
+`Constants`, `Presets`, `Configuration`, `Containers`, `Dataclasses`,
+`Functions`, or `Protocols`. List each removed item as an inline code span in a
+bullet list. Record a removal only in the fork where the item is first dropped.
+Later forks inherit it automatically.
+
+The `presets/` and `configs/` YAML files are never touched, only the generated
+spec. There is also a `Preset verifications` subsection for the rare case where
+a preset keeps its value but its generated derivation check must be dropped (for
+example when the structure it was derived from no longer exists).
+
+For example, to drop a function in Capella:
+
+```markdown
+## Removed
+
+### Functions
+
+- `upgrade_to_bellatrix`
+```

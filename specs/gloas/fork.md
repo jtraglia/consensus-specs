@@ -12,6 +12,8 @@
 - [Fork to Gloas](#fork-to-gloas)
   - [Fork trigger](#fork-trigger)
   - [Upgrading the state](#upgrading-the-state)
+- [Removed](#removed)
+  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -208,3 +210,10 @@ def upgrade_to_gloas(pre: fulu.BeaconState) -> BeaconState:
 
     return post
 ```
+
+## Removed
+
+### Functions
+
+- `initialize_proposer_lookahead`
+- `upgrade_to_fulu`

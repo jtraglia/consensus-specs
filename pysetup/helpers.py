@@ -85,19 +85,7 @@ def objects_to_spec(
     functions = reduce(
         lambda fns, builder: builder.implement_optimizations(fns), builders, spec_object.functions
     )
-    # Remove deprecated functions
-    deprecate_functions = reduce(
-        lambda obj, builder: obj.union(builder.deprecate_functions()), builders, set()
-    )
-    functions = {k: v for k, v in functions.items() if k not in deprecate_functions}
     functions_spec = "\n\n\n".join(functions.values())
-    # Remove deprecated containers
-    deprecate_containers = reduce(
-        lambda obj, builder: obj.union(builder.deprecate_containers()), builders, set()
-    )
-    ordered_class_objects = {
-        k: v for k, v in ordered_class_objects.items() if k not in deprecate_containers
-    }
     ordered_class_objects_spec = "\n\n\n".join(ordered_class_objects.values())
 
     # Access global dict of config vars for runtime configurables
@@ -187,21 +175,19 @@ def objects_to_spec(
         lambda txt, builder: builder.execution_engine_cls() or txt, builders, ""
     )
 
-    # Remove deprecated constants
-    deprecate_constants = reduce(
-        lambda obj, builder: obj.union(builder.deprecate_constants()), builders, set()
-    )
-    # constant_vars = {k: v for k, v in spec_object.constant_vars.items() if k not in deprecate_constants}
+    # Drop the verification of constants this fork (or an earlier one) removed
     filtered_ssz_dep_constants = {
-        k: v for k, v in hardcoded_ssz_dep_constants.items() if k not in deprecate_constants
+        k: v
+        for k, v in hardcoded_ssz_dep_constants.items()
+        if k not in spec_object.removed["constants"]
     }
-    # Remove deprecated presets
-    deprecate_presets = reduce(
-        lambda obj, builder: obj.union(builder.deprecate_presets()), builders, set()
+    # Drop the verification of presets this fork (or an earlier one) removed,
+    # including presets whose value is kept but whose derivation is dropped
+    dropped_preset_verifications = (
+        spec_object.removed["presets"] | spec_object.removed["preset_verifications"]
     )
-    # preset_vars = {k: v for k, v in spec_object.constant_vars.items() if k not in deprecate_constants}
     filtered_hardcoded_func_dep_presets = {
-        k: v for k, v in hardcoded_func_dep_presets.items() if k not in deprecate_presets
+        k: v for k, v in hardcoded_func_dep_presets.items() if k not in dropped_preset_verifications
     }
 
     constant_vars_spec = "# Constant vars\n" + "\n".join(
@@ -214,7 +200,7 @@ def objects_to_spec(
         format_constant(k, v) for k, v in spec_object.preset_vars.items()
     )
     ssz_dep_constants = "\n".join(
-        f"{x} = {hardcoded_ssz_dep_constants[x]}" for x in hardcoded_ssz_dep_constants
+        f"{x} = {filtered_ssz_dep_constants[x]}" for x in filtered_ssz_dep_constants
     )
     ssz_dep_constants_verification = "\n".join(
         f"assert {x} == {spec_object.ssz_dep_constants[x]}" for x in filtered_ssz_dep_constants
@@ -370,6 +356,9 @@ def combine_spec_objects(spec0: SpecObject, spec1: SpecObject) -> SpecObject:
     func_dep_presets = combine_dicts(spec0.func_dep_presets, spec1.func_dep_presets)
     ssz_objects = combine_ssz_objects(spec0.ssz_objects, spec1.ssz_objects)
     dataclasses = combine_dicts(spec0.dataclasses, spec1.dataclasses)
+    removed = {
+        category: spec0.removed[category] | spec1.removed[category] for category in spec0.removed
+    }
     return SpecObject(
         functions=functions,
         protocols=protocols,
@@ -382,6 +371,38 @@ def combine_spec_objects(spec0: SpecObject, spec1: SpecObject) -> SpecObject:
         func_dep_presets=func_dep_presets,
         ssz_objects=ssz_objects,
         dataclasses=dataclasses,
+        removed=removed,
+    )
+
+
+def apply_removals(spec_object: SpecObject) -> SpecObject:
+    """
+    Drops items that a fork removed, as declared in the `## Removed` sections of
+    its markdown files. Each item type is filtered out of the field(s) that
+    define it. Constants cover plain, preset-dependent, and generalized-index
+    constants. Removing a preset drops its value as well. A preset verification
+    keeps the value but drops only the generated derivation check (along with its
+    hardcoded counterpart in objects_to_spec). The config and preset YAML files
+    are never touched.
+    """
+    removed = spec_object.removed
+
+    def drop(items: dict[str, T], *categories: str) -> dict[str, T]:
+        names = set().union(*(removed[category] for category in categories))
+        return {k: v for k, v in items.items() if k not in names}
+
+    return spec_object._replace(
+        functions=drop(spec_object.functions, "functions"),
+        protocols=drop(spec_object.protocols, "protocols"),
+        custom_types=drop(spec_object.custom_types, "custom_types"),
+        constant_vars=drop(spec_object.constant_vars, "constants"),
+        preset_dep_constant_vars=drop(spec_object.preset_dep_constant_vars, "constants"),
+        preset_vars=drop(spec_object.preset_vars, "presets"),
+        config_vars=drop(spec_object.config_vars, "configuration"),
+        ssz_dep_constants=drop(spec_object.ssz_dep_constants, "constants"),
+        func_dep_presets=drop(spec_object.func_dep_presets, "presets", "preset_verifications"),
+        ssz_objects=drop(spec_object.ssz_objects, "containers"),
+        dataclasses=drop(spec_object.dataclasses, "dataclasses"),
     )
 
 
@@ -417,6 +438,7 @@ def finalized_spec_object(spec_object: SpecObject) -> SpecObject:
         func_dep_presets=spec_object.func_dep_presets,
         ssz_objects=ssz_objects,
         dataclasses=spec_object.dataclasses,
+        removed=spec_object.removed,
     )
 
 

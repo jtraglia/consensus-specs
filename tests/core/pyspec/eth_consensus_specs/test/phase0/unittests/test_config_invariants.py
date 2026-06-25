@@ -4,6 +4,7 @@ from eth_consensus_specs.test.context import (
 )
 from eth_consensus_specs.test.helpers.constants import UINT64_MAX
 from eth_consensus_specs.test.helpers.forks import (
+    get_min_activation_balance,
     is_post_altair,
     is_post_bellatrix,
     is_post_electra,
@@ -38,10 +39,10 @@ def test_validators(spec, state):
 @with_all_phases
 @spec_state_test
 def test_balances(spec, state):
-    assert spec.MAX_EFFECTIVE_BALANCE % spec.EFFECTIVE_BALANCE_INCREMENT == 0
+    assert get_min_activation_balance(spec) % spec.EFFECTIVE_BALANCE_INCREMENT == 0
     check_bound(spec.MIN_DEPOSIT_AMOUNT, 1, UINT64_MAX)
-    check_bound(spec.MAX_EFFECTIVE_BALANCE, spec.MIN_DEPOSIT_AMOUNT, UINT64_MAX)
-    check_bound(spec.MAX_EFFECTIVE_BALANCE, spec.EFFECTIVE_BALANCE_INCREMENT, UINT64_MAX)
+    check_bound(get_min_activation_balance(spec), spec.MIN_DEPOSIT_AMOUNT, UINT64_MAX)
+    check_bound(get_min_activation_balance(spec), spec.EFFECTIVE_BALANCE_INCREMENT, UINT64_MAX)
 
 
 @with_all_phases
@@ -56,14 +57,14 @@ def test_hysteresis_quotient(spec, state):
 @spec_state_test
 def test_incentives(spec, state):
     # Ensure no ETH is minted in slash_validator
-    if is_post_bellatrix(spec):
-        assert spec.MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX <= spec.WHISTLEBLOWER_REWARD_QUOTIENT
-    elif is_post_altair(spec):
-        assert spec.MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR <= spec.WHISTLEBLOWER_REWARD_QUOTIENT
-    elif is_post_electra(spec):
+    if is_post_electra(spec):
         assert (
             spec.MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA <= spec.WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA
         )
+    elif is_post_bellatrix(spec):
+        assert spec.MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX <= spec.WHISTLEBLOWER_REWARD_QUOTIENT
+    elif is_post_altair(spec):
+        assert spec.MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR <= spec.WHISTLEBLOWER_REWARD_QUOTIENT
     else:
         assert spec.MIN_SLASHING_PENALTY_QUOTIENT <= spec.WHISTLEBLOWER_REWARD_QUOTIENT
 

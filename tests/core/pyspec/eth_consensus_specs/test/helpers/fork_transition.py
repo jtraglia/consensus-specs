@@ -31,6 +31,7 @@ from eth_consensus_specs.test.helpers.execution_payload import (
 )
 from eth_consensus_specs.test.helpers.forks import (
     get_fork_version,
+    get_min_activation_balance,
     get_next_fork_transition,
     get_previous_fork_version,
     is_post_bellatrix,
@@ -381,7 +382,7 @@ def run_transition_with_operation(
     elif operation_type == OperationType.DEPOSIT:
         # create a new deposit
         selected_validator_index = len(state.validators)
-        amount = spec.MAX_EFFECTIVE_BALANCE
+        amount = get_min_activation_balance(spec)
         deposit = prepare_state_and_deposit(
             spec, state, selected_validator_index, amount, signed=True
         )

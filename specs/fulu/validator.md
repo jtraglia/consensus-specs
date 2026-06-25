@@ -21,6 +21,8 @@
       - [`get_data_column_sidecars_from_column_sidecar`](#get_data_column_sidecars_from_column_sidecar)
     - [Sidecar publishing](#sidecar-publishing)
     - [Sidecar retention](#sidecar-retention)
+- [Removed](#removed)
+  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -304,3 +306,12 @@ ensure the data-availability of these blobs throughout the network.
 
 After `MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS` nodes MAY prune the
 sidecars and/or stop serving them.
+
+## Removed
+
+### Functions
+
+- `compute_subnet_for_blob_sidecar`
+- `get_blob_sidecars`
+- `get_eth1_pending_deposit_count`
+- `get_eth1_vote`

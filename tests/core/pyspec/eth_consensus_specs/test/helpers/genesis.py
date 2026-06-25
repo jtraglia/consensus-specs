@@ -8,6 +8,7 @@ from eth_consensus_specs.test.helpers.execution_payload import (
 )
 from eth_consensus_specs.test.helpers.forks import (
     get_fork_version,
+    get_min_activation_balance,
     get_previous_fork_version,
     is_post_altair,
     is_post_bellatrix,
@@ -55,7 +56,7 @@ def build_mock_validator(spec, i: int, balance: int):
     else:
         # insecurely use pubkey as withdrawal key as well
         withdrawal_credentials = spec.BLS_WITHDRAWAL_PREFIX + spec.hash(withdrawal_pubkey)[1:]
-        max_effective_balance = spec.MAX_EFFECTIVE_BALANCE
+        max_effective_balance = get_min_activation_balance(spec)
 
     validator = spec.Validator(
         pubkey=active_pubkey,

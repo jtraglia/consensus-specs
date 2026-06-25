@@ -7,6 +7,8 @@
 - [Fork to Electra](#fork-to-electra)
   - [Fork trigger](#fork-trigger)
   - [Upgrading the state](#upgrading-the-state)
+- [Removed](#removed)
+  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -141,3 +143,9 @@ def upgrade_to_electra(pre: deneb.BeaconState) -> BeaconState:
 
     return post
 ```
+
+## Removed
+
+### Functions
+
+- `upgrade_to_deneb`

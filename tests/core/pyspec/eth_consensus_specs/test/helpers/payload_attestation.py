@@ -10,6 +10,7 @@ from eth_consensus_specs.test.helpers.fork_choice import (
     setup_one_block_store,
     tick_and_add_block,
 )
+from eth_consensus_specs.test.helpers.forks import get_min_activation_balance
 from eth_consensus_specs.test.helpers.state import state_transition_and_sign_block
 
 
@@ -52,7 +53,7 @@ def ptc_size_balances(spec):
     """
     Return a balances list sized to PTC_SIZE so each PTC seat can be pinned to a unique validator.
     """
-    return [spec.MAX_EFFECTIVE_BALANCE] * spec.PTC_SIZE
+    return [get_min_activation_balance(spec)] * spec.PTC_SIZE
 
 
 def setup_verified_parent_with_distinct_ptc(spec, state):

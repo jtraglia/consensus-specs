@@ -53,19 +53,3 @@ class BaseSpecBuilder(ABC):
     @classmethod
     def implement_optimizations(cls, functions: dict[str, str]) -> dict[str, str]:
         return functions
-
-    @classmethod
-    def deprecate_constants(cls) -> set[str]:
-        return set()
-
-    @classmethod
-    def deprecate_presets(cls) -> set[str]:
-        return set()
-
-    @classmethod
-    def deprecate_containers(cls) -> set[str]:
-        return set()
-
-    @classmethod
-    def deprecate_functions(cls) -> set[str]:
-        return set()

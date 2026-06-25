@@ -7,6 +7,8 @@
 - [Fork to Deneb](#fork-to-deneb)
   - [Fork trigger](#fork-trigger)
   - [Upgrading the state](#upgrading-the-state)
+- [Removed](#removed)
+  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -97,3 +99,9 @@ def upgrade_to_deneb(pre: capella.BeaconState) -> BeaconState:
 
     return post
 ```
+
+## Removed
+
+### Functions
+
+- `upgrade_to_capella`

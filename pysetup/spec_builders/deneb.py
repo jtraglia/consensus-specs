@@ -77,21 +77,9 @@ class NoopExecutionEngine(ExecutionEngine):
 EXECUTION_ENGINE = NoopExecutionEngine()"""
 
     @classmethod
-    def deprecate_functions(cls) -> set[str]:
-        return {
-            "upgrade_lc_bootstrap_to_capella",
-            "upgrade_lc_finality_update_to_capella",
-            "upgrade_lc_header_to_capella",
-            "upgrade_lc_optimistic_update_to_capella",
-            "upgrade_lc_store_to_capella",
-            "upgrade_lc_update_to_capella",
-            "upgrade_to_capella",
-        }
-
-    @classmethod
     def hardcoded_func_dep_presets(cls, spec_object) -> dict[str, str]:
-        return {
-            "KZG_COMMITMENT_INCLUSION_PROOF_DEPTH": spec_object.preset_vars[
-                "KZG_COMMITMENT_INCLUSION_PROOF_DEPTH"
-            ].value,
-        }
+        name = "KZG_COMMITMENT_INCLUSION_PROOF_DEPTH"
+        # The preset may have been removed by a later fork.
+        if name not in spec_object.preset_vars:
+            return {}
+        return {name: spec_object.preset_vars[name].value}

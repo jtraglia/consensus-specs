@@ -109,6 +109,9 @@
       - [Execution-layer consolidation requests](#execution-layer-consolidation-requests)
         - [New `is_valid_switch_to_compounding_request`](#new-is_valid_switch_to_compounding_request)
         - [New `process_consolidation_request`](#new-process_consolidation_request)
+- [Removed](#removed)
+  - [Presets](#presets)
+  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -1937,3 +1940,17 @@ def process_consolidation_request(
         PendingConsolidation(source_index=source_index, target_index=target_index)
     )
 ```
+
+## Removed
+
+### Presets
+
+- `MAX_ATTESTATIONS`
+- `MAX_ATTESTER_SLASHINGS`
+- `MAX_EFFECTIVE_BALANCE`
+- `MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX`
+- `WHISTLEBLOWER_REWARD_QUOTIENT`
+
+### Functions
+
+- `get_validator_activation_churn_limit`

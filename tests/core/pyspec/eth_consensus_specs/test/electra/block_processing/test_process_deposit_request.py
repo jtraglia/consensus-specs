@@ -7,6 +7,7 @@ from eth_consensus_specs.test.context import (
 from eth_consensus_specs.test.helpers.deposits import (
     prepare_deposit_request,
 )
+from eth_consensus_specs.test.helpers.forks import get_min_activation_balance
 from tests.infra.helpers.deposit_requests import (
     assert_process_deposit_request,
     prepare_process_deposit_request,
@@ -129,8 +130,8 @@ def test_process_deposit_request_top_up_max_effective_balance_compounding(spec, 
         + b"\x59" * 20  # a 20-byte eth1 address
     )
 
-    state.balances[validator_index] = spec.MAX_EFFECTIVE_BALANCE
-    state.validators[validator_index].effective_balance = spec.MAX_EFFECTIVE_BALANCE
+    state.balances[validator_index] = get_min_activation_balance(spec)
+    state.validators[validator_index].effective_balance = get_min_activation_balance(spec)
     state.validators[validator_index].withdrawal_credentials = withdrawal_credentials
 
     deposit_request = prepare_deposit_request(

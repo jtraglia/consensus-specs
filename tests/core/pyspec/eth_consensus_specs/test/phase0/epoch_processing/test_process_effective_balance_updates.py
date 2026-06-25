@@ -3,7 +3,7 @@ from eth_consensus_specs.test.helpers.epoch_processing import (
     run_epoch_processing_to,
     run_process_slots_up_to_epoch_boundary,
 )
-from eth_consensus_specs.test.helpers.forks import is_post_electra
+from eth_consensus_specs.test.helpers.forks import get_min_activation_balance, is_post_electra
 from eth_consensus_specs.test.helpers.withdrawals import (
     set_compounding_withdrawal_credential,
 )
@@ -27,7 +27,7 @@ def run_test_effective_balance_hysteresis(spec, state, with_compounding_credenti
     max = (
         spec.MAX_EFFECTIVE_BALANCE_ELECTRA
         if with_compounding_credentials
-        else spec.MAX_EFFECTIVE_BALANCE
+        else get_min_activation_balance(spec)
     )
     min = spec.config.EJECTION_BALANCE
     inc = spec.EFFECTIVE_BALANCE_INCREMENT

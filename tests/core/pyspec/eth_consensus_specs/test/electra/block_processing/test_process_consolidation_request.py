@@ -9,7 +9,7 @@ from eth_consensus_specs.test.context import (
     with_presets,
 )
 from eth_consensus_specs.test.helpers.constants import MINIMAL
-from eth_consensus_specs.test.helpers.forks import is_post_gloas
+from eth_consensus_specs.test.helpers.forks import get_min_activation_balance, is_post_gloas
 from eth_consensus_specs.test.helpers.withdrawals import (
     set_compounding_withdrawal_credential,
     set_compounding_withdrawal_credential_with_balance,
@@ -369,7 +369,7 @@ def test_basic_consolidation_source_has_less_than_max_effective_balance(spec, st
     set_eth1_withdrawal_credential_with_balance(spec, state, source_index, address=source_address)
 
     # Lower the source validator's effective balance
-    source_effective_balance = spec.MAX_EFFECTIVE_BALANCE - spec.EFFECTIVE_BALANCE_INCREMENT
+    source_effective_balance = get_min_activation_balance(spec) - spec.EFFECTIVE_BALANCE_INCREMENT
     state.validators[source_index].effective_balance = source_effective_balance
 
     # Make consolidation with source address

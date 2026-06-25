@@ -28,7 +28,7 @@ from eth_consensus_specs.test.helpers.constants import (
 from eth_consensus_specs.test.helpers.fork_choice import (
     get_genesis_forkchoice_store_and_block,
 )
-from eth_consensus_specs.test.helpers.forks import is_post_electra
+from eth_consensus_specs.test.helpers.forks import get_min_activation_balance, is_post_electra
 from eth_consensus_specs.test.helpers.gossip import (
     get_filename,
     get_seen,
@@ -48,7 +48,7 @@ def large_validator_balances(spec):
     so that there's a chance of non-aggregators (modulo >= 2).
     """
     num_validators = 32 * spec.SLOTS_PER_EPOCH
-    return [spec.MAX_EFFECTIVE_BALANCE] * num_validators
+    return [get_min_activation_balance(spec)] * num_validators
 
 
 def create_signed_aggregate_and_proof(spec, state, attestation, aggregator_index=None):

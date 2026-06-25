@@ -7,6 +7,8 @@
   - [`normalize_merkle_branch`](#normalize_merkle_branch)
 - [Upgrading light client data](#upgrading-light-client-data)
 - [Upgrading the store](#upgrading-the-store)
+- [Removed](#removed)
+  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -118,3 +120,14 @@ def upgrade_lc_store_to_electra(pre: deneb.LightClientStore) -> LightClientStore
         current_max_active_participants=pre.current_max_active_participants,
     )
 ```
+
+## Removed
+
+### Functions
+
+- `upgrade_lc_bootstrap_to_deneb`
+- `upgrade_lc_finality_update_to_deneb`
+- `upgrade_lc_header_to_deneb`
+- `upgrade_lc_optimistic_update_to_deneb`
+- `upgrade_lc_store_to_deneb`
+- `upgrade_lc_update_to_deneb`

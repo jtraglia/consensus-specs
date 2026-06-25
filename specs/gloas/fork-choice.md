@@ -60,6 +60,8 @@
   - [Modified `on_block`](#modified-on_block)
   - [New `on_execution_payload_envelope`](#new-on_execution_payload_envelope)
   - [New `on_payload_attestation_message`](#new-on_payload_attestation_message)
+- [Removed](#removed)
+  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -1116,3 +1118,9 @@ def on_payload_attestation_message(
         payload_timeliness_vote[ptc_index] = data.payload_present
         payload_data_availability_vote[ptc_index] = data.blob_data_available
 ```
+
+## Removed
+
+### Functions
+
+- `retrieve_column_sidecars`

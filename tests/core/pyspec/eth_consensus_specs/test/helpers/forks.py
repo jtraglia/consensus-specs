@@ -70,6 +70,17 @@ def is_post_eip8148(spec):
     return is_post_fork(spec.fork, EIP8148)
 
 
+def get_min_activation_balance(spec):
+    """
+    Returns the minimum activation balance. Electra introduced
+    ``MIN_ACTIVATION_BALANCE``; before Electra the equivalent value was
+    ``MAX_EFFECTIVE_BALANCE``.
+    """
+    if is_post_electra(spec):
+        return spec.MIN_ACTIVATION_BALANCE
+    return spec.MAX_EFFECTIVE_BALANCE
+
+
 def has_explicit_fork_version(spec, fork) -> bool:
     if fork == PHASE0:
         return True

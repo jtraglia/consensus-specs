@@ -6,6 +6,7 @@ from eth_consensus_specs.test.helpers.epoch_processing import (
     run_epoch_processing_with,
 )
 from eth_consensus_specs.test.helpers.forks import (
+    get_min_activation_balance,
     is_post_altair,
     is_post_bellatrix,
     is_post_electra,
@@ -130,7 +131,7 @@ def test_minimal_penalty(spec, state):
     )
     # All the other validators get the maximum.
     for i in range(1, len(state.validators)):
-        state.validators[i].effective_balance = state.balances[i] = spec.MAX_EFFECTIVE_BALANCE
+        state.validators[i].effective_balance = state.balances[i] = get_min_activation_balance(spec)
 
     out_epoch = spec.get_current_epoch(state) + (spec.EPOCHS_PER_SLASHINGS_VECTOR // 2)
 
@@ -175,11 +176,11 @@ def test_scaled_penalties(spec, state):
 
     # make the balances non-uniform.
     # Otherwise it would just be a simple balance slashing. Test the per-validator scaled penalties.
-    diff = spec.MAX_EFFECTIVE_BALANCE - base
+    diff = get_min_activation_balance(spec) - base
     increments = diff // incr
     for i in range(10):
         state.validators[i].effective_balance = base + (incr * (i % increments))
-        assert state.validators[i].effective_balance <= spec.MAX_EFFECTIVE_BALANCE
+        assert state.validators[i].effective_balance <= get_min_activation_balance(spec)
         # add/remove some, see if balances different than the effective balances are picked up
         state.balances[i] = state.validators[i].effective_balance + i - 5
 

@@ -12,7 +12,11 @@ from eth_consensus_specs.test.helpers.block import (
 )
 from eth_consensus_specs.test.helpers.bls_to_execution_changes import get_signed_address_change
 from eth_consensus_specs.test.helpers.deposits import build_deposit, deposit_from_context
-from eth_consensus_specs.test.helpers.forks import is_post_electra, is_post_fulu
+from eth_consensus_specs.test.helpers.forks import (
+    get_min_activation_balance,
+    is_post_electra,
+    is_post_fulu,
+)
 from eth_consensus_specs.test.helpers.keys import privkeys, pubkeys
 from eth_consensus_specs.test.helpers.proposer_slashings import get_valid_proposer_slashing
 from eth_consensus_specs.test.helpers.state import (
@@ -82,7 +86,12 @@ def get_random_attester_slashings(spec, state, rng, slashed_indices=None):
     # is small so not much room for random inclusion
     if slashed_indices is None:
         slashed_indices = []
-    num_slashings = rng.randrange(1, spec.MAX_ATTESTER_SLASHINGS)
+    # Use the phase0 limit so the random count is unchanged across forks. The
+    # electra limit (1) would make randrange(1, 1) an empty range.
+    max_attester_slashings = (
+        spec.phase0.MAX_ATTESTER_SLASHINGS if is_post_electra(spec) else spec.MAX_ATTESTER_SLASHINGS
+    )
+    num_slashings = rng.randrange(1, max_attester_slashings)
     active_indices = spec.get_active_validator_indices(state, spec.get_current_epoch(state)).copy()
     indices = [
         index
@@ -149,7 +158,7 @@ def get_random_deposits(spec, state, rng, num_deposits=None):
             deposit_data_leaves,
             pubkeys[index],
             privkeys[index],
-            spec.MAX_EFFECTIVE_BALANCE,
+            get_min_activation_balance(spec),
             withdrawal_credentials=withdrawal_credentials,
             signed=True,
         )
