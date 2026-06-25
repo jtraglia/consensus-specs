@@ -822,7 +822,14 @@ def get_attestation_participation_flag_indices(
         assert data.index == 0
         payload_matches = True
     else:
-        slot_index = data.slot % SLOTS_PER_HISTORICAL_ROOT
+        block_slot = data.slot
+        while block_slot > 0 and block_slot + SLOTS_PER_HISTORICAL_ROOT > state.slot:
+            previous_root = get_block_root_at_slot(state, Slot(block_slot - 1))
+            if previous_root != data.beacon_block_root:
+                break
+            block_slot = Slot(block_slot - 1)
+        assert block_slot + SLOTS_PER_HISTORICAL_ROOT > state.slot
+        slot_index = block_slot % SLOTS_PER_HISTORICAL_ROOT
         payload_index = state.execution_payload_availability[slot_index]
         payload_matches = data.index == payload_index
 
