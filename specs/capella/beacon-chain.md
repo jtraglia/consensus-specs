@@ -44,6 +44,7 @@
     - [Modified `process_operations`](#modified-process_operations)
     - [New `process_bls_to_execution_change`](#new-process_bls_to_execution_change)
 - [Removed](#removed)
+  - [Constants](#constants-1)
   - [Containers](#containers-1)
   - [Functions](#functions)
 
@@ -603,6 +604,10 @@ def process_bls_to_execution_change(
 ```
 
 ## Removed
+
+### Constants
+
+- `EMPTY_BLOCK_HASH`
 
 ### Containers
 

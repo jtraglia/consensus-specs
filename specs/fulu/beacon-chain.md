@@ -30,6 +30,7 @@
     - [Modified `process_pending_deposits`](#modified-process_pending_deposits)
     - [New `process_proposer_lookahead`](#new-process_proposer_lookahead)
 - [Removed](#removed)
+  - [Types](#types)
   - [Functions](#functions)
 
 <!-- mdformat-toc end -->
@@ -468,6 +469,10 @@ def process_proposer_lookahead(state: BeaconState) -> None:
 ```
 
 ## Removed
+
+### Types
+
+- `BlobIndex`
 
 ### Functions
 
