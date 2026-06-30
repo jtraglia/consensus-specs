@@ -7,7 +7,7 @@
 - [Introduction](#introduction)
 - [Types](#types)
 - [Constants](#constants)
-  - [Index flags](#index-flags)
+  - [Withdrawal registries](#withdrawal-registries)
   - [Domains](#domains)
   - [Misc](#misc)
   - [Withdrawal prefixes](#withdrawal-prefixes)
@@ -42,20 +42,18 @@
     - [`BeaconState`](#beaconstate)
     - [`ExecutionPayload`](#executionpayload)
     - [`ExecutionRequests`](#executionrequests)
+    - [Modified `Withdrawal`](#modified-withdrawal)
 - [Dataclasses](#dataclasses)
   - [Modified dataclasses](#modified-dataclasses)
     - [`ExpectedWithdrawals`](#expectedwithdrawals)
 - [Helpers](#helpers)
   - [Predicates](#predicates)
-    - [New `is_builder_index`](#new-is_builder_index)
     - [New `is_active_builder`](#new-is_active_builder)
     - [New `is_builder_withdrawal_credential`](#new-is_builder_withdrawal_credential)
     - [New `is_attestation_same_slot`](#new-is_attestation_same_slot)
     - [New `is_valid_indexed_payload_attestation`](#new-is_valid_indexed_payload_attestation)
     - [New `is_pending_validator`](#new-is_pending_validator)
   - [Misc](#misc-2)
-    - [New `convert_builder_index_to_validator_index`](#new-convert_builder_index_to_validator_index)
-    - [New `convert_validator_index_to_builder_index`](#new-convert_validator_index_to_builder_index)
     - [New `get_pending_balance_to_withdraw_for_builder`](#new-get_pending_balance_to_withdraw_for_builder)
     - [New `can_builder_cover_bid`](#new-can_builder_cover_bid)
     - [New `compute_balance_weighted_selection`](#new-compute_balance_weighted_selection)
@@ -87,13 +85,17 @@
       - [New `apply_parent_execution_payload`](#new-apply_parent_execution_payload)
       - [New `process_parent_execution_payload`](#new-process_parent_execution_payload)
     - [Withdrawals](#withdrawals)
+      - [Modified `get_balance_after_withdrawals`](#modified-get_balance_after_withdrawals)
       - [New `get_builder_withdrawals`](#new-get_builder_withdrawals)
       - [New `get_builders_sweep_withdrawals`](#new-get_builders_sweep_withdrawals)
+      - [Modified `get_pending_partial_withdrawals`](#modified-get_pending_partial_withdrawals)
+      - [Modified `get_validators_sweep_withdrawals`](#modified-get_validators_sweep_withdrawals)
       - [Modified `get_expected_withdrawals`](#modified-get_expected_withdrawals)
       - [Modified `apply_withdrawals`](#modified-apply_withdrawals)
       - [New `update_payload_expected_withdrawals`](#new-update_payload_expected_withdrawals)
       - [New `update_builder_pending_withdrawals`](#new-update_builder_pending_withdrawals)
       - [New `update_next_withdrawal_builder_index`](#new-update_next_withdrawal_builder_index)
+      - [Modified `update_next_withdrawal_validator_index`](#modified-update_next_withdrawal_validator_index)
       - [Modified `process_withdrawals`](#modified-process_withdrawals)
     - [Execution payload](#execution-payload)
       - [Removed `process_execution_payload`](#removed-process_execution_payload)
@@ -140,18 +142,20 @@ from the latest published version of the EIPs.
 
 ## Types
 
-| Name              | SSZ equivalent                        | Description                   |
-| ----------------- | ------------------------------------- | ----------------------------- |
-| `BuilderIndex`    | `uint64`                              | Builder registry index        |
-| `BlockAccessList` | `ByteList[MAX_BYTES_PER_TRANSACTION]` | RLP encoded block access list |
+| Name                 | SSZ equivalent                        | Description                                           |
+| -------------------- | ------------------------------------- | ----------------------------------------------------- |
+| `BuilderIndex`       | `uint64`                              | Builder registry index                                |
+| `WithdrawalRegistry` | `uint8`                               | Registry that a `Withdrawal.registry_index` refers to |
+| `BlockAccessList`    | `ByteList[MAX_BYTES_PER_TRANSACTION]` | RLP encoded block access list                         |
 
 ## Constants
 
-### Index flags
+### Withdrawal registries
 
-| Name                 | Value           | Description                                                                                |
-| -------------------- | --------------- | ------------------------------------------------------------------------------------------ |
-| `BUILDER_INDEX_FLAG` | `uint64(2**40)` | Bitwise flag which indicates that a `ValidatorIndex` should be treated as a `BuilderIndex` |
+| Name                 | Value      | Description                                              |
+| -------------------- | ---------- | -------------------------------------------------------- |
+| `VALIDATOR_REGISTRY` | `uint8(0)` | A `Withdrawal.registry_index` indexes `state.validators` |
+| `BUILDER_REGISTRY`   | `uint8(1)` | A `Withdrawal.registry_index` indexes `state.builders`   |
 
 ### Domains
 
@@ -513,6 +517,24 @@ class ExecutionRequests(Container):
     builder_exits: List[BuilderExitRequest, MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD]
 ```
 
+#### Modified `Withdrawal`
+
+*Note*: The `registry` field selects which registry the withdrawal targets.
+Because the index may now point into either `state.validators` or
+`state.builders`, the `validator_index` field is renamed to `registry_index` and
+widened to a plain `uint64`.
+
+```python
+class Withdrawal(Container):
+    index: WithdrawalIndex
+    # [New in Gloas:EIP7732]
+    registry: WithdrawalRegistry
+    # [Modified in Gloas:EIP7732]
+    registry_index: uint64
+    address: ExecutionAddress
+    amount: Gwei
+```
+
 ## Dataclasses
 
 ### Modified dataclasses
@@ -534,13 +556,6 @@ class ExpectedWithdrawals:
 ## Helpers
 
 ### Predicates
-
-#### New `is_builder_index`
-
-```python
-def is_builder_index(validator_index: ValidatorIndex) -> bool:
-    return (validator_index & BUILDER_INDEX_FLAG) != 0
-```
 
 #### New `is_active_builder`
 
@@ -628,20 +643,6 @@ def is_pending_validator(pending_deposits: Sequence[PendingDeposit], pubkey: BLS
 ```
 
 ### Misc
-
-#### New `convert_builder_index_to_validator_index`
-
-```python
-def convert_builder_index_to_validator_index(builder_index: BuilderIndex) -> ValidatorIndex:
-    return ValidatorIndex(builder_index | BUILDER_INDEX_FLAG)
-```
-
-#### New `convert_validator_index_to_builder_index`
-
-```python
-def convert_validator_index_to_builder_index(validator_index: ValidatorIndex) -> BuilderIndex:
-    return BuilderIndex(validator_index & ~BUILDER_INDEX_FLAG)
-```
 
 #### New `get_pending_balance_to_withdraw_for_builder`
 
@@ -1270,6 +1271,28 @@ def process_parent_execution_payload(state: BeaconState, block: BeaconBlock) -> 
 
 #### Withdrawals
 
+##### Modified `get_balance_after_withdrawals`
+
+*Note*: This is modified to ignore builder withdrawals, whose `registry_index`
+could otherwise collide with the queried `validator_index`.
+
+```python
+def get_balance_after_withdrawals(
+    state: BeaconState,
+    validator_index: ValidatorIndex,
+    withdrawals: Sequence[Withdrawal],
+) -> Gwei:
+    withdrawn = Gwei(0)
+    for withdrawal in withdrawals:
+        # [Modified in Gloas:EIP7732]
+        if (
+            withdrawal.registry == VALIDATOR_REGISTRY
+            and withdrawal.registry_index == validator_index
+        ):
+            withdrawn += withdrawal.amount
+    return state.balances[validator_index] - withdrawn
+```
+
 ##### New `get_builder_withdrawals`
 
 ```python
@@ -1293,7 +1316,8 @@ def get_builder_withdrawals(
         withdrawals.append(
             Withdrawal(
                 index=withdrawal_index,
-                validator_index=convert_builder_index_to_validator_index(builder_index),
+                registry=BUILDER_REGISTRY,
+                registry_index=builder_index,
                 address=withdrawal.fee_recipient,
                 amount=withdrawal.amount,
             )
@@ -1331,7 +1355,8 @@ def get_builders_sweep_withdrawals(
             withdrawals.append(
                 Withdrawal(
                     index=withdrawal_index,
-                    validator_index=convert_builder_index_to_validator_index(builder_index),
+                    registry=BUILDER_REGISTRY,
+                    registry_index=builder_index,
                     address=builder.execution_address,
                     amount=builder.balance,
                 )
@@ -1339,6 +1364,114 @@ def get_builders_sweep_withdrawals(
             withdrawal_index += WithdrawalIndex(1)
 
         builder_index = BuilderIndex((builder_index + 1) % len(state.builders))
+        processed_count += 1
+
+    return withdrawals, withdrawal_index, processed_count
+```
+
+##### Modified `get_pending_partial_withdrawals`
+
+*Note*: This is modified only to set `registry` and use the renamed
+`registry_index` field on constructed withdrawals.
+
+```python
+def get_pending_partial_withdrawals(
+    state: BeaconState,
+    withdrawal_index: WithdrawalIndex,
+    prior_withdrawals: Sequence[Withdrawal],
+) -> Tuple[Sequence[Withdrawal], WithdrawalIndex, uint64]:
+    epoch = get_current_epoch(state)
+    withdrawals_limit = min(
+        len(prior_withdrawals) + MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
+        MAX_WITHDRAWALS_PER_PAYLOAD - 1,
+    )
+    assert len(prior_withdrawals) <= withdrawals_limit
+
+    processed_count: uint64 = 0
+    withdrawals: List[Withdrawal] = []
+    for withdrawal in state.pending_partial_withdrawals:
+        all_withdrawals = prior_withdrawals + withdrawals
+        is_withdrawable = withdrawal.withdrawable_epoch <= epoch
+        has_reached_limit = len(all_withdrawals) >= withdrawals_limit
+        if not is_withdrawable or has_reached_limit:
+            break
+
+        validator_index = withdrawal.validator_index
+        validator = state.validators[validator_index]
+        balance = get_balance_after_withdrawals(state, validator_index, all_withdrawals)
+        if is_eligible_for_partial_withdrawals(validator, balance):
+            withdrawal_amount = min(balance - MIN_ACTIVATION_BALANCE, withdrawal.amount)
+            withdrawals.append(
+                Withdrawal(
+                    index=withdrawal_index,
+                    # [Modified in Gloas:EIP7732]
+                    registry=VALIDATOR_REGISTRY,
+                    registry_index=validator_index,
+                    address=ExecutionAddress(validator.withdrawal_credentials[12:]),
+                    amount=withdrawal_amount,
+                )
+            )
+            withdrawal_index += WithdrawalIndex(1)
+
+        processed_count += 1
+
+    return withdrawals, withdrawal_index, processed_count
+```
+
+##### Modified `get_validators_sweep_withdrawals`
+
+*Note*: This is modified only to set `registry` and use the renamed
+`registry_index` field on constructed withdrawals.
+
+```python
+def get_validators_sweep_withdrawals(
+    state: BeaconState,
+    withdrawal_index: WithdrawalIndex,
+    prior_withdrawals: Sequence[Withdrawal],
+) -> Tuple[Sequence[Withdrawal], WithdrawalIndex, uint64]:
+    epoch = get_current_epoch(state)
+    validators_limit = min(len(state.validators), MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
+    withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD
+    # There must be at least one space reserved for validator sweep withdrawals
+    assert len(prior_withdrawals) < withdrawals_limit
+
+    processed_count: uint64 = 0
+    withdrawals: List[Withdrawal] = []
+    validator_index = state.next_withdrawal_validator_index
+    for _ in range(validators_limit):
+        all_withdrawals = prior_withdrawals + withdrawals
+        has_reached_limit = len(all_withdrawals) >= withdrawals_limit
+        if has_reached_limit:
+            break
+
+        validator = state.validators[validator_index]
+        balance = get_balance_after_withdrawals(state, validator_index, all_withdrawals)
+        if is_fully_withdrawable_validator(validator, balance, epoch):
+            withdrawals.append(
+                Withdrawal(
+                    index=withdrawal_index,
+                    # [Modified in Gloas:EIP7732]
+                    registry=VALIDATOR_REGISTRY,
+                    registry_index=validator_index,
+                    address=ExecutionAddress(validator.withdrawal_credentials[12:]),
+                    amount=balance,
+                )
+            )
+            withdrawal_index += WithdrawalIndex(1)
+        elif is_partially_withdrawable_validator(validator, balance):
+            withdrawals.append(
+                Withdrawal(
+                    index=withdrawal_index,
+                    # [Modified in Gloas:EIP7732]
+                    registry=VALIDATOR_REGISTRY,
+                    registry_index=validator_index,
+                    address=ExecutionAddress(validator.withdrawal_credentials[12:]),
+                    amount=balance - get_max_effective_balance(validator),
+                )
+            )
+            withdrawal_index += WithdrawalIndex(1)
+
+        validator_index = ValidatorIndex((validator_index + 1) % len(state.validators))
         processed_count += 1
 
     return withdrawals, withdrawal_index, processed_count
@@ -1394,12 +1527,12 @@ def get_expected_withdrawals(state: BeaconState) -> ExpectedWithdrawals:
 def apply_withdrawals(state: BeaconState, withdrawals: Sequence[Withdrawal]) -> None:
     for withdrawal in withdrawals:
         # [Modified in Gloas:EIP7732]
-        if is_builder_index(withdrawal.validator_index):
-            builder_index = convert_validator_index_to_builder_index(withdrawal.validator_index)
+        if withdrawal.registry == BUILDER_REGISTRY:
+            builder_index = BuilderIndex(withdrawal.registry_index)
             builder_balance = state.builders[builder_index].balance
             state.builders[builder_index].balance -= min(withdrawal.amount, builder_balance)
         else:
-            decrease_balance(state, withdrawal.validator_index, withdrawal.amount)
+            decrease_balance(state, ValidatorIndex(withdrawal.registry_index), withdrawal.amount)
 ```
 
 ##### New `update_payload_expected_withdrawals`
@@ -1433,6 +1566,31 @@ def update_next_withdrawal_builder_index(
         next_index = state.next_withdrawal_builder_index + processed_builders_sweep_count
         next_builder_index = BuilderIndex(next_index % len(state.builders))
         state.next_withdrawal_builder_index = next_builder_index
+```
+
+##### Modified `update_next_withdrawal_validator_index`
+
+*Note*: When the payload is full, the final withdrawal is always from the
+validator sweep, so its `registry_index` is the validator index that the next
+sweep should resume after.
+
+```python
+def update_next_withdrawal_validator_index(
+    state: BeaconState, withdrawals: Sequence[Withdrawal]
+) -> None:
+    # Update the next validator index to start the next withdrawal sweep
+    if len(withdrawals) == MAX_WITHDRAWALS_PER_PAYLOAD:
+        # Next sweep starts after the latest withdrawal's validator index
+        # [Modified in Gloas:EIP7732]
+        next_validator_index = ValidatorIndex(
+            (withdrawals[-1].registry_index + 1) % len(state.validators)
+        )
+        state.next_withdrawal_validator_index = next_validator_index
+    else:
+        # Advance sweep by the max length of the sweep if there was not a full set of withdrawals
+        next_index = state.next_withdrawal_validator_index + MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP
+        next_validator_index = ValidatorIndex(next_index % len(state.validators))
+        state.next_withdrawal_validator_index = next_validator_index
 ```
 
 ##### Modified `process_withdrawals`

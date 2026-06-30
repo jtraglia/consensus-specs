@@ -286,7 +286,8 @@ def get_validators_sweep_withdrawals(
             withdrawals.append(
                 Withdrawal(
                     index=withdrawal_index,
-                    validator_index=validator_index,
+                    registry=VALIDATOR_REGISTRY,
+                    registry_index=validator_index,
                     address=ExecutionAddress(validator.withdrawal_credentials[12:]),
                     amount=balance,
                 )
@@ -297,7 +298,8 @@ def get_validators_sweep_withdrawals(
             withdrawals.append(
                 Withdrawal(
                     index=withdrawal_index,
-                    validator_index=validator_index,
+                    registry=VALIDATOR_REGISTRY,
+                    registry_index=validator_index,
                     address=ExecutionAddress(validator.withdrawal_credentials[12:]),
                     # [Modified in EIP8148]
                     amount=balance - get_effective_sweep_threshold(validator, sweep_threshold),
