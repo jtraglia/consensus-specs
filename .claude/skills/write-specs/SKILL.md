@@ -96,9 +96,9 @@ comments cannot. A note should not simply restate how the item now behaves,
 since that is clear from reading the item itself. Use a note only to call out a
 subtle change the reader might otherwise miss.
 
-### Deprecations
+### Removals
 
-If an existing spec item is no longer needed in a newer spec, mark it as
-deprecated by adding its name to the deprecation list for that item's type in
-that spec's `SpecBuilder` class. Define a deprecation only in the spec where the
-item is first dropped. Later specs inherit it automatically.
+If a spec item is no longer needed in a newer spec, record it in that fork's
+`removed.md` file. In the appropriate section, list each item as an inline code
+span in a bullet list. Only record items in the fork where the item is first
+dropped as later forks inherit it automatically.

@@ -85,19 +85,7 @@ def objects_to_spec(
     functions = reduce(
         lambda fns, builder: builder.implement_optimizations(fns), builders, spec_object.functions
     )
-    # Remove deprecated functions
-    deprecate_functions = reduce(
-        lambda obj, builder: obj.union(builder.deprecate_functions()), builders, set()
-    )
-    functions = {k: v for k, v in functions.items() if k not in deprecate_functions}
     functions_spec = "\n\n\n".join(functions.values())
-    # Remove deprecated containers
-    deprecate_containers = reduce(
-        lambda obj, builder: obj.union(builder.deprecate_containers()), builders, set()
-    )
-    ordered_class_objects = {
-        k: v for k, v in ordered_class_objects.items() if k not in deprecate_containers
-    }
     ordered_class_objects_spec = "\n\n\n".join(ordered_class_objects.values())
 
     # Access global dict of config vars for runtime configurables
@@ -164,11 +152,6 @@ def objects_to_spec(
     hardcoded_ssz_dep_constants = reduce(
         lambda obj, builder: {**obj, **builder.hardcoded_ssz_dep_constants()}, builders, {}
     )
-    hardcoded_func_dep_presets = reduce(
-        lambda obj, builder: {**obj, **builder.hardcoded_func_dep_presets(spec_object)},
-        builders,
-        {},
-    )
     # Concatenate all strings
     imports = reduce(
         lambda txt, builder: (txt + "\n\n" + builder.imports(preset_name)).strip("\n"), builders, ""
@@ -187,21 +170,8 @@ def objects_to_spec(
         lambda txt, builder: builder.execution_engine_cls() or txt, builders, ""
     )
 
-    # Remove deprecated constants
-    deprecate_constants = reduce(
-        lambda obj, builder: obj.union(builder.deprecate_constants()), builders, set()
-    )
-    # constant_vars = {k: v for k, v in spec_object.constant_vars.items() if k not in deprecate_constants}
     filtered_ssz_dep_constants = {
-        k: v for k, v in hardcoded_ssz_dep_constants.items() if k not in deprecate_constants
-    }
-    # Remove deprecated presets
-    deprecate_presets = reduce(
-        lambda obj, builder: obj.union(builder.deprecate_presets()), builders, set()
-    )
-    # preset_vars = {k: v for k, v in spec_object.constant_vars.items() if k not in deprecate_constants}
-    filtered_hardcoded_func_dep_presets = {
-        k: v for k, v in hardcoded_func_dep_presets.items() if k not in deprecate_presets
+        k: v for k, v in hardcoded_ssz_dep_constants.items() if k in spec_object.ssz_dep_constants
     }
 
     constant_vars_spec = "# Constant vars\n" + "\n".join(
@@ -214,14 +184,13 @@ def objects_to_spec(
         format_constant(k, v) for k, v in spec_object.preset_vars.items()
     )
     ssz_dep_constants = "\n".join(
-        f"{x} = {hardcoded_ssz_dep_constants[x]}" for x in hardcoded_ssz_dep_constants
+        f"{x} = {filtered_ssz_dep_constants[x]}" for x in filtered_ssz_dep_constants
     )
     ssz_dep_constants_verification = "\n".join(
         f"assert {x} == {spec_object.ssz_dep_constants[x]}" for x in filtered_ssz_dep_constants
     )
     func_dep_presets_verification = "\n".join(
-        f"assert {x} == {spec_object.func_dep_presets[x]}  # noqa: E501"
-        for x in filtered_hardcoded_func_dep_presets
+        f"assert {x} == {value}  # noqa: E501" for x, value in spec_object.func_dep_presets.items()
     )
     spec_strs = [
         imports,
@@ -370,6 +339,9 @@ def combine_spec_objects(spec0: SpecObject, spec1: SpecObject) -> SpecObject:
     func_dep_presets = combine_dicts(spec0.func_dep_presets, spec1.func_dep_presets)
     ssz_objects = combine_ssz_objects(spec0.ssz_objects, spec1.ssz_objects)
     dataclasses = combine_dicts(spec0.dataclasses, spec1.dataclasses)
+    removed = {
+        category: spec0.removed[category] | spec1.removed[category] for category in spec0.removed
+    }
     return SpecObject(
         functions=functions,
         protocols=protocols,
@@ -382,6 +354,41 @@ def combine_spec_objects(spec0: SpecObject, spec1: SpecObject) -> SpecObject:
         func_dep_presets=func_dep_presets,
         ssz_objects=ssz_objects,
         dataclasses=dataclasses,
+        removed=removed,
+    )
+
+
+def apply_removals(spec_object: SpecObject) -> SpecObject:
+    """
+    Drops items that a fork removed, as declared in the `## Removed` sections of
+    its markdown files. Each item type is filtered out of the field(s) that
+    define it. Constants cover plain, preset-dependent, and generalized-index
+    constants. Removing a preset drops its value and its generated derivation
+    check. The config and preset YAML files are never touched.
+    """
+    # The removal map is keyed by the spec object field each item is dropped
+    # from, so every removed item must be defined in that field. This catches
+    # typos and stale entries that would otherwise be ignored.
+    for field, names in spec_object.removed.items():
+        missing = names - set(getattr(spec_object, field))
+        if missing:
+            raise Exception(f"removed {field} not found in spec: {', '.join(sorted(missing))}")
+
+    def drop(items: dict[str, T], field: str) -> dict[str, T]:
+        return {k: v for k, v in items.items() if k not in spec_object.removed[field]}
+
+    return spec_object._replace(
+        functions=drop(spec_object.functions, "functions"),
+        protocols=drop(spec_object.protocols, "protocols"),
+        custom_types=drop(spec_object.custom_types, "custom_types"),
+        constant_vars=drop(spec_object.constant_vars, "constant_vars"),
+        preset_dep_constant_vars=drop(spec_object.preset_dep_constant_vars, "constant_vars"),
+        preset_vars=drop(spec_object.preset_vars, "preset_vars"),
+        config_vars=drop(spec_object.config_vars, "config_vars"),
+        ssz_dep_constants=drop(spec_object.ssz_dep_constants, "constant_vars"),
+        func_dep_presets=drop(spec_object.func_dep_presets, "preset_vars"),
+        ssz_objects=drop(spec_object.ssz_objects, "ssz_objects"),
+        dataclasses=drop(spec_object.dataclasses, "dataclasses"),
     )
 
 
@@ -417,6 +424,7 @@ def finalized_spec_object(spec_object: SpecObject) -> SpecObject:
         func_dep_presets=spec_object.func_dep_presets,
         ssz_objects=ssz_objects,
         dataclasses=spec_object.dataclasses,
+        removed=spec_object.removed,
     )
 
 

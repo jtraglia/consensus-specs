@@ -55,13 +55,13 @@ def test_apply_pending_deposit_over_min_activation_next_increment(spec, state):
     validator_index = len(state.validators)
     # set deposit amount to the next effective balance increment over the limit
     # the validator's effective balance should be set to pre-electra MAX_EFFECTIVE_BALANCE
-    amount = spec.MAX_EFFECTIVE_BALANCE + spec.EFFECTIVE_BALANCE_INCREMENT
+    amount = spec.phase0.MAX_EFFECTIVE_BALANCE + spec.EFFECTIVE_BALANCE_INCREMENT
     pending_deposit = prepare_pending_deposit(spec, validator_index, amount, signed=True)
 
     yield from run_pending_deposit_applying(spec, state, pending_deposit, validator_index)
 
     # check validator's effective balance
-    assert state.validators[validator_index].effective_balance == spec.MAX_EFFECTIVE_BALANCE
+    assert state.validators[validator_index].effective_balance == spec.phase0.MAX_EFFECTIVE_BALANCE
 
 
 @with_electra_and_later

@@ -124,7 +124,7 @@ def default_balances(spec: Spec, num_validators=None):
     """
     if num_validators is None:
         num_validators = spec.SLOTS_PER_EPOCH * 8
-    return [spec.MAX_EFFECTIVE_BALANCE] * num_validators
+    return [default_activation_threshold(spec)] * num_validators
 
 
 def default_balances_electra(spec: Spec):
@@ -147,7 +147,7 @@ def scaled_churn_balances_min_churn_limit(spec: Spec):
     Usage: `@with_custom_state(balances_fn=scaled_churn_balances_min_churn_limit, ...)`
     """
     num_validators = spec.config.CHURN_LIMIT_QUOTIENT * (spec.config.MIN_PER_EPOCH_CHURN_LIMIT + 2)
-    return [spec.MAX_EFFECTIVE_BALANCE] * num_validators
+    return [default_activation_threshold(spec)] * num_validators
 
 
 def scaled_churn_balances_equal_activation_churn_limit(spec: Spec):
@@ -166,7 +166,7 @@ def scaled_churn_balances_equal_activation_churn_limit(spec: Spec):
     num_validators = spec.config.CHURN_LIMIT_QUOTIENT * (
         spec.config.MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT
     )
-    return [spec.MAX_EFFECTIVE_BALANCE] * num_validators
+    return [default_activation_threshold(spec)] * num_validators
 
 
 def scaled_churn_balances_exceed_activation_churn_limit(spec: Spec):
@@ -189,7 +189,7 @@ def scaled_churn_balances_exceed_activation_churn_limit(spec: Spec):
     num_validators = spec.config.CHURN_LIMIT_QUOTIENT * (
         spec.config.MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT + 2
     )
-    return [spec.MAX_EFFECTIVE_BALANCE] * num_validators
+    return [default_activation_threshold(spec)] * num_validators
 
 
 def scaled_churn_balances_exceed_activation_exit_churn_limit(spec: Spec):
@@ -236,7 +236,9 @@ def misc_balances(spec: Spec):
     Usage: `@with_custom_state(balances_fn=misc_balances, ...)`
     """
     num_validators = spec.SLOTS_PER_EPOCH * 8
-    balances = [spec.MAX_EFFECTIVE_BALANCE * 2 * i // num_validators for i in range(num_validators)]
+    balances = [
+        default_activation_threshold(spec) * 2 * i // num_validators for i in range(num_validators)
+    ]
     rng = Random(1234)
     rng.shuffle(balances)
     return balances
@@ -268,7 +270,7 @@ def misc_balances_in_default_range_with_many_validators(spec: Spec):
     num_validators = spec.SLOTS_PER_EPOCH * 8 * 2
     floor = spec.config.EJECTION_BALANCE + spec.EFFECTIVE_BALANCE_INCREMENT
     balances = [
-        max(spec.MAX_EFFECTIVE_BALANCE * 2 * i // num_validators, floor)
+        max(default_activation_threshold(spec) * 2 * i // num_validators, floor)
         for i in range(num_validators)
     ]
     rng = Random(1234)
@@ -302,7 +304,7 @@ def large_validator_set(spec: Spec):
     num_validators = (
         2 * spec.SLOTS_PER_EPOCH * spec.MAX_COMMITTEES_PER_SLOT * spec.TARGET_COMMITTEE_SIZE
     )
-    return [spec.MAX_EFFECTIVE_BALANCE] * num_validators
+    return [default_activation_threshold(spec)] * num_validators
 
 
 def single_phase(fn):

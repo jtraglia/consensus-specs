@@ -26,6 +26,7 @@ class SpecObject(NamedTuple):
     func_dep_presets: dict[str, str]  # the constants that depend on functions
     ssz_objects: dict[str, str]
     dataclasses: dict[str, str]
+    removed: dict[str, set[str]]
 
 
 class BuildTarget(NamedTuple):

@@ -47,25 +47,5 @@ class BaseSpecBuilder(ABC):
         return {}
 
     @classmethod
-    def hardcoded_func_dep_presets(cls, spec_object) -> dict[str, str]:
-        return {}
-
-    @classmethod
     def implement_optimizations(cls, functions: dict[str, str]) -> dict[str, str]:
         return functions
-
-    @classmethod
-    def deprecate_constants(cls) -> set[str]:
-        return set()
-
-    @classmethod
-    def deprecate_presets(cls) -> set[str]:
-        return set()
-
-    @classmethod
-    def deprecate_containers(cls) -> set[str]:
-        return set()
-
-    @classmethod
-    def deprecate_functions(cls) -> set[str]:
-        return set()

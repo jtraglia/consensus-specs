@@ -11,6 +11,7 @@ from ruamel.yaml import YAML
 
 from pysetup.constants import PHASE0
 from pysetup.helpers import (
+    apply_removals,
     combine_spec_objects,
     dependency_order_class_objects,
     finalized_spec_object,
@@ -89,6 +90,7 @@ def build_spec(
     spec_object = all_specs[0]
     for value in all_specs[1:]:
         spec_object = combine_spec_objects(spec_object, value)
+    spec_object = apply_removals(spec_object)
     spec_object = finalized_spec_object(spec_object)
 
     class_objects = {**spec_object.ssz_objects, **spec_object.dataclasses}
