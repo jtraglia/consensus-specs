@@ -16,11 +16,11 @@ from eth_consensus_specs.test.helpers.fork_transition import do_fork_generate
 from eth_consensus_specs.test.helpers.forks import get_min_activation_balance
 from eth_consensus_specs.test.helpers.state import next_epoch, state_transition_and_sign_block
 from eth_consensus_specs.test.helpers.typing import SpecForkName
-from eth_consensus_specs.test.utils.utils import with_meta_tags
-from tests.infra.template_test import (
+from eth_consensus_specs.test.utils.template_test import (
     template_test_upgrades_all,
     template_test_upgrades_from_to,
 )
+from eth_consensus_specs.test.utils.utils import with_meta_tags
 
 
 @template_test_upgrades_all

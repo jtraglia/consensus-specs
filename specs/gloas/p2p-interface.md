@@ -36,7 +36,7 @@
       - [ExecutionPayloadEnvelopesByRange v1](#executionpayloadenvelopesbyrange-v1)
       - [ExecutionPayloadEnvelopesByRoot v1](#executionpayloadenvelopesbyroot-v1)
 - [Removed](#removed)
-  - [Preset verifications](#preset-verifications)
+  - [Presets](#presets)
   - [Functions](#functions)
 
 <!-- mdformat-toc end -->
