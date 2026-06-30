@@ -108,9 +108,7 @@ bullet list. Record a removal only in the fork where the item is first dropped.
 Later forks inherit it automatically.
 
 The `presets/` and `configs/` YAML files are never touched, only the generated
-spec. There is also a `Preset verifications` subsection for the rare case where
-a preset keeps its value but its generated derivation check must be dropped (for
-example when the structure it was derived from no longer exists).
+spec.
 
 For example, to drop a function in Capella:
 

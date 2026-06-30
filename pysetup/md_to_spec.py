@@ -22,9 +22,6 @@ REMOVED_CATEGORIES = {
     "types": "custom_types",
     "constants": "constants",
     "presets": "presets",
-    # A preset whose value is retained but whose generated derivation check is
-    # dropped (e.g. when the structure it was derived from no longer exists).
-    "preset verifications": "preset_verifications",
     "configuration": "configuration",
     "containers": "containers",
     "dataclasses": "dataclasses",

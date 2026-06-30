@@ -181,13 +181,11 @@ def objects_to_spec(
         for k, v in hardcoded_ssz_dep_constants.items()
         if k not in spec_object.removed["constants"]
     }
-    # Drop the verification of presets this fork (or an earlier one) removed,
-    # including presets whose value is kept but whose derivation is dropped
-    dropped_preset_verifications = (
-        spec_object.removed["presets"] | spec_object.removed["preset_verifications"]
-    )
+    # Drop the verification of presets this fork (or an earlier one) removed
     filtered_hardcoded_func_dep_presets = {
-        k: v for k, v in hardcoded_func_dep_presets.items() if k not in dropped_preset_verifications
+        k: v
+        for k, v in hardcoded_func_dep_presets.items()
+        if k not in spec_object.removed["presets"]
     }
 
     constant_vars_spec = "# Constant vars\n" + "\n".join(
@@ -380,16 +378,13 @@ def apply_removals(spec_object: SpecObject) -> SpecObject:
     Drops items that a fork removed, as declared in the `## Removed` sections of
     its markdown files. Each item type is filtered out of the field(s) that
     define it. Constants cover plain, preset-dependent, and generalized-index
-    constants. Removing a preset drops its value as well. A preset verification
-    keeps the value but drops only the generated derivation check (along with its
-    hardcoded counterpart in objects_to_spec). The config and preset YAML files
-    are never touched.
+    constants. Removing a preset drops its value and its generated derivation
+    check. The config and preset YAML files are never touched.
     """
     removed = spec_object.removed
 
-    def drop(items: dict[str, T], *categories: str) -> dict[str, T]:
-        names = set().union(*(removed[category] for category in categories))
-        return {k: v for k, v in items.items() if k not in names}
+    def drop(items: dict[str, T], category: str) -> dict[str, T]:
+        return {k: v for k, v in items.items() if k not in removed[category]}
 
     return spec_object._replace(
         functions=drop(spec_object.functions, "functions"),
@@ -400,7 +395,7 @@ def apply_removals(spec_object: SpecObject) -> SpecObject:
         preset_vars=drop(spec_object.preset_vars, "presets"),
         config_vars=drop(spec_object.config_vars, "configuration"),
         ssz_dep_constants=drop(spec_object.ssz_dep_constants, "constants"),
-        func_dep_presets=drop(spec_object.func_dep_presets, "presets", "preset_verifications"),
+        func_dep_presets=drop(spec_object.func_dep_presets, "presets"),
         ssz_objects=drop(spec_object.ssz_objects, "containers"),
         dataclasses=drop(spec_object.dataclasses, "dataclasses"),
     )

@@ -36,7 +36,6 @@
       - [ExecutionPayloadEnvelopesByRange v1](#executionpayloadenvelopesbyrange-v1)
       - [ExecutionPayloadEnvelopesByRoot v1](#executionpayloadenvelopesbyroot-v1)
 - [Removed](#removed)
-  - [Presets](#presets)
   - [Preset verifications](#preset-verifications)
   - [Functions](#functions)
 
@@ -673,11 +672,9 @@ Clients MAY limit the number of payload envelopes in the response.
 ### Presets
 
 - `KZG_COMMITMENT_INCLUSION_PROOF_DEPTH`
-
-### Preset verifications
-
 - `KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH`
 
 ### Functions
 
 - `validate_data_column_sidecar_gossip`
+- `verify_data_column_sidecar_inclusion_proof`

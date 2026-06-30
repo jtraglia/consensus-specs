@@ -4,6 +4,7 @@ from eth_consensus_specs.test.context import (
     spec_state_test,
     with_electra_and_later,
 )
+from eth_consensus_specs.test.helpers.constants import ELECTRA
 from eth_consensus_specs.test.helpers.keys import pubkeys
 from eth_consensus_specs.utils import bls
 from tests.infra.helpers.deposit_requests import (
@@ -85,6 +86,8 @@ def test_assert_validator_deposit():
     UNSET_VALUE = 2**64 - 1
 
     spec = MagicMock()
+    # A pre-fulu fork, so the helper runs the deposit_requests_start_index check.
+    spec.fork = ELECTRA
     spec.UNSET_DEPOSIT_REQUESTS_START_INDEX = UNSET_VALUE
 
     deposit_request = MagicMock()
@@ -129,6 +132,8 @@ def test_assert_process_deposit_request_start_index_set():
     UNSET_VALUE = 2**64 - 1
 
     spec = MagicMock()
+    # A pre-fulu fork, so the helper runs the deposit_requests_start_index check.
+    spec.fork = ELECTRA
     spec.UNSET_DEPOSIT_REQUESTS_START_INDEX = UNSET_VALUE
 
     deposit_request = MagicMock()
@@ -175,6 +180,8 @@ def test_assert_process_deposit_request_start_index_unchanged():
     initial_start_index = 100
 
     spec = MagicMock()
+    # A pre-fulu fork, so the helper runs the deposit_requests_start_index check.
+    spec.fork = ELECTRA
     spec.UNSET_DEPOSIT_REQUESTS_START_INDEX = UNSET_VALUE
 
     deposit_request = MagicMock()
