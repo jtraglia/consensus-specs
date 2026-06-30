@@ -170,8 +170,6 @@ def objects_to_spec(
         lambda txt, builder: builder.execution_engine_cls() or txt, builders, ""
     )
 
-    # Keep only the ssz-dependent constants the spec still defines. Anything a
-    # fork removed was already dropped from the spec object by apply_removals.
     filtered_ssz_dep_constants = {
         k: v for k, v in hardcoded_ssz_dep_constants.items() if k in spec_object.ssz_dep_constants
     }
