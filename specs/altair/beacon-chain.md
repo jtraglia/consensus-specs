@@ -50,10 +50,6 @@
     - [Slashings](#slashings)
     - [Participation flags updates](#participation-flags-updates)
     - [Sync committee updates](#sync-committee-updates)
-- [Removed](#removed)
-  - [Presets](#presets)
-  - [Containers](#containers-1)
-  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -786,34 +782,3 @@ def process_sync_committee_updates(state: BeaconState) -> None:
         state.current_sync_committee = state.next_sync_committee
         state.next_sync_committee = get_next_sync_committee(state)
 ```
-
-## Removed
-
-### Presets
-
-- `INACTIVITY_PENALTY_QUOTIENT`
-- `MIN_SLASHING_PENALTY_QUOTIENT`
-- `PROPORTIONAL_SLASHING_MULTIPLIER`
-- `PROPOSER_REWARD_QUOTIENT`
-
-### Containers
-
-- `PendingAttestation`
-
-### Functions
-
-- `get_attestation_component_deltas`
-- `get_attestation_deltas`
-- `get_attesting_balance`
-- `get_head_deltas`
-- `get_inclusion_delay_deltas`
-- `get_matching_head_attestations`
-- `get_matching_source_attestations`
-- `get_matching_target_attestations`
-- `get_proposer_reward`
-- `get_source_deltas`
-- `get_target_deltas`
-- `get_unslashed_attesting_indices`
-- `initialize_beacon_state_from_eth1`
-- `is_valid_genesis_state`
-- `process_participation_record_updates`

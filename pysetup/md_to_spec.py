@@ -16,14 +16,14 @@ from marko.inline import CodeSpan
 
 from .typing import ProtocolDefinition, SpecObject, VariableDefinition
 
-# Maps a "Removed" subsection heading (lowercased) to the spec item type it
-# drops. There is one entry per kind of item a spec file can define.
+# Maps a "Removed" subsection heading (lowercased) to the SpecObject field it
+# drops from. There is one entry per kind of item a spec file can define.
 REMOVED_CATEGORIES = {
     "types": "custom_types",
-    "constants": "constants",
-    "presets": "presets",
-    "configuration": "configuration",
-    "containers": "containers",
+    "constants": "constant_vars",
+    "presets": "preset_vars",
+    "configuration": "config_vars",
+    "containers": "ssz_objects",
     "dataclasses": "dataclasses",
     "functions": "functions",
     "protocols": "protocols",

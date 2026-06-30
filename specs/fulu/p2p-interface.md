@@ -41,9 +41,6 @@
       - [Next fork digest](#next-fork-digest)
 - [Peer scoring](#peer-scoring)
 - [Supernodes](#supernodes)
-- [Removed](#removed)
-  - [Containers](#containers-1)
-  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -914,16 +911,3 @@ is connected to validator(s) with a combined balance greater than or equal to
 may altruistically be a supernode. Therefore, there are expected to be many
 (hundreds) of supernodes on mainnet and it is likely (though not necessary) for
 a node to be connected to several of these by chance.
-
-## Removed
-
-### Containers
-
-- `BlobIdentifier`
-- `BlobSidecar`
-
-### Functions
-
-- `compute_max_request_blob_sidecars`
-- `validate_blob_sidecar_gossip`
-- `verify_blob_sidecar_inclusion_proof`

@@ -29,10 +29,6 @@
     - [Modified `process_epoch`](#modified-process_epoch)
     - [Modified `process_pending_deposits`](#modified-process_pending_deposits)
     - [New `process_proposer_lookahead`](#new-process_proposer_lookahead)
-- [Removed](#removed)
-  - [Types](#types)
-  - [Constants](#constants)
-  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -468,18 +464,3 @@ def process_proposer_lookahead(state: BeaconState) -> None:
     )
     state.proposer_lookahead[last_epoch_start:] = last_epoch_proposers
 ```
-
-## Removed
-
-### Types
-
-- `BlobIndex`
-
-### Constants
-
-- `UNSET_DEPOSIT_REQUESTS_START_INDEX`
-
-### Functions
-
-- `apply_deposit`
-- `process_deposit`

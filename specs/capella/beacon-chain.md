@@ -43,10 +43,6 @@
     - [Modified `process_execution_payload`](#modified-process_execution_payload)
     - [Modified `process_operations`](#modified-process_operations)
     - [New `process_bls_to_execution_change`](#new-process_bls_to_execution_change)
-- [Removed](#removed)
-  - [Constants](#constants-1)
-  - [Containers](#containers-1)
-  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -602,20 +598,3 @@ def process_bls_to_execution_change(
         ETH1_ADDRESS_WITHDRAWAL_PREFIX + b"\x00" * 11 + address_change.to_execution_address
     )
 ```
-
-## Removed
-
-### Constants
-
-- `EMPTY_BLOCK_HASH`
-
-### Containers
-
-- `HistoricalBatch`
-
-### Functions
-
-- `is_execution_enabled`
-- `is_merge_transition_block`
-- `is_merge_transition_complete`
-- `process_historical_roots_update`

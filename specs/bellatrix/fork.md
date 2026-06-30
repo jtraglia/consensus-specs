@@ -7,8 +7,6 @@
 - [Fork to Bellatrix](#fork-to-bellatrix)
   - [Fork trigger](#fork-trigger)
   - [Upgrading the state](#upgrading-the-state)
-- [Removed](#removed)
-  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -91,10 +89,3 @@ def upgrade_to_bellatrix(pre: altair.BeaconState) -> BeaconState:
 
     return post
 ```
-
-## Removed
-
-### Functions
-
-- `translate_participation`
-- `upgrade_to_altair`

@@ -99,8 +99,8 @@ subtle change the reader might otherwise miss.
 ### Removals
 
 If an existing spec item is no longer needed in a newer spec, record it in a
-`## Removed` section at the bottom of the file. Add the section to the file in
-the fork that drops the item, matching the file where it was previously defined.
-The section has a subsection for each item type that is dropped. List each
-removed item as an inline code span in a bullet list. Record a removal only in
-the fork where the item is first dropped. Later forks inherit it automatically.
+`## Removed` section in that fork's `removals.md` file. Each fork keeps all of
+its removals in this single file. The section has a subsection for each item
+type that is dropped. List each removed item as an inline code span in a bullet
+list. Record a removal only in the fork where the item is first dropped. Later
+forks inherit it automatically.

@@ -35,9 +35,6 @@
       - [BeaconBlocksByRoot v2](#beaconblocksbyroot-v2)
       - [ExecutionPayloadEnvelopesByRange v1](#executionpayloadenvelopesbyrange-v1)
       - [ExecutionPayloadEnvelopesByRoot v1](#executionpayloadenvelopesbyroot-v1)
-- [Removed](#removed)
-  - [Presets](#presets)
-  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -666,15 +663,3 @@ payload envelope in the response.
 
 Clients MUST respond with at least one payload envelope, if they have it.
 Clients MAY limit the number of payload envelopes in the response.
-
-## Removed
-
-### Presets
-
-- `KZG_COMMITMENT_INCLUSION_PROOF_DEPTH`
-- `KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH`
-
-### Functions
-
-- `validate_data_column_sidecar_gossip`
-- `verify_data_column_sidecar_inclusion_proof`

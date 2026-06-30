@@ -10,8 +10,6 @@
   - [Modified `PayloadAttributes`](#modified-payloadattributes)
 - [Handlers](#handlers)
   - [Modified `on_block`](#modified-on_block)
-- [Removed](#removed)
-  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -112,9 +110,3 @@ def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
     # Eagerly compute unrealized justification and finality.
     compute_pulled_up_tip(store, block_root)
 ```
-
-## Removed
-
-### Functions
-
-- `validate_merge_block`

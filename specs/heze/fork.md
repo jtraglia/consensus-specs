@@ -8,8 +8,6 @@
 - [Configuration](#configuration)
 - [Fork to Heze](#fork-to-heze)
   - [Upgrading the state](#upgrading-the-state)
-- [Removed](#removed)
-  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -94,11 +92,3 @@ def upgrade_to_heze(pre: gloas.BeaconState) -> BeaconState:
 
     return post
 ```
-
-## Removed
-
-### Functions
-
-- `initialize_ptc_window`
-- `onboard_builders_from_pending_deposits`
-- `upgrade_to_gloas`

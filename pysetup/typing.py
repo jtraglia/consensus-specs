@@ -27,8 +27,9 @@ class SpecObject(NamedTuple):
     ssz_objects: dict[str, str]
     dataclasses: dict[str, str]
     # Names of items defined in a previous fork that this fork removes, keyed by
-    # item type (e.g. "custom_types", "constants", "presets", "configuration",
-    # "containers", "dataclasses", "functions", "protocols").
+    # the field they are dropped from (e.g. "custom_types", "constant_vars",
+    # "preset_vars", "config_vars", "ssz_objects", "dataclasses", "functions",
+    # "protocols").
     removed: dict[str, set[str]]
 
 

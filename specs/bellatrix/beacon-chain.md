@@ -39,8 +39,6 @@
       - [`process_execution_payload`](#process_execution_payload)
   - [Epoch processing](#epoch-processing)
     - [Slashings](#slashings)
-- [Removed](#removed)
-  - [Presets](#presets)
 
 <!-- mdformat-toc end -->
 
@@ -451,11 +449,3 @@ def process_slashings(state: BeaconState) -> None:
             penalty = penalty_numerator // total_balance * increment
             decrease_balance(state, ValidatorIndex(index), penalty)
 ```
-
-## Removed
-
-### Presets
-
-- `INACTIVITY_PENALTY_QUOTIENT_ALTAIR`
-- `MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR`
-- `PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR`

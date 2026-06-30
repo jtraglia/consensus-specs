@@ -368,41 +368,28 @@ def apply_removals(spec_object: SpecObject) -> SpecObject:
     constants. Removing a preset drops its value and its generated derivation
     check. The config and preset YAML files are never touched.
     """
-    removed = spec_object.removed
-
-    # The spec field that defines each kind of removable item.
-    sources = {
-        "functions": spec_object.functions,
-        "protocols": spec_object.protocols,
-        "custom_types": spec_object.custom_types,
-        "constants": spec_object.constant_vars,
-        "presets": spec_object.preset_vars,
-        "configuration": spec_object.config_vars,
-        "containers": spec_object.ssz_objects,
-        "dataclasses": spec_object.dataclasses,
-    }
-
-    # Every removed item must be defined under the section it is removed from.
-    # This catches typos and stale entries that would otherwise be ignored.
-    for category, names in removed.items():
-        missing = names - set(sources[category])
+    # The removal map is keyed by the spec object field each item is dropped
+    # from, so every removed item must be defined in that field. This catches
+    # typos and stale entries that would otherwise be ignored.
+    for field, names in spec_object.removed.items():
+        missing = names - set(getattr(spec_object, field))
         if missing:
-            raise Exception(f"removed {category} not found in spec: {', '.join(sorted(missing))}")
+            raise Exception(f"removed {field} not found in spec: {', '.join(sorted(missing))}")
 
-    def drop(items: dict[str, T], category: str) -> dict[str, T]:
-        return {k: v for k, v in items.items() if k not in removed[category]}
+    def drop(items: dict[str, T], field: str) -> dict[str, T]:
+        return {k: v for k, v in items.items() if k not in spec_object.removed[field]}
 
     return spec_object._replace(
         functions=drop(spec_object.functions, "functions"),
         protocols=drop(spec_object.protocols, "protocols"),
         custom_types=drop(spec_object.custom_types, "custom_types"),
-        constant_vars=drop(spec_object.constant_vars, "constants"),
-        preset_dep_constant_vars=drop(spec_object.preset_dep_constant_vars, "constants"),
-        preset_vars=drop(spec_object.preset_vars, "presets"),
-        config_vars=drop(spec_object.config_vars, "configuration"),
-        ssz_dep_constants=drop(spec_object.ssz_dep_constants, "constants"),
-        func_dep_presets=drop(spec_object.func_dep_presets, "presets"),
-        ssz_objects=drop(spec_object.ssz_objects, "containers"),
+        constant_vars=drop(spec_object.constant_vars, "constant_vars"),
+        preset_dep_constant_vars=drop(spec_object.preset_dep_constant_vars, "constant_vars"),
+        preset_vars=drop(spec_object.preset_vars, "preset_vars"),
+        config_vars=drop(spec_object.config_vars, "config_vars"),
+        ssz_dep_constants=drop(spec_object.ssz_dep_constants, "constant_vars"),
+        func_dep_presets=drop(spec_object.func_dep_presets, "preset_vars"),
+        ssz_objects=drop(spec_object.ssz_objects, "ssz_objects"),
         dataclasses=drop(spec_object.dataclasses, "dataclasses"),
     )
 

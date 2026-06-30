@@ -16,8 +16,6 @@
       - [BLS to execution changes](#bls-to-execution-changes)
 - [Enabling validator withdrawals](#enabling-validator-withdrawals)
   - [Changing from BLS to execution withdrawal credentials](#changing-from-bls-to-execution-withdrawal-credentials)
-- [Removed](#removed)
-  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -183,9 +181,3 @@ the automated withdrawal process.
 *Note*: A node *should* prioritize locally received `BLSToExecutionChange`
 operations to ensure these changes make it on-chain through self published
 blocks even if the rest of the network censors.
-
-## Removed
-
-### Functions
-
-- `get_terminal_pow_block`

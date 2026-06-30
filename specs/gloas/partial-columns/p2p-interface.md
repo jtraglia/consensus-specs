@@ -12,9 +12,6 @@
   - [The gossip domain: gossipsub](#the-gossip-domain-gossipsub)
     - [Blob subnets](#blob-subnets)
       - [Modified `data_column_sidecar_{subnet_id}` (partial messages)](#modified-data_column_sidecar_subnet_id-partial-messages)
-- [Removed](#removed)
-  - [Containers](#containers-1)
-  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -128,14 +125,3 @@ as the bid contains the KZG commitments.
   header check above for more details.
 - _[IGNORE]_ The corresponding header is from a slot greater than the latest
   finalized slot. See related header check above for more details.
-
-## Removed
-
-### Containers
-
-- `PartialDataColumnHeader`
-
-### Functions
-
-- `validate_partial_data_column_sidecar_gossip`
-- `verify_partial_data_column_header_inclusion_proof`

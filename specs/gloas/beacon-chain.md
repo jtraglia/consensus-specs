@@ -116,9 +116,6 @@
         - [New `process_payload_attestation`](#new-process_payload_attestation)
       - [Proposer slashing](#proposer-slashing)
         - [Modified `process_proposer_slashing`](#modified-process_proposer_slashing)
-- [Removed](#removed)
-  - [Containers](#containers-1)
-  - [Functions](#functions)
 
 <!-- mdformat-toc end -->
 
@@ -1897,16 +1894,3 @@ def process_proposer_slashing(state: BeaconState, proposer_slashing: ProposerSla
 
     slash_validator(state, header_1.proposer_index)
 ```
-
-## Removed
-
-### Containers
-
-- `ExecutionPayloadHeader`
-
-### Functions
-
-- `compute_proposer_index`
-- `get_activation_exit_churn_limit`
-- `get_balance_churn_limit`
-- `process_execution_payload`
