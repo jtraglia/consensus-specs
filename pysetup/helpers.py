@@ -370,28 +370,22 @@ def apply_removals(spec_object: SpecObject) -> SpecObject:
     """
     removed = spec_object.removed
 
-    # The field(s) that may define each kind of removable item. Constants span
-    # plain, preset-dependent, and ssz-dependent constants. Presets span plain
-    # and function-dependent presets.
+    # The spec field that defines each kind of removable item.
     sources = {
-        "functions": [spec_object.functions],
-        "protocols": [spec_object.protocols],
-        "custom_types": [spec_object.custom_types],
-        "constants": [
-            spec_object.constant_vars,
-            spec_object.preset_dep_constant_vars,
-            spec_object.ssz_dep_constants,
-        ],
-        "presets": [spec_object.preset_vars, spec_object.func_dep_presets],
-        "configuration": [spec_object.config_vars],
-        "containers": [spec_object.ssz_objects],
-        "dataclasses": [spec_object.dataclasses],
+        "functions": spec_object.functions,
+        "protocols": spec_object.protocols,
+        "custom_types": spec_object.custom_types,
+        "constants": spec_object.constant_vars,
+        "presets": spec_object.preset_vars,
+        "configuration": spec_object.config_vars,
+        "containers": spec_object.ssz_objects,
+        "dataclasses": spec_object.dataclasses,
     }
 
     # Every removed item must be defined under the section it is removed from.
     # This catches typos and stale entries that would otherwise be ignored.
     for category, names in removed.items():
-        missing = names - set().union(*sources[category])
+        missing = names - set(sources[category])
         if missing:
             raise Exception(f"removed {category} not found in spec: {', '.join(sorted(missing))}")
 
