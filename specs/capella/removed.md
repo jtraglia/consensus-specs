@@ -1,4 +1,4 @@
-# Capella -- Removals
+# Capella -- Removed
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 

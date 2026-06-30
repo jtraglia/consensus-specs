@@ -1,4 +1,4 @@
-# Heze -- Removals
+# Heze -- Removed
 
 *Note*: This document is a work-in-progress for researchers and implementers.
 

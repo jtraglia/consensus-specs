@@ -1,4 +1,4 @@
-# Bellatrix -- Removals
+# Bellatrix -- Removed
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 

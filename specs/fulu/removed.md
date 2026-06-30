@@ -1,4 +1,4 @@
-# Fulu -- Removals
+# Fulu -- Removed
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
