@@ -152,11 +152,6 @@ def objects_to_spec(
     hardcoded_ssz_dep_constants = reduce(
         lambda obj, builder: {**obj, **builder.hardcoded_ssz_dep_constants()}, builders, {}
     )
-    hardcoded_func_dep_presets = reduce(
-        lambda obj, builder: {**obj, **builder.hardcoded_func_dep_presets(spec_object)},
-        builders,
-        {},
-    )
     # Concatenate all strings
     imports = reduce(
         lambda txt, builder: (txt + "\n\n" + builder.imports(preset_name)).strip("\n"), builders, ""
@@ -175,17 +170,10 @@ def objects_to_spec(
         lambda txt, builder: builder.execution_engine_cls() or txt, builders, ""
     )
 
-    # Drop the verification of constants this fork (or an earlier one) removed
+    # Keep only the ssz-dependent constants the spec still defines. Anything a
+    # fork removed was already dropped from the spec object by apply_removals.
     filtered_ssz_dep_constants = {
-        k: v
-        for k, v in hardcoded_ssz_dep_constants.items()
-        if k not in spec_object.removed["constants"]
-    }
-    # Drop the verification of presets this fork (or an earlier one) removed
-    filtered_hardcoded_func_dep_presets = {
-        k: v
-        for k, v in hardcoded_func_dep_presets.items()
-        if k not in spec_object.removed["presets"]
+        k: v for k, v in hardcoded_ssz_dep_constants.items() if k in spec_object.ssz_dep_constants
     }
 
     constant_vars_spec = "# Constant vars\n" + "\n".join(
@@ -204,8 +192,7 @@ def objects_to_spec(
         f"assert {x} == {spec_object.ssz_dep_constants[x]}" for x in filtered_ssz_dep_constants
     )
     func_dep_presets_verification = "\n".join(
-        f"assert {x} == {spec_object.func_dep_presets[x]}  # noqa: E501"
-        for x in filtered_hardcoded_func_dep_presets
+        f"assert {x} == {value}  # noqa: E501" for x, value in spec_object.func_dep_presets.items()
     )
     spec_strs = [
         imports,
@@ -382,6 +369,31 @@ def apply_removals(spec_object: SpecObject) -> SpecObject:
     check. The config and preset YAML files are never touched.
     """
     removed = spec_object.removed
+
+    # The field(s) that may define each kind of removable item. Constants span
+    # plain, preset-dependent, and ssz-dependent constants. Presets span plain
+    # and function-dependent presets.
+    sources = {
+        "functions": [spec_object.functions],
+        "protocols": [spec_object.protocols],
+        "custom_types": [spec_object.custom_types],
+        "constants": [
+            spec_object.constant_vars,
+            spec_object.preset_dep_constant_vars,
+            spec_object.ssz_dep_constants,
+        ],
+        "presets": [spec_object.preset_vars, spec_object.func_dep_presets],
+        "configuration": [spec_object.config_vars],
+        "containers": [spec_object.ssz_objects],
+        "dataclasses": [spec_object.dataclasses],
+    }
+
+    # Every removed item must be defined under the section it is removed from.
+    # This catches typos and stale entries that would otherwise be ignored.
+    for category, names in removed.items():
+        missing = names - set().union(*sources[category])
+        if missing:
+            raise Exception(f"removed {category} not found in spec: {', '.join(sorted(missing))}")
 
     def drop(items: dict[str, T], category: str) -> dict[str, T]:
         return {k: v for k, v in items.items() if k not in removed[category]}

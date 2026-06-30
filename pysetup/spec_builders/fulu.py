@@ -47,11 +47,3 @@ class CosetEvals(list):
 def retrieve_column_sidecars(beacon_block_root: Root) -> Sequence[DataColumnSidecar]:
     return []
 """
-
-    @classmethod
-    def hardcoded_func_dep_presets(cls, spec_object) -> dict[str, str]:
-        name = "KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH"
-        # The preset may have been removed by a later fork.
-        if name not in spec_object.preset_vars:
-            return {}
-        return {name: spec_object.preset_vars[name].value}

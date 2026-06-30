@@ -75,11 +75,3 @@ class NoopExecutionEngine(ExecutionEngine):
 
 
 EXECUTION_ENGINE = NoopExecutionEngine()"""
-
-    @classmethod
-    def hardcoded_func_dep_presets(cls, spec_object) -> dict[str, str]:
-        name = "KZG_COMMITMENT_INCLUSION_PROOF_DEPTH"
-        # The preset may have been removed by a later fork.
-        if name not in spec_object.preset_vars:
-            return {}
-        return {name: spec_object.preset_vars[name].value}

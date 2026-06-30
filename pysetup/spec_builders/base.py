@@ -47,9 +47,5 @@ class BaseSpecBuilder(ABC):
         return {}
 
     @classmethod
-    def hardcoded_func_dep_presets(cls, spec_object) -> dict[str, str]:
-        return {}
-
-    @classmethod
     def implement_optimizations(cls, functions: dict[str, str]) -> dict[str, str]:
         return functions

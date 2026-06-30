@@ -125,7 +125,6 @@ class MarkdownToSpec:
     def _process_heading(self, heading: Heading) -> None:
         """
         Extracts the section name from the heading and updates current_heading_name for context.
-        Also tracks the "Removed" section and its item-type subsections.
         """
         self.current_heading_name = _get_name_from_heading(heading)
 
