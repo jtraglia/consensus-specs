@@ -1,16 +1,13 @@
 from random import Random
 
 from eth_consensus_specs.test.context import expect_assertion_error
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.epoch_processing import (
     run_epoch_processing_from,
     run_epoch_processing_to,
     run_process_slots_up_to_epoch_boundary,
 )
-from eth_consensus_specs.test.helpers.forks import (
-    get_min_activation_balance,
-    is_post_altair,
-    is_post_electra,
-)
+from eth_consensus_specs.test.helpers.forks import is_post_altair, is_post_electra
 from eth_consensus_specs.test.helpers.keys import (
     builder_pubkey_to_privkey,
     builder_pubkeys,

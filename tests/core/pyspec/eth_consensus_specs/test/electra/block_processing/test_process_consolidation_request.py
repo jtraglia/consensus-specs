@@ -8,8 +8,9 @@ from eth_consensus_specs.test.context import (
     with_electra_and_later,
     with_presets,
 )
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.constants import MINIMAL
-from eth_consensus_specs.test.helpers.forks import get_min_activation_balance, is_post_gloas
+from eth_consensus_specs.test.helpers.forks import is_post_gloas
 from eth_consensus_specs.test.helpers.withdrawals import (
     set_compounding_withdrawal_credential,
     set_compounding_withdrawal_credential_with_balance,

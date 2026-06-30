@@ -1,7 +1,7 @@
 from eth_consensus_specs.test.context import spec_state_test, with_fulu_and_later
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.block import build_empty_block_for_next_slot
 from eth_consensus_specs.test.helpers.deposits import prepare_state_and_deposit
-from eth_consensus_specs.test.helpers.forks import get_min_activation_balance
 from eth_consensus_specs.test.helpers.state import state_transition_and_sign_block
 
 

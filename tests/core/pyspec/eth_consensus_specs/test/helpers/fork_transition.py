@@ -7,6 +7,7 @@ from eth_consensus_specs.test.helpers.attestations import (
 from eth_consensus_specs.test.helpers.attester_slashings import (
     get_valid_attester_slashing_by_indices,
 )
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.block import (
     build_empty_block,
     build_empty_block_for_next_slot,
@@ -31,7 +32,6 @@ from eth_consensus_specs.test.helpers.execution_payload import (
 )
 from eth_consensus_specs.test.helpers.forks import (
     get_fork_version,
-    get_min_activation_balance,
     get_next_fork_transition,
     get_previous_fork_version,
     is_post_bellatrix,

@@ -14,9 +14,9 @@ from eth_consensus_specs.test.helpers.attestations import (
     build_attestation_data,
     get_valid_attestation,
 )
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.block import build_empty_block
 from eth_consensus_specs.test.helpers.constants import FULU, PHASE0
-from eth_consensus_specs.test.helpers.forks import get_min_activation_balance
 from eth_consensus_specs.test.helpers.keys import privkeys, pubkeys
 from eth_consensus_specs.test.helpers.state import next_epoch
 from eth_consensus_specs.utils import bls

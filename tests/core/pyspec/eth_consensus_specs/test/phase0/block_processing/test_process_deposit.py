@@ -1,4 +1,5 @@
 from eth_consensus_specs.test.context import always_bls, spec_state_test, with_all_phases_from_to
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.constants import FULU, PHASE0
 from eth_consensus_specs.test.helpers.deposits import (
     build_deposit,
@@ -7,7 +8,7 @@ from eth_consensus_specs.test.helpers.deposits import (
     run_deposit_processing_with_specific_fork_version,
     sign_deposit_data,
 )
-from eth_consensus_specs.test.helpers.forks import get_min_activation_balance, is_post_electra
+from eth_consensus_specs.test.helpers.forks import is_post_electra
 from eth_consensus_specs.test.helpers.keys import privkeys, pubkeys
 
 

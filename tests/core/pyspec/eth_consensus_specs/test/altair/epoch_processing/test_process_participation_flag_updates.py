@@ -8,9 +8,9 @@ from eth_consensus_specs.test.context import (
     with_custom_state,
     with_presets,
 )
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.constants import MINIMAL
 from eth_consensus_specs.test.helpers.epoch_processing import run_epoch_processing_with
-from eth_consensus_specs.test.helpers.forks import get_min_activation_balance
 from eth_consensus_specs.test.helpers.state import next_epoch_via_block
 
 

@@ -8,9 +8,10 @@ from eth_consensus_specs.test.context import (
     with_deneb_and_later,
     with_presets,
 )
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.constants import MINIMAL
 from eth_consensus_specs.test.helpers.epoch_processing import run_epoch_processing_with
-from eth_consensus_specs.test.helpers.forks import get_min_activation_balance, is_post_electra
+from eth_consensus_specs.test.helpers.forks import is_post_electra
 from eth_consensus_specs.test.helpers.keys import pubkeys
 from tests.core.pyspec.eth_consensus_specs.test.helpers.churn import get_activation_churn_limit
 

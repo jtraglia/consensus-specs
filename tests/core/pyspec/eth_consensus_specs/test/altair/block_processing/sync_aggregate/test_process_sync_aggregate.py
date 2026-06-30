@@ -11,6 +11,7 @@ from eth_consensus_specs.test.context import (
     with_custom_state,
     with_presets,
 )
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.block import (
     build_empty_block_for_next_slot,
 )
@@ -18,7 +19,6 @@ from eth_consensus_specs.test.helpers.constants import (
     MAINNET,
     MINIMAL,
 )
-from eth_consensus_specs.test.helpers.forks import get_min_activation_balance
 from eth_consensus_specs.test.helpers.state import (
     next_epoch_via_block,
     state_transition_and_sign_block,

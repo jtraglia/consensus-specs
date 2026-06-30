@@ -5,6 +5,7 @@ from eth_consensus_specs.test.context import (
     with_phases,
     with_state,
 )
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.block import build_empty_block_for_next_slot
 from eth_consensus_specs.test.helpers.constants import ELECTRA, FULU, PHASE0
 from eth_consensus_specs.test.helpers.deposits import (
@@ -13,7 +14,6 @@ from eth_consensus_specs.test.helpers.deposits import (
 )
 from eth_consensus_specs.test.helpers.execution_payload import compute_el_block_hash_for_block
 from eth_consensus_specs.test.helpers.fork_transition import do_fork_generate
-from eth_consensus_specs.test.helpers.forks import get_min_activation_balance
 from eth_consensus_specs.test.helpers.state import next_epoch, state_transition_and_sign_block
 from eth_consensus_specs.test.helpers.typing import SpecForkName
 from eth_consensus_specs.test.utils.template_test import (

@@ -4,8 +4,8 @@ from eth_consensus_specs.test.context import (
     spec_state_test,
     with_gloas_and_later,
 )
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.builders import add_builder_to_registry
-from eth_consensus_specs.test.helpers.forks import get_min_activation_balance
 from eth_consensus_specs.test.helpers.withdrawals import (
     assert_process_withdrawals,
     check_is_partially_withdrawable_validator,

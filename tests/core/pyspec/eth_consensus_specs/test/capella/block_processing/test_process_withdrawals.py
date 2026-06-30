@@ -6,6 +6,7 @@ from eth_consensus_specs.test.context import (
     with_capella_and_later,
     with_presets,
 )
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.constants import (
     CAPELLA,
     GLOAS,
@@ -16,7 +17,7 @@ from eth_consensus_specs.test.helpers.execution_payload import (
     build_empty_execution_payload,
     compute_el_block_hash,
 )
-from eth_consensus_specs.test.helpers.forks import get_min_activation_balance, is_post_gloas
+from eth_consensus_specs.test.helpers.forks import is_post_gloas
 from eth_consensus_specs.test.helpers.random import (
     randomize_state,
 )

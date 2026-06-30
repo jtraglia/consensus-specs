@@ -2,6 +2,7 @@ from eth_consensus_specs.test.context import (
     spec_state_test,
     with_all_phases_from_to,
 )
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.constants import (
     CAPELLA,
     FULU,
@@ -10,7 +11,7 @@ from eth_consensus_specs.test.helpers.deposits import (
     prepare_state_and_deposit,
     run_deposit_processing,
 )
-from eth_consensus_specs.test.helpers.forks import get_min_activation_balance, is_post_electra
+from eth_consensus_specs.test.helpers.forks import is_post_electra
 from eth_consensus_specs.test.helpers.state import next_epoch_via_block
 from eth_consensus_specs.test.helpers.withdrawals import set_validator_fully_withdrawable
 

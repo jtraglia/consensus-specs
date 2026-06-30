@@ -1,6 +1,7 @@
 from eth_consensus_specs.test.gloas.block_processing.test_process_payload_attestation import (
     prepare_signed_payload_attestation,
 )
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.block import build_empty_block_for_next_slot
 from eth_consensus_specs.test.helpers.execution_payload import (
     build_signed_execution_payload_envelope,
@@ -10,7 +11,6 @@ from eth_consensus_specs.test.helpers.fork_choice import (
     setup_one_block_store,
     tick_and_add_block,
 )
-from eth_consensus_specs.test.helpers.forks import get_min_activation_balance
 from eth_consensus_specs.test.helpers.state import state_transition_and_sign_block
 
 

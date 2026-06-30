@@ -2,9 +2,9 @@ from eth_consensus_specs.test.context import (
     spec_state_test,
     with_all_phases,
 )
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.constants import UINT64_MAX
 from eth_consensus_specs.test.helpers.forks import (
-    get_min_activation_balance,
     is_post_altair,
     is_post_bellatrix,
     is_post_electra,

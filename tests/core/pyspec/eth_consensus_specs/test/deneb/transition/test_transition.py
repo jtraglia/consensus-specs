@@ -3,6 +3,7 @@ from eth_consensus_specs.test.context import (
     with_fork_metas,
     with_presets,
 )
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.constants import (
     AFTER_DENEB_PRE_POST_FORKS,
     MINIMAL,
@@ -12,7 +13,7 @@ from eth_consensus_specs.test.helpers.fork_transition import (
     transition_to_next_epoch_and_append_blocks,
     transition_until_fork,
 )
-from eth_consensus_specs.test.helpers.forks import get_min_activation_balance, is_post_electra
+from eth_consensus_specs.test.helpers.forks import is_post_electra
 from eth_consensus_specs.test.helpers.keys import pubkeys
 
 

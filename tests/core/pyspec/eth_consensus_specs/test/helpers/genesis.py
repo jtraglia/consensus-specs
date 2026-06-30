@@ -1,5 +1,6 @@
 from hashlib import sha256
 
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.constants import (
     PHASE0,
 )
@@ -8,7 +9,6 @@ from eth_consensus_specs.test.helpers.execution_payload import (
 )
 from eth_consensus_specs.test.helpers.forks import (
     get_fork_version,
-    get_min_activation_balance,
     get_previous_fork_version,
     is_post_altair,
     is_post_bellatrix,

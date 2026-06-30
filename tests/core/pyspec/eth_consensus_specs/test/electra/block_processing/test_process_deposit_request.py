@@ -4,6 +4,7 @@ from eth_consensus_specs.test.context import (
     with_electra_and_later,
     with_electra_only,
 )
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.deposit_requests import (
     assert_process_deposit_request,
     prepare_process_deposit_request,
@@ -12,7 +13,6 @@ from eth_consensus_specs.test.helpers.deposit_requests import (
 from eth_consensus_specs.test.helpers.deposits import (
     prepare_deposit_request,
 )
-from eth_consensus_specs.test.helpers.forks import get_min_activation_balance
 
 
 @with_electra_and_later

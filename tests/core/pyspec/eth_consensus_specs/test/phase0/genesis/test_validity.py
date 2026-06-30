@@ -5,14 +5,12 @@ from eth_consensus_specs.test.context import (
     with_phases,
     with_presets,
 )
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.constants import MINIMAL
 from eth_consensus_specs.test.helpers.deposits import (
     prepare_full_genesis_deposits,
 )
-from eth_consensus_specs.test.helpers.forks import (
-    get_min_activation_balance,
-    is_post_altair,
-)
+from eth_consensus_specs.test.helpers.forks import is_post_altair
 
 
 def get_post_altair_description(spec):

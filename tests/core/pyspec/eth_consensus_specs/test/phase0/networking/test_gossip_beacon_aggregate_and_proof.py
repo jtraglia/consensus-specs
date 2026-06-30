@@ -12,6 +12,7 @@ from eth_consensus_specs.test.helpers.attestations import (
     get_valid_attestation,
     sign_attestation,
 )
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.block import (
     build_empty_block_for_next_slot,
 )
@@ -28,7 +29,7 @@ from eth_consensus_specs.test.helpers.constants import (
 from eth_consensus_specs.test.helpers.fork_choice import (
     get_genesis_forkchoice_store_and_block,
 )
-from eth_consensus_specs.test.helpers.forks import get_min_activation_balance, is_post_electra
+from eth_consensus_specs.test.helpers.forks import is_post_electra
 from eth_consensus_specs.test.helpers.gossip import (
     get_filename,
     get_seen,

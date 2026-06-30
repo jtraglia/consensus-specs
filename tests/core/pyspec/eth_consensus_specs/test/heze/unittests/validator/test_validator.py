@@ -9,7 +9,7 @@ from eth_consensus_specs.test.context import (
     with_custom_state,
     with_heze_and_later,
 )
-from eth_consensus_specs.test.helpers.forks import get_min_activation_balance
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.inclusion_list import get_empty_inclusion_list
 from eth_consensus_specs.test.helpers.keys import privkeys, pubkeys
 from eth_consensus_specs.test.phase0.unittests.validator.test_validator_unittest import (

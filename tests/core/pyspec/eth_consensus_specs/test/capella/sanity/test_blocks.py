@@ -9,6 +9,7 @@ from eth_consensus_specs.test.context import (
 from eth_consensus_specs.test.helpers.attestations import (
     next_epoch_with_attestations,
 )
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.block import (
     build_empty_block,
     build_empty_block_for_next_slot,
@@ -23,12 +24,7 @@ from eth_consensus_specs.test.helpers.constants import (
 from eth_consensus_specs.test.helpers.deposits import (
     prepare_state_and_deposit,
 )
-from eth_consensus_specs.test.helpers.forks import (
-    get_min_activation_balance,
-    is_post_eip8148,
-    is_post_electra,
-    is_post_gloas,
-)
+from eth_consensus_specs.test.helpers.forks import is_post_eip8148, is_post_electra, is_post_gloas
 from eth_consensus_specs.test.helpers.keys import pubkeys
 from eth_consensus_specs.test.helpers.state import (
     next_epoch_via_block,

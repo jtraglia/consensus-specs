@@ -1,7 +1,7 @@
 import pytest
 
+from eth_consensus_specs.test.helpers.balances import get_min_activation_balance
 from eth_consensus_specs.test.helpers.forks import (
-    get_min_activation_balance,
     is_post_eip8148,
     is_post_electra,
     is_post_fulu,
