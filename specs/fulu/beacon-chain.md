@@ -31,6 +31,7 @@
     - [New `process_proposer_lookahead`](#new-process_proposer_lookahead)
 - [Removed](#removed)
   - [Types](#types)
+  - [Constants](#constants)
   - [Functions](#functions)
 
 <!-- mdformat-toc end -->
@@ -473,6 +474,10 @@ def process_proposer_lookahead(state: BeaconState) -> None:
 ### Types
 
 - `BlobIndex`
+
+### Constants
+
+- `UNSET_DEPOSIT_REQUESTS_START_INDEX`
 
 ### Functions
 
