@@ -101,21 +101,6 @@ subtle change the reader might otherwise miss.
 If an existing spec item is no longer needed in a newer spec, record it in a
 `## Removed` section at the bottom of the file. Add the section to the file in
 the fork that drops the item, matching the file where it was previously defined.
-The section has a subsection for each item type that is dropped: `Types`,
-`Constants`, `Presets`, `Configuration`, `Containers`, `Dataclasses`,
-`Functions`, or `Protocols`. List each removed item as an inline code span in a
-bullet list. Record a removal only in the fork where the item is first dropped.
-Later forks inherit it automatically.
-
-The `presets/` and `configs/` YAML files are never touched, only the generated
-spec.
-
-For example, to drop a function in Capella:
-
-```markdown
-## Removed
-
-### Functions
-
-- `upgrade_to_bellatrix`
-```
+The section has a subsection for each item type that is dropped. List each
+removed item as an inline code span in a bullet list. Record a removal only in
+the fork where the item is first dropped. Later forks inherit it automatically.
