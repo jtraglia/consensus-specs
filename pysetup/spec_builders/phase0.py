@@ -33,8 +33,7 @@ from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root, copy, replace
 from eth_consensus_specs.utils.ssz.ssz_typing import (
     View, Boolean, Container, List, Vector, Uint8, Uint32, Uint64, Uint256,
     Bytes1, Bytes4, Bytes32, Bytes48, Bytes96, Bitlist, Bitvector)
-from eth_consensus_specs.utils.ssz.ssz_typing import (  # noqa: F401
-    boolean, uint8, uint32, uint64, uint256)
+from eth_consensus_specs.utils.ssz.ssz_typing import boolean  # noqa: F401
 from eth_consensus_specs.utils import bls
 from eth_consensus_specs.utils.hash_function import hash
 """
