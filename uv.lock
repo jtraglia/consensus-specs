@@ -584,7 +584,6 @@ name = "eth-consensus-specs"
 version = "1.7.0a12"
 source = { editable = "." }
 dependencies = [
-    { name = "eth-remerkleable" },
     { name = "eth-ssz-specs" },
     { name = "eth-utils" },
     { name = "frozendict" },
@@ -634,7 +633,6 @@ requires-dist = [
     { name = "codespell", marker = "extra == 'lint'", specifier = "==2.4.2" },
     { name = "deepdiff", marker = "extra == 'test'", specifier = "==9.1.0" },
     { name = "eth-hash", extras = ["pycryptodome"], marker = "extra == 'test'", specifier = "==0.8.0" },
-    { name = "eth-remerkleable", specifier = "==0.1.31" },
     { name = "eth-ssz-specs", git = "https://github.com/leanEthereum/ssz-specs.git?rev=0acd2ae653af12472e9ced976cbbac4c2a42886b" },
     { name = "eth-utils", specifier = "==6.0.0" },
     { name = "frozendict", specifier = "==2.4.7" },
@@ -679,15 +677,6 @@ wheels = [
 [package.optional-dependencies]
 pycryptodome = [
     { name = "pycryptodome" },
-]
-
-[[package]]
-name = "eth-remerkleable"
-version = "0.1.31"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/51/ac/40fde655f67fd02f07b28e3fe4b9bb4af521388ca8aa48462d622ce4fa03/eth_remerkleable-0.1.31.tar.gz", hash = "sha256:94df4b18a50dfc46f55b2e790cfece384e64032e9cb82d185cff09224682ad1d", size = 49525, upload-time = "2026-06-11T13:23:38.552Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b6/a1/87f7c996f344c5f213c2bca657e579c3696bb99737238c0cf9f04867386a/eth_remerkleable-0.1.31-py3-none-any.whl", hash = "sha256:7e48ea1b80935977effc02300f3f9b1db19153ab87ffbcea14a6e6429bbdc56b", size = 57192, upload-time = "2026-06-11T13:23:37.208Z" },
 ]
 
 [[package]]

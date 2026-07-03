@@ -1,4 +1,22 @@
-from remerkleable.tree import gindex_bit_iter
+from collections.abc import Iterator
+
+
+def gindex_bit_iter(gindex: int) -> tuple[Iterator[bool], int]:
+    """Iterate the path bits of a generalized index, from the root down to the leaf."""
+    gindex = int(gindex)
+    if gindex < 1:
+        raise Exception(f"invalid gindex: {gindex}")
+    bit_len = gindex.bit_length()
+
+    def iter_bits() -> Iterator[bool]:
+        if bit_len <= 1:
+            return
+        shift_v = 1 << (bit_len - 2)
+        while shift_v != 0:
+            yield (gindex & shift_v) != 0
+            shift_v >>= 1
+
+    return iter_bits(), bit_len - 1
 
 
 def build_proof(anchor, leaf_index):

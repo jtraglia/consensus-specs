@@ -1,7 +1,6 @@
 from collections.abc import Sequence
 
-from remerkleable.basic import uint64
-from remerkleable.byte_arrays import Bytes32
+from eth_consensus_specs.utils.ssz.ssz_typing import Bytes32, uint64
 
 from eth_consensus_specs.test.context import expect_assertion_error
 from eth_consensus_specs.test.helpers.block import (
