@@ -16,6 +16,16 @@ from marko.inline import CodeSpan
 
 from .typing import ProtocolDefinition, SpecObject, VariableDefinition
 
+# SSZ collection bases that a named type may subclass, e.g. `class Validators(List[Validator])`.
+COLLECTION_BASE_CLASSES = {
+    "List",
+    "Vector",
+    "Bitlist",
+    "Bitvector",
+    "ByteList",
+    "ByteVector",
+}
+
 
 class MarkdownToSpec:
     def __init__(
@@ -175,6 +185,12 @@ class MarkdownToSpec:
         """
         class_name, parent_class = _get_class_info_from_ast(cls)
 
+        # Named SSZ collection types (e.g. `class Validators(List[Validator])`) are grouped
+        # together rather than each getting its own spec section, so skip the heading check.
+        if parent_class in COLLECTION_BASE_CLASSES:
+            self.spec["ssz_objects"][class_name] = source
+            return
+
         # check consistency with spec
         if class_name != self.current_heading_name:
             raise Exception(f"class_name {class_name} != current_name {self.current_heading_name}")
@@ -207,6 +223,8 @@ class MarkdownToSpec:
                 if value.startswith(
                     (
                         "uint",
+                        "Uint",
+                        "Boolean",
                         "Bitlist",
                         "Bitvector",
                         "ByteList",

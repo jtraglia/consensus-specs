@@ -821,7 +821,7 @@ def store_target_checkpoint_state(store: Store, target: Checkpoint) -> None:
     if target not in store.checkpoint_states:
         base_state = copy(store.block_states[target.root])
         if base_state.slot < compute_start_slot_at_epoch(target.epoch):
-            process_slots(base_state, compute_start_slot_at_epoch(target.epoch))
+            base_state = process_slots(base_state, compute_start_slot_at_epoch(target.epoch))
         store.checkpoint_states[target] = base_state
 ```
 
@@ -929,7 +929,7 @@ def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
     # Check the block is valid and compute the post-state
     state = pre_state.copy()
     block_root = hash_tree_root(block)
-    state_transition(state, signed_block, validate_result=True)
+    state = state_transition(state, signed_block, validate_result=True)
 
     # Compute head before applying the block
     head = get_head(store)

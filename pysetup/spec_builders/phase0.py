@@ -29,11 +29,12 @@ from typing import (
     Any, Callable, Dict, DefaultDict, Set, Sequence, Tuple, Optional, TypeAlias, TypeVar, NamedTuple, Final
 )
 
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root, copy, uint_to_bytes
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root, copy, replace, uint_to_bytes
 from eth_consensus_specs.utils.ssz.ssz_typing import (
-    View, boolean, Container, List, Vector, uint8, uint32, uint64, uint256,
-    Bytes1, Bytes4, Bytes32, Bytes48, Bytes96, Bitlist)
-from eth_consensus_specs.utils.ssz.ssz_typing import Bitvector  # noqa: F401
+    View, Boolean, Container, List, Vector, Uint8, Uint32, Uint64, Uint256,
+    Bytes1, Bytes4, Bytes32, Bytes48, Bytes96, Bitlist, Bitvector)
+from eth_consensus_specs.utils.ssz.ssz_typing import (  # noqa: F401
+    boolean, uint8, uint32, uint64, uint256)
 from eth_consensus_specs.utils import bls
 from eth_consensus_specs.utils.hash_function import hash
 """

@@ -1,37 +1,453 @@
 # ruff: noqa: F401
 
-from remerkleable.basic import (
-    bit,
-    boolean,
-    byte,
-    uint,
-    uint8,
-    uint16,
-    uint32,
-    uint64,
-    uint128,
-    uint256,
-)
-from remerkleable.bitfields import Bitlist, Bitvector
-from remerkleable.byte_arrays import (
-    ByteList,
-    Bytes1,
-    Bytes4,
-    Bytes8,
-    Bytes32,
-    Bytes48,
-    Bytes96,
-    ByteVector,
-)
-from remerkleable.complex import Container, List, Vector
-from remerkleable.core import BasicView, Path, View
-from remerkleable.progressive import (
-    CompatibleUnion,
-    ProgressiveBitlist,
-    ProgressiveContainer,
-    ProgressiveList,
-)
-from remerkleable.union import Union
+"""
+SSZ type layer for the consensus specs, built on the `eth-ssz-specs` package.
 
-Bytes20 = ByteVector[20]
-Bytes31 = ByteVector[31]
+The upstream `ssz` package provides immutable, Pydantic-backed SSZ types. This
+module adapts them to the ergonomics the specs and tests rely on:
+
+- Every leaf type (uints, booleans, byte vectors) supports zero-argument
+  construction that yields its SSZ default (zero) value.
+- Containers fill any unspecified field with its SSZ default value.
+- Collections and bitfields accept a single positional argument as their data.
+- The legacy `List[T, N]` / `Vector[T, N]` / `Bitlist[N]` subscription syntax is
+  supported alongside the named-subclass form (`class Foo(List[T]): LIMIT = N`).
+"""
+
+from types import GeneratorType
+from typing import Any
+
+from pydantic import model_validator
+
+from ssz import Container as _Container
+from ssz import List as _List
+from ssz import Vector as _Vector
+from ssz.bitfields import BaseBitlist, BaseBitvector
+from ssz.boolean import Boolean as _Boolean
+from ssz.byte_arrays import BaseByteList, BaseBytes
+from ssz.merkleization import hash_tree_root as _lib_hash_tree_root
+from ssz.ssz_base import SSZType
+from ssz.uint import BaseUint
+
+# `View` is remerkleable's root SSZ type. The upstream equivalent is `SSZType`.
+View = SSZType
+BasicView = SSZType
+
+
+class _PositionalData:
+    """Mixin: build a sequence type from positional element arguments.
+
+    Mirrors remerkleable: multiple positional arguments become the elements, and a
+    single `list`/`tuple`/generator argument is spread into the elements. Any other
+    single argument (e.g. one SSZ value) becomes a one-element sequence.
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        if args and "data" not in kwargs:
+            elements = list(args)
+            if len(elements) == 1 and isinstance(elements[0], (list, tuple, GeneratorType)):
+                elements = list(elements[0])
+            super().__init__(data=elements, **kwargs)
+        else:
+            super().__init__(*args, **kwargs)
+
+
+#
+# Unsigned integers
+#
+
+
+class _Uint(BaseUint):
+    """Unsigned integer base with remerkleable-compatible operator semantics.
+
+    - Zero-argument construction yields the SSZ default (zero).
+    - Comparisons work against plain ints and other uint types.
+    - Arithmetic returns this uint type and range-checks the result, matching
+      remerkleable, so overflow/underflow raises rather than silently wrapping.
+    """
+
+    def __new__(cls, value: Any = 0) -> Any:
+        return super().__new__(cls, value)
+
+    # Lenient comparisons and int-compatible hashing.
+    __eq__ = int.__eq__
+    __ne__ = int.__ne__
+    __lt__ = int.__lt__
+    __le__ = int.__le__
+    __gt__ = int.__gt__
+    __ge__ = int.__ge__
+    __hash__ = int.__hash__
+
+    # Arithmetic returns this uint type and range-checks via the constructor.
+    def __add__(self, other: Any) -> Any:
+        return type(self)(int.__add__(self, int(other)))
+
+    def __radd__(self, other: Any) -> Any:
+        return type(self)(int(other) + int(self))
+
+    def __sub__(self, other: Any) -> Any:
+        return type(self)(int.__sub__(self, int(other)))
+
+    def __rsub__(self, other: Any) -> Any:
+        return type(self)(int(other) - int(self))
+
+    def __mul__(self, other: Any) -> Any:
+        return type(self)(int.__mul__(self, int(other)))
+
+    def __rmul__(self, other: Any) -> Any:
+        return type(self)(int(other) * int(self))
+
+    def __mod__(self, other: Any) -> Any:
+        return type(self)(int.__mod__(self, int(other)))
+
+    def __rmod__(self, other: Any) -> Any:
+        return type(self)(int(other) % int(self))
+
+    def __floordiv__(self, other: Any) -> Any:
+        return type(self)(int.__floordiv__(self, int(other)))
+
+    def __rfloordiv__(self, other: Any) -> Any:
+        return type(self)(int(other) // int(self))
+
+    def __pow__(self, other: Any) -> Any:
+        return type(self)(int.__pow__(self, int(other)))
+
+    def __rpow__(self, other: Any) -> Any:
+        return type(self)(int(other) ** int(self))
+
+    def __and__(self, other: Any) -> Any:
+        return type(self)(int.__and__(self, int(other)))
+
+    def __rand__(self, other: Any) -> Any:
+        return type(self)(int(other) & int(self))
+
+    def __or__(self, other: Any) -> Any:
+        return type(self)(int.__or__(self, int(other)))
+
+    def __ror__(self, other: Any) -> Any:
+        return type(self)(int(other) | int(self))
+
+    def __xor__(self, other: Any) -> Any:
+        return type(self)(int.__xor__(self, int(other)))
+
+    def __rxor__(self, other: Any) -> Any:
+        return type(self)(int(other) ^ int(self))
+
+    def __lshift__(self, other: Any) -> Any:
+        return type(self)(int.__lshift__(self, int(other)))
+
+    def __rlshift__(self, other: Any) -> Any:
+        return type(self)(int(other) << int(self))
+
+    def __rshift__(self, other: Any) -> Any:
+        return type(self)(int.__rshift__(self, int(other)))
+
+    def __rrshift__(self, other: Any) -> Any:
+        return type(self)(int(other) >> int(self))
+
+
+class Uint8(_Uint):
+    BITS = 8
+
+
+class Uint16(_Uint):
+    BITS = 16
+
+
+class Uint32(_Uint):
+    BITS = 32
+
+
+class Uint64(_Uint):
+    BITS = 64
+
+
+class Uint128(_Uint):
+    BITS = 128
+
+
+class Uint256(_Uint):
+    BITS = 256
+
+
+#
+# Boolean
+#
+
+
+class Boolean(_Boolean):
+    """Boolean that defaults to False and compares against plain bools/ints."""
+
+    def __new__(cls, value: Any = False) -> Any:
+        return super().__new__(cls, value)
+
+    __eq__ = int.__eq__
+    __ne__ = int.__ne__
+    __hash__ = int.__hash__
+
+
+#
+# Byte vectors
+#
+
+
+class _Bytes(BaseBytes):
+    """Fixed-size byte vector that defaults to all-zero bytes when empty.
+
+    Equality and hashing follow plain `bytes` semantics (value-based, type-agnostic)
+    to match remerkleable, so typed byte values compare equal to raw `bytes`.
+    """
+
+    def __new__(cls, value: Any = b"") -> Any:
+        if value is None or (isinstance(value, (bytes, bytearray, str)) and len(value) == 0):
+            value = b"\x00" * cls.LENGTH
+        return super().__new__(cls, value)
+
+    __eq__ = bytes.__eq__
+    __ne__ = bytes.__ne__
+    __hash__ = bytes.__hash__
+
+
+class Bytes1(_Bytes):
+    LENGTH = 1
+
+
+class Bytes4(_Bytes):
+    LENGTH = 4
+
+
+class Bytes8(_Bytes):
+    LENGTH = 8
+
+
+class Bytes20(_Bytes):
+    LENGTH = 20
+
+
+class Bytes31(_Bytes):
+    LENGTH = 31
+
+
+class Bytes32(_Bytes):
+    LENGTH = 32
+
+
+class Bytes48(_Bytes):
+    LENGTH = 48
+
+
+class Bytes96(_Bytes):
+    LENGTH = 96
+
+
+class ByteVector(_Bytes):
+    """Legacy `ByteVector[N]` subscription that synthesizes a fixed byte vector."""
+
+    def __class_getitem__(cls, length: Any) -> type["_Bytes"]:
+        return type(f"ByteVector{int(length)}", (_Bytes,), {"LENGTH": int(length)})
+
+
+#
+# Byte list
+#
+
+
+class ByteList(BaseByteList):
+    """Variable-length byte array. Use `class T(ByteList): LIMIT = N` or `ByteList[N]`."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        # A byte list holds a single bytes payload, not a sequence of elements.
+        if args and "data" not in kwargs:
+            super().__init__(data=args[0], **kwargs)
+        else:
+            super().__init__(*args, **kwargs)
+
+    def __class_getitem__(cls, limit: Any) -> type["ByteList"]:
+        return type(f"ByteList{int(limit)}", (cls,), {"LIMIT": int(limit)})
+
+
+#
+# Collections
+#
+
+
+class List(_PositionalData, _List):
+    """SSZ list. Use `class T(List[E]): LIMIT = N` or the legacy `List[E, N]`."""
+
+    def __class_getitem__(cls, params: Any) -> Any:
+        if isinstance(params, tuple):
+            element_type, limit = params
+            base = super().__class_getitem__(element_type)
+            name = f"List_{getattr(element_type, '__name__', element_type)}_{limit}"
+            return type(name, (base,), {"LIMIT": int(limit)})
+        return super().__class_getitem__(params)
+
+
+class Vector(_PositionalData, _Vector):
+    """SSZ vector. Use `class T(Vector[E]): LENGTH = N` or the legacy `Vector[E, N]`."""
+
+    def __class_getitem__(cls, params: Any) -> Any:
+        if isinstance(params, tuple):
+            element_type, length = params
+            base = super().__class_getitem__(element_type)
+            name = f"Vector_{getattr(element_type, '__name__', element_type)}_{length}"
+            return type(name, (base,), {"LENGTH": int(length)})
+        return super().__class_getitem__(params)
+
+
+#
+# Bitfields
+#
+
+
+class Bitlist(_PositionalData, BaseBitlist):
+    """SSZ bitlist. Use `class T(Bitlist): LIMIT = N` or the legacy `Bitlist[N]`."""
+
+    def __class_getitem__(cls, limit: Any) -> type["Bitlist"]:
+        return type(f"Bitlist{int(limit)}", (cls,), {"LIMIT": int(limit)})
+
+
+class Bitvector(_PositionalData, BaseBitvector):
+    """SSZ bitvector. Use `class T(Bitvector): LENGTH = N` or the legacy `Bitvector[N]`."""
+
+    def __class_getitem__(cls, length: Any) -> type["Bitvector"]:
+        return type(f"Bitvector{int(length)}", (cls,), {"LENGTH": int(length)})
+
+
+#
+# Container with SSZ default-filling
+#
+
+
+def default_value(type_: type[SSZType]) -> Any:
+    """Return the SSZ default (zero) value for an SSZ type."""
+    if isinstance(type_, type) and issubclass(type_, _Container):
+        return type_()
+    if issubclass(type_, BaseUint):
+        return type_()
+    if issubclass(type_, _Boolean):
+        return type_()
+    if issubclass(type_, BaseBytes):
+        return type_()
+    if issubclass(type_, BaseByteList):
+        return type_()
+    if issubclass(type_, _Vector):
+        return type_(data=[default_value(type_.ELEMENT_TYPE)] * int(type_.LENGTH))
+    if issubclass(type_, _List):
+        return type_()
+    if issubclass(type_, BaseBitvector):
+        return type_(data=[False] * int(type_.LENGTH))
+    if issubclass(type_, BaseBitlist):
+        return type_()
+    raise TypeError(f"no SSZ default for type {type_!r}")
+
+
+_COLLECTION_MODEL_BASES = (_List, _Vector, BaseBitlist, BaseBitvector, BaseByteList)
+
+
+class Container(_Container):
+    """SSZ container that fills defaults and coerces raw sequences into collection fields.
+
+    - Any unspecified field is filled with its SSZ default value.
+    - A raw list/tuple/bytes given for a collection field is coerced into that field's
+      SSZ collection type, matching remerkleable's implicit coercion.
+    """
+
+    @model_validator(mode="before")
+    @classmethod
+    def _prepare_fields(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        filled = dict(data)
+        for name, field in cls.model_fields.items():
+            annotation = field.annotation
+            if name not in filled:
+                filled[name] = default_value(annotation)
+                continue
+            value = filled[name]
+            if (
+                isinstance(annotation, type)
+                and issubclass(annotation, _COLLECTION_MODEL_BASES)
+                and not isinstance(value, annotation)
+            ):
+                filled[name] = annotation(value)
+        return filled
+
+
+def _hash_tree_root_method(self: Any) -> "Bytes32":
+    """Method form of hash_tree_root, kept for remerkleable compatibility."""
+    return Bytes32(_lib_hash_tree_root(self))
+
+
+# Restore the `value.hash_tree_root()` method form used across the specs and tests.
+for _ssz_cls in (_Uint, Boolean, _Bytes, ByteList, List, Vector, Bitlist, Bitvector, Container):
+    _ssz_cls.hash_tree_root = _hash_tree_root_method  # type: ignore[attr-defined]
+
+
+def _copy_method(self: Any) -> Any:
+    """Method form of copy. SSZ values are immutable, so this returns an equal copy."""
+    return self.model_copy(deep=True)
+
+
+# Restore the `value.copy()` method form used across the specs and tests.
+for _ssz_model_cls in (ByteList, List, Vector, Bitlist, Bitvector, Container):
+    _ssz_model_cls.copy = _copy_method  # type: ignore[attr-defined]
+
+
+#
+# Placeholders for SSZ features not present in eth-ssz-specs.
+#
+# Phase0 does not use unions or progressive types. These names exist only so that
+# modules referencing them (the generic SSZ debug helpers and not-yet-migrated forks)
+# still import. They are NOT functional implementations.
+#
+
+uint = BaseUint
+
+
+class Path:
+    """Placeholder for remerkleable's generalized-index Path (unused by phase0)."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
+
+class Union:
+    def __class_getitem__(cls, params: Any) -> Any:
+        return cls
+
+
+class CompatibleUnion:
+    def __class_getitem__(cls, params: Any) -> Any:
+        return cls
+
+
+# Progressive collections behave like their non-progressive counterparts for the
+# purpose of importing not-yet-migrated forks.
+ProgressiveList = List
+ProgressiveBitlist = Bitlist
+
+
+class _ProgressiveContainerMeta(type):
+    def __call__(cls, *args: Any, **kwargs: Any) -> Any:
+        # `class X(ProgressiveContainer(active_fields=[...]))` uses this as a base factory.
+        return Container
+
+
+class ProgressiveContainer(metaclass=_ProgressiveContainerMeta):
+    pass
+
+
+#
+# Lowercase aliases for specs and forks not yet migrated to the new names.
+#
+
+boolean = Boolean
+bit = Boolean
+byte = Uint8
+uint8 = Uint8
+uint16 = Uint16
+uint32 = Uint32
+uint64 = Uint64
+uint128 = Uint128
+uint256 = Uint256

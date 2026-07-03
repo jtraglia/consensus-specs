@@ -584,7 +584,7 @@ root for this purpose:
 def compute_new_state_root(state: BeaconState, block: BeaconBlock) -> Root:
     temp_state: BeaconState = state.copy()
     signed_block = SignedBeaconBlock(message=block)
-    state_transition(temp_state, signed_block, validate_result=False)
+    temp_state = state_transition(temp_state, signed_block, validate_result=False)
     return hash_tree_root(temp_state)
 ```
 

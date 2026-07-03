@@ -274,6 +274,7 @@ ignored_dependencies = [
     "Bitlist",
     "Bitvector",
     "boolean",
+    "Boolean",
     "byte",
     "ByteList",
     "bytes",
@@ -308,6 +309,12 @@ ignored_dependencies = [
     "uint32",
     "uint64",
     "uint8",
+    "Uint128",
+    "Uint16",
+    "Uint256",
+    "Uint32",
+    "Uint64",
+    "Uint8",
     "Vector",
 ]
 
