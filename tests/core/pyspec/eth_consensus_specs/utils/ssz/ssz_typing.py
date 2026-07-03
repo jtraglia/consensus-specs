@@ -21,6 +21,7 @@ from pydantic import model_validator
 
 from ssz import Container as _Container
 from ssz import List as _List
+from ssz import Uint8, Uint16, Uint32, Uint64
 from ssz import Vector as _Vector
 from ssz.bitfields import BaseBitlist, BaseBitvector
 from ssz.boolean import Boolean as _Boolean
@@ -73,39 +74,14 @@ class _IntBound:
 #
 
 
-class _Uint(BaseUint):
-    """Unsigned integer base that yields the SSZ default (zero) with no argument.
-
-    Operators are inherited from the library and are strict: mixing a uint with a
-    plain int or a different uint type raises `TypeError`. Spec and test code casts
-    operands to a common type explicitly.
-    """
-
-    def __new__(cls, value: Any = 0) -> Any:
-        return super().__new__(cls, value)
-
-
-class Uint8(_Uint):
-    BITS = 8
-
-
-class Uint16(_Uint):
-    BITS = 16
-
-
-class Uint32(_Uint):
-    BITS = 32
-
-
-class Uint64(_Uint):
-    BITS = 64
-
-
-class Uint128(_Uint):
+# Uint8/Uint16/Uint32/Uint64 are imported from the library. Uint128 and Uint256 are
+# not yet upstream, so they are defined here for now.
+# TODO: import Uint128/Uint256 from ssz once they are added upstream.
+class Uint128(BaseUint):
     BITS = 128
 
 
-class Uint256(_Uint):
+class Uint256(BaseUint):
     BITS = 256
 
 
@@ -263,7 +239,7 @@ def default_value(type_: type[SSZType]) -> Any:
     if isinstance(type_, type) and issubclass(type_, _Container):
         return type_()
     if issubclass(type_, BaseUint):
-        return type_()
+        return type_(0)
     if issubclass(type_, _Boolean):
         return type_()
     if issubclass(type_, BaseBytes):
@@ -319,7 +295,7 @@ def _hash_tree_root_method(self: Any) -> "Bytes32":
 
 
 # Restore the `value.hash_tree_root()` method form used across the specs and tests.
-for _ssz_cls in (_Uint, Boolean, _Bytes, ByteList, List, Vector, Bitlist, Bitvector, Container):
+for _ssz_cls in (BaseUint, Boolean, _Bytes, ByteList, List, Vector, Bitlist, Bitvector, Container):
     _ssz_cls.hash_tree_root = _hash_tree_root_method  # type: ignore[attr-defined]
 
 
