@@ -203,14 +203,14 @@ specification.
 
 | Name                          | Value                 |
 | ----------------------------- | --------------------- |
-| `UINT64_MAX`                  | `uint64(2**64 - 1)`   |
-| `UINT64_MAX_SQRT`             | `uint64(4294967295)`  |
+| `UINT64_MAX`                  | `Uint64(2**64 - 1)`   |
+| `UINT64_MAX_SQRT`             | `Uint64(4294967295)`  |
 | `GENESIS_SLOT`                | `Slot(0)`             |
 | `GENESIS_EPOCH`               | `Epoch(0)`            |
 | `FAR_FUTURE_EPOCH`            | `Epoch(2**64 - 1)`    |
-| `BASE_REWARDS_PER_EPOCH`      | `uint64(4)`           |
-| `DEPOSIT_CONTRACT_TREE_DEPTH` | `uint64(2**5)` (= 32) |
-| `JUSTIFICATION_BITS_LENGTH`   | `uint64(4)`           |
+| `BASE_REWARDS_PER_EPOCH`      | `Uint64(4)`           |
+| `DEPOSIT_CONTRACT_TREE_DEPTH` | `Uint64(2**5)` (= 32) |
+| `JUSTIFICATION_BITS_LENGTH`   | `Uint64(4)`           |
 | `ENDIANNESS`                  | `'little'`            |
 
 ### Withdrawal prefixes
@@ -251,13 +251,13 @@ directory.
 
 | Name                             | Value                     |
 | -------------------------------- | ------------------------- |
-| `MAX_COMMITTEES_PER_SLOT`        | `uint64(2**6)` (= 64)     |
-| `TARGET_COMMITTEE_SIZE`          | `uint64(2**7)` (= 128)    |
-| `MAX_VALIDATORS_PER_COMMITTEE`   | `uint64(2**11)` (= 2,048) |
-| `SHUFFLE_ROUND_COUNT`            | `uint64(90)`              |
-| `HYSTERESIS_QUOTIENT`            | `uint64(4)`               |
-| `HYSTERESIS_DOWNWARD_MULTIPLIER` | `uint64(1)`               |
-| `HYSTERESIS_UPWARD_MULTIPLIER`   | `uint64(5)`               |
+| `MAX_COMMITTEES_PER_SLOT`        | `Uint64(2**6)` (= 64)     |
+| `TARGET_COMMITTEE_SIZE`          | `Uint64(2**7)` (= 128)    |
+| `MAX_VALIDATORS_PER_COMMITTEE`   | `Uint64(2**11)` (= 2,048) |
+| `SHUFFLE_ROUND_COUNT`            | `Uint64(90)`              |
+| `HYSTERESIS_QUOTIENT`            | `Uint64(4)`               |
+| `HYSTERESIS_DOWNWARD_MULTIPLIER` | `Uint64(1)`               |
+| `HYSTERESIS_UPWARD_MULTIPLIER`   | `Uint64(5)`               |
 
 - For the safety of committees, `TARGET_COMMITTEE_SIZE` exceeds
   [the recommended minimum committee size of 111](http://web.archive.org/web/20190504131341/https://vitalik.ca/files/Ithaca201807_Sharding.pdf);
@@ -279,33 +279,33 @@ directory.
 
 | Name                               | Value                     | Unit   |
 | ---------------------------------- | ------------------------- | ------ |
-| `MIN_ATTESTATION_INCLUSION_DELAY`  | `uint64(2**0)` (= 1)      | slots  |
-| `SLOTS_PER_EPOCH`                  | `uint64(2**5)` (= 32)     | slots  |
-| `MIN_SEED_LOOKAHEAD`               | `uint64(2**0)` (= 1)      | epochs |
-| `MAX_SEED_LOOKAHEAD`               | `uint64(2**2)` (= 4)      | epochs |
-| `MIN_EPOCHS_TO_INACTIVITY_PENALTY` | `uint64(2**2)` (= 4)      | epochs |
-| `EPOCHS_PER_ETH1_VOTING_PERIOD`    | `uint64(2**6)` (= 64)     | epochs |
-| `SLOTS_PER_HISTORICAL_ROOT`        | `uint64(2**13)` (= 8,192) | slots  |
+| `MIN_ATTESTATION_INCLUSION_DELAY`  | `Uint64(2**0)` (= 1)      | slots  |
+| `SLOTS_PER_EPOCH`                  | `Uint64(2**5)` (= 32)     | slots  |
+| `MIN_SEED_LOOKAHEAD`               | `Uint64(2**0)` (= 1)      | epochs |
+| `MAX_SEED_LOOKAHEAD`               | `Uint64(2**2)` (= 4)      | epochs |
+| `MIN_EPOCHS_TO_INACTIVITY_PENALTY` | `Uint64(2**2)` (= 4)      | epochs |
+| `EPOCHS_PER_ETH1_VOTING_PERIOD`    | `Uint64(2**6)` (= 64)     | epochs |
+| `SLOTS_PER_HISTORICAL_ROOT`        | `Uint64(2**13)` (= 8,192) | slots  |
 
 ### State list lengths
 
 | Name                           | Value                                 | Unit             |
 | ------------------------------ | ------------------------------------- | ---------------- |
-| `EPOCHS_PER_HISTORICAL_VECTOR` | `uint64(2**16)` (= 65,536)            | epochs           |
-| `EPOCHS_PER_SLASHINGS_VECTOR`  | `uint64(2**13)` (= 8,192)             | epochs           |
-| `HISTORICAL_ROOTS_LIMIT`       | `uint64(2**24)` (= 16,777,216)        | historical roots |
-| `VALIDATOR_REGISTRY_LIMIT`     | `uint64(2**40)` (= 1,099,511,627,776) | validators       |
+| `EPOCHS_PER_HISTORICAL_VECTOR` | `Uint64(2**16)` (= 65,536)            | epochs           |
+| `EPOCHS_PER_SLASHINGS_VECTOR`  | `Uint64(2**13)` (= 8,192)             | epochs           |
+| `HISTORICAL_ROOTS_LIMIT`       | `Uint64(2**24)` (= 16,777,216)        | historical roots |
+| `VALIDATOR_REGISTRY_LIMIT`     | `Uint64(2**40)` (= 1,099,511,627,776) | validators       |
 
 ### Rewards and penalties
 
 | Name                               | Value                          |
 | ---------------------------------- | ------------------------------ |
-| `BASE_REWARD_FACTOR`               | `uint64(2**6)` (= 64)          |
-| `WHISTLEBLOWER_REWARD_QUOTIENT`    | `uint64(2**9)` (= 512)         |
-| `PROPOSER_REWARD_QUOTIENT`         | `uint64(2**3)` (= 8)           |
-| `INACTIVITY_PENALTY_QUOTIENT`      | `uint64(2**26)` (= 67,108,864) |
-| `MIN_SLASHING_PENALTY_QUOTIENT`    | `uint64(2**7)` (= 128)         |
-| `PROPORTIONAL_SLASHING_MULTIPLIER` | `uint64(1)`                    |
+| `BASE_REWARD_FACTOR`               | `Uint64(2**6)` (= 64)          |
+| `WHISTLEBLOWER_REWARD_QUOTIENT`    | `Uint64(2**9)` (= 512)         |
+| `PROPOSER_REWARD_QUOTIENT`         | `Uint64(2**3)` (= 8)           |
+| `INACTIVITY_PENALTY_QUOTIENT`      | `Uint64(2**26)` (= 67,108,864) |
+| `MIN_SLASHING_PENALTY_QUOTIENT`    | `Uint64(2**7)` (= 128)         |
+| `PROPORTIONAL_SLASHING_MULTIPLIER` | `Uint64(1)`                    |
 
 - The `INACTIVITY_PENALTY_QUOTIENT` equals `INVERSE_SQRT_E_DROP_TIME**2` where
   `INVERSE_SQRT_E_DROP_TIME := 2**13` epochs is the time it takes the inactivity
@@ -326,11 +326,11 @@ directory.
 
 | Name                     | Value                  |
 | ------------------------ | ---------------------- |
-| `MAX_PROPOSER_SLASHINGS` | `uint64(2**4)` (= 16)  |
-| `MAX_ATTESTER_SLASHINGS` | `uint64(2**1)` (= 2)   |
-| `MAX_ATTESTATIONS`       | `uint64(2**7)` (= 128) |
-| `MAX_DEPOSITS`           | `uint64(2**4)` (= 16)  |
-| `MAX_VOLUNTARY_EXITS`    | `uint64(2**4)` (= 16)  |
+| `MAX_PROPOSER_SLASHINGS` | `Uint64(2**4)` (= 16)  |
+| `MAX_ATTESTER_SLASHINGS` | `Uint64(2**1)` (= 2)   |
+| `MAX_ATTESTATIONS`       | `Uint64(2**7)` (= 128) |
+| `MAX_DEPOSITS`           | `Uint64(2**4)` (= 16)  |
+| `MAX_VOLUNTARY_EXITS`    | `Uint64(2**4)` (= 16)  |
 
 ## Configuration
 
@@ -343,28 +343,28 @@ and other types of chain instances may use a different configuration.
 
 | Name                                 | Value                                        |
 | ------------------------------------ | -------------------------------------------- |
-| `MIN_GENESIS_ACTIVE_VALIDATOR_COUNT` | `uint64(2**14)` (= 16,384)                   |
-| `MIN_GENESIS_TIME`                   | `uint64(1606824000)` (Dec 1, 2020, 12pm UTC) |
+| `MIN_GENESIS_ACTIVE_VALIDATOR_COUNT` | `Uint64(2**14)` (= 16,384)                   |
+| `MIN_GENESIS_TIME`                   | `Uint64(1606824000)` (Dec 1, 2020, 12pm UTC) |
 | `GENESIS_FORK_VERSION`               | `Version('0x00000000')`                      |
-| `GENESIS_DELAY`                      | `uint64(604800)` (7 days)                    |
+| `GENESIS_DELAY`                      | `Uint64(604800)` (7 days)                    |
 
 ### Time parameters
 
 | Name                                  | Value                     | Unit         |
 | ------------------------------------- | ------------------------- | ------------ |
-| `SLOT_DURATION_MS`                    | `uint64(12000)`           | milliseconds |
-| `SECONDS_PER_ETH1_BLOCK`              | `uint64(14)`              | seconds      |
-| `MIN_VALIDATOR_WITHDRAWABILITY_DELAY` | `uint64(2**8)` (= 256)    | epochs       |
-| `SHARD_COMMITTEE_PERIOD`              | `uint64(2**8)` (= 256)    | epochs       |
-| `ETH1_FOLLOW_DISTANCE`                | `uint64(2**11)` (= 2,048) | Eth1 blocks  |
+| `SLOT_DURATION_MS`                    | `Uint64(12000)`           | milliseconds |
+| `SECONDS_PER_ETH1_BLOCK`              | `Uint64(14)`              | seconds      |
+| `MIN_VALIDATOR_WITHDRAWABILITY_DELAY` | `Uint64(2**8)` (= 256)    | epochs       |
+| `SHARD_COMMITTEE_PERIOD`              | `Uint64(2**8)` (= 256)    | epochs       |
+| `ETH1_FOLLOW_DISTANCE`                | `Uint64(2**11)` (= 2,048) | Eth1 blocks  |
 
 ### Validator cycle
 
 | Name                        | Value                                   |
 | --------------------------- | --------------------------------------- |
 | `EJECTION_BALANCE`          | `Gwei(2**4 * 10**9)` (= 16,000,000,000) |
-| `MIN_PER_EPOCH_CHURN_LIMIT` | `uint64(2**2)` (= 4)                    |
-| `CHURN_LIMIT_QUOTIENT`      | `uint64(2**16)` (= 65,536)              |
+| `MIN_PER_EPOCH_CHURN_LIMIT` | `Uint64(2**2)` (= 4)                    |
+| `CHURN_LIMIT_QUOTIENT`      | `Uint64(2**16)` (= 65,536)              |
 
 ## Containers
 
@@ -767,7 +767,7 @@ necessarily optimal implementations.
 #### `integer_squareroot`
 
 ```python
-def integer_squareroot(n: uint64) -> uint64:
+def integer_squareroot(n: Uint64) -> Uint64:
     """
     Return the largest integer ``x`` such that ``x**2 <= n``.
     """
@@ -793,18 +793,18 @@ def xor(bytes_1: Bytes32, bytes_2: Bytes32) -> Bytes32:
 
 #### `uint_to_bytes`
 
-`def uint_to_bytes(n: uint) -> bytes` is a function for serializing the `uint`
+`def uint_to_bytes(n: Uint) -> bytes` is a function for serializing the `Uint`
 type object to bytes in `ENDIANNESS`-endian. The expected length of the output
-is the byte-length of the `uint` type.
+is the byte-length of the `Uint` type.
 
 #### `bytes_to_uint64`
 
 ```python
-def bytes_to_uint64(data: bytes) -> uint64:
+def bytes_to_uint64(data: bytes) -> Uint64:
     """
     Return the integer deserialization of ``data`` interpreted as ``ENDIANNESS``-endian.
     """
-    return uint64(int.from_bytes(data, ENDIANNESS))
+    return Uint64(int.from_bytes(data, ENDIANNESS))
 ```
 
 ### Crypto
@@ -927,7 +927,7 @@ def is_valid_indexed_attestation(
 
 ```python
 def compute_merkle_branch_root(
-    leaf: Bytes32, branch: Sequence[Bytes32], depth: uint64, index: uint64
+    leaf: Bytes32, branch: Sequence[Bytes32], depth: Uint64, index: Uint64
 ) -> Root:
     """
     Return the Merkle root obtained by hashing ``leaf`` at ``index`` with ``branch``.
@@ -945,7 +945,7 @@ def compute_merkle_branch_root(
 
 ```python
 def is_valid_merkle_branch(
-    leaf: Bytes32, branch: Sequence[Bytes32], depth: uint64, index: uint64, root: Root
+    leaf: Bytes32, branch: Sequence[Bytes32], depth: Uint64, index: Uint64, root: Root
 ) -> bool:
     """
     Check if ``leaf`` at ``index`` verifies against the Merkle ``root`` and ``branch``.
@@ -960,7 +960,7 @@ def is_valid_merkle_branch(
 #### `compute_shuffled_permutation`
 
 ```python
-def compute_shuffled_permutation(index_count: uint64, seed: Bytes32) -> Sequence[uint64]:
+def compute_shuffled_permutation(index_count: Uint64, seed: Bytes32) -> Sequence[Uint64]:
     """
     Return the full shuffled permutation corresponding to ``seed`` (and ``index_count``).
     """
@@ -989,7 +989,7 @@ def compute_shuffled_permutation(index_count: uint64, seed: Bytes32) -> Sequence
 #### `compute_shuffled_index`
 
 ```python
-def compute_shuffled_index(index: uint64, index_count: uint64, seed: Bytes32) -> uint64:
+def compute_shuffled_index(index: Uint64, index_count: Uint64, seed: Bytes32) -> Uint64:
     """
     Return the shuffled index corresponding to ``seed`` (and ``index_count``).
     """
@@ -1023,7 +1023,7 @@ def compute_proposer_index(
 
 ```python
 def compute_committee(
-    indices: Sequence[ValidatorIndex], seed: Bytes32, index: uint64, count: uint64
+    indices: Sequence[ValidatorIndex], seed: Bytes32, index: Uint64, count: Uint64
 ) -> Sequence[ValidatorIndex]:
     """
     Return the committee corresponding to ``indices``, ``seed``, ``index``, and committee ``count``.
@@ -1041,7 +1041,7 @@ def compute_committee(
 *Note*: This function is unsafe with respect to overflows and underflows.
 
 ```python
-def compute_time_at_slot(state: BeaconState, slot: Slot) -> uint64:
+def compute_time_at_slot(state: BeaconState, slot: Slot) -> Uint64:
     slots_since_genesis = slot - GENESIS_SLOT
     return Uint64(
         state.genesis_time + Uint64(slots_since_genesis) * SLOT_DURATION_MS // Uint64(1000)
@@ -1197,13 +1197,13 @@ def get_active_validator_indices(state: BeaconState, epoch: Epoch) -> Sequence[V
 #### `get_validator_churn_limit`
 
 ```python
-def get_validator_churn_limit(state: BeaconState) -> uint64:
+def get_validator_churn_limit(state: BeaconState) -> Uint64:
     """
     Return the validator churn limit for the current epoch.
     """
     active_validator_indices = get_active_validator_indices(state, get_current_epoch(state))
     return max(
-        MIN_PER_EPOCH_CHURN_LIMIT, uint64(len(active_validator_indices)) // CHURN_LIMIT_QUOTIENT
+        MIN_PER_EPOCH_CHURN_LIMIT, Uint64(len(active_validator_indices)) // CHURN_LIMIT_QUOTIENT
     )
 ```
 
@@ -1224,15 +1224,15 @@ def get_seed(state: BeaconState, epoch: Epoch, domain_type: DomainType) -> Bytes
 #### `get_committee_count_per_slot`
 
 ```python
-def get_committee_count_per_slot(state: BeaconState, epoch: Epoch) -> uint64:
+def get_committee_count_per_slot(state: BeaconState, epoch: Epoch) -> Uint64:
     """
     Return the number of committees in each slot for the given ``epoch``.
     """
     return max(
-        uint64(1),
+        Uint64(1),
         min(
             MAX_COMMITTEES_PER_SLOT,
-            uint64(len(get_active_validator_indices(state, epoch)))
+            Uint64(len(get_active_validator_indices(state, epoch)))
             // SLOTS_PER_EPOCH
             // TARGET_COMMITTEE_SIZE,
         ),
@@ -1278,7 +1278,7 @@ def get_total_balance(state: BeaconState, indices: Set[ValidatorIndex]) -> Gwei:
     """
     Return the combined effective balance of the ``indices``.
     ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
-    Math safe up to ~10B ETH, after which this overflows uint64.
+    Math safe up to ~10B ETH, after which this overflows Uint64.
     """
     return Gwei(
         max(
@@ -1545,7 +1545,7 @@ The post-state corresponding to a pre-state `state` and a signed block
 `signed_block` is defined as `state_transition(state, signed_block)`. State
 transitions that trigger an unhandled exception (e.g. a failed `assert` or an
 out-of-range list access) are considered invalid. State transitions that cause a
-`uint64` overflow or underflow are also considered invalid.
+`Uint64` overflow or underflow are also considered invalid.
 
 ```python
 def state_transition(
@@ -1773,7 +1773,7 @@ def get_proposer_reward(state: BeaconState, attesting_index: ValidatorIndex) -> 
 ```
 
 ```python
-def get_finality_delay(state: BeaconState) -> uint64:
+def get_finality_delay(state: BeaconState) -> Uint64:
     return Uint64(get_previous_epoch(state)) - Uint64(state.finalized_checkpoint.epoch)
 ```
 
@@ -1807,7 +1807,7 @@ def get_attestation_component_deltas(
     attesting_balance = get_total_balance(state, unslashed_attesting_indices)
     for index in get_eligible_validator_indices(state):
         if index in unslashed_attesting_indices:
-            increment = Uint64(EFFECTIVE_BALANCE_INCREMENT)  # Factored out from balance totals to avoid uint64 overflow
+            increment = Uint64(EFFECTIVE_BALANCE_INCREMENT)  # Factored out from balance totals to avoid Uint64 overflow
             if is_in_inactivity_leak(state):
                 # Since full base reward will be canceled out by inactivity penalty deltas,
                 # optimal participation receives full base reward compensation here.
@@ -2012,7 +2012,7 @@ def process_slashings(state: BeaconState) -> BeaconState:
             and Uint64(epoch) + EPOCHS_PER_SLASHINGS_VECTOR // Uint64(2)
             == Uint64(validator.withdrawable_epoch)
         ):
-            increment = Uint64(EFFECTIVE_BALANCE_INCREMENT)  # Factored out from penalty numerator to avoid uint64 overflow
+            increment = Uint64(EFFECTIVE_BALANCE_INCREMENT)  # Factored out from penalty numerator to avoid Uint64 overflow
             penalty_numerator = (
                 Uint64(validator.effective_balance) // increment * adjusted_total_slashing_balance
             )
