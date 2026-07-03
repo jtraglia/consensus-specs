@@ -87,7 +87,7 @@ get_base_reward = cache_this(
 _get_committee_count_per_slot = get_committee_count_per_slot
 get_committee_count_per_slot = cache_this(
     lambda state, epoch: (state.validators.hash_tree_root(), epoch),
-    _get_committee_count_per_slot, lru_size=SLOTS_PER_EPOCH * 3)
+    _get_committee_count_per_slot, lru_size=int(SLOTS_PER_EPOCH) * 3)
 
 _get_active_validator_indices = get_active_validator_indices
 get_active_validator_indices = cache_this(
@@ -97,7 +97,7 @@ get_active_validator_indices = cache_this(
 _get_beacon_committee = get_beacon_committee
 get_beacon_committee = cache_this(
     lambda state, slot, index: (state.validators.hash_tree_root(), state.randao_mixes.hash_tree_root(), slot, index),
-    _get_beacon_committee, lru_size=SLOTS_PER_EPOCH * MAX_COMMITTEES_PER_SLOT * 3)
+    _get_beacon_committee, lru_size=int(SLOTS_PER_EPOCH) * int(MAX_COMMITTEES_PER_SLOT) * 3)
 
 _get_attesting_indices = get_attesting_indices
 get_attesting_indices = cache_this(
@@ -105,4 +105,4 @@ get_attesting_indices = cache_this(
         state.randao_mixes.hash_tree_root(),
         state.validators.hash_tree_root(), attestation.hash_tree_root()
     ),
-    _get_attesting_indices, lru_size=SLOTS_PER_EPOCH * MAX_COMMITTEES_PER_SLOT * 3)'''
+    _get_attesting_indices, lru_size=int(SLOTS_PER_EPOCH) * int(MAX_COMMITTEES_PER_SLOT) * 3)'''

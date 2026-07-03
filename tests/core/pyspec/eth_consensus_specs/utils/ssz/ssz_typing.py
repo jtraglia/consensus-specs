@@ -52,98 +52,37 @@ class _PositionalData:
             super().__init__(*args, **kwargs)
 
 
+class _IntBound:
+    """Mixin: coerce a named type's LENGTH/LIMIT to a plain int.
+
+    Spec constants are typed uints (e.g. `SLOTS_PER_HISTORICAL_ROOT` is a Uint64), but
+    the library compares them against `len(...)` (a plain int), which is rejected under
+    strict uint semantics. Coercing to int at class-definition time keeps the spec's
+    `LENGTH = SOME_CONSTANT` form working.
+    """
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        for bound in ("LENGTH", "LIMIT"):
+            if bound in cls.__dict__:
+                setattr(cls, bound, int(cls.__dict__[bound]))
+
+
 #
 # Unsigned integers
 #
 
 
 class _Uint(BaseUint):
-    """Unsigned integer base with remerkleable-compatible operator semantics.
+    """Unsigned integer base that yields the SSZ default (zero) with no argument.
 
-    - Zero-argument construction yields the SSZ default (zero).
-    - Comparisons work against plain ints and other uint types.
-    - Arithmetic returns this uint type and range-checks the result, matching
-      remerkleable, so overflow/underflow raises rather than silently wrapping.
+    Operators are inherited from the library and are strict: mixing a uint with a
+    plain int or a different uint type raises `TypeError`. Spec and test code casts
+    operands to a common type explicitly.
     """
 
     def __new__(cls, value: Any = 0) -> Any:
         return super().__new__(cls, value)
-
-    # Lenient comparisons and int-compatible hashing.
-    __eq__ = int.__eq__
-    __ne__ = int.__ne__
-    __lt__ = int.__lt__
-    __le__ = int.__le__
-    __gt__ = int.__gt__
-    __ge__ = int.__ge__
-    __hash__ = int.__hash__
-
-    # Arithmetic returns this uint type and range-checks via the constructor.
-    def __add__(self, other: Any) -> Any:
-        return type(self)(int.__add__(self, int(other)))
-
-    def __radd__(self, other: Any) -> Any:
-        return type(self)(int(other) + int(self))
-
-    def __sub__(self, other: Any) -> Any:
-        return type(self)(int.__sub__(self, int(other)))
-
-    def __rsub__(self, other: Any) -> Any:
-        return type(self)(int(other) - int(self))
-
-    def __mul__(self, other: Any) -> Any:
-        return type(self)(int.__mul__(self, int(other)))
-
-    def __rmul__(self, other: Any) -> Any:
-        return type(self)(int(other) * int(self))
-
-    def __mod__(self, other: Any) -> Any:
-        return type(self)(int.__mod__(self, int(other)))
-
-    def __rmod__(self, other: Any) -> Any:
-        return type(self)(int(other) % int(self))
-
-    def __floordiv__(self, other: Any) -> Any:
-        return type(self)(int.__floordiv__(self, int(other)))
-
-    def __rfloordiv__(self, other: Any) -> Any:
-        return type(self)(int(other) // int(self))
-
-    def __pow__(self, other: Any) -> Any:
-        return type(self)(int.__pow__(self, int(other)))
-
-    def __rpow__(self, other: Any) -> Any:
-        return type(self)(int(other) ** int(self))
-
-    def __and__(self, other: Any) -> Any:
-        return type(self)(int.__and__(self, int(other)))
-
-    def __rand__(self, other: Any) -> Any:
-        return type(self)(int(other) & int(self))
-
-    def __or__(self, other: Any) -> Any:
-        return type(self)(int.__or__(self, int(other)))
-
-    def __ror__(self, other: Any) -> Any:
-        return type(self)(int(other) | int(self))
-
-    def __xor__(self, other: Any) -> Any:
-        return type(self)(int.__xor__(self, int(other)))
-
-    def __rxor__(self, other: Any) -> Any:
-        return type(self)(int(other) ^ int(self))
-
-    def __lshift__(self, other: Any) -> Any:
-        return type(self)(int.__lshift__(self, int(other)))
-
-    def __rlshift__(self, other: Any) -> Any:
-        return type(self)(int(other) << int(self))
-
-    def __rshift__(self, other: Any) -> Any:
-        return type(self)(int.__rshift__(self, int(other)))
-
-    def __rrshift__(self, other: Any) -> Any:
-        return type(self)(int(other) >> int(self))
 
 
 class Uint8(_Uint):
@@ -252,7 +191,7 @@ class ByteVector(_Bytes):
 #
 
 
-class ByteList(BaseByteList):
+class ByteList(_IntBound, BaseByteList):
     """Variable-length byte array. Use `class T(ByteList): LIMIT = N` or `ByteList[N]`."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -271,7 +210,7 @@ class ByteList(BaseByteList):
 #
 
 
-class List(_PositionalData, _List):
+class List(_IntBound, _PositionalData, _List):
     """SSZ list. Use `class T(List[E]): LIMIT = N` or the legacy `List[E, N]`."""
 
     def __class_getitem__(cls, params: Any) -> Any:
@@ -283,7 +222,7 @@ class List(_PositionalData, _List):
         return super().__class_getitem__(params)
 
 
-class Vector(_PositionalData, _Vector):
+class Vector(_IntBound, _PositionalData, _Vector):
     """SSZ vector. Use `class T(Vector[E]): LENGTH = N` or the legacy `Vector[E, N]`."""
 
     def __class_getitem__(cls, params: Any) -> Any:
@@ -300,14 +239,14 @@ class Vector(_PositionalData, _Vector):
 #
 
 
-class Bitlist(_PositionalData, BaseBitlist):
+class Bitlist(_IntBound, _PositionalData, BaseBitlist):
     """SSZ bitlist. Use `class T(Bitlist): LIMIT = N` or the legacy `Bitlist[N]`."""
 
     def __class_getitem__(cls, limit: Any) -> type["Bitlist"]:
         return type(f"Bitlist{int(limit)}", (cls,), {"LIMIT": int(limit)})
 
 
-class Bitvector(_PositionalData, BaseBitvector):
+class Bitvector(_IntBound, _PositionalData, BaseBitvector):
     """SSZ bitvector. Use `class T(Bitvector): LENGTH = N` or the legacy `Bitvector[N]`."""
 
     def __class_getitem__(cls, length: Any) -> type["Bitvector"]:
