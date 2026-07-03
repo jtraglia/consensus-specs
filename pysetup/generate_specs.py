@@ -9,7 +9,7 @@ from typing import cast
 
 from ruamel.yaml import YAML
 
-from pysetup.constants import PHASE0
+from pysetup.constants import ENABLED_FORKS, PHASE0
 from pysetup.helpers import (
     combine_spec_objects,
     dependency_order_class_objects,
@@ -294,7 +294,7 @@ Examples:
 
         # Determine which forks to generate
         if args.all_forks:
-            forks = list(spec_builders.keys())
+            forks = [fork for fork in spec_builders if fork in ENABLED_FORKS]
         elif args.fork:
             forks = [args.fork]
         else:

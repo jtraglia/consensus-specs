@@ -3,9 +3,21 @@ import sys
 import pytest
 
 from eth_consensus_specs.test import context
-from eth_consensus_specs.test.helpers.constants import ALL_PHASES, ALLOWED_TEST_RUNNER_FORKS
+from eth_consensus_specs.test.helpers.constants import (
+    ALL_PHASES,
+    ALLOWED_TEST_RUNNER_FORKS,
+    DISABLED_PHASES,
+)
 from eth_consensus_specs.test.helpers.specs import spec_targets
 from eth_consensus_specs.utils.ckzg_utils import apply_ckzg_to_spec, load_trusted_setup
+
+# During the eth-ssz-specs migration, skip collecting the disabled forks' test
+# directories (their spec files are not compiled). Paths are relative to this conftest.
+# The ssz_static suite is also skipped: it hashes containers across forks that are not
+# yet migrated. (The ssz_generic suite was removed — SSZ type-system conformance is
+# provided by the eth-ssz-specs library.)
+# TODO(ssz-specs migration): re-enable these as forks are migrated.
+collect_ignore = [*DISABLED_PHASES, "phase0/ssz_static"]
 
 # We import pytest only when it's present, i.e. when we are running tests.
 # The test-cases themselves can be generated without installing pytest.

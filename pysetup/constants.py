@@ -11,6 +11,11 @@ HEZE = "heze"
 EIP8025 = "eip8025"
 EIP8148 = "eip8148"
 
+# Forks that are compiled by `--all-forks`. During the eth-ssz-specs migration only
+# phase0 is active; the other forks' spec files are kept but not built.
+# TODO(ssz-specs migration): re-enable the remaining forks here as they are migrated.
+ENABLED_FORKS = [PHASE0]
+
 
 # The helper functions that are used when defining constants
 CONSTANT_DEP_SUNDRY_CONSTANTS_FUNCTIONS = """

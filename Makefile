@@ -4,15 +4,6 @@ all: help
 # These must pass a strict linter.
 ALL_EXECUTABLE_SPEC_NAMES = \
 	phase0    \
-	altair    \
-	bellatrix \
-	capella   \
-	deneb     \
-	electra   \
-	fulu      \
-	gloas     \
-	heze      \
-	eip8025
 
 # A list of fake targets.
 .PHONY: \

@@ -635,7 +635,7 @@ requires-dist = [
     { name = "deepdiff", marker = "extra == 'test'", specifier = "==9.1.0" },
     { name = "eth-hash", extras = ["pycryptodome"], marker = "extra == 'test'", specifier = "==0.8.0" },
     { name = "eth-remerkleable", specifier = "==0.1.31" },
-    { name = "eth-ssz-specs", git = "https://github.com/leanEthereum/ssz-specs.git?rev=2b963eab793c072dcd6cff7ed09f1d97806cab1b" },
+    { name = "eth-ssz-specs", git = "https://github.com/leanEthereum/ssz-specs.git?rev=0acd2ae653af12472e9ced976cbbac4c2a42886b" },
     { name = "eth-utils", specifier = "==6.0.0" },
     { name = "frozendict", specifier = "==2.4.7" },
     { name = "lru-dict", specifier = "==1.4.1" },
@@ -693,7 +693,7 @@ wheels = [
 [[package]]
 name = "eth-ssz-specs"
 version = "0.0.1"
-source = { git = "https://github.com/leanEthereum/ssz-specs.git?rev=2b963eab793c072dcd6cff7ed09f1d97806cab1b#2b963eab793c072dcd6cff7ed09f1d97806cab1b" }
+source = { git = "https://github.com/leanEthereum/ssz-specs.git?rev=0acd2ae653af12472e9ced976cbbac4c2a42886b#0acd2ae653af12472e9ced976cbbac4c2a42886b" }
 dependencies = [
     { name = "pydantic" },
     { name = "typing-extensions" },

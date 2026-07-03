@@ -1,4 +1,3 @@
-# ruff: noqa: F401
 
 """
 SSZ type layer for the consensus specs, built on the `eth-ssz-specs` package.
@@ -18,17 +17,24 @@ from types import GeneratorType
 from typing import Any
 
 from pydantic import model_validator
-
-from ssz import Container as _Container
-from ssz import List as _List
-from ssz import Uint8, Uint16, Uint32, Uint64
-from ssz import Vector as _Vector
 from ssz.bitfields import BaseBitlist, BaseBitvector
 from ssz.boolean import Boolean as _Boolean
 from ssz.byte_arrays import BaseByteList, BaseBytes
 from ssz.merkleization import hash_tree_root as _lib_hash_tree_root
 from ssz.ssz_base import SSZType
 from ssz.uint import BaseUint
+
+from ssz import (
+    Container as _Container,
+    List as _List,
+    Uint8,
+    Uint16,
+    Uint32,
+    Uint64,
+    Uint128,
+    Uint256,
+    Vector as _Vector,
+)
 
 # `View` is remerkleable's root SSZ type. The upstream equivalent is `SSZType`.
 View = SSZType
@@ -67,22 +73,6 @@ class _IntBound:
         for bound in ("LENGTH", "LIMIT"):
             if bound in cls.__dict__:
                 setattr(cls, bound, int(cls.__dict__[bound]))
-
-
-#
-# Unsigned integers
-#
-
-
-# Uint8/Uint16/Uint32/Uint64 are imported from the library. Uint128 and Uint256 are
-# not yet upstream, so they are defined here for now.
-# TODO: import Uint128/Uint256 from ssz once they are added upstream.
-class Uint128(BaseUint):
-    BITS = 128
-
-
-class Uint256(BaseUint):
-    BITS = 256
 
 
 #

@@ -3,7 +3,13 @@ from typing import Any, NamedTuple
 
 from eth_utils import encode_hex
 
-from eth_consensus_specs.fulu.mainnet import DataColumnSidecar
+try:
+    from eth_consensus_specs.fulu.mainnet import DataColumnSidecar
+except Exception:
+    # The fulu spec is not compiled during the eth-ssz-specs migration (phase0 only), so
+    # importing it fails (missing, or a stale build that no longer imports). DataColumnSidecar
+    # is only used in type annotations here, so a placeholder suffices.
+    DataColumnSidecar = Any
 from eth_consensus_specs.test.context import expect_assertion_error
 from eth_consensus_specs.test.exceptions import BlockNotFoundException
 from eth_consensus_specs.test.helpers.attestations import (
