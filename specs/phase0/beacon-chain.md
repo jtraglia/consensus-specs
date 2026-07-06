@@ -1217,7 +1217,7 @@ def get_seed(state: BeaconState, epoch: Epoch, domain_type: DomainType) -> Bytes
     mix = get_randao_mix(
         state,
         epoch + Epoch(EPOCHS_PER_HISTORICAL_VECTOR) - Epoch(MIN_SEED_LOOKAHEAD) - Epoch(1),
-    )  # Avoid underflow
+    )
     return hash(domain_type + uint_to_bytes(epoch) + mix)
 ```
 
