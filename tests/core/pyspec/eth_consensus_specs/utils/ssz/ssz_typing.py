@@ -41,22 +41,6 @@ View = SSZType
 BasicView = SSZType
 
 
-class _IntBound:
-    """Mixin: coerce a named type's LENGTH/LIMIT to a plain int.
-
-    Spec constants are typed uints (e.g. `SLOTS_PER_HISTORICAL_ROOT` is a Uint64), but
-    the library compares them against `len(...)` (a plain int), which is rejected under
-    strict uint semantics. Coercing to int at class-definition time keeps the spec's
-    `LENGTH = SOME_CONSTANT` form working.
-    """
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        super().__init_subclass__(**kwargs)
-        for bound in ("LENGTH", "LIMIT"):
-            if bound in cls.__dict__:
-                setattr(cls, bound, int(cls.__dict__[bound]))
-
-
 class _MutableData:
     """Mixin: in-place element mutation for collections.
 
@@ -176,7 +160,7 @@ class ByteVector(_Bytes):
 #
 
 
-class ByteList(_IntBound, _MutableData, BaseByteList):
+class ByteList(_MutableData, BaseByteList):
     """Variable-length byte array. Use `class T(ByteList): LIMIT = N` or `ByteList[N]`."""
 
     model_config = ConfigDict(frozen=False)
@@ -185,7 +169,7 @@ class ByteList(_IntBound, _MutableData, BaseByteList):
         key = (cls, int(limit))
         if key not in _legacy_subscriptions:
             name = f"ByteList{int(limit)}"
-            _legacy_subscriptions[key] = type(name, (cls,), {"LIMIT": int(limit)})
+            _legacy_subscriptions[key] = type(name, (cls,), {"LIMIT": Uint64(limit)})
         return _legacy_subscriptions[key]
 
 
@@ -194,7 +178,7 @@ class ByteList(_IntBound, _MutableData, BaseByteList):
 #
 
 
-class List(_IntBound, _MutableData, _List):
+class List(_MutableData, _List):
     """SSZ list. Use `class T(List[E]): LIMIT = N` or the legacy `List[E, N]`."""
 
     model_config = ConfigDict(frozen=False)
@@ -206,12 +190,12 @@ class List(_IntBound, _MutableData, _List):
             if key not in _legacy_subscriptions:
                 base = super().__class_getitem__(element_type)
                 name = f"List_{getattr(element_type, '__name__', element_type)}_{limit}"
-                _legacy_subscriptions[key] = type(name, (base,), {"LIMIT": int(limit)})
+                _legacy_subscriptions[key] = type(name, (base,), {"LIMIT": Uint64(limit)})
             return _legacy_subscriptions[key]
         return super().__class_getitem__(params)
 
 
-class Vector(_IntBound, _MutableData, _Vector):
+class Vector(_MutableData, _Vector):
     """SSZ vector. Use `class T(Vector[E]): LENGTH = N` or the legacy `Vector[E, N]`."""
 
     model_config = ConfigDict(frozen=False)
@@ -223,7 +207,7 @@ class Vector(_IntBound, _MutableData, _Vector):
             if key not in _legacy_subscriptions:
                 base = super().__class_getitem__(element_type)
                 name = f"Vector_{getattr(element_type, '__name__', element_type)}_{length}"
-                _legacy_subscriptions[key] = type(name, (base,), {"LENGTH": int(length)})
+                _legacy_subscriptions[key] = type(name, (base,), {"LENGTH": Uint64(length)})
             return _legacy_subscriptions[key]
         return super().__class_getitem__(params)
 
@@ -233,7 +217,7 @@ class Vector(_IntBound, _MutableData, _Vector):
 #
 
 
-class Bitlist(_IntBound, _MutableData, BaseBitlist):
+class Bitlist(_MutableData, BaseBitlist):
     """SSZ bitlist. Use `class T(Bitlist): LIMIT = N` or the legacy `Bitlist[N]`."""
 
     model_config = ConfigDict(frozen=False)
@@ -242,11 +226,11 @@ class Bitlist(_IntBound, _MutableData, BaseBitlist):
         key = (cls, int(limit))
         if key not in _legacy_subscriptions:
             name = f"Bitlist{int(limit)}"
-            _legacy_subscriptions[key] = type(name, (cls,), {"LIMIT": int(limit)})
+            _legacy_subscriptions[key] = type(name, (cls,), {"LIMIT": Uint64(limit)})
         return _legacy_subscriptions[key]
 
 
-class Bitvector(_IntBound, _MutableData, BaseBitvector):
+class Bitvector(_MutableData, BaseBitvector):
     """SSZ bitvector. Use `class T(Bitvector): LENGTH = N` or the legacy `Bitvector[N]`."""
 
     model_config = ConfigDict(frozen=False)
@@ -255,7 +239,7 @@ class Bitvector(_IntBound, _MutableData, BaseBitvector):
         key = (cls, int(length))
         if key not in _legacy_subscriptions:
             name = f"Bitvector{int(length)}"
-            _legacy_subscriptions[key] = type(name, (cls,), {"LENGTH": int(length)})
+            _legacy_subscriptions[key] = type(name, (cls,), {"LENGTH": Uint64(length)})
         return _legacy_subscriptions[key]
 
 
