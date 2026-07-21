@@ -10,8 +10,8 @@ module adapts them to the ergonomics the specs and tests rely on:
 - Containers fill any unspecified field with its SSZ default value.
 - The legacy `List[T, N]` / `Vector[T, N]` / `Bitlist[N]` subscription syntax is
   supported alongside the named-subclass form (`class Foo(List[T]): LIMIT = N`).
-- Values are mutable: tests assign container fields and collection elements in
-  place, while the spec itself only uses the library's immutable/functional API.
+- Containers are mutable: tests and the spec assign container fields in place
+  (collection mutability comes from the library itself).
 """
 
 from typing import Any
@@ -39,32 +39,6 @@ from ssz import (
 # `View` is remerkleable's root SSZ type. The upstream equivalent is `SSZType`.
 View = SSZType
 BasicView = SSZType
-
-
-class _MutableData:
-    """Mixin: in-place element mutation for collections.
-
-    The upstream types are frozen and the spec uses them functionally. Tests mutate
-    values in place (remerkleable ergonomics), so the shim re-enables assignment and
-    provides element-level mutation. Every mutation revalidates the whole collection,
-    so limits and element coercion behave exactly as they do at construction.
-
-    Pydantic reads `model_config` only from model bases, not plain mixins, so each
-    collection class using this mixin must set `frozen=False` in its own body.
-    """
-
-    def __setitem__(self, index: Any, value: Any) -> None:
-        elements = list(self.data)
-        elements[index] = value
-        self.data = type(self)(data=elements).data
-
-    def append(self, value: Any) -> None:
-        self.data = type(self)(data=[*self.data, value]).data
-
-    def pop(self) -> Any:
-        *rest, last = self.data
-        self.data = type(self)(data=rest).data
-        return last
 
 
 #
@@ -160,10 +134,8 @@ class ByteVector(_Bytes):
 #
 
 
-class ByteList(_MutableData, BaseByteList):
+class ByteList(BaseByteList):
     """Variable-length byte array. Use `class T(ByteList): LIMIT = N` or `ByteList[N]`."""
-
-    model_config = ConfigDict(frozen=False)
 
     def __class_getitem__(cls, limit: Any) -> type["ByteList"]:
         key = (cls, int(limit))
@@ -178,10 +150,8 @@ class ByteList(_MutableData, BaseByteList):
 #
 
 
-class List(_MutableData, _List):
+class List(_List):
     """SSZ list. Use `class T(List[E]): LIMIT = N` or the legacy `List[E, N]`."""
-
-    model_config = ConfigDict(frozen=False)
 
     def __class_getitem__(cls, params: Any) -> Any:
         if isinstance(params, tuple):
@@ -195,10 +165,8 @@ class List(_MutableData, _List):
         return super().__class_getitem__(params)
 
 
-class Vector(_MutableData, _Vector):
+class Vector(_Vector):
     """SSZ vector. Use `class T(Vector[E]): LENGTH = N` or the legacy `Vector[E, N]`."""
-
-    model_config = ConfigDict(frozen=False)
 
     def __class_getitem__(cls, params: Any) -> Any:
         if isinstance(params, tuple):
@@ -217,10 +185,8 @@ class Vector(_MutableData, _Vector):
 #
 
 
-class Bitlist(_MutableData, BaseBitlist):
+class Bitlist(BaseBitlist):
     """SSZ bitlist. Use `class T(Bitlist): LIMIT = N` or the legacy `Bitlist[N]`."""
-
-    model_config = ConfigDict(frozen=False)
 
     def __class_getitem__(cls, limit: Any) -> type["Bitlist"]:
         key = (cls, int(limit))
@@ -230,10 +196,8 @@ class Bitlist(_MutableData, BaseBitlist):
         return _legacy_subscriptions[key]
 
 
-class Bitvector(_MutableData, BaseBitvector):
+class Bitvector(BaseBitvector):
     """SSZ bitvector. Use `class T(Bitvector): LENGTH = N` or the legacy `Bitvector[N]`."""
-
-    model_config = ConfigDict(frozen=False)
 
     def __class_getitem__(cls, length: Any) -> type["Bitvector"]:
         key = (cls, int(length))
