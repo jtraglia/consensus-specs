@@ -76,8 +76,8 @@ and use as a reference throughout.
 
 | Name                                       | Value                 | Unit       |
 | ------------------------------------------ | --------------------- | ---------- |
-| `TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE` | `uint64(2**4)` (= 16) | validators |
-| `SYNC_COMMITTEE_SUBNET_COUNT`              | `uint64(2**2)` (= 4)  | subnets    |
+| `TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE` | `Uint64(2**4)` (= 16) | validators |
+| `SYNC_COMMITTEE_SUBNET_COUNT`              | `Uint64(2**2)` (= 4)  | subnets    |
 
 ## Configuration
 
@@ -85,8 +85,8 @@ and use as a reference throughout.
 
 | Name                   | Value          | Unit         | Duration                   |
 | ---------------------- | -------------- | ------------ | -------------------------- |
-| `SYNC_MESSAGE_DUE_BPS` | `uint64(3333)` | basis points | ~33% of `SLOT_DURATION_MS` |
-| `CONTRIBUTION_DUE_BPS` | `uint64(6667)` | basis points | ~67% of `SLOT_DURATION_MS` |
+| `SYNC_MESSAGE_DUE_BPS` | `Uint64(3333)` | basis points | ~33% of `SLOT_DURATION_MS` |
+| `CONTRIBUTION_DUE_BPS` | `Uint64(6667)` | basis points | ~67% of `SLOT_DURATION_MS` |
 
 ## Containers
 
@@ -100,14 +100,21 @@ class SyncCommitteeMessage(Container):
     signature: BLSSignature
 ```
 
+### `SyncSubcommitteeBits`
+
+```python
+class SyncSubcommitteeBits(Bitvector):
+    LENGTH = SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT
+```
+
 ### `SyncCommitteeContribution`
 
 ```python
 class SyncCommitteeContribution(Container):
     slot: Slot
     beacon_block_root: Root
-    subcommittee_index: uint64
-    aggregation_bits: Bitvector[SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT]
+    subcommittee_index: Uint64
+    aggregation_bits: SyncSubcommitteeBits
     signature: BLSSignature
 ```
 
@@ -133,7 +140,7 @@ class SignedContributionAndProof(Container):
 ```python
 class SyncAggregatorSelectionData(Container):
     slot: Slot
-    subcommittee_index: uint64
+    subcommittee_index: Uint64
 ```
 
 ## Validator assignments
@@ -160,8 +167,8 @@ To reduce complexity during the Altair upgrade, sync committees are not expected
 to produce signatures for `compute_start_slot_at_epoch(ALTAIR_FORK_EPOCH) - 1`.
 
 ```python
-def compute_sync_committee_period(epoch: Epoch) -> uint64:
-    return epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+def compute_sync_committee_period(epoch: Epoch) -> Uint64:
+    return Uint64(epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
 ```
 
 ```python
@@ -171,7 +178,7 @@ def is_assigned_to_sync_committee(
     sync_committee_period = compute_sync_committee_period(epoch)
     current_epoch = get_current_epoch(state)
     current_sync_committee_period = compute_sync_committee_period(current_epoch)
-    next_sync_committee_period = current_sync_committee_period + 1
+    next_sync_committee_period = current_sync_committee_period + Uint64(1)
     assert sync_committee_period in (current_sync_committee_period, next_sync_committee_period)
 
     pubkey = state.validators[validator_index].pubkey
@@ -279,7 +286,7 @@ def process_sync_committee_contributions(
         subcommittee_index = contribution.subcommittee_index
         for index, participated in enumerate(contribution.aggregation_bits):
             if participated:
-                participant_index = sync_subcommittee_size * subcommittee_index + index
+                participant_index = sync_subcommittee_size * subcommittee_index + Uint64(index)
                 sync_aggregate.sync_committee_bits[participant_index] = True
         signatures.append(contribution.signature)
 
@@ -378,7 +385,7 @@ subcommittees.
 def compute_subnets_for_sync_committee(
     state: BeaconState, validator_index: ValidatorIndex
 ) -> Set[SubnetID]:
-    next_slot_epoch = compute_epoch_at_slot(Slot(state.slot + 1))
+    next_slot_epoch = compute_epoch_at_slot(state.slot + Slot(1))
     if compute_sync_committee_period(get_current_epoch(state)) == compute_sync_committee_period(
         next_slot_epoch
     ):
@@ -391,7 +398,7 @@ def compute_subnets_for_sync_committee(
         index for index, pubkey in enumerate(sync_committee.pubkeys) if pubkey == target_pubkey
     ]
     return {
-        SubnetID(index // (SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT))
+        SubnetID(Uint64(index) // (SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT))
         for index in sync_committee_indices
     }
 ```
@@ -421,7 +428,7 @@ the BLS private key associated with the validator.
 
 ```python
 def get_sync_committee_selection_proof(
-    state: BeaconState, slot: Slot, subcommittee_index: uint64, privkey: int
+    state: BeaconState, slot: Slot, subcommittee_index: Uint64, privkey: int
 ) -> BLSSignature:
     domain = get_domain(state, DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF, compute_epoch_at_slot(slot))
     signing_data = SyncAggregatorSelectionData(
@@ -435,7 +442,7 @@ def get_sync_committee_selection_proof(
 ```python
 def is_sync_committee_aggregator(signature: BLSSignature) -> bool:
     modulo = max(
-        1,
+        Uint64(1),
         SYNC_COMMITTEE_SIZE
         // SYNC_COMMITTEE_SUBNET_COUNT
         // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE,

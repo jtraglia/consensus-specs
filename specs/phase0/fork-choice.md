@@ -286,8 +286,8 @@ def is_ancestor(store: Store, node: ForkChoiceNode, ancestor: ForkChoiceNode) ->
 
 ```python
 def calculate_committee_fraction(state: BeaconState, committee_percent: Uint64) -> Gwei:
-    committee_weight = get_total_active_balance(state) // SLOTS_PER_EPOCH
-    return Gwei((committee_weight * committee_percent) // 100)
+    committee_weight = get_total_active_balance(state) // Gwei(SLOTS_PER_EPOCH)
+    return committee_weight * Gwei(committee_percent) // Gwei(100)
 ```
 
 #### `get_checkpoint_block`
@@ -324,8 +324,8 @@ def get_attestation_score(store: Store, node: ForkChoiceNode, state: BeaconState
         for i in get_active_validator_indices(state, get_current_epoch(state))
         if not state.validators[i].slashed
     ]
-    return Gwei(
-        sum(
+    return sum(
+        (
             state.validators[i].effective_balance
             for i in unslashed_and_active_indices
             if (
@@ -333,7 +333,8 @@ def get_attestation_score(store: Store, node: ForkChoiceNode, state: BeaconState
                 and i not in store.equivocating_indices
                 and is_ancestor(store, get_supported_node(store, store.latest_messages[i]), node)
             )
-        )
+        ),
+        start=Gwei(0),
     )
 ```
 
@@ -341,8 +342,8 @@ def get_attestation_score(store: Store, node: ForkChoiceNode, state: BeaconState
 
 ```python
 def compute_proposer_score(state: BeaconState) -> Gwei:
-    committee_weight = get_total_active_balance(state) // SLOTS_PER_EPOCH
-    return (committee_weight * PROPOSER_SCORE_BOOST) // 100
+    committee_weight = get_total_active_balance(state) // Gwei(SLOTS_PER_EPOCH)
+    return committee_weight * Gwei(PROPOSER_SCORE_BOOST) // Gwei(100)
 ```
 
 #### `get_proposer_score`
@@ -420,7 +421,7 @@ def filter_block_tree(store: Store, block_root: Root, blocks: Dict[Root, BeaconB
     correct_justified = (
         store.justified_checkpoint.epoch == GENESIS_EPOCH
         or voting_source.epoch == store.justified_checkpoint.epoch
-        or voting_source.epoch + 2 >= current_epoch
+        or voting_source.epoch + Epoch(2) >= current_epoch
     )
 
     finalized_checkpoint_block = get_checkpoint_block(
@@ -685,8 +686,8 @@ def get_proposer_head(store: Store, head_node: ForkChoiceNode, slot: Slot) -> Fo
     proposing_on_time = is_proposing_on_time(store)
 
     # Only re-org a single slot at most.
-    parent_slot_ok = parent_block.slot + 1 == head_block.slot
-    current_time_ok = head_block.slot + 1 == slot
+    parent_slot_ok = parent_block.slot + Slot(1) == head_block.slot
+    current_time_ok = head_block.slot + Slot(1) == slot
     single_slot_reorg = parent_slot_ok and current_time_ok
 
     # Check that the head has few enough votes to be overpowered by our proposer boost.

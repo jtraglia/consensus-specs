@@ -220,7 +220,7 @@ def create_genesis_state(spec, validator_balances, activation_threshold):
         state.execution_payload_availability = [0b1 for _ in range(spec.SLOTS_PER_HISTORICAL_ROOT)]
         state.payload_expected_withdrawals = spec.ProgressiveList[spec.Withdrawal]()
         state.builder_pending_payments = [
-            spec.BuilderPendingPayment() for _ in range(2 * spec.SLOTS_PER_EPOCH)
+            spec.BuilderPendingPayment() for _ in range(spec.Slot(2) * spec.SLOTS_PER_EPOCH)
         ]
         state.builder_pending_withdrawals = []
         state.ptc_window = initialize_ptc_window(spec, state)

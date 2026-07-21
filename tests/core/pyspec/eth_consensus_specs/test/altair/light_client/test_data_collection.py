@@ -1,3 +1,4 @@
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from eth_consensus_specs.test.context import (
     spec_state_test_with_matching_config,
     with_config_overrides,
@@ -40,7 +41,7 @@ def test_light_client_data_collection(spec, state):
 
     # Genesis block is post Altair and is finalized, so can be used as bootstrap
     genesis_bid = BlockID(
-        slot=state.slot, root=create_signed_genesis_block(spec, state).message.hash_tree_root()
+        slot=state.slot, root=hash_tree_root(create_signed_genesis_block(spec, state).message)
     )
     assert (
         get_lc_bootstrap_block_id(get_light_client_bootstrap(test, genesis_bid.root).data)

@@ -39,7 +39,7 @@ def run_sync_committee_sanity_test(spec, state, fraction_full=1.0, rng=None):
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
-            block.slot - 1,
+            block.slot - spec.Slot(1),
             participants,
         ),
     )
@@ -138,4 +138,4 @@ def test_inactivity_scores_full_participation_leaking(spec, state):
 
     # Full participation during a leak so all scores should decrease by 1
     for pre, post in zip(previous_inactivity_scores, state.inactivity_scores, strict=False):
-        assert post == pre - 1
+        assert post == pre - spec.Uint64(1)

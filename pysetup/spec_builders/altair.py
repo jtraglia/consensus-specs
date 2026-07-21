@@ -9,33 +9,22 @@ class AltairSpecBuilder(BaseSpecBuilder):
     @classmethod
     def imports(cls, preset_name: str) -> str:
         return f"""
-from typing import NewType, Union as PyUnion
-
 from eth_consensus_specs.phase0 import {preset_name} as phase0
-from eth_consensus_specs.test.helpers.merkle import build_proof
-from eth_consensus_specs.utils.ssz.ssz_typing import Path
+from ssz import compute_merkle_proof as ssz_compute_merkle_proof
+from ssz import get_generalized_index
 """
 
     @classmethod
     def preparations(cls):
         return """
-SSZVariableName = str
 GeneralizedIndex = int
 """
 
     @classmethod
     def sundry_functions(cls) -> str:
         return """
-def get_generalized_index(ssz_class: Any, *path: PyUnion[int, SSZVariableName]) -> GeneralizedIndex:
-    ssz_path = Path(ssz_class)
-    for item in path:
-        ssz_path = ssz_path / item
-    return GeneralizedIndex(ssz_path.gindex())
-
-
-def compute_merkle_proof(object: SSZObject,
-                         index: GeneralizedIndex) -> list[Bytes32]:
-    return build_proof(object.get_backing(), index)"""
+# The in-document definition is a stub; the SSZ library provides the implementation.
+compute_merkle_proof = ssz_compute_merkle_proof"""
 
     @classmethod
     def hardcoded_ssz_dep_constants(cls) -> dict[str, str]:

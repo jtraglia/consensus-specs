@@ -55,17 +55,17 @@ domain. Some Phase 0 features will be deprecated, but not removed immediately.
 class Seen:
     proposer_slots: Set[Tuple[ValidatorIndex, Slot]]
     aggregator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
-    aggregate_data_roots: Dict[Root, Set[Tuple[boolean, ...]]]
+    aggregate_data_roots: Dict[Root, Set[Tuple[Boolean, ...]]]
     voluntary_exit_indices: Set[ValidatorIndex]
     proposer_slashing_indices: Set[ValidatorIndex]
     attester_slashing_indices: Set[ValidatorIndex]
     attestation_validator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
     # [New in Altair]
-    sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, uint64]]
+    sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, Uint64]]
     # [New in Altair]
-    sync_contribution_data: Dict[Tuple[Slot, Root, uint64], Set[Tuple[boolean, ...]]]
+    sync_contribution_data: Dict[Tuple[Slot, Root, Uint64], Set[Tuple[Boolean, ...]]]
     # [New in Altair]
-    sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, uint64]]
+    sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, Uint64]]
 ```
 
 #### Modified `compute_fork_version`
@@ -86,24 +86,24 @@ def compute_fork_version(epoch: Epoch) -> Version:
 def is_current_slot(
     state: BeaconState,
     slot: Slot,
-    current_time_ms: uint64,
+    current_time_ms: Uint64,
 ) -> bool:
     """
     Check if the given slot is the current slot
     (with MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
     """
-    return is_within_slot_range(state, slot, 0, current_time_ms)
+    return is_within_slot_range(state, slot, Slot(0), current_time_ms)
 ```
 
 #### New `get_sync_subcommittee_pubkeys`
 
 ```python
 def get_sync_subcommittee_pubkeys(
-    state: BeaconState, subcommittee_index: uint64
+    state: BeaconState, subcommittee_index: Uint64
 ) -> Sequence[BLSPubkey]:
     # Committees assigned to `slot` sign for `slot - 1`
     # This creates the exceptional logic below when transitioning between sync committee periods
-    next_slot_epoch = compute_epoch_at_slot(Slot(state.slot + 1))
+    next_slot_epoch = compute_epoch_at_slot(state.slot + Slot(1))
     if compute_sync_committee_period(get_current_epoch(state)) == compute_sync_committee_period(
         next_slot_epoch
     ):
@@ -113,7 +113,7 @@ def get_sync_subcommittee_pubkeys(
 
     # Return pubkeys for the subcommittee index
     sync_subcommittee_size = SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT
-    i = subcommittee_index * sync_subcommittee_size
+    i = Uint64(subcommittee_index) * sync_subcommittee_size
     return sync_committee.pubkeys[i : i + sync_subcommittee_size]
 ```
 
@@ -163,12 +163,12 @@ of the `Message` Protobuf, and interpreted as empty byte strings if missing. The
   data: `MESSAGE_DOMAIN_VALID_SNAPPY`, the length of the topic byte string
   (encoded as little-endian `uint64`), the topic byte string, and the snappy
   decompressed message data: i.e.
-  `SHA256(MESSAGE_DOMAIN_VALID_SNAPPY + uint_to_bytes(uint64(len(message.topic))) + message.topic + snappy_decompress(message.data))[:20]`.
+  `SHA256(MESSAGE_DOMAIN_VALID_SNAPPY + uint_to_bytes(Uint64(len(message.topic))) + message.topic + snappy_decompress(message.data))[:20]`.
 - Otherwise, set `message-id` to the first 20 bytes of the `SHA256` hash of the
   concatenation of the following data: `MESSAGE_DOMAIN_INVALID_SNAPPY`, the
   length of the topic byte string (encoded as little-endian `uint64`), the topic
   byte string, and the raw message data: i.e.
-  `SHA256(MESSAGE_DOMAIN_INVALID_SNAPPY + uint_to_bytes(uint64(len(message.topic))) + message.topic + message.data)[:20]`.
+  `SHA256(MESSAGE_DOMAIN_INVALID_SNAPPY + uint_to_bytes(Uint64(len(message.topic))) + message.topic + message.data)[:20]`.
 
 Implementations may need to carefully handle the function that computes the
 `message-id`. In particular, messages on topics with the Phase 0 fork digest
@@ -219,7 +219,7 @@ def validate_sync_committee_contribution_and_proof_gossip(
     seen: Seen,
     state: BeaconState,
     signed_contribution_and_proof: SignedContributionAndProof,
-    current_time_ms: uint64,
+    current_time_ms: Uint64,
 ) -> None:
     """
     Validate a SignedContributionAndProof for gossip propagation.
@@ -336,7 +336,7 @@ def validate_sync_committee_message_gossip(
     seen: Seen,
     state: BeaconState,
     sync_committee_message: SyncCommitteeMessage,
-    current_time_ms: uint64,
+    current_time_ms: Uint64,
     subnet_id: SubnetID,
 ) -> None:
     """

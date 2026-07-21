@@ -1,3 +1,4 @@
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from copy import deepcopy
 
 from eth_consensus_specs.test.context import (
@@ -23,7 +24,7 @@ from eth_consensus_specs.test.helpers.state import (
 
 def setup_test(spec, state):
     trusted_block = create_signed_genesis_block(spec, state)
-    trusted_block_root = trusted_block.message.hash_tree_root()
+    trusted_block_root = hash_tree_root(trusted_block.message)
     bootstrap = spec.create_light_client_bootstrap(state, trusted_block)
     store = spec.initialize_light_client_store(trusted_block_root, bootstrap)
     store.next_sync_committee = state.next_sync_committee
@@ -45,7 +46,7 @@ def test_process_light_client_update_not_timeout(spec, state):
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=False, fill_prev_epoch=False
     )
-    signature_slot = state.slot + 1
+    signature_slot = state.slot + spec.Slot(1)
 
     # Ensure that finality checkpoint is genesis
     assert state.finalized_checkpoint.epoch == 0
@@ -82,7 +83,7 @@ def test_process_light_client_update_at_period_boundary(spec, state):
     genesis_block, store = setup_test(spec, state)
 
     # Forward to slot before next sync committee period so that next block is final one in period
-    next_slots(spec, state, spec.UPDATE_TIMEOUT - 2)
+    next_slots(spec, state, spec.UPDATE_TIMEOUT - spec.Slot(2))
     store_period = spec.compute_sync_committee_period_at_slot(store.optimistic_header.beacon.slot)
     update_period = spec.compute_sync_committee_period_at_slot(state.slot)
     assert store_period == update_period
@@ -90,7 +91,7 @@ def test_process_light_client_update_at_period_boundary(spec, state):
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=False, fill_prev_epoch=False
     )
-    signature_slot = state.slot + 1
+    signature_slot = state.slot + spec.Slot(1)
 
     update = create_update(
         spec,
@@ -127,12 +128,12 @@ def test_process_light_client_update_timeout(spec, state):
     next_slots(spec, state, spec.UPDATE_TIMEOUT)
     store_period = spec.compute_sync_committee_period_at_slot(store.optimistic_header.beacon.slot)
     update_period = spec.compute_sync_committee_period_at_slot(state.slot)
-    assert store_period + 1 == update_period
+    assert store_period + spec.Uint64(1) == update_period
 
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=False, fill_prev_epoch=False
     )
-    signature_slot = state.slot + 1
+    signature_slot = state.slot + spec.Slot(1)
 
     update = create_update(
         spec,
@@ -167,7 +168,7 @@ def test_process_light_client_update_finality_updated(spec, state):
 
     # Change finality
     blocks = []
-    next_slots(spec, state, spec.SLOTS_PER_EPOCH * 2)
+    next_slots(spec, state, spec.SLOTS_PER_EPOCH * spec.Slot(2))
     for _epoch in range(3):
         _prev_state, new_blocks, state = next_epoch_with_attestations(
             spec, state, fill_cur_epoch=True, fill_prev_epoch=True
@@ -181,14 +182,14 @@ def test_process_light_client_update_finality_updated(spec, state):
     assert store_period == update_period
 
     attested_block = blocks[-1]
-    signature_slot = state.slot + 1
+    signature_slot = state.slot + spec.Slot(1)
 
     # Updated finality
-    finalized_block = blocks[spec.SLOTS_PER_EPOCH - 1]
+    finalized_block = blocks[spec.SLOTS_PER_EPOCH - spec.Slot(1)]
     assert finalized_block.message.slot == spec.compute_start_slot_at_epoch(
         state.finalized_checkpoint.epoch
     )
-    assert finalized_block.message.hash_tree_root() == state.finalized_checkpoint.root
+    assert hash_tree_root(finalized_block.message) == state.finalized_checkpoint.root
 
     update = create_update(
         spec,

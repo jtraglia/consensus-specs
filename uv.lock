@@ -622,7 +622,7 @@ requires-dist = [
     { name = "codespell", marker = "extra == 'lint'", specifier = "==2.4.3" },
     { name = "deepdiff", marker = "extra == 'test'", specifier = "==9.1.0" },
     { name = "eth-hash", extras = ["pycryptodome"], marker = "extra == 'test'", specifier = "==0.8.0" },
-    { name = "eth-ssz-specs", git = "https://github.com/jtraglia/eth-ssz-specs.git?rev=04c4b7f47ca9033be919c4c14b0e3bca96964e59" },
+    { name = "eth-ssz-specs", git = "https://github.com/jtraglia/eth-ssz-specs.git?rev=6356a8af2a8c3ec4f2cd3427b7049eb5372e2ed4" },
     { name = "eth-utils", specifier = "==6.0.0" },
     { name = "frozendict", specifier = "==2.4.7" },
     { name = "lru-dict", specifier = "==1.4.1" },
@@ -671,7 +671,7 @@ pycryptodome = [
 [[package]]
 name = "eth-ssz-specs"
 version = "0.0.1"
-source = { git = "https://github.com/jtraglia/eth-ssz-specs.git?rev=04c4b7f47ca9033be919c4c14b0e3bca96964e59#04c4b7f47ca9033be919c4c14b0e3bca96964e59" }
+source = { git = "https://github.com/jtraglia/eth-ssz-specs.git?rev=6356a8af2a8c3ec4f2cd3427b7049eb5372e2ed4#6356a8af2a8c3ec4f2cd3427b7049eb5372e2ed4" }
 dependencies = [
     { name = "pydantic" },
     { name = "typing-extensions" },

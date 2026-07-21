@@ -25,10 +25,10 @@ def run_sync_committees_progress_test(spec, state):
     second_sync_committee = state.next_sync_committee.copy()
 
     current_period = spec.compute_sync_committee_period(spec.get_current_epoch(state))
-    next_period = current_period + 1
-    next_period_start_epoch = next_period * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
-    next_period_start_slot = next_period_start_epoch * spec.SLOTS_PER_EPOCH
-    end_slot_of_current_period = next_period_start_slot - 1
+    next_period = current_period + spec.Uint64(1)
+    next_period_start_epoch = spec.Epoch(next_period) * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+    next_period_start_slot = spec.Slot(next_period_start_epoch) * spec.SLOTS_PER_EPOCH
+    end_slot_of_current_period = next_period_start_slot - spec.Slot(1)
     transition_to(spec, state, end_slot_of_current_period)
 
     # Ensure assignments have not changed:
@@ -72,7 +72,9 @@ def test_sync_committees_progress_genesis(spec, state):
 def test_sync_committees_progress_not_genesis(spec, state):
     # Transition out of the genesis epoch period to test non-exceptional case
     assert spec.get_current_epoch(state) == spec.GENESIS_EPOCH
-    slot_in_next_period = state.slot + spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    slot_in_next_period = (
+        state.slot + spec.Slot(spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
+    )
     transition_to(spec, state, slot_in_next_period)
 
     yield from run_sync_committees_progress_test(spec, state)
@@ -104,7 +106,9 @@ def test_sync_committees_progress_misc_balances_genesis(spec, state):
 def test_sync_committees_progress_misc_balances_not_genesis(spec, state):
     # Transition out of the genesis epoch period to test non-exceptional case
     assert spec.get_current_epoch(state) == spec.GENESIS_EPOCH
-    slot_in_next_period = state.slot + spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    slot_in_next_period = (
+        state.slot + spec.Slot(spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
+    )
     transition_to(spec, state, slot_in_next_period)
 
     yield from run_sync_committees_progress_test(spec, state)

@@ -4,6 +4,7 @@ all: help
 # These must pass a strict linter.
 ALL_EXECUTABLE_SPEC_NAMES = \
 	phase0    \
+	altair    \
 
 # A list of fake targets.
 .PHONY: \

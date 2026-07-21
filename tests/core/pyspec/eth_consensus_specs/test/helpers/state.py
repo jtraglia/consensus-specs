@@ -120,9 +120,9 @@ def _set_full_participation(spec, state, current=True, previous=True):
 
     for index in range(len(state.validators)):
         if current:
-            state.current_epoch_participation[index] = full_flags.copy()
+            state.current_epoch_participation[index] = full_flags
         if previous:
-            state.previous_epoch_participation[index] = full_flags.copy()
+            state.previous_epoch_participation[index] = full_flags
 
 
 def set_full_participation(spec, state, rng=None):

@@ -36,7 +36,7 @@ def _template_test_at_fork_deactivate_validators_wo_block(
     @with_meta_tags(meta_tags)
     def test_after_fork_deactivate_validators_wo_block(spec, phases, state):
         current_epoch = spec.get_current_epoch(state)
-        fork_epoch = current_epoch + spec.MIN_SEED_LOOKAHEAD + 1
+        fork_epoch = current_epoch + spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1)
 
         exited_validators = []
         # Change the active validator set by exiting half of the validators in future epochs
@@ -48,22 +48,23 @@ def _template_test_at_fork_deactivate_validators_wo_block(
             validator.exit_epoch = fork_epoch
             exited_validators.append(validator_index)
 
-        while spec.get_current_epoch(state) < fork_epoch - 1:
+        while spec.get_current_epoch(state) < fork_epoch - spec.Epoch(1):
             spec.process_slots(
                 state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH)
             )
             assert state.slot % spec.SLOTS_PER_EPOCH == 0
 
         spec.process_slots(
-            state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
+            state,
+            state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - spec.Slot(1),
         )
-        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - 1
+        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
         state, _ = yield from do_fork_generate(
             state, spec, phases[post_spec], fork_epoch, with_block=False
         )
 
-        current_epoch = spec.get_current_epoch(state)
+        current_epoch = phases[post_spec].get_current_epoch(state)
 
         for validator_index in exited_validators:
             validator = state.validators[validator_index]
@@ -95,7 +96,7 @@ def _template_test_at_fork_deactivate_validators(
     @with_meta_tags(meta_tags)
     def test_after_fork_deactivate_validators(spec, phases, state):
         current_epoch = spec.get_current_epoch(state)
-        fork_epoch = current_epoch + spec.MIN_SEED_LOOKAHEAD + 1
+        fork_epoch = current_epoch + spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1)
 
         exited_validators = []
         # Change the active validator set by exiting half of the validators in future epochs
@@ -107,22 +108,23 @@ def _template_test_at_fork_deactivate_validators(
             validator.exit_epoch = fork_epoch
             exited_validators.append(validator_index)
 
-        while spec.get_current_epoch(state) < fork_epoch - 1:
+        while spec.get_current_epoch(state) < fork_epoch - spec.Epoch(1):
             spec.process_slots(
                 state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH)
             )
             assert state.slot % spec.SLOTS_PER_EPOCH == 0
 
         spec.process_slots(
-            state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
+            state,
+            state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - spec.Slot(1),
         )
-        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - 1
+        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
         state, _ = yield from do_fork_generate(
             state, spec, phases[post_spec], fork_epoch, with_block=True
         )
 
-        current_epoch = spec.get_current_epoch(state)
+        current_epoch = phases[post_spec].get_current_epoch(state)
 
         for validator_index in exited_validators:
             validator = state.validators[validator_index]
@@ -168,7 +170,7 @@ def _template_test_after_fork_new_validator_active_pre_electra(
         next_epoch(spec, state)
         next_epoch(spec, state)
 
-        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - 1
+        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - spec.Epoch(1)
 
         next_epoch(spec, state)
 
@@ -186,15 +188,15 @@ def _template_test_after_fork_new_validator_active_pre_electra(
         ):
             next_epoch(spec, state)
 
-        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - 1
+        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - spec.Epoch(1)
 
         while state.validators[new_validator_index].activation_epoch == spec.FAR_FUTURE_EPOCH:
             next_epoch(spec, state)
 
         fork_epoch = state.validators[new_validator_index].activation_epoch
-        assert spec.get_current_epoch(state) < fork_epoch - 1
+        assert spec.get_current_epoch(state) < fork_epoch - spec.Epoch(1)
 
-        while spec.get_current_epoch(state) < fork_epoch - 1:
+        while spec.get_current_epoch(state) < fork_epoch - spec.Epoch(1):
             next_epoch(spec, state)
 
         new_validator = state.validators[new_validator_index]
@@ -204,16 +206,18 @@ def _template_test_after_fork_new_validator_active_pre_electra(
         )
 
         spec.process_slots(
-            state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
+            state,
+            state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - spec.Slot(1),
         )
-        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - 1
+        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
         state, _ = yield from do_fork_generate(state, spec, phases[post_spec], fork_epoch)
 
         new_validator = state.validators[new_validator_index]
 
-        assert spec.is_active_validator(new_validator, spec.get_current_epoch(state)), (
-            f"New Validator should be active at epoch {spec.get_current_epoch(state)}"
+        post = phases[post_spec]
+        assert post.is_active_validator(new_validator, post.get_current_epoch(state)), (
+            f"New Validator should be active at epoch {post.get_current_epoch(state)}"
         )
 
     return (
@@ -266,7 +270,7 @@ def _template_test_after_fork_new_validator_active_post_electra(
         next_epoch(spec, state)
         next_epoch(spec, state)
 
-        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - 1
+        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - spec.Epoch(1)
 
         next_epoch(spec, state)
 
@@ -286,15 +290,15 @@ def _template_test_after_fork_new_validator_active_post_electra(
         ):
             next_epoch(spec, state)
 
-        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - 1
+        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - spec.Epoch(1)
 
         while state.validators[new_validator_index].activation_epoch == spec.FAR_FUTURE_EPOCH:
             next_epoch(spec, state)
 
         fork_epoch = state.validators[new_validator_index].activation_epoch
-        assert spec.get_current_epoch(state) < fork_epoch - 1
+        assert spec.get_current_epoch(state) < fork_epoch - spec.Epoch(1)
 
-        while spec.get_current_epoch(state) < fork_epoch - 1:
+        while spec.get_current_epoch(state) < fork_epoch - spec.Epoch(1):
             next_epoch(spec, state)
 
         new_validator = state.validators[new_validator_index]
@@ -304,16 +308,18 @@ def _template_test_after_fork_new_validator_active_post_electra(
         )
 
         spec.process_slots(
-            state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
+            state,
+            state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - spec.Slot(1),
         )
-        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - 1
+        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
         state, _ = yield from do_fork_generate(state, spec, phases[post_spec], fork_epoch)
 
         new_validator = state.validators[new_validator_index]
 
-        assert spec.is_active_validator(new_validator, spec.get_current_epoch(state)), (
-            f"New Validator should be active at epoch {spec.get_current_epoch(state)}"
+        post = phases[post_spec]
+        assert post.is_active_validator(new_validator, post.get_current_epoch(state)), (
+            f"New Validator should be active at epoch {post.get_current_epoch(state)}"
         )
 
     return (

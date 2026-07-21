@@ -1,3 +1,4 @@
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from dataclasses import dataclass
 from typing import Any
 
@@ -28,7 +29,7 @@ from eth_consensus_specs.test.helpers.light_client import (
 def _next_epoch_boundary_slot(spec, slot):
     # Compute the first possible epoch boundary state slot of a `Checkpoint`
     # referring to a block at given slot.
-    epoch = spec.compute_epoch_at_slot(slot + spec.SLOTS_PER_EPOCH - 1)
+    epoch = spec.compute_epoch_at_slot(slot + spec.SLOTS_PER_EPOCH - spec.Slot(1))
     return spec.compute_start_slot_at_epoch(epoch)
 
 
@@ -41,27 +42,27 @@ class BlockID:
 def _block_to_block_id(block):
     return BlockID(
         slot=block.message.slot,
-        root=block.message.hash_tree_root(),
+        root=hash_tree_root(block.message),
     )
 
 
 def _state_to_block_id(state):
     parent_header = state.latest_block_header.copy()
-    parent_header.state_root = state.hash_tree_root()
-    return BlockID(slot=parent_header.slot, root=parent_header.hash_tree_root())
+    parent_header.state_root = hash_tree_root(state)
+    return BlockID(slot=parent_header.slot, root=hash_tree_root(parent_header))
 
 
 def get_lc_bootstrap_block_id(bootstrap):
     return BlockID(
         slot=bootstrap.header.beacon.slot,
-        root=bootstrap.header.beacon.hash_tree_root(),
+        root=hash_tree_root(bootstrap.header.beacon),
     )
 
 
 def get_lc_update_attested_block_id(update):
     return BlockID(
         slot=update.attested_header.beacon.slot,
-        root=update.attested_header.beacon.hash_tree_root(),
+        root=hash_tree_root(update.attested_header.beacon),
     )
 
 
@@ -386,7 +387,7 @@ def _create_lc_update(test, spec, state, block, parent_bid):
 
     # If sync committee does not have sufficient participants, do not bump latest
     sync_aggregate = block.message.body.sync_aggregate
-    num_active_participants = sum(sync_aggregate.sync_committee_bits)
+    num_active_participants = len([bit for bit in sync_aggregate.sync_committee_bits if bit])
     if num_active_participants < spec.MIN_SYNC_COMMITTEE_PARTICIPANTS:
         latest_signature_slot = attested_data.latest_signature_slot
     else:
@@ -466,15 +467,15 @@ def _process_head_change_for_light_client(test, spec, head_bid, old_finalized_bi
     low_slot = max(test.lc_data_store.cache.tail_slot, old_finalized_bid.slot)
     low_period = spec.compute_sync_committee_period_at_slot(low_slot)
     bid = head_bid
-    for period in reversed(range(low_period, head_period + 1)):
-        period_end_slot = compute_start_slot_at_sync_committee_period(spec, period + 1) - 1
+    for period in reversed(range(low_period, int(head_period) + 1)):
+        period_end_slot = compute_start_slot_at_sync_committee_period(spec, period + 1) - spec.Slot(1)
         bid = get_ancestor_of_block_id(test, bid, period_end_slot)
         if bid is None or bid.slot < low_slot:
             break
         best = _get_light_client_data(test.lc_data_store, bid).current_period_best_update
         if (
             best.spec is None
-            or sum(best.data.sync_aggregate.sync_committee_bits)
+            or len([bit for bit in best.data.sync_aggregate.sync_committee_bits if bit])
             < spec.MIN_SYNC_COMMITTEE_PARTICIPANTS
         ):
             test.lc_data_store.db.best_updates.pop(period, None)
@@ -491,7 +492,7 @@ def _process_head_change_for_light_client(test, spec, head_bid, old_finalized_bi
     if signature_bid is None or signature_bid.slot <= low_slot:
         test.lc_data_store.cache.latest = ForkedLightClientFinalityUpdate(spec=None, data=None)
         return
-    attested_bid = get_ancestor_of_block_id(test, signature_bid, signature_bid.slot - 1)
+    attested_bid = get_ancestor_of_block_id(test, signature_bid, signature_bid.slot - spec.Slot(1))
     if attested_bid is None or attested_bid.slot < low_slot:
         test.lc_data_store.cache.latest = ForkedLightClientFinalityUpdate(spec=None, data=None)
         return
@@ -511,7 +512,7 @@ def _process_finalization_for_light_client(test, spec, finalized_bid, old_finali
         return
 
     # Cache `LightClientBootstrap` for newly finalized epoch boundary blocks
-    first_new_slot = old_finalized_bid.slot + 1
+    first_new_slot = old_finalized_bid.slot + spec.Slot(1)
     low_slot = max(first_new_slot, test.lc_data_store.cache.tail_slot)
     boundary_slot = finalized_slot
     while boundary_slot >= low_slot:
@@ -618,8 +619,8 @@ def setup_lc_data_collection_test(spec, state, phases=None):
         spec=spec, data=create_signed_genesis_block(spec, state)
     )
     test.finalized_block_roots[bid.slot] = bid.root
-    test.states[state.hash_tree_root()] = ForkedBeaconState(spec=spec, data=state)
-    test.finalized_checkpoint_states[state.hash_tree_root()] = ForkedBeaconState(
+    test.states[hash_tree_root(state)] = ForkedBeaconState(spec=spec, data=state)
+    test.finalized_checkpoint_states[hash_tree_root(state)] = ForkedBeaconState(
         spec=spec, data=state
     )
     _cache_lc_data(
@@ -642,7 +643,7 @@ def finish_lc_data_collection_test(test):
 def _encode_lc_object(test, prefix, obj, slot, genesis_validators_root):
     yield from []  # Consistently enable `yield from` syntax in calling tests
 
-    file_name = f"{prefix}_{slot}_{encode_hex(obj.data.hash_tree_root())}"
+    file_name = f"{prefix}_{slot}_{encode_hex(hash_tree_root(obj.data))}"
     if file_name not in test.files:
         test.files.add(file_name)
         yield file_name, obj.data
@@ -712,7 +713,7 @@ def select_new_head(test, spec, head_bid):
             new_finalized_epoch = state.data.finalized_checkpoint.epoch
             while bid.slot > test.latest_finalized_bid.slot:
                 test.finalized_block_roots[bid.slot] = bid.root
-                finalized_epoch = spec.compute_epoch_at_slot(bid.slot + spec.SLOTS_PER_EPOCH - 1)
+                finalized_epoch = spec.compute_epoch_at_slot(bid.slot + spec.SLOTS_PER_EPOCH - spec.Slot(1))
                 if finalized_epoch != old_finalized_epoch:
                     state = test.states[block.data.message.state_root]
                     test.finalized_checkpoint_states[block.data.message.state_root] = state
@@ -759,7 +760,7 @@ def select_new_head(test, spec, head_bid):
     best_updates = []
     low_period = spec.compute_sync_committee_period_at_slot(test.lc_data_store.cache.tail_slot)
     head_period = spec.compute_sync_committee_period_at_slot(head_bid.slot)
-    for period in range(low_period, head_period + 1):
+    for period in range(low_period, int(head_period) + 1):
         entry = {
             "period": int(period),
         }
@@ -820,7 +821,7 @@ def run_lc_data_collection_test_multi_fork(spec, phases, state, fork_1, fork_2):
 
     # Genesis block is post Altair and is finalized, so can be used as bootstrap
     genesis_bid = BlockID(
-        slot=state.slot, root=create_signed_genesis_block(spec, state).message.hash_tree_root()
+        slot=state.slot, root=create_signed_genesis_block(spec, state).hash_tree_root(message)
     )
     assert (
         get_lc_bootstrap_block_id(get_light_client_bootstrap(test, genesis_bid.root).data)

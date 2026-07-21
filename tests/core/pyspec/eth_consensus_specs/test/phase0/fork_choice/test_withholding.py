@@ -39,7 +39,7 @@ def test_withholding_attack(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
@@ -47,7 +47,7 @@ def test_withholding_attack(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // 1000,
+        store.genesis_time + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -102,8 +102,11 @@ def test_withholding_attack(spec, state):
 
     # Tick to the next slot so proposer boost is not a factor in choosing the head
     current_time = (
-        honest_block.slot + 1
-    ) * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+        spec.Uint64(honest_block.slot + spec.Slot(1))
+        * spec.config.SLOT_DURATION_MS
+        // spec.Uint64(1000)
+        + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     check_head_against_root(spec, store, hash_tree_root(signed_honest_block.message))
     assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 5
@@ -117,7 +120,9 @@ def test_withholding_attack(spec, state):
 
     # Even after going to the next epoch, the honest block should remain the head
     slot = spec.get_current_slot(store) + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH)
-    current_time = slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = (
+        spec.Uint64(slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 6
     check_head_against_root(spec, store, hash_tree_root(signed_honest_block.message))
@@ -138,7 +143,7 @@ def test_withholding_attack_unviable_honest_chain(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
@@ -146,7 +151,7 @@ def test_withholding_attack_unviable_honest_chain(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // 1000,
+        store.genesis_time + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -207,8 +212,11 @@ def test_withholding_attack_unviable_honest_chain(spec, state):
 
     # Tick to the next slot so proposer boost is not a factor in choosing the head
     current_time = (
-        honest_block.slot + 1
-    ) * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+        spec.Uint64(honest_block.slot + spec.Slot(1))
+        * spec.config.SLOT_DURATION_MS
+        // spec.Uint64(1000)
+        + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     check_head_against_root(spec, store, honest_block_root)
     assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 6
@@ -223,7 +231,9 @@ def test_withholding_attack_unviable_honest_chain(spec, state):
 
     # After going to the next epoch, the honest block should become the head
     slot = spec.get_current_slot(store) + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH)
-    current_time = slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = (
+        spec.Uint64(slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 7
     # assert store.voting_source[honest_block_root].epoch == 5

@@ -42,19 +42,26 @@ def test_update_ranking(spec, state):
     # - `fin_finalized` / `fin_attested` --> Finalized header also in next sync committee period
     # - `lat_finalized` / `lat_attested` --> Like `fin`, but at a later `attested_header.beacon.slot`
     next_slots(
-        spec, state, spec.compute_start_slot_at_epoch(spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD - 3) - 1
+        spec,
+        state,
+        spec.compute_start_slot_at_epoch(spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD - spec.Epoch(3))
+        - spec.Slot(1),
     )
     sig_finalized_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
     _, _, state = next_slots_with_attestations(
-        spec, state, spec.SLOTS_PER_EPOCH - 1, fill_cur_epoch=True, fill_prev_epoch=True
+        spec, state, spec.SLOTS_PER_EPOCH - spec.Slot(1), fill_cur_epoch=True, fill_prev_epoch=True
     )
     att_finalized_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
     _, _, state = next_slots_with_attestations(
-        spec, state, 2 * spec.SLOTS_PER_EPOCH - 2, fill_cur_epoch=True, fill_prev_epoch=True
+        spec,
+        state,
+        spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(2),
+        fill_cur_epoch=True,
+        fill_prev_epoch=True,
     )
     sig_attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
@@ -66,7 +73,7 @@ def test_update_ranking(spec, state):
     att_attested_state = state.copy()
     fin_finalized_block = att_attested_block
     _, _, state = next_slots_with_attestations(
-        spec, state, 2 * spec.SLOTS_PER_EPOCH - 1, fill_cur_epoch=True, fill_prev_epoch=True
+        spec, state, spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1), fill_cur_epoch=True, fill_prev_epoch=True
     )
     fin_attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
@@ -155,7 +162,7 @@ def test_update_ranking(spec, state):
             with_next=0,
             with_finality=0,
             participation_rate=0.2,
-            signature_slot=lat_attested_state.slot + 2,
+            signature_slot=lat_attested_state.slot + spec.Slot(2),
         ),
     ]
     yield "updates", updates

@@ -36,7 +36,7 @@ def test_transition_with_leaking_pre_fork(state, fork_epoch, spec, post_spec, pr
     blocks.append(post_tag(block))
 
     # check post transition state
-    assert spec.is_in_inactivity_leak(state)
+    assert post_spec.is_in_inactivity_leak(state)
 
     # continue regular state transition with new spec into next epoch
     transition_to_next_epoch_and_append_blocks(
@@ -71,7 +71,7 @@ def test_transition_with_leaking_at_fork(state, fork_epoch, spec, post_spec, pre
     blocks.append(post_tag(block))
 
     # check post transition state
-    assert spec.is_in_inactivity_leak(state)
+    assert post_spec.is_in_inactivity_leak(state)
 
     # continue regular state transition with new spec into next epoch
     transition_to_next_epoch_and_append_blocks(

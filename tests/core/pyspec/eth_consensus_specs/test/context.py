@@ -613,7 +613,8 @@ def _get_available_phases(run_phases, other_phases):
     """
     available_phases = set(run_phases)
     if other_phases is not None:
-        available_phases |= set(other_phases)
+        # Restrict to enabled forks: a disabled fork has no compiled spec to hand out.
+        available_phases |= set(other_phases) & set(ALL_PHASES)
     return available_phases
 
 

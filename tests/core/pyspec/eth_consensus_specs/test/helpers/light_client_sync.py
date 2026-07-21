@@ -1,3 +1,4 @@
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from typing import Any
 
 from eth_utils import encode_hex
@@ -65,11 +66,11 @@ def setup_lc_sync_test(spec, state, s_spec=None, phases=None):
     yield "genesis_validators_root", "meta", "0x" + state.genesis_validators_root.hex()
     test.genesis_validators_root = state.genesis_validators_root
 
-    next_slots(spec, state, spec.SLOTS_PER_EPOCH * 2 - 1)
+    next_slots(spec, state, spec.SLOTS_PER_EPOCH * spec.Slot(2) - spec.Slot(1))
     trusted_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
-    trusted_block_root = trusted_block.message.hash_tree_root()
+    trusted_block_root = hash_tree_root(trusted_block.message)
     yield "trusted_block_root", "meta", "0x" + trusted_block_root.hex()
 
     data_epoch = spec.compute_epoch_at_slot(trusted_block.message.slot)
@@ -100,7 +101,7 @@ def _get_update_file_name(d_spec, update):
         suffix2 = "f"
     else:
         suffix2 = "x"
-    return f"update_{encode_hex(update.attested_header.beacon.hash_tree_root())}_{suffix1}{suffix2}"
+    return f"update_{encode_hex(hash_tree_root(update.attested_header.beacon))}_{suffix1}{suffix2}"
 
 
 def _get_checks(s_spec, store):
@@ -108,12 +109,12 @@ def _get_checks(s_spec, store):
         return {
             "finalized_header": {
                 "slot": int(store.finalized_header.beacon.slot),
-                "beacon_root": encode_hex(store.finalized_header.beacon.hash_tree_root()),
+                "beacon_root": encode_hex(hash_tree_root(store.finalized_header.beacon)),
                 "execution_root": encode_hex(s_spec.get_lc_execution_root(store.finalized_header)),
             },
             "optimistic_header": {
                 "slot": int(store.optimistic_header.beacon.slot),
-                "beacon_root": encode_hex(store.optimistic_header.beacon.hash_tree_root()),
+                "beacon_root": encode_hex(hash_tree_root(store.optimistic_header.beacon)),
                 "execution_root": encode_hex(s_spec.get_lc_execution_root(store.optimistic_header)),
             },
         }
@@ -121,11 +122,11 @@ def _get_checks(s_spec, store):
     return {
         "finalized_header": {
             "slot": int(store.finalized_header.beacon.slot),
-            "beacon_root": encode_hex(store.finalized_header.beacon.hash_tree_root()),
+            "beacon_root": encode_hex(hash_tree_root(store.finalized_header.beacon)),
         },
         "optimistic_header": {
             "slot": int(store.optimistic_header.beacon.slot),
-            "beacon_root": encode_hex(store.optimistic_header.beacon.hash_tree_root()),
+            "beacon_root": encode_hex(hash_tree_root(store.optimistic_header.beacon)),
         },
     }
 
@@ -316,7 +317,7 @@ def run_lc_sync_test_single_fork(spec, phases, state, fork):
     finalized_block = block.copy()
     finalized_state = state.copy()
     _, _, state = next_slots_with_attestations(
-        spec, state, 2 * spec.SLOTS_PER_EPOCH - 1, fill_cur_epoch=True, fill_prev_epoch=True
+        spec, state, spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1), fill_cur_epoch=True, fill_prev_epoch=True
     )
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True

@@ -1,3 +1,4 @@
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from enum import auto, Enum
 
 from eth_consensus_specs.test.helpers.attestations import (
@@ -105,7 +106,7 @@ def _state_transition_and_sign_block_at_slot(spec, state, sync_aggregate=None, o
     assert state.latest_block_header.slot < block.slot
     assert state.slot == block.slot
     spec.process_block(state, block)
-    block.state_root = state.hash_tree_root()
+    block.state_root = hash_tree_root(state)
     return sign_block(spec, state, block)
 
 
@@ -120,7 +121,7 @@ def skip_slots(*slots):
     """
 
     def f(state_at_prior_slot):
-        return state_at_prior_slot.slot + 1 not in slots
+        return int(state_at_prior_slot.slot) + 1 not in slots
 
     return f
 
@@ -135,7 +136,7 @@ def only_at(slot):
     """
 
     def f(state_at_prior_slot):
-        return state_at_prior_slot.slot + 1 == slot
+        return int(state_at_prior_slot.slot) + 1 == slot
 
     return f
 
@@ -254,12 +255,12 @@ def do_fork_generate(
 
 
 def transition_until_fork(spec, state, fork_epoch):
-    to_slot = fork_epoch * spec.SLOTS_PER_EPOCH - 1
+    to_slot = spec.Slot(fork_epoch) * spec.SLOTS_PER_EPOCH - spec.Slot(1)
     transition_to(spec, state, to_slot)
 
 
 def _transition_until_fork_minus_one(spec, state, fork_epoch):
-    to_slot = fork_epoch * spec.SLOTS_PER_EPOCH - 2
+    to_slot = spec.Slot(fork_epoch) * spec.SLOTS_PER_EPOCH - spec.Slot(2)
     transition_to(spec, state, to_slot)
 
 
@@ -267,6 +268,7 @@ def transition_across_forks(
     spec, state, to_slot, phases=None, with_block=False, sync_aggregate=None
 ):
     assert to_slot > state.slot
+    to_slot = spec.Slot(to_slot)
     state = state.copy()
     block = None
     to_epoch = spec.compute_epoch_at_slot(to_slot)
@@ -276,7 +278,7 @@ def transition_across_forks(
         post_spec, fork_epoch = get_next_fork_transition(spec, epoch, phases)
         if fork_epoch is None or to_epoch < fork_epoch:
             if with_block and (to_slot == state.slot + spec.Slot(1)):
-                transition_to(spec, state, to_slot - 1)
+                transition_to(spec, state, to_slot - spec.Slot(1))
                 block = state_transition_with_full_block(
                     spec,
                     state,
@@ -333,8 +335,8 @@ def run_transition_with_operation(
     Generate `operation_type` operation with the spec before fork.
     The operation would be included into the block at `operation_at_slot`.
     """
-    is_at_fork = operation_at_slot == fork_epoch * spec.SLOTS_PER_EPOCH
-    is_right_before_fork = operation_at_slot == fork_epoch * spec.SLOTS_PER_EPOCH - 1
+    is_at_fork = operation_at_slot == spec.Slot(fork_epoch) * spec.SLOTS_PER_EPOCH
+    is_right_before_fork = operation_at_slot == spec.Slot(fork_epoch) * spec.SLOTS_PER_EPOCH - spec.Slot(1)
     assert is_at_fork or is_right_before_fork
 
     if is_at_fork:
@@ -353,7 +355,9 @@ def run_transition_with_operation(
         future_state = state.copy()
         next_slot(spec, future_state)
         proposer_index = spec.get_beacon_proposer_index(future_state)
-        selected_validator_index = (proposer_index + 1) % len(state.validators)
+        selected_validator_index = (proposer_index + spec.ValidatorIndex(1)) % spec.ValidatorIndex(
+            len(state.validators)
+        )
         if operation_type == OperationType.PROPOSER_SLASHING:
             proposer_slashing = get_valid_proposer_slashing(
                 spec, state, slashed_index=selected_validator_index, signed_1=True, signed_2=True
@@ -437,8 +441,10 @@ def run_transition_with_operation(
             for validator_index in indices:
                 assert state.validators[validator_index].slashed
         elif operation_type == OperationType.DEPOSIT:
-            assert not post_spec.is_active_validator(
-                state.validators[selected_validator_index], post_spec.get_current_epoch(state)
+            # The check may run before or after the fork; pick the state's spec.
+            state_spec = post_spec if isinstance(state, post_spec.BeaconState) else spec
+            assert not state_spec.is_active_validator(
+                state.validators[selected_validator_index], state_spec.get_current_epoch(state)
             )
         elif operation_type == OperationType.VOLUNTARY_EXIT:
             validator = state.validators[selected_validator_index]
@@ -519,7 +525,7 @@ def _transition_until_active(post_spec, state, post_tag, blocks, validator_index
     _, blocks_in_epoch, state = next_slots_with_attestations(
         post_spec,
         state,
-        post_spec.SLOTS_PER_EPOCH * epochs_required_to_activate,
+        post_spec.SLOTS_PER_EPOCH * post_spec.Slot(epochs_required_to_activate),
         fill_cur_epoch=True,
         fill_prev_epoch=True,
     )
@@ -536,7 +542,10 @@ def _transition_until_active(post_spec, state, post_tag, blocks, validator_index
 
     assert state.validators[validator_index].activation_epoch < post_spec.FAR_FUTURE_EPOCH
 
-    to_slot = state.validators[validator_index].activation_epoch * post_spec.SLOTS_PER_EPOCH
+    to_slot = (
+        post_spec.Slot(state.validators[validator_index].activation_epoch)
+        * post_spec.SLOTS_PER_EPOCH
+    )
     blocks.extend(
         [
             post_tag(block)

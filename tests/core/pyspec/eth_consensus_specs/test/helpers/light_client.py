@@ -1,3 +1,4 @@
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from math import floor
 
 from frozendict import frozendict
@@ -65,13 +66,13 @@ def latest_normalize_merkle_branch(spec, branch, gindex):
 
 def compute_start_slot_at_sync_committee_period(spec, sync_committee_period):
     return spec.compute_start_slot_at_epoch(
-        sync_committee_period * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+        spec.Epoch(sync_committee_period) * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
     )
 
 
 def compute_start_slot_at_next_sync_committee_period(spec, state):
     sync_committee_period = spec.compute_sync_committee_period_at_slot(state.slot)
-    return compute_start_slot_at_sync_committee_period(spec, sync_committee_period + 1)
+    return compute_start_slot_at_sync_committee_period(spec, sync_committee_period + spec.Uint64(1))
 
 
 def get_sync_aggregate(spec, state, num_participants=None, signature_slot=None, phases=None):
@@ -99,7 +100,7 @@ def get_sync_aggregate(spec, state, num_participants=None, signature_slot=None, 
     sync_committee_signature = compute_aggregate_sync_committee_signature(
         signature_spec,
         signature_state,
-        max(signature_slot, 1) - 1,
+        max(signature_slot, signature_spec.Slot(1)) - signature_spec.Slot(1),
         committee_indices[:num_participants],
     )
     sync_aggregate = signature_spec.SyncAggregate(
@@ -119,7 +120,7 @@ def create_update(
     participation_rate,
     signature_slot=None,
 ):
-    num_participants = floor(spec.SYNC_COMMITTEE_SIZE * participation_rate)
+    num_participants = floor(int(spec.SYNC_COMMITTEE_SIZE) * participation_rate)
 
     update = spec.LightClientUpdate()
 
@@ -171,7 +172,7 @@ def check_merkle_branch_equal(spec, new_spec, data, upgraded, gindex):
 
 def check_lc_header_equal(spec, new_spec, data, upgraded):
     assert upgraded.beacon.slot == data.beacon.slot
-    assert upgraded.beacon.hash_tree_root() == data.beacon.hash_tree_root()
+    assert hash_tree_root(upgraded.beacon) == hash_tree_root(data.beacon)
     if is_post_capella(new_spec):
         if is_post_capella(spec):
             assert new_spec.get_lc_execution_root(upgraded) == spec.get_lc_execution_root(data)

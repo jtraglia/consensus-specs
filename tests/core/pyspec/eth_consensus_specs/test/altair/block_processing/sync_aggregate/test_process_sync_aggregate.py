@@ -46,7 +46,7 @@ def test_invalid_signature_bad_domain(spec, state):
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
-            block.slot - 1,
+            block.slot - spec.Slot(1),
             committee_indices,  # full committee signs
             block_root=block.parent_root,
             domain_type=spec.DOMAIN_BEACON_ATTESTER,  # Incorrect domain
@@ -70,7 +70,7 @@ def test_invalid_signature_missing_participant(spec, state):
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
-            block.slot - 1,
+            block.slot - spec.Slot(1),
             committee_indices,  # full committee signs
             block_root=block.parent_root,
         ),
@@ -136,7 +136,7 @@ def test_invalid_signature_extra_participant(spec, state):
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
-            block.slot - 1,
+            block.slot - spec.Slot(1),
             [index for index in committee_indices if index != random_participant],
             block_root=block.parent_root,
         ),
@@ -364,7 +364,7 @@ def test_invalid_signature_past_block(spec, state):
             sync_committee_signature=compute_aggregate_sync_committee_signature(
                 spec,
                 state,
-                block.slot - 1,
+                block.slot - spec.Slot(1),
                 committee_indices,
                 block_root=block.parent_root,
             ),
@@ -379,7 +379,7 @@ def test_invalid_signature_past_block(spec, state):
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
-            invalid_block.slot - 2,
+            invalid_block.slot - spec.Slot(2),
             committee_indices,
         ),
     )
@@ -401,10 +401,10 @@ def test_invalid_signature_previous_committee(spec, state):
     old_sync_committee = state.next_sync_committee
 
     epoch_in_future_sync_committee_period = (
-        current_epoch + 2 * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+        current_epoch + spec.Epoch(2) * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
     )
     slot_in_future_sync_committee_period = (
-        epoch_in_future_sync_committee_period * spec.SLOTS_PER_EPOCH
+        spec.Slot(epoch_in_future_sync_committee_period) * spec.SLOTS_PER_EPOCH
     )
     transition_to(spec, state, slot_in_future_sync_committee_period)
 
@@ -419,7 +419,7 @@ def test_invalid_signature_previous_committee(spec, state):
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
-            block.slot - 1,
+            block.slot - spec.Slot(1),
             committee_indices,
             block_root=block.parent_root,
         ),
@@ -443,10 +443,10 @@ def test_valid_signature_future_committee(spec, state):
     old_next_sync_committee = state.next_sync_committee
 
     epoch_in_future_sync_committee_period = (
-        current_epoch + 2 * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+        current_epoch + spec.Epoch(2) * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
     )
     slot_in_future_sync_committee_period = (
-        epoch_in_future_sync_committee_period * spec.SLOTS_PER_EPOCH
+        spec.Slot(epoch_in_future_sync_committee_period) * spec.SLOTS_PER_EPOCH
     )
     transition_to(spec, state, slot_in_future_sync_committee_period)
 
@@ -465,7 +465,7 @@ def test_valid_signature_future_committee(spec, state):
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
-            block.slot - 1,
+            block.slot - spec.Slot(1),
             committee_indices,
             block_root=block.parent_root,
         ),
@@ -499,7 +499,7 @@ def test_proposer_in_committee_without_participation(spec, state):
             sync_committee_signature=compute_aggregate_sync_committee_signature(
                 spec,
                 state,
-                block.slot - 1,
+                block.slot - spec.Slot(1),
                 participants,
                 block_root=block.parent_root,
             ),
@@ -541,7 +541,7 @@ def test_proposer_in_committee_with_participation(spec, state):
             sync_committee_signature=compute_aggregate_sync_committee_signature(
                 spec,
                 state,
-                block.slot - 1,
+                block.slot - spec.Slot(1),
                 committee_indices,
                 block_root=block.parent_root,
             ),
@@ -566,10 +566,10 @@ def _exit_validator_from_committee_and_transition_state(
     validator = state.validators[exited_validator_index]
     current_epoch = spec.get_current_epoch(state)
     validator.exit_epoch = current_epoch
-    validator.withdrawable_epoch = validator.exit_epoch + withdrawable_offset
+    validator.withdrawable_epoch = validator.exit_epoch + spec.Epoch(withdrawable_offset)
 
     target_epoch = target_epoch_provider(state.validators[exited_validator_index])
-    target_slot = target_epoch * spec.SLOTS_PER_EPOCH
+    target_slot = spec.Slot(target_epoch) * spec.SLOTS_PER_EPOCH
     transition_to(spec, state, target_slot)
 
     exited_validator_indices = get_unslashed_exited_validators(spec, state)
@@ -585,7 +585,7 @@ def _exit_validator_from_committee_and_transition_state(
 @always_bls
 def test_sync_committee_with_participating_exited_member(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     # move forward via some blocks
     for _ in range(3):
@@ -611,7 +611,7 @@ def test_sync_committee_with_participating_exited_member(spec, state):
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
-            block.slot - 1,
+            block.slot - spec.Slot(1),
             committee_indices,  # full committee signs
             block_root=block.parent_root,
         ),
@@ -624,7 +624,7 @@ def test_sync_committee_with_participating_exited_member(spec, state):
 @always_bls
 def test_sync_committee_with_nonparticipating_exited_member(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     # move forward via some blocks
     for _ in range(3):
@@ -645,7 +645,7 @@ def test_sync_committee_with_nonparticipating_exited_member(spec, state):
     current_epoch = spec.get_current_epoch(state)
     assert current_epoch < state.validators[exited_index].withdrawable_epoch
 
-    exited_committee_index = state.current_sync_committee.pubkeys.index(exited_pubkey)
+    exited_committee_index = list(state.current_sync_committee.pubkeys).index(exited_pubkey)
     block = build_empty_block_for_next_slot(spec, state)
     committee_bits = [i != exited_committee_index for i in committee_indices]
     committee_indices = [index for index in committee_indices if index != exited_committee_index]
@@ -654,7 +654,7 @@ def test_sync_committee_with_nonparticipating_exited_member(spec, state):
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
-            block.slot - 1,
+            block.slot - spec.Slot(1),
             committee_indices,  # with exited validator removed
             block_root=block.parent_root,
         ),
@@ -667,7 +667,7 @@ def test_sync_committee_with_nonparticipating_exited_member(spec, state):
 @always_bls
 def test_sync_committee_with_participating_withdrawable_member(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     # move forward via some blocks
     for _ in range(3):
@@ -681,7 +681,7 @@ def test_sync_committee_with_participating_withdrawable_member(spec, state):
         state,
         committee_indices,
         rng,
-        lambda v: v.withdrawable_epoch + 1,
+        lambda v: v.withdrawable_epoch + spec.Epoch(1),
     )
 
     current_epoch = spec.get_current_epoch(state)
@@ -693,7 +693,7 @@ def test_sync_committee_with_participating_withdrawable_member(spec, state):
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
-            block.slot - 1,
+            block.slot - spec.Slot(1),
             committee_indices,  # full committee signs
             block_root=block.parent_root,
         ),
@@ -706,7 +706,7 @@ def test_sync_committee_with_participating_withdrawable_member(spec, state):
 @always_bls
 def test_sync_committee_with_nonparticipating_withdrawable_member(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     # move forward via some blocks
     for _ in range(3):
@@ -720,14 +720,14 @@ def test_sync_committee_with_nonparticipating_withdrawable_member(spec, state):
         state,
         committee_indices,
         rng,
-        lambda v: v.withdrawable_epoch + 1,
+        lambda v: v.withdrawable_epoch + spec.Epoch(1),
     )
     exited_pubkey = state.validators[exited_index].pubkey
 
     current_epoch = spec.get_current_epoch(state)
     assert current_epoch > state.validators[exited_index].withdrawable_epoch
 
-    target_committee_index = state.current_sync_committee.pubkeys.index(exited_pubkey)
+    target_committee_index = list(state.current_sync_committee.pubkeys).index(exited_pubkey)
     block = build_empty_block_for_next_slot(spec, state)
     committee_bits = [i != target_committee_index for i in committee_indices]
     committee_indices = [index for index in committee_indices if index != target_committee_index]
@@ -736,7 +736,7 @@ def test_sync_committee_with_nonparticipating_withdrawable_member(spec, state):
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
-            block.slot - 1,
+            block.slot - spec.Slot(1),
             committee_indices,  # with withdrawable validator removed
             block_root=block.parent_root,
         ),

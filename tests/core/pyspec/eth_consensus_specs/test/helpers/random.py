@@ -152,7 +152,7 @@ def randomize_epoch_participation(spec, state, epoch, rng):
                 if value:
                     flags |= flag
                 else:
-                    flags &= 0xFF ^ flag
+                    flags &= spec.ParticipationFlags(0xFF) ^ flag
 
             set_flag(spec.TIMELY_HEAD_FLAG_INDEX, is_timely_correct_head)
             if is_timely_correct_head:

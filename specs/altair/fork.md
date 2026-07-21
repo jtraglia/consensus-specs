@@ -52,8 +52,10 @@ def translate_participation(
     state: BeaconState, pending_attestations: Sequence[phase0.PendingAttestation]
 ) -> None:
     for attestation in pending_attestations:
-        data = attestation.data
-        inclusion_delay = attestation.inclusion_delay
+        # The pending attestation carries the previous fork's types; convert
+        # so the data can flow through this fork's accessors.
+        data = AttestationData(attestation.data)
+        inclusion_delay = Slot(attestation.inclusion_delay)
         # Translate attestation inclusion info to flag indices
         participation_flag_indices = get_attestation_participation_flag_indices(
             state, data, inclusion_delay
@@ -61,7 +63,11 @@ def translate_participation(
 
         # Apply flags to all attesting validators
         epoch_participation = state.previous_epoch_participation
-        for index in get_attesting_indices(state, attestation):
+        adapted_attestation = Attestation(
+            aggregation_bits=attestation.aggregation_bits,
+            data=data,
+        )
+        for index in get_attesting_indices(state, adapted_attestation):
             for flag_index in participation_flag_indices:
                 epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
 
@@ -99,7 +105,7 @@ def upgrade_to_altair(pre: phase0.BeaconState) -> BeaconState:
         previous_justified_checkpoint=pre.previous_justified_checkpoint,
         current_justified_checkpoint=pre.current_justified_checkpoint,
         finalized_checkpoint=pre.finalized_checkpoint,
-        inactivity_scores=[uint64(0) for _ in range(len(pre.validators))],
+        inactivity_scores=[Uint64(0) for _ in range(len(pre.validators))],
     )
     # Fill in previous epoch participation from the pre state's pending attestations
     translate_participation(post, pre.previous_epoch_attestations)
