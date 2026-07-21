@@ -331,7 +331,7 @@ def patch_state_to_non_leaking(spec, state):
     state.justification_bits[1] = True
     previous_epoch = spec.get_previous_epoch(state)
     previous_root = spec.get_block_root(state, previous_epoch)
-    previous_previous_epoch = max(spec.GENESIS_EPOCH, spec.Epoch(previous_epoch - 1))
+    previous_previous_epoch = max(spec.GENESIS_EPOCH, previous_epoch - spec.Epoch(1))
     previous_previous_root = spec.get_block_root(state, previous_previous_epoch)
     state.previous_justified_checkpoint = spec.Checkpoint(
         epoch=previous_previous_epoch,

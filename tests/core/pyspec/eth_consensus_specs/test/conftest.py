@@ -168,7 +168,14 @@ def pytest_ignore_collect(collection_path, config):
     migrated, at which point it can be removed from this gate.
     """
     unmigrated = {
-        "altair", "bellatrix", "capella", "deneb", "electra", "fulu", "gloas", "heze",
+        "altair",
+        "bellatrix",
+        "capella",
+        "deneb",
+        "electra",
+        "fulu",
+        "gloas",
+        "heze",
     }
     requested = config.getoption("--fork", default=None) or ["phase0"]
     requested = {fork.lower() for fork in requested}

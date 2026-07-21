@@ -73,14 +73,14 @@ def test_basic(spec, state):
     block = build_empty_block_for_next_slot(spec, state)
     signed_block = state_transition_and_sign_block(spec, state, block)
     yield from tick_and_add_block(spec, store, signed_block, test_steps)
-    check_head_against_root(spec, store, signed_block.message.hash_tree_root())
+    check_head_against_root(spec, store, hash_tree_root(signed_block.message))
 
     # On receiving a block of next epoch
     store.time = current_time + spec.config.SLOT_DURATION_MS * spec.SLOTS_PER_EPOCH // 1000
     block = build_empty_block(spec, state, state.slot + spec.SLOTS_PER_EPOCH)
     signed_block = state_transition_and_sign_block(spec, state, block)
     yield from tick_and_add_block(spec, store, signed_block, test_steps)
-    check_head_against_root(spec, store, signed_block.message.hash_tree_root())
+    check_head_against_root(spec, store, hash_tree_root(signed_block.message))
 
     yield "steps", test_steps
 
@@ -132,7 +132,7 @@ def test_on_block_checkpoints(spec, state):
     block = build_empty_block_for_next_slot(spec, fin_state)
     signed_block = state_transition_and_sign_block(spec, fin_state, block)
     yield from tick_and_add_block(spec, store, signed_block, test_steps)
-    check_head_against_root(spec, store, signed_block.message.hash_tree_root())
+    check_head_against_root(spec, store, hash_tree_root(signed_block.message))
     yield "steps", test_steps
 
 
@@ -172,7 +172,7 @@ def test_on_block_bad_parent_root(spec, state):
     # Fail receiving block of `GENESIS_SLOT + 1` slot
     block = build_empty_block_for_next_slot(spec, state)
     transition_unsigned_block(spec, state, block)
-    block.state_root = state.hash_tree_root()
+    block.state_root = hash_tree_root(state)
 
     block.parent_root = b"\x45" * 32
     if is_post_gloas(spec):
@@ -217,7 +217,7 @@ def test_on_block_before_finalized(spec, state):
     block = build_empty_block_for_next_slot(spec, another_state)
     block.body.graffiti = b"\x12" * 32
     signed_block = state_transition_and_sign_block(spec, another_state, block)
-    assert signed_block.message.hash_tree_root() not in store.blocks
+    assert hash_tree_root(signed_block.message) not in store.blocks
     yield from tick_and_add_block(spec, store, signed_block, test_steps, valid=False)
 
     yield "steps", test_steps
@@ -904,7 +904,7 @@ def test_justification_update_beginning_of_epoch(spec, state):
     # Now add the blocks & check that justification update was triggered
     for signed_block in signed_blocks:
         yield from tick_and_add_block(spec, store, signed_block, test_steps)
-        check_head_against_root(spec, store, signed_block.message.hash_tree_root())
+        check_head_against_root(spec, store, hash_tree_root(signed_block.message))
     assert store.justified_checkpoint.epoch == 4
 
     yield "steps", test_steps
@@ -962,7 +962,7 @@ def test_justification_update_end_of_epoch(spec, state):
     # Now add the blocks & check that justification update was triggered
     for signed_block in signed_blocks:
         yield from tick_and_add_block(spec, store, signed_block, test_steps)
-        check_head_against_root(spec, store, signed_block.message.hash_tree_root())
+        check_head_against_root(spec, store, hash_tree_root(signed_block.message))
     assert store.justified_checkpoint.epoch == 4
     yield "steps", test_steps
 
@@ -1235,7 +1235,7 @@ def test_justified_update_not_realized_finality(spec, state):
     assert store.justified_checkpoint.epoch == 6
     assert store.finalized_checkpoint.epoch == 4
     last_block = signed_blocks[-1]
-    last_block_root = last_block.message.hash_tree_root()
+    last_block_root = hash_tree_root(last_block.message)
     ancestor_at_finalized_slot = spec.get_ancestor(
         store, get_fork_choice_node(spec, last_block_root), finalized_block.slot
     ).root
@@ -1316,7 +1316,7 @@ def test_justified_update_monotonic(spec, state):
     assert store.justified_checkpoint.epoch == 6
     assert store.finalized_checkpoint.epoch == 2
     last_block = signed_blocks[-1]
-    last_block_root = last_block.message.hash_tree_root()
+    last_block_root = hash_tree_root(last_block.message)
     ancestor_at_finalized_slot = spec.get_ancestor(
         store, get_fork_choice_node(spec, last_block_root), finalized_block.slot
     ).root
@@ -1471,7 +1471,7 @@ def test_pull_up_past_epoch_block(spec, state):
     # Add the previously created chain to the store and check for updates
     for signed_block in signed_blocks:
         yield from tick_and_add_block(spec, store, signed_block, test_steps)
-        check_head_against_root(spec, store, signed_block.message.hash_tree_root())
+        check_head_against_root(spec, store, hash_tree_root(signed_block.message))
     assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 5
     assert store.justified_checkpoint.epoch == 4
     assert store.finalized_checkpoint.epoch == 3
@@ -1528,7 +1528,7 @@ def test_not_pull_up_current_epoch_block(spec, state):
     # Add the previously created chain to the store and check that store does not apply pull-up updates
     for signed_block in signed_blocks:
         yield from tick_and_add_block(spec, store, signed_block, test_steps)
-        check_head_against_root(spec, store, signed_block.message.hash_tree_root())
+        check_head_against_root(spec, store, hash_tree_root(signed_block.message))
     assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 5
     assert store.justified_checkpoint.epoch == 3
     assert store.finalized_checkpoint.epoch == 2
@@ -1586,7 +1586,7 @@ def test_pull_up_on_tick(spec, state):
     # since the previous epoch was not justified
     for signed_block in signed_blocks:
         yield from tick_and_add_block(spec, store, signed_block, test_steps)
-        check_head_against_root(spec, store, signed_block.message.hash_tree_root())
+        check_head_against_root(spec, store, hash_tree_root(signed_block.message))
     assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 5
     assert store.justified_checkpoint.epoch == 3
     assert store.finalized_checkpoint.epoch == 2

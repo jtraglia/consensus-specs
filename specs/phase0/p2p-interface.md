@@ -234,13 +234,13 @@ This section outlines configurations that are used in this specification.
 | ------------------------------------ | ----------------------------------- | --------------------------------------------------------------------------------- |
 | `MAX_PAYLOAD_SIZE`                   | `10 * 2**20` (= 10,485,760, 10 MiB) | Maximum allowed size of uncompressed payload in gossipsub messages and RPC chunks |
 | `MAX_REQUEST_BLOCKS`                 | `2**10` (= 1,024)                   | Maximum number of blocks in a single request                                      |
-| `EPOCHS_PER_SUBNET_SUBSCRIPTION`     | `2**8` (= 256)                      | Number of epochs on a subnet subscription                                         |
-| `ATTESTATION_PROPAGATION_SLOT_RANGE` | `32`                                | Maximum number of slots during which an attestation can be propagated             |
-| `MAXIMUM_GOSSIP_CLOCK_DISPARITY`     | `500`                               | Maximum **milliseconds** of clock disparity assumed between honest nodes          |
+| `EPOCHS_PER_SUBNET_SUBSCRIPTION`     | `Epoch(2**8)` (= 256)               | Number of epochs on a subnet subscription                                         |
+| `ATTESTATION_PROPAGATION_SLOT_RANGE` | `Slot(32)`                          | Maximum number of slots during which an attestation can be propagated             |
+| `MAXIMUM_GOSSIP_CLOCK_DISPARITY`     | `Uint64(500)`                       | Maximum **milliseconds** of clock disparity assumed between honest nodes          |
 | `MESSAGE_DOMAIN_INVALID_SNAPPY`      | `DomainType('0x00000000')`          | 4-byte domain for gossip message-id isolation of *invalid* snappy messages        |
 | `MESSAGE_DOMAIN_VALID_SNAPPY`        | `DomainType('0x01000000')`          | 4-byte domain for gossip message-id isolation of *valid* snappy messages          |
 | `SUBNETS_PER_NODE`                   | `2`                                 | Number of long-lived subnets a beacon node should be subscribed to                |
-| `ATTESTATION_SUBNET_COUNT`           | `2**6` (= 64)                       | Number of attestation subnets used in the gossipsub protocol                      |
+| `ATTESTATION_SUBNET_COUNT`           | `Uint64(2**6)` (= 64)               | Number of attestation subnets used in the gossipsub protocol                      |
 | `ATTESTATION_SUBNET_EXTRA_BITS`      | `Uint64(0)`                         | Number of extra bits of a NodeId to use when mapping to a subscribed subnet       |
 | `MAX_CONCURRENT_REQUESTS`            | `2`                                 | Maximum number of concurrent requests per protocol ID that a client may issue     |
 
@@ -325,7 +325,7 @@ def is_not_from_future_slot(
 def is_within_slot_range(
     state: BeaconState,
     slot: Slot,
-    slot_range: Uint64,
+    slot_range: Slot,
     current_time_ms: Uint64,
 ) -> bool:
     """
@@ -335,7 +335,7 @@ def is_within_slot_range(
     start_time_ms = compute_time_at_slot_ms(state, slot)
     if current_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY < start_time_ms:
         return False
-    end_time_ms = compute_time_at_slot_ms(state, Slot(slot + slot_range + 1))
+    end_time_ms = compute_time_at_slot_ms(state, slot + slot_range + Slot(1))
     if end_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY < current_time_ms:
         return False
     return True
@@ -985,7 +985,7 @@ def validate_beacon_attestation_gossip(
         raise GossipReject("aggregation bits length does not match committee size")
 
     # [IGNORE] No other valid attestation seen for this validator and target epoch
-    participant_index = committee[aggregation_bits.index(True)]
+    participant_index = committee[list(aggregation_bits).index(True)]
     if (participant_index, target_epoch) in seen.attestation_validator_epochs:
         raise GossipIgnore("already seen attestation from this validator for this epoch")
 
@@ -1740,17 +1740,17 @@ should:
 ```python
 def compute_subscribed_subnet(node_id: NodeID, epoch: Epoch, index: int) -> SubnetID:
     prefix_bits = int(compute_attestation_subnet_prefix_bits())
-    node_id_prefix = node_id >> (NODE_ID_BITS - prefix_bits)
-    node_offset = node_id % EPOCHS_PER_SUBNET_SUBSCRIPTION
+    node_id_prefix = Uint64(int(node_id) >> (NODE_ID_BITS - prefix_bits))
+    node_offset = int(node_id) % int(EPOCHS_PER_SUBNET_SUBSCRIPTION)
     permutation_seed = hash(
-        uint_to_bytes(Uint64((epoch + node_offset) // EPOCHS_PER_SUBNET_SUBSCRIPTION))
+        uint_to_bytes(Uint64((int(epoch) + node_offset) // int(EPOCHS_PER_SUBNET_SUBSCRIPTION)))
     )
     permutated_prefix = compute_shuffled_index(
         node_id_prefix,
-        1 << prefix_bits,
+        Uint64(1 << prefix_bits),
         permutation_seed,
     )
-    return SubnetID((permutated_prefix + index) % ATTESTATION_SUBNET_COUNT)
+    return SubnetID((permutated_prefix + Uint64(index)) % ATTESTATION_SUBNET_COUNT)
 ```
 
 ```python

@@ -61,7 +61,7 @@ def setup_verified_parent_with_distinct_ptc(spec, state):
     and pin each PTC seat for that slot to a distinct validator so each cast vote later
     lands on exactly one position.
     """
-    block_slot = state.slot + 1
+    block_slot = state.slot + spec.Slot(1)
     window_idx = spec.SLOTS_PER_EPOCH + block_slot % spec.SLOTS_PER_EPOCH
     for i in range(spec.PTC_SIZE):
         state.ptc_window[window_idx][i] = spec.ValidatorIndex(i)

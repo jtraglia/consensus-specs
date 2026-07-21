@@ -88,6 +88,13 @@ warn_unused_configs = true
 warn_redundant_casts = true
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# The compiled specs lean on runtime behavior that static analysis cannot
+# see: containers fill missing fields with SSZ defaults, and assignments
+# coerce raw values (lists, bools, bytes) into their SSZ field types.
+module = "tests.core.pyspec.eth_consensus_specs.*"
+disable_error_code = ["call-arg", "arg-type", "assignment", "return-value"]
+
 [tool.ruff]
 line-length = 100
 namespace-packages = ["scripts"]
@@ -164,4 +171,4 @@ order-by-type = false
 [tool.uv.sources]
 # Temporarily track the jtraglia fork for positional construction (`SSZCollection`)
 # until https://github.com/leanEthereum/ssz-specs receives it.
-eth-ssz-specs = { git = "https://github.com/jtraglia/eth-ssz-specs.git", rev = "241d7c963665293e0a5544c1b6813424df656b67" }
+eth-ssz-specs = { git = "https://github.com/jtraglia/eth-ssz-specs.git", rev = "04c4b7f47ca9033be919c4c14b0e3bca96964e59" }

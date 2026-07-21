@@ -42,6 +42,7 @@ from eth_consensus_specs.test.helpers.state import (
     next_slots,
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 @with_altair_and_later
@@ -443,7 +444,7 @@ def test_discard_equivocations_slashed_validator_censoring(spec, state):
     # Store this state as the anchor state
     anchor_state = state.copy()
     # Generate an anchor block with correct state root
-    anchor_block = spec.BeaconBlock(state_root=anchor_state.hash_tree_root())
+    anchor_block = spec.BeaconBlock(state_root=hash_tree_root(anchor_state))
     if is_post_gloas(spec):
         anchor_block.body.signed_execution_payload_bid.message = (
             anchor_state.latest_execution_payload_bid
@@ -460,7 +461,7 @@ def test_discard_equivocations_slashed_validator_censoring(spec, state):
     assert store.time == current_time
 
     # Create two competing blocks at eqv_slot
-    next_slots(spec, state, eqv_slot - state.slot - 1)
+    next_slots(spec, state, eqv_slot - state.slot - spec.Slot(1))
     assert state.slot == eqv_slot - 1
 
     state_1 = state.copy()
@@ -480,13 +481,13 @@ def test_discard_equivocations_slashed_validator_censoring(spec, state):
 
     # Find out which block will win in tie breaking
     if spec.hash_tree_root(block_1) < spec.hash_tree_root(block_2):
-        block_low_root = block_1.hash_tree_root()
+        block_low_root = hash_tree_root(block_1)
         block_low_root_post_state = state_1
-        block_high_root = block_2.hash_tree_root()
+        block_high_root = hash_tree_root(block_2)
     else:
-        block_low_root = block_2.hash_tree_root()
+        block_low_root = hash_tree_root(block_2)
         block_low_root_post_state = state_2
-        block_high_root = block_1.hash_tree_root()
+        block_high_root = hash_tree_root(block_1)
     assert block_low_root < block_high_root
 
     # Tick to next slot so proposer boost does not apply
@@ -583,7 +584,7 @@ def test_voting_source_within_two_epoch(spec, state):
 
     # Check that the last block from the fork is the head
     # LMD votes for the competing branch are overwritten so this fork should win
-    last_fork_block_root = last_fork_block.hash_tree_root()
+    last_fork_block_root = hash_tree_root(last_fork_block)
     # assert store.voting_source[last_fork_block_root].epoch != store.justified_checkpoint.epoch
     assert (
         store.unrealized_justifications[last_fork_block_root].epoch
@@ -673,7 +674,7 @@ def test_voting_source_beyond_two_epoch(spec, state):
     assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 5
     assert store.finalized_checkpoint.epoch == 4
 
-    last_fork_block_root = last_fork_block.hash_tree_root()
+    last_fork_block_root = hash_tree_root(last_fork_block)
     last_fork_block_state = store.block_states[last_fork_block_root]
     assert last_fork_block_state.current_justified_checkpoint.epoch == 3
 
@@ -780,10 +781,10 @@ def test_incorrect_finalized(spec, state):
     assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 6
     assert store.finalized_checkpoint.epoch == 5
     # Store the expected head
-    head_root = signed_head_block.message.hash_tree_root()
+    head_root = hash_tree_root(signed_head_block.message)
 
     # Check that the head is unchanged
-    last_fork_block_root = last_fork_block.hash_tree_root()
+    last_fork_block_root = hash_tree_root(last_fork_block)
     assert store.voting_source[last_fork_block_root].epoch == store.justified_checkpoint.epoch
     assert store.finalized_checkpoint.epoch != spec.GENESIS_EPOCH
     finalized_slot = spec.compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)

@@ -67,24 +67,25 @@ from eth_consensus_specs.test.helpers.sync_committee import (
 )
 from eth_consensus_specs.test.helpers.voluntary_exits import prepare_signed_exits
 from eth_consensus_specs.utils import bls
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 @with_all_phases
 @spec_state_test
 def test_invalid_prev_slot_block_transition(spec, state):
     # Go to clean slot
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
     # Make a block for it
     block = build_empty_block(spec, state, slot=state.slot)
     proposer_index = spec.get_beacon_proposer_index(state)
     # Transition to next slot, above block will not be invalid on top of new state.
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
 
     yield "pre", state
     # State is beyond block slot, but the block can still be realistic when invalid.
     # Try the transition, and update the state root to where it is halted. Then sign with the supposed proposer.
     expect_assertion_error(lambda: transition_unsigned_block(spec, state, block))
-    block.state_root = state.hash_tree_root()
+    block.state_root = hash_tree_root(state)
     signed_block = sign_block(spec, state, block, proposer_index=proposer_index)
     yield "blocks", [signed_block]
     yield "post", None
@@ -94,7 +95,7 @@ def test_invalid_prev_slot_block_transition(spec, state):
 @spec_state_test
 def test_invalid_same_slot_block_transition(spec, state):
     # Same slot on top of pre-state, but move out of slot 0 first.
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
 
     block = build_empty_block(spec, state, slot=state.slot)
 
@@ -171,7 +172,7 @@ def process_and_sign_block_without_header_validations(spec, state, block):
         proposer_index=block.proposer_index,
         parent_root=block.parent_root,
         state_root=spec.Bytes32(),
-        body_root=block.body.hash_tree_root(),
+        body_root=hash_tree_root(block.body),
     )
     if is_post_bellatrix(spec) and not is_post_gloas(spec):
         if is_post_capella(spec) or spec.is_execution_enabled(state, block.body):
@@ -190,7 +191,7 @@ def process_and_sign_block_without_header_validations(spec, state, block):
         spec.process_sync_aggregate(state, block.body.sync_aggregate)
 
     # Insert post-state root
-    block.state_root = state.hash_tree_root()
+    block.state_root = hash_tree_root(state)
 
     # Sign block
     return sign_block(spec, state, block)
@@ -204,7 +205,7 @@ def test_invalid_proposal_for_genesis_slot(spec, state):
     yield "pre", state
 
     block = build_empty_block(spec, state, spec.GENESIS_SLOT)
-    block.parent_root = state.latest_block_header.hash_tree_root()
+    block.parent_root = hash_tree_root(state.latest_block_header)
 
     # Show that normal path through transition fails
     failed_state = state.copy()
@@ -230,7 +231,7 @@ def test_invalid_parent_from_same_slot(spec, state):
     signed_parent_block = state_transition_and_sign_block(spec, state, parent_block)
 
     child_block = parent_block.copy()
-    child_block.parent_root = state.latest_block_header.hash_tree_root()
+    child_block.parent_root = hash_tree_root(state.latest_block_header)
 
     if is_post_gloas(spec):
         child_block.body.signed_execution_payload_bid = build_empty_signed_execution_payload_bid(
@@ -239,7 +240,7 @@ def test_invalid_parent_from_same_slot(spec, state):
     elif is_post_bellatrix(spec):
         child_block.body.execution_payload = build_empty_execution_payload(spec, state)
 
-    child_block.parent_root = state.latest_block_header.hash_tree_root()
+    child_block.parent_root = hash_tree_root(state.latest_block_header)
     if is_post_gloas(spec):
         payload = build_empty_execution_payload(spec, state)
         child_block.body.signed_execution_payload_bid.message.block_hash = compute_el_block_hash(
@@ -363,7 +364,7 @@ def test_skipped_slots(spec, state):
     pre_slot = state.slot
     yield "pre", state
 
-    block = build_empty_block(spec, state, state.slot + 4)
+    block = build_empty_block(spec, state, state.slot + spec.Slot(4))
 
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -373,7 +374,7 @@ def test_skipped_slots(spec, state):
     assert state.slot == block.slot
     assert spec.get_randao_mix(state, spec.get_current_epoch(state)) != spec.Bytes32()
     for slot in range(pre_slot, state.slot):
-        assert spec.get_block_root_at_slot(state, slot) == block.parent_root
+        assert spec.get_block_root_at_slot(state, spec.Slot(slot)) == block.parent_root
 
 
 @with_all_phases
@@ -391,7 +392,7 @@ def test_empty_epoch_transition(spec, state):
 
     assert state.slot == block.slot
     for slot in range(pre_slot, state.slot):
-        assert spec.get_block_root_at_slot(state, slot) == block.parent_root
+        assert spec.get_block_root_at_slot(state, spec.Slot(slot)) == block.parent_root
 
 
 @with_all_phases
@@ -417,7 +418,7 @@ def test_empty_epoch_transition_large_validator_set(spec, state):
 
     assert state.slot == block.slot
     for slot in range(pre_slot, state.slot):
-        assert spec.get_block_root_at_slot(state, slot) == block.parent_root
+        assert spec.get_block_root_at_slot(state, spec.Slot(slot)) == block.parent_root
 
 
 @with_all_phases
@@ -433,7 +434,7 @@ def test_empty_epoch_transition_not_finalizing(spec, state):
     pre_balances = list(state.balances)
     yield "pre", state
 
-    spec.process_slots(state, state.slot + (spec.SLOTS_PER_EPOCH * 5))
+    spec.process_slots(state, state.slot + spec.SLOTS_PER_EPOCH * spec.Slot(5))
     block = build_empty_block_for_next_slot(spec, state)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -441,7 +442,7 @@ def test_empty_epoch_transition_not_finalizing(spec, state):
     yield "post", state
 
     assert state.slot == block.slot
-    assert state.finalized_checkpoint.epoch < spec.get_current_epoch(state) - 4
+    assert state.finalized_checkpoint.epoch < spec.get_current_epoch(state) - spec.Epoch(4)
     for index in range(len(state.validators)):
         assert state.balances[index] < pre_balances[index]
 
@@ -773,7 +774,7 @@ def test_high_proposer_index(spec, state):
         state.validators[i].exit_epoch = current_epoch
 
     # skip forward, get brand new proposers
-    state.slot = spec.SLOTS_PER_EPOCH * 2
+    state.slot = spec.SLOTS_PER_EPOCH * spec.Slot(2)
     block = build_empty_block_for_next_slot(spec, state)
     state_transition_and_sign_block(spec, state, block)
 
@@ -797,7 +798,7 @@ def test_high_proposer_index(spec, state):
 @spec_state_test
 def test_invalid_only_increase_deposit_count(spec, state):
     # Make the state expect a deposit, then don't provide it.
-    state.eth1_data.deposit_count += 1
+    state.eth1_data.deposit_count += spec.Uint64(1)
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
@@ -834,7 +835,7 @@ def test_deposit_in_block(spec, state):
     assert len(state.validators) == initial_registry_len + 1
     assert len(state.balances) == initial_balances_len + 1
     assert balance == spec.MAX_EFFECTIVE_BALANCE
-    assert state.validators[validator_index].pubkey == pubkeys[validator_index]
+    assert state.validators[validator_index].pubkey == spec.BLSPubkey(pubkeys[validator_index])
 
 
 @with_all_phases_from_to(PHASE0, FULU)
@@ -862,7 +863,7 @@ def test_invalid_duplicate_deposit_same_block(spec, state):
 @spec_state_test
 def test_deposit_top_up(spec, state):
     validator_index = 0
-    amount = spec.MAX_EFFECTIVE_BALANCE // 4
+    amount = spec.MAX_EFFECTIVE_BALANCE // spec.Gwei(4)
     deposit = prepare_state_and_deposit(spec, state, validator_index, amount)
 
     initial_registry_len = len(state.validators)
@@ -884,7 +885,7 @@ def test_deposit_top_up(spec, state):
     assert len(state.balances) == initial_balances_len
 
     # Altair introduces sync committee (sm) reward and penalty
-    sync_committee_reward = sync_committee_penalty = 0
+    sync_committee_reward = sync_committee_penalty = spec.Gwei(0)
     if is_post_altair(spec):
         committee_indices = compute_committee_indices(state, state.current_sync_committee)
         committee_bits = block.body.sync_aggregate.sync_committee_bits
@@ -1016,7 +1017,7 @@ def test_voluntary_exit(spec, state):
     validator_index = spec.get_active_validator_indices(state, spec.get_current_epoch(state))[-1]
 
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     signed_exits = prepare_signed_exits(spec, state, [validator_index])
     yield "pre", state
@@ -1044,7 +1045,7 @@ def test_invalid_duplicate_validator_exit_same_block(spec, state):
     validator_index = spec.get_active_validator_indices(state, spec.get_current_epoch(state))[-1]
 
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     # Same index tries to exit twice, but should only be able to do so once.
     signed_exits = prepare_signed_exits(spec, state, [validator_index, validator_index])
@@ -1068,7 +1069,7 @@ def test_multiple_different_validator_exits_same_block(spec, state):
         spec.get_active_validator_indices(state, spec.get_current_epoch(state))[i] for i in range(3)
     ]
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     signed_exits = prepare_signed_exits(spec, state, validator_indices)
     yield "pre", state
@@ -1136,7 +1137,11 @@ def test_balance_driven_status_transitions(spec, state):
 @spec_state_test
 @always_bls
 def test_historical_batch(spec, state):
-    state.slot += spec.SLOTS_PER_HISTORICAL_ROOT - (state.slot % spec.SLOTS_PER_HISTORICAL_ROOT) - 1
+    state.slot += (
+        spec.SLOTS_PER_HISTORICAL_ROOT
+        - (state.slot % spec.SLOTS_PER_HISTORICAL_ROOT)
+        - spec.Slot(1)
+    )
     pre_historical_roots = state.historical_roots.copy()
 
     if is_post_capella(spec):
@@ -1152,7 +1157,8 @@ def test_historical_batch(spec, state):
 
     assert state.slot == block.slot
     assert (
-        spec.get_current_epoch(state) % (spec.SLOTS_PER_HISTORICAL_ROOT // spec.SLOTS_PER_EPOCH)
+        spec.get_current_epoch(state)
+        % spec.Epoch(spec.SLOTS_PER_HISTORICAL_ROOT // spec.SLOTS_PER_EPOCH)
         == 0
     )
 
@@ -1169,9 +1175,9 @@ def test_historical_batch(spec, state):
 @with_presets([MINIMAL], reason="suffices to test eth1 data voting without long voting period")
 @spec_state_test
 def test_eth1_data_votes_consensus(spec, state):
-    voting_period_slots = spec.EPOCHS_PER_ETH1_VOTING_PERIOD * spec.SLOTS_PER_EPOCH
+    voting_period_slots = spec.Slot(spec.EPOCHS_PER_ETH1_VOTING_PERIOD) * spec.SLOTS_PER_EPOCH
 
-    offset_block = build_empty_block(spec, state, slot=voting_period_slots - 1)
+    offset_block = build_empty_block(spec, state, slot=voting_period_slots - spec.Slot(1))
     state_transition_and_sign_block(spec, state, offset_block)
     yield "pre", state
 
@@ -1189,7 +1195,7 @@ def test_eth1_data_votes_consensus(spec, state):
         blocks.append(signed_block)
 
     assert len(state.eth1_data_votes) == voting_period_slots
-    assert state.eth1_data.block_hash == a
+    assert state.eth1_data.block_hash == spec.Hash32(a)
 
     # transition to next eth1 voting period
     block = build_empty_block_for_next_slot(spec, state)
@@ -1200,21 +1206,21 @@ def test_eth1_data_votes_consensus(spec, state):
     yield "blocks", blocks
     yield "post", state
 
-    assert state.eth1_data.block_hash == a
+    assert state.eth1_data.block_hash == spec.Hash32(a)
     assert state.slot % voting_period_slots == 0
     assert len(state.eth1_data_votes) == 1
-    assert state.eth1_data_votes[0].block_hash == c
+    assert state.eth1_data_votes[0].block_hash == spec.Hash32(c)
 
 
 @with_all_phases
 @with_presets([MINIMAL], reason="suffices to test eth1 data voting without long voting period")
 @spec_state_test
 def test_eth1_data_votes_no_consensus(spec, state):
-    voting_period_slots = spec.EPOCHS_PER_ETH1_VOTING_PERIOD * spec.SLOTS_PER_EPOCH
+    voting_period_slots = spec.Slot(spec.EPOCHS_PER_ETH1_VOTING_PERIOD) * spec.SLOTS_PER_EPOCH
 
     pre_eth1_hash = state.eth1_data.block_hash
 
-    offset_block = build_empty_block(spec, state, slot=voting_period_slots - 1)
+    offset_block = build_empty_block(spec, state, slot=voting_period_slots - spec.Slot(1))
     state_transition_and_sign_block(spec, state, offset_block)
     yield "pre", state
 

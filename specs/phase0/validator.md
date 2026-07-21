@@ -100,8 +100,8 @@ specifications before continuing and use as a reference throughout.
 
 ### Misc
 
-| Name                               | Value                | Unit       |
-| ---------------------------------- | -------------------- | ---------- |
+| Name                               | Value                 | Unit       |
+| ---------------------------------- | --------------------- | ---------- |
 | `TARGET_AGGREGATORS_PER_COMMITTEE` | `Uint64(2**4)` (= 16) | validators |
 
 ## Configuration
@@ -471,7 +471,8 @@ def voting_period_start_time(state: BeaconState) -> Uint64:
 def is_candidate_block(block: Eth1Block, period_start: Uint64) -> bool:
     return (
         block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= period_start
-        and block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * 2 >= period_start
+        and block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * Uint64(2)
+        >= period_start
     )
 ```
 
@@ -710,7 +711,9 @@ def compute_subnet_for_attestation(
     slots_since_epoch_start = Uint64(slot % SLOTS_PER_EPOCH)
     committees_since_epoch_start = committees_per_slot * slots_since_epoch_start
 
-    return SubnetID((committees_since_epoch_start + committee_index) % ATTESTATION_SUBNET_COUNT)
+    return SubnetID(
+        (committees_since_epoch_start + Uint64(committee_index)) % ATTESTATION_SUBNET_COUNT
+    )
 ```
 
 ### Attestation aggregation

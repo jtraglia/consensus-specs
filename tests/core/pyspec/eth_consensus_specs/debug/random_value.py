@@ -69,7 +69,9 @@ def get_random_ssz_object(
         elif mode == RandomizationMode.mode_max:
             return typ(data=b"\xff" * min(1, limit))
         else:
-            return typ(data=get_random_bytes_list(rng, rng.randint(0, min(max_bytes_length, limit))))
+            return typ(
+                data=get_random_bytes_list(rng, rng.randint(0, min(max_bytes_length, limit)))
+            )
     if issubclass(typ, BaseBytes):
         # Random byte vectors can be bigger than max bytes size, e.g. custody chunk data.
         # No max-bytes-length limitation here.
@@ -92,7 +94,9 @@ def get_random_ssz_object(
         length = int(typ.LENGTH)
         return typ(
             data=(
-                get_random_ssz_object(rng, elem_type, max_bytes_length, max_list_length, mode, chaos)
+                get_random_ssz_object(
+                    rng, elem_type, max_bytes_length, max_list_length, mode, chaos
+                )
                 for _ in range(length)
             )
         )
@@ -110,7 +114,9 @@ def get_random_ssz_object(
         max_list_length = 1 << (max_list_length.bit_length() >> 1)
         return typ(
             data=(
-                get_random_ssz_object(rng, elem_type, max_bytes_length, max_list_length, mode, chaos)
+                get_random_ssz_object(
+                    rng, elem_type, max_bytes_length, max_list_length, mode, chaos
+                )
                 for _ in range(length)
             )
         )

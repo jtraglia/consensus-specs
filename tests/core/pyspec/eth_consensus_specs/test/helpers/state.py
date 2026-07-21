@@ -8,9 +8,9 @@ from eth_consensus_specs.test.helpers.block import (
 )
 from eth_consensus_specs.test.helpers.forks import is_post_altair
 from eth_consensus_specs.test.helpers.voluntary_exits import get_unslashed_exited_validators
-from eth_consensus_specs.utils.hash_function import hash
+from eth_consensus_specs.utils.hash_function import Bytes32, hash
 from eth_consensus_specs.utils.ssz.ssz_impl import uint_to_bytes
-from ssz import Bytes32, Uint64
+from ssz import Uint64
 
 
 def get_balance(state, index):
@@ -208,20 +208,20 @@ def simulate_lookahead(spec, state):
 
 
 def cause_effective_balance_decrease_below_threshold(
-    spec, state, validator_index: uint64, threshold: uint64
+    spec, state, validator_index: Uint64, threshold: Uint64
 ) -> None:
     """
     Cause an effective balance decrease change for the validator at
     `validator_index` below a threshold
     """
-    HYSTERESIS_INCREMENT = uint64(spec.EFFECTIVE_BALANCE_INCREMENT // spec.HYSTERESIS_QUOTIENT)
+    HYSTERESIS_INCREMENT = Uint64(spec.EFFECTIVE_BALANCE_INCREMENT // spec.HYSTERESIS_QUOTIENT)
     DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * spec.HYSTERESIS_DOWNWARD_MULTIPLIER
     state.balances[validator_index] = (
         min(threshold, state.validators[validator_index].effective_balance - DOWNWARD_THRESHOLD) - 1
     )
 
 
-def simulate_lookahead_with_thresholds(spec, state) -> Sequence[tuple[uint64, uint64]]:
+def simulate_lookahead_with_thresholds(spec, state) -> Sequence[tuple[Uint64, Uint64]]:
     """
     Simulate the lookahead by advancing the state forward with empty slots and
     calling `get_beacon_proposer_index`. Returns along, the lookaheads.
@@ -235,7 +235,7 @@ def simulate_lookahead_with_thresholds(spec, state) -> Sequence[tuple[uint64, ui
     return lookahead
 
 
-def get_beacon_proposer_index_and_threshold(spec, state) -> tuple[uint64, uint64]:
+def get_beacon_proposer_index_and_threshold(spec, state) -> tuple[Uint64, Uint64]:
     """
     Return the beacon proposer index at the current slot,
     along with the threshold for that index.
@@ -249,16 +249,16 @@ def get_beacon_proposer_index_and_threshold(spec, state) -> tuple[uint64, uint64
 
 
 def electra_compute_proposer_index_and_threshold(
-    spec, state, indices: Sequence[uint64], seed: Bytes32
-) -> tuple[uint64, uint64]:
+    spec, state, indices: Sequence[Uint64], seed: Bytes32
+) -> tuple[Uint64, Uint64]:
     """
     Return from ``indices`` a random index sampled by effective balance,
     along with the threshold for that index.
     """
     assert len(indices) > 0
     MAX_RANDOM_VALUE = 2**16 - 1  # [Modified in Electra]
-    i = uint64(0)
-    total = uint64(len(indices))
+    i = Uint64(0)
+    total = Uint64(len(indices))
     while True:
         candidate_index = indices[spec.compute_shuffled_index(i % total, total, seed)]
         # [Modified in Electra]

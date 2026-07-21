@@ -9,7 +9,7 @@ def run_process_slashings_reset(spec, state):
 @with_all_phases
 @spec_state_test
 def test_flush_slashings(spec, state):
-    next_epoch = spec.get_current_epoch(state) + 1
+    next_epoch = spec.get_current_epoch(state) + spec.Epoch(1)
     state.slashings[next_epoch % spec.EPOCHS_PER_SLASHINGS_VECTOR] = 100
     assert state.slashings[next_epoch % spec.EPOCHS_PER_SLASHINGS_VECTOR] != 0
 

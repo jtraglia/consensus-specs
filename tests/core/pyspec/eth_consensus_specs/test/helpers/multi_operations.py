@@ -95,7 +95,7 @@ def get_random_attester_slashings(spec, state, rng, slashed_indices=None):
     if len(indices) < max_slashed_count:
         return []
 
-    slot_range = list(range(state.slot - spec.SLOTS_PER_HISTORICAL_ROOT + 1, state.slot))
+    slot_range = list(range(state.slot - spec.SLOTS_PER_HISTORICAL_ROOT + spec.Slot(1), state.slot))
     slashings = [
         get_valid_attester_slashing_by_indices(
             spec,
@@ -123,7 +123,7 @@ def get_random_attestations(spec, state, rng, num_attestations=None):
         get_valid_attestation(
             spec,
             state,
-            slot=rng.randrange(state.slot - spec.SLOTS_PER_EPOCH + 1, state.slot),
+            slot=rng.randrange(state.slot - spec.SLOTS_PER_EPOCH + spec.Slot(1), state.slot),
             signed=True,
         )
         for _ in range(num_attestations)

@@ -659,7 +659,7 @@ def _encode_lc_object(test, prefix, obj, slot, genesis_validators_root):
 
 def add_new_block(test, spec, state, slot=None, num_sync_participants=0):
     if slot is None:
-        slot = state.slot + 1
+        slot = state.slot + spec.Slot(1)
     assert slot > state.slot
     parent_bid = _state_to_block_id(state)
 

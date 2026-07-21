@@ -1,6 +1,8 @@
 import random
 from math import isqrt
 
+from ssz.exceptions import SSZRangeError
+
 from eth_consensus_specs.test.context import (
     single_phase,
     spec_test,
@@ -23,10 +25,11 @@ def test_integer_squareroot(spec):
         uint64_n = spec.Uint64(n)
         assert spec.integer_squareroot(uint64_n) == isqrt(n)
 
+    # An out-of-range value cannot even be constructed as a Uint64.
     bad = False
     try:
         spec.integer_squareroot(spec.Uint64(2**64))
         bad = True
-    except ValueError:
+    except SSZRangeError:
         pass
     assert not bad

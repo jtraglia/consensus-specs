@@ -15,6 +15,7 @@ from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
 from eth_consensus_specs.utils import bls
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def run_attestation_processing(spec, state, attestation, valid=True):
@@ -58,6 +59,7 @@ def run_attestation_processing(spec, state, attestation, valid=True):
 
 
 def build_attestation_data(spec, state, slot, index, beacon_block_root=None, shard=None):
+    slot = spec.Slot(slot)
     assert state.slot >= slot
 
     if beacon_block_root is not None:
@@ -65,7 +67,7 @@ def build_attestation_data(spec, state, slot, index, beacon_block_root=None, sha
     elif slot == state.slot:
         beacon_block_root = build_empty_block_for_next_slot(spec, state).parent_root
     else:
-        beacon_block_root = spec.get_block_root_at_slot(state, slot)
+        beacon_block_root = spec.get_block_root_at_slot(state, spec.Slot(slot))
 
     current_epoch_start_slot = spec.compute_start_slot_at_epoch(spec.get_current_epoch(state))
     if slot < current_epoch_start_slot:
@@ -508,7 +510,7 @@ def cached_prepare_state_with_attestations(spec, state):
     # If the pre-state is not already known in the LRU, then take it,
     # prepare it with attestations, and put it in the LRU.
     # The input state is likely already cached, so the hash-tree-root does not affect speed.
-    key = (spec.fork, state.hash_tree_root())
+    key = (spec.fork, hash_tree_root(state))
     if key not in _prep_state_cache_dict:
         prepare_state_with_attestations(spec, state)
         _prep_state_cache_dict[key] = state.copy()

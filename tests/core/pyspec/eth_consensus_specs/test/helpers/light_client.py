@@ -77,7 +77,7 @@ def compute_start_slot_at_next_sync_committee_period(spec, state):
 def get_sync_aggregate(spec, state, num_participants=None, signature_slot=None, phases=None):
     # By default, the sync committee signs the previous slot
     if signature_slot is None:
-        signature_slot = state.slot + 1
+        signature_slot = state.slot + spec.Slot(1)
     assert signature_slot > state.slot
 
     # Ensure correct sync committee and fork version are selected

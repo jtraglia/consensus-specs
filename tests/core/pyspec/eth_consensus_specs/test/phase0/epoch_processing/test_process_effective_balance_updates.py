@@ -29,12 +29,13 @@ def run_test_effective_balance_hysteresis(spec, state, with_compounding_credenti
         if with_compounding_credentials
         else spec.MAX_EFFECTIVE_BALANCE
     )
-    min = spec.config.EJECTION_BALANCE
-    inc = spec.EFFECTIVE_BALANCE_INCREMENT
-    div = spec.HYSTERESIS_QUOTIENT
+    max = int(max)
+    min = int(spec.config.EJECTION_BALANCE)
+    inc = int(spec.EFFECTIVE_BALANCE_INCREMENT)
+    div = int(spec.HYSTERESIS_QUOTIENT)
     hys_inc = inc // div
-    down = spec.HYSTERESIS_DOWNWARD_MULTIPLIER
-    up = spec.HYSTERESIS_UPWARD_MULTIPLIER
+    down = int(spec.HYSTERESIS_DOWNWARD_MULTIPLIER)
+    up = int(spec.HYSTERESIS_UPWARD_MULTIPLIER)
     cases = [
         (max, max, max, "as-is"),
         (max, max - 1, max, "round up"),

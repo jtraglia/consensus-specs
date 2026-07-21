@@ -96,7 +96,7 @@ def test_gossip_proposer_slashing__reject_slots_not_matching(spec, state):
 
     # Modify second header slot to not match
     proposer_slashing.signed_header_2.message.slot = (
-        proposer_slashing.signed_header_1.message.slot + 1
+        proposer_slashing.signed_header_1.message.slot + spec.Slot(1)
     )
 
     yield get_filename(proposer_slashing), proposer_slashing
@@ -136,7 +136,7 @@ def test_gossip_proposer_slashing__reject_proposer_indices_not_matching(spec, st
 
     # Modify second header proposer_index to not match
     proposer_slashing.signed_header_2.message.proposer_index = (
-        proposer_slashing.signed_header_1.message.proposer_index + 1
+        proposer_slashing.signed_header_1.message.proposer_index + spec.ValidatorIndex(1)
     )
 
     yield get_filename(proposer_slashing), proposer_slashing

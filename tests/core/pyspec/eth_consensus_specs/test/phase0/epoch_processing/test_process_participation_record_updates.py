@@ -16,5 +16,5 @@ def test_updated_participation_record(spec, state):
 
     yield from run_process_participation_record_updates(spec, state)
 
-    assert state.previous_epoch_attestations == current_epoch_attestations
-    assert state.current_epoch_attestations == []
+    assert list(state.previous_epoch_attestations) == current_epoch_attestations
+    assert len(state.current_epoch_attestations) == 0

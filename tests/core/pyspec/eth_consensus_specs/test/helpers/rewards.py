@@ -46,8 +46,8 @@ def has_enough_for_reward(spec, state, index):
     but a zero base reward.
     """
     return (
-        state.validators[index].effective_balance * spec.BASE_REWARD_FACTOR
-        > spec.integer_squareroot(spec.get_total_active_balance(state))
+        state.validators[index].effective_balance * spec.Gwei(spec.BASE_REWARD_FACTOR)
+        > spec.integer_squareroot(spec.Uint64(spec.get_total_active_balance(state)))
         // spec.BASE_REWARDS_PER_EPOCH
     )
 
@@ -66,7 +66,7 @@ def has_enough_for_leak_penalty(spec, state, index):
         ] > spec.config.INACTIVITY_SCORE_BIAS * get_inactivity_penalty_quotient(spec)
     else:
         return (
-            state.validators[index].effective_balance * spec.get_finality_delay(state)
+            state.validators[index].effective_balance * spec.Gwei(spec.get_finality_delay(state))
             > spec.INACTIVITY_PENALTY_QUOTIENT
         )
 
@@ -265,10 +265,9 @@ def run_get_inactivity_penalty_deltas(spec, state):
             base_reward = spec.get_base_reward(state, index)
             if not is_post_altair(spec):
                 cancel_base_rewards_per_epoch = spec.BASE_REWARDS_PER_EPOCH
-                base_penalty = (
-                    cancel_base_rewards_per_epoch * base_reward
-                    - spec.get_proposer_reward(state, index)
-                )
+                base_penalty = spec.Gwei(
+                    cancel_base_rewards_per_epoch
+                ) * base_reward - spec.get_proposer_reward(state, index)
 
             if not has_enough_for_reward(spec, state, index):
                 assert penalties[index] == 0
@@ -472,7 +471,7 @@ def run_test_full_fraction_incorrect(spec, state, correct_target, correct_head, 
 def run_test_full_delay_one_slot(spec, state):
     cached_prepare_state_with_attestations(spec, state)
     for a in state.previous_epoch_attestations:
-        a.inclusion_delay += 1
+        a.inclusion_delay += spec.Slot(1)
 
     yield from run_deltas(spec, state)
 
@@ -530,7 +529,7 @@ def run_test_duplicate_attestations_at_later_slots(spec, state):
         if a.data.slot + a.inclusion_delay >= max_slot:
             continue
         later_a = a.copy()
-        later_a.inclusion_delay += 1
+        later_a.inclusion_delay += spec.Slot(1)
         later_a.proposer_index = per_slot_proposers[later_a.data.slot + later_a.inclusion_delay]
         later_attestations.append(later_a)
 

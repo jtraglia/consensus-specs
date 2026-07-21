@@ -200,7 +200,8 @@ class MarkdownToSpec:
                 r"^(.*ProgressiveContainer.*)$", r"\1  # type: ignore", source, flags=re.MULTILINE
             )
         else:
-            assert parent_class is None or parent_class == "Container"
+            # Containers, and primitive fixed byte arrays the custom types build upon.
+            assert parent_class is None or parent_class in ("Container", "BaseBytes")
         self.spec["ssz_objects"][class_name] = source
 
     def _process_table(self, table: Table) -> None:

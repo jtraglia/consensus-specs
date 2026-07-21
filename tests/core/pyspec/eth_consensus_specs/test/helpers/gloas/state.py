@@ -1,7 +1,7 @@
 def initialize_ptc_window(spec, state):
     empty_previous_epoch = [
-        spec.Vector[spec.ValidatorIndex, spec.PTC_SIZE].of(*
-            [spec.ValidatorIndex(0) for _ in range(spec.PTC_SIZE)]
+        spec.Vector[spec.ValidatorIndex, spec.PTC_SIZE].of(
+            *[spec.ValidatorIndex(0) for _ in range(spec.PTC_SIZE)]
         )
         for _ in range(spec.SLOTS_PER_EPOCH)
     ]

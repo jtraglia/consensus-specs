@@ -77,11 +77,11 @@ def build_deposit(spec, deposit_data_list, pubkey, privkey, amount, withdrawal_c
 def deposit_from_context(spec, deposit_data_list, index):
     deposit_data = deposit_data_list[index]
     root = hash_tree_root(spec.DepositDataList.of(*deposit_data_list))
-    tree = calc_merkle_tree_from_leaves(tuple([d.hash_tree_root() for d in deposit_data_list]))
+    tree = calc_merkle_tree_from_leaves(tuple([hash_tree_root(d) for d in deposit_data_list]))
     proof = list(get_merkle_proof(tree, item_index=index, tree_len=32)) + [
         len(deposit_data_list).to_bytes(32, "little")
     ]
-    leaf = deposit_data.hash_tree_root()
+    leaf = hash_tree_root(deposit_data)
     assert spec.is_valid_merkle_branch(
         leaf, proof, spec.DEPOSIT_CONTRACT_TREE_DEPTH + spec.Uint64(1), spec.Uint64(index), root
     )
@@ -347,7 +347,7 @@ def run_deposit_processing(spec, state, deposit, validator_index, valid=True, ef
     If ``valid == False``, run expecting ``AssertionError``
     """
     pre_validator_count = len(state.validators)
-    pre_balance = 0
+    pre_balance = spec.Gwei(0)
     pre_effective_balance = 0
     is_top_up = False
     # is a top-up
@@ -458,7 +458,7 @@ def run_deposit_request_processing(spec, state, deposit_request, validator_index
     assert is_post_electra(spec)
 
     pre_validator_count = len(state.validators)
-    pre_balance = 0
+    pre_balance = spec.Gwei(0)
     is_top_up = False
     # is a top-up
     if validator_index < pre_validator_count:
@@ -515,7 +515,7 @@ def run_pending_deposit_applying(spec, state, pending_deposit, validator_index, 
     state.pending_deposits.append(pending_deposit)
 
     pre_validator_count = len(state.validators)
-    pre_balance = 0
+    pre_balance = spec.Gwei(0)
     pre_effective_balance = 0
     is_top_up = False
     # is a top-up

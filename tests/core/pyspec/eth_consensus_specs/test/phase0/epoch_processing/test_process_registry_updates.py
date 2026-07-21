@@ -1,3 +1,5 @@
+from ssz.exceptions import SSZRangeError
+
 from eth_consensus_specs.test.context import (
     scaled_churn_balances_min_churn_limit,
     single_phase,
@@ -49,7 +51,7 @@ def test_activation_queue_to_activated_if_finalized(spec, state):
     mock_deposit(spec, state, index)
 
     # mock validator as having been in queue since latest finalized
-    state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - 1
+    state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - spec.Epoch(1)
     state.validators[index].activation_eligibility_epoch = state.finalized_checkpoint.epoch
 
     assert not spec.is_active_validator(state.validators[index], spec.get_current_epoch(state))
@@ -76,8 +78,10 @@ def test_activation_queue_no_activation_no_finality(spec, state):
     mock_deposit(spec, state, index)
 
     # mock validator as having been in queue only after latest finalized
-    state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - 1
-    state.validators[index].activation_eligibility_epoch = state.finalized_checkpoint.epoch + 1
+    state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - spec.Epoch(1)
+    state.validators[index].activation_eligibility_epoch = (
+        state.finalized_checkpoint.epoch + spec.Epoch(1)
+    )
 
     assert not spec.is_active_validator(state.validators[index], spec.get_current_epoch(state))
 
@@ -94,19 +98,19 @@ def test_activation_queue_sorting(spec, state):
     churn_limit = spec.get_validator_churn_limit(state)
 
     # try to activate more than the per-epoch churn limit
-    mock_activations = churn_limit * 2
+    mock_activations = int(churn_limit) * 2
 
     epoch = spec.get_current_epoch(state)
     for i in range(mock_activations):
         mock_deposit(spec, state, i)
-        state.validators[i].activation_eligibility_epoch = epoch + 1
+        state.validators[i].activation_eligibility_epoch = epoch + spec.Epoch(1)
 
     # give the last priority over the others
     state.validators[mock_activations - 1].activation_eligibility_epoch = epoch
 
     # move state forward and finalize to allow for activations
-    next_slots(spec, state, spec.SLOTS_PER_EPOCH * 3)
-    state.finalized_checkpoint.epoch = epoch + 1
+    next_slots(spec, state, spec.SLOTS_PER_EPOCH * spec.Slot(3))
+    state.finalized_checkpoint.epoch = epoch + spec.Epoch(1)
 
     yield from run_process_registry_updates(spec, state)
 
@@ -126,22 +130,22 @@ def test_activation_queue_sorting(spec, state):
         # the one at churn_limit did not make it, it was out-prioritized
         assert state.validators[churn_limit].activation_epoch == spec.FAR_FUTURE_EPOCH
         # but the one in front of the above did
-        assert state.validators[churn_limit - 1].activation_epoch != spec.FAR_FUTURE_EPOCH
+        assert state.validators[int(churn_limit) - 1].activation_epoch != spec.FAR_FUTURE_EPOCH
 
 
 def run_test_activation_queue_efficiency(spec, state):
     churn_limit = spec.get_validator_churn_limit(state)
-    mock_activations = churn_limit * 2
+    mock_activations = int(churn_limit) * 2
 
     epoch = spec.get_current_epoch(state)
     for i in range(mock_activations):
         mock_deposit(spec, state, i)
-        state.validators[i].activation_eligibility_epoch = epoch + 1
+        state.validators[i].activation_eligibility_epoch = epoch + spec.Epoch(1)
 
     # move state forward and finalize to allow for activations
-    next_slots(spec, state, spec.SLOTS_PER_EPOCH * 3)
+    next_slots(spec, state, spec.SLOTS_PER_EPOCH * spec.Slot(3))
 
-    state.finalized_checkpoint.epoch = epoch + 1
+    state.finalized_checkpoint.epoch = epoch + spec.Epoch(1)
 
     # Churn limit could have changed given the active vals removed via `mock_deposit`
     churn_limit_0 = spec.get_validator_churn_limit(state)
@@ -212,7 +216,7 @@ def run_test_ejection_past_churn_limit(spec, state):
     churn_limit = spec.get_validator_churn_limit(state)
 
     # try to eject more than per-epoch churn limit
-    mock_ejections = churn_limit * 3
+    mock_ejections = int(churn_limit) * 3
 
     for i in range(mock_ejections):
         state.validators[i].effective_balance = spec.config.EJECTION_BALANCE
@@ -239,10 +243,10 @@ def run_test_ejection_past_churn_limit(spec, state):
                 return expected_ejection_epoch
             # second third gets delayed by 1 epoch
             elif mock_ejections // 3 <= i < mock_ejections * 2 // 3:
-                return expected_ejection_epoch + 1
+                return expected_ejection_epoch + spec.Epoch(1)
             # final third gets delayed by 2 epochs
             else:
-                return expected_ejection_epoch + 2
+                return expected_ejection_epoch + spec.Epoch(2)
 
     for i in range(mock_ejections):
         target_exit_epoch = map_index_to_exit_epoch(i)
@@ -286,7 +290,7 @@ def run_test_activation_queue_activation_and_ejection(spec, state, num_per_statu
         mock_deposit(spec, state, validator_index)
 
     # ready for activation
-    state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - 1
+    state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - spec.Epoch(1)
     activation_start_index = num_per_status
     activation_indices = list(
         range(activation_start_index, activation_start_index + num_per_status)
@@ -337,10 +341,11 @@ def run_test_activation_queue_activation_and_ejection(spec, state, num_per_statu
         validator = state.validators[validator_index]
         assert validator.exit_epoch != spec.FAR_FUTURE_EPOCH
         assert spec.is_active_validator(validator, spec.get_current_epoch(state))
-        queue_offset = i // churn_limit
+        queue_offset = i // int(churn_limit)
         assert not spec.is_active_validator(
             validator,
-            spec.compute_activation_exit_epoch(spec.get_current_epoch(state)) + queue_offset,
+            spec.compute_activation_exit_epoch(spec.get_current_epoch(state))
+            + spec.Epoch(queue_offset),
         )
 
 
@@ -355,7 +360,7 @@ def test_activation_queue_activation_and_ejection__1(spec, state):
 def test_activation_queue_activation_and_ejection__churn_limit(spec, state):
     churn_limit = spec.get_validator_churn_limit(state)
     assert churn_limit == spec.config.MIN_PER_EPOCH_CHURN_LIMIT
-    yield from run_test_activation_queue_activation_and_ejection(spec, state, churn_limit)
+    yield from run_test_activation_queue_activation_and_ejection(spec, state, int(churn_limit))
 
 
 @with_all_phases
@@ -363,7 +368,7 @@ def test_activation_queue_activation_and_ejection__churn_limit(spec, state):
 def test_activation_queue_activation_and_ejection__exceed_churn_limit(spec, state):
     churn_limit = spec.get_validator_churn_limit(state)
     assert churn_limit == spec.config.MIN_PER_EPOCH_CHURN_LIMIT
-    yield from run_test_activation_queue_activation_and_ejection(spec, state, churn_limit + 1)
+    yield from run_test_activation_queue_activation_and_ejection(spec, state, int(churn_limit) + 1)
 
 
 @with_all_phases
@@ -380,7 +385,7 @@ def test_activation_queue_activation_and_ejection__exceed_churn_limit(spec, stat
 def test_activation_queue_activation_and_ejection__scaled_churn_limit(spec, state):
     churn_limit = spec.get_validator_churn_limit(state)
     assert churn_limit > spec.config.MIN_PER_EPOCH_CHURN_LIMIT
-    yield from run_test_activation_queue_activation_and_ejection(spec, state, churn_limit)
+    yield from run_test_activation_queue_activation_and_ejection(spec, state, int(churn_limit))
 
 
 @with_all_phases
@@ -397,7 +402,7 @@ def test_activation_queue_activation_and_ejection__scaled_churn_limit(spec, stat
 def test_activation_queue_activation_and_ejection__exceed_scaled_churn_limit(spec, state):
     churn_limit = spec.get_validator_churn_limit(state)
     assert churn_limit > spec.config.MIN_PER_EPOCH_CHURN_LIMIT
-    yield from run_test_activation_queue_activation_and_ejection(spec, state, churn_limit * 2)
+    yield from run_test_activation_queue_activation_and_ejection(spec, state, int(churn_limit) * 2)
 
 
 @with_all_phases
@@ -416,7 +421,7 @@ def test_invalid_large_withdrawable_epoch(spec, state):
     assert spec.is_active_validator(state.validators[0], spec.get_current_epoch(state))
     assert spec.is_active_validator(state.validators[1], spec.get_current_epoch(state))
 
-    exit_epoch = spec.FAR_FUTURE_EPOCH - 1
+    exit_epoch = spec.FAR_FUTURE_EPOCH - spec.Epoch(1)
     state.validators[0].exit_epoch = exit_epoch
     state.validators[1].effective_balance = spec.config.EJECTION_BALANCE
 
@@ -425,7 +430,7 @@ def test_invalid_large_withdrawable_epoch(spec, state):
 
     try:
         yield from run_process_registry_updates(spec, state)
-    except ValueError:
+    except SSZRangeError:
         yield "post", None
         return
 

@@ -28,6 +28,7 @@ from eth_consensus_specs.test.helpers.state import (
     next_slot,
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 @with_all_phases_from_to(ALTAIR, GLOAS)
@@ -47,7 +48,7 @@ def test_basic_is_head_root(spec, state):
     signed_block = state_transition_and_sign_block(spec, state, block)
     yield from tick_and_add_block(spec, store, signed_block, test_steps)
     head = spec.get_head(store)
-    assert head.root == signed_block.message.hash_tree_root()
+    assert head.root == hash_tree_root(signed_block.message)
 
     # Proposing next slot
     next_slot(spec, state)
@@ -136,7 +137,7 @@ def test_basic_is_parent_root(spec, state):
     head = spec.get_head(store)
     head_block = store.blocks[head.root]
     parent_root = head_block.parent_root
-    assert parent_root == signed_parent_block.message.hash_tree_root()
+    assert parent_root == hash_tree_root(signed_parent_block.message)
     parent_block = store.blocks[parent_root]
 
     # Proposing next slot

@@ -13,10 +13,11 @@ from eth_consensus_specs.test.helpers.execution_payload import (
 )
 from eth_consensus_specs.test.helpers.forks import is_post_bellatrix, is_post_gloas
 from eth_consensus_specs.test.helpers.state import next_slot
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def prepare_state_for_header_processing(spec, state):
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
 
 
 def run_block_header_processing(spec, state, block, prepare_state=True, valid=True):
@@ -53,7 +54,7 @@ def test_basic_block_header(spec, state):
 @spec_state_test
 def test_invalid_slot_block_header(spec, state):
     block = build_empty_block_for_next_slot(spec, state)
-    block.slot = state.slot + 2  # invalid slot
+    block.slot = state.slot + spec.Slot(2)  # invalid slot
 
     yield from run_block_header_processing(spec, state, block, valid=False)
 
@@ -97,7 +98,7 @@ def test_invalid_multiple_blocks_single_slot(spec, state):
     assert state.latest_block_header.slot == state.slot
 
     child_block = block.copy()
-    child_block.parent_root = block.hash_tree_root()
+    child_block.parent_root = hash_tree_root(block)
     if is_post_gloas(spec):
         payload = build_empty_execution_payload(spec, state)
         child_block.body.signed_execution_payload_bid.message.block_hash = compute_el_block_hash(

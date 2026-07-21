@@ -342,7 +342,7 @@ def random_block_gloas(spec, state, signed_blocks, scenario_state, rng=None):
     # Add payload_attestations
     # Deferred import: the payload attestation helpers pull in gloas test modules,
     # which are not importable until that fork is migrated.
-    from eth_consensus_specs.test.helpers.payload_attestation import (
+    from eth_consensus_specs.test.helpers.payload_attestation import (  # noqa: PLC0415
         get_random_payload_attestations,
     )
 

@@ -34,6 +34,7 @@ from eth_consensus_specs.test.helpers.state import (
     next_slot,
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def get_correct_subnet_for_attestation(spec, state, attestation):
@@ -59,7 +60,7 @@ def test_gossip_beacon_attestation__valid(spec, state):
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -96,11 +97,10 @@ def test_gossip_beacon_attestation__valid(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
-    assert result == "valid"
-    assert reason is None
+    assert (result, reason) == ("valid", None)
 
     yield (
         "messages",
@@ -128,7 +128,7 @@ def test_gossip_beacon_attestation__reject_committee_index_out_of_range(spec, st
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -141,9 +141,9 @@ def test_gossip_beacon_attestation__reject_committee_index_out_of_range(spec, st
     committees_per_slot = spec.get_committee_count_per_slot(state, attestation.data.target.epoch)
     if is_post_electra(spec):
         attestation = to_single_attestation(spec, state, attestation)
-        attestation.committee_index = committees_per_slot + 10
+        attestation.committee_index = committees_per_slot + spec.Uint64(10)
     else:
-        attestation.data.index = committees_per_slot + 10
+        attestation.data.index = committees_per_slot + spec.Uint64(10)
 
     yield get_filename(attestation), attestation
 
@@ -158,7 +158,7 @@ def test_gossip_beacon_attestation__reject_committee_index_out_of_range(spec, st
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -191,7 +191,7 @@ def test_gossip_beacon_attestation__reject_wrong_subnet(spec, state):
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -206,7 +206,9 @@ def test_gossip_beacon_attestation__reject_wrong_subnet(spec, state):
 
     # Get correct subnet and use a different one
     correct_subnet = get_correct_subnet_for_attestation(spec, state, attestation)
-    wrong_subnet = spec.Uint64((correct_subnet + 1) % spec.config.ATTESTATION_SUBNET_COUNT)
+    wrong_subnet = (correct_subnet + spec.SubnetID(1)) % spec.SubnetID(
+        spec.config.ATTESTATION_SUBNET_COUNT
+    )
     block_time_ms = spec.compute_time_at_slot_ms(state, attestation.data.slot)
 
     yield "current_time_ms", "meta", int(block_time_ms)
@@ -217,7 +219,7 @@ def test_gossip_beacon_attestation__reject_wrong_subnet(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=wrong_subnet,
     )
     assert result == "reject"
@@ -250,7 +252,7 @@ def test_gossip_beacon_attestation__ignore_slot_not_in_range(spec, state):
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -273,7 +275,9 @@ def test_gossip_beacon_attestation__ignore_slot_not_in_range(spec, state):
 
     # Set current time to be before the attestation slot (too far in future)
     attestation_slot_time_ms = spec.compute_time_at_slot_ms(state, attestation.data.slot)
-    current_time_ms = attestation_slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - 1
+    current_time_ms = (
+        attestation_slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - spec.Uint64(1)
+    )
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
@@ -317,7 +321,7 @@ def test_gossip_beacon_attestation__valid_within_clock_disparity(spec, state):
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -357,8 +361,7 @@ def test_gossip_beacon_attestation__valid_within_clock_disparity(spec, state):
         current_time_ms=current_time_ms,
         subnet_id=subnet_id,
     )
-    assert result == "valid"
-    assert reason is None
+    assert (result, reason) == ("valid", None)
 
     yield (
         "messages",
@@ -386,7 +389,7 @@ def test_gossip_beacon_attestation__valid_within_clock_disparity_old(spec, state
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -409,7 +412,10 @@ def test_gossip_beacon_attestation__valid_within_clock_disparity_old(spec, state
 
     # Set current time to exactly the boundary (should still be valid)
     attestation_latest_ms = spec.compute_time_at_slot_ms(
-        state, spec.Slot(attestation.data.slot + spec.config.ATTESTATION_PROPAGATION_SLOT_RANGE + 1)
+        state,
+        spec.Slot(
+            attestation.data.slot + spec.config.ATTESTATION_PROPAGATION_SLOT_RANGE + spec.Slot(1)
+        ),
     )
     current_time_ms = attestation_latest_ms + spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY
 
@@ -425,8 +431,7 @@ def test_gossip_beacon_attestation__valid_within_clock_disparity_old(spec, state
         current_time_ms=current_time_ms,
         subnet_id=subnet_id,
     )
-    assert result == "valid"
-    assert reason is None
+    assert (result, reason) == ("valid", None)
 
     yield (
         "messages",
@@ -454,7 +459,7 @@ def test_gossip_beacon_attestation__ignore_slot_too_old(spec, state):
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -477,9 +482,14 @@ def test_gossip_beacon_attestation__ignore_slot_too_old(spec, state):
 
     # Set current time to just past the expiry boundary
     attestation_latest_ms = spec.compute_time_at_slot_ms(
-        state, spec.Slot(attestation.data.slot + spec.config.ATTESTATION_PROPAGATION_SLOT_RANGE + 1)
+        state,
+        spec.Slot(
+            attestation.data.slot + spec.config.ATTESTATION_PROPAGATION_SLOT_RANGE + spec.Slot(1)
+        ),
     )
-    current_time_ms = attestation_latest_ms + spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY + 1
+    current_time_ms = (
+        attestation_latest_ms + spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY + spec.Uint64(1)
+    )
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
@@ -523,7 +533,7 @@ def test_gossip_beacon_attestation__reject_epoch_mismatch(spec, state):
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -551,7 +561,7 @@ def test_gossip_beacon_attestation__reject_epoch_mismatch(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -584,7 +594,7 @@ def test_gossip_beacon_attestation__reject_not_unaggregated(spec, state):
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -615,7 +625,7 @@ def test_gossip_beacon_attestation__reject_not_unaggregated(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -648,7 +658,7 @@ def test_gossip_beacon_attestation__reject_aggregation_bits_size_mismatch(spec, 
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -677,7 +687,7 @@ def test_gossip_beacon_attestation__reject_aggregation_bits_size_mismatch(spec, 
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -711,7 +721,7 @@ def test_gossip_beacon_attestation__ignore_already_seen(spec, state):
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -747,11 +757,10 @@ def test_gossip_beacon_attestation__ignore_already_seen(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
-    assert result == "valid"
-    assert reason is None
+    assert (result, reason) == ("valid", None)
     messages.append(
         {
             "subnet_id": int(subnet_id),
@@ -768,7 +777,7 @@ def test_gossip_beacon_attestation__ignore_already_seen(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 600,
+        current_time_ms=block_time_ms + spec.Uint64(600),
         subnet_id=subnet_id,
     )
     assert result == "ignore"
@@ -836,7 +845,7 @@ def test_gossip_beacon_attestation__ignore_block_not_seen(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "ignore"
@@ -881,7 +890,7 @@ def test_gossip_beacon_attestation__reject_block_failed_validation(spec, state):
     yield get_filename(signed_block), signed_block
 
     # Add block to store.blocks but NOT to store.block_states (simulating failed validation)
-    store.blocks[signed_block.message.hash_tree_root()] = signed_block.message
+    store.blocks[hash_tree_root(signed_block.message)] = signed_block.message
 
     yield (
         "blocks",
@@ -920,7 +929,7 @@ def test_gossip_beacon_attestation__reject_block_failed_validation(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -954,7 +963,7 @@ def test_gossip_beacon_attestation__reject_invalid_signature(spec, state):
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -988,7 +997,7 @@ def test_gossip_beacon_attestation__reject_invalid_signature(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -1021,7 +1030,7 @@ def test_gossip_beacon_attestation__reject_target_not_ancestor(spec, state):
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -1059,7 +1068,7 @@ def test_gossip_beacon_attestation__reject_target_not_ancestor(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -1104,8 +1113,8 @@ def test_gossip_beacon_attestation__ignore_finalized_not_ancestor(spec, state):
     yield get_filename(signed_block), signed_block
 
     # Add block to store
-    store.blocks[signed_block.message.hash_tree_root()] = signed_block.message
-    store.block_states[signed_block.message.hash_tree_root()] = state.copy()
+    store.blocks[hash_tree_root(signed_block.message)] = signed_block.message
+    store.block_states[hash_tree_root(signed_block.message)] = state.copy()
 
     yield (
         "blocks",
@@ -1152,7 +1161,7 @@ def test_gossip_beacon_attestation__ignore_finalized_not_ancestor(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "ignore"

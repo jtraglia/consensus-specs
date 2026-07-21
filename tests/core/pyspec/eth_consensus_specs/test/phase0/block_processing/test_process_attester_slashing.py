@@ -66,8 +66,11 @@ def run_attester_slashing_processing(spec, state, attester_slashing, valid=True)
     }
 
     total_proposer_rewards = sum(
-        effective_balance // get_whistleblower_reward_quotient(spec)
-        for effective_balance in pre_slashing_effectives.values()
+        (
+            effective_balance // spec.Gwei(get_whistleblower_reward_quotient(spec))
+            for effective_balance in pre_slashing_effectives.values()
+        ),
+        start=spec.Gwei(0),
     )
 
     # Process slashing
@@ -100,7 +103,8 @@ def run_attester_slashing_processing(spec, state, attester_slashing, valid=True)
         expected_balance = (
             pre_proposer_balance
             + total_proposer_rewards
-            - pre_slashing_effectives[proposer_index] // get_min_slashing_penalty_quotient(spec)
+            - pre_slashing_effectives[proposer_index]
+            // spec.Gwei(get_min_slashing_penalty_quotient(spec))
         )
 
         assert get_balance(state, proposer_index) == expected_balance
@@ -121,14 +125,14 @@ def test_basic_double(spec, state):
 def test_basic_surround(spec, state):
     next_epoch_via_block(spec, state)
 
-    state.current_justified_checkpoint.epoch += 1
+    state.current_justified_checkpoint.epoch += spec.Epoch(1)
     attester_slashing = get_valid_attester_slashing(spec, state, signed_1=False, signed_2=True)
     att_1_data = get_attestation_1_data(spec, attester_slashing)
     att_2_data = get_attestation_2_data(spec, attester_slashing)
 
     # set attestation1 to surround attestation 2
-    att_1_data.source.epoch = att_2_data.source.epoch - 1
-    att_1_data.target.epoch = att_2_data.target.epoch + 1
+    att_1_data.source.epoch = att_2_data.source.epoch - spec.Epoch(1)
+    att_1_data.target.epoch = att_2_data.target.epoch + spec.Epoch(1)
 
     sign_indexed_attestation(spec, state, attester_slashing.attestation_1)
 
@@ -176,7 +180,7 @@ def test_attestation_from_future(spec, state):
     attester_slashing = get_valid_attester_slashing(
         spec,
         future_state,
-        slot=state.slot + 5,  # Slot is in the future wrt `state`
+        slot=state.slot + spec.Slot(5),  # Slot is in the future wrt `state`
         signed_1=True,
         signed_2=True,
     )
@@ -217,7 +221,7 @@ def test_with_effective_balance_disparity(spec, state):
     rng = Random(12345)
     for i in range(len(state.balances)):
         pre = int(state.balances[i])
-        state.balances[i] += rng.randrange(max(pre - 5000, 0), pre + 5000)
+        state.balances[i] += spec.Gwei(rng.randrange(max(pre - 5000, 0), pre + 5000))
 
     attester_slashing = get_valid_attester_slashing(spec, state, signed_1=True, signed_2=True)
 
@@ -232,7 +236,7 @@ def test_already_exited_long_ago(spec, state):
     slashed_indices = get_indexed_attestation_participants(spec, attester_slashing.attestation_1)
     for index in slashed_indices:
         spec.initiate_validator_exit(state, index)
-        state.validators[index].withdrawable_epoch = spec.get_current_epoch(state) + 2
+        state.validators[index].withdrawable_epoch = spec.get_current_epoch(state) + spec.Epoch(2)
 
     yield from run_attester_slashing_processing(spec, state, attester_slashing)
 
@@ -280,7 +284,7 @@ def test_invalid_no_double_or_surround(spec, state):
     attester_slashing = get_valid_attester_slashing(spec, state, signed_1=False, signed_2=True)
 
     att_1_data = get_attestation_1_data(spec, attester_slashing)
-    att_1_data.target.epoch += 1
+    att_1_data.target.epoch += spec.Epoch(1)
 
     sign_indexed_attestation(spec, state, attester_slashing.attestation_1)
 

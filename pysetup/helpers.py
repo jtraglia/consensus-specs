@@ -1,7 +1,6 @@
 import re
 import textwrap
 from functools import reduce
-from typing import TypeVar
 
 from .constants import CONSTANT_DEP_SUNDRY_CONSTANTS_FUNCTIONS
 from .md_doc_paths import PREVIOUS_FORK_OF
@@ -98,6 +97,32 @@ def objects_to_spec(
     ordered_class_objects = {
         k: v for k, v in ordered_class_objects.items() if k not in deprecate_containers
     }
+
+    # Classes with no dependency on the generated type definitions, constants,
+    # presets, config, or other spec classes are emitted before the generated
+    # type definitions, so those definitions may reference them. This lets the
+    # markdown define primitive types (e.g. fixed byte arrays) that the custom
+    # types table builds upon.
+    late_names = (
+        set(spec_object.custom_types)
+        | set(spec_object.constant_vars)
+        | set(spec_object.preset_vars)
+        | set(spec_object.config_vars)
+        | set(spec_object.ssz_dep_constants)
+    )
+    early_class_objects = dict(ordered_class_objects)
+    changed = True
+    while changed:
+        changed = False
+        blocked = late_names | (set(ordered_class_objects) - set(early_class_objects))
+        for name, source in list(early_class_objects.items()):
+            if any(re.search(rf"\b{re.escape(dep)}\b", source) for dep in blocked):
+                del early_class_objects[name]
+                changed = True
+    ordered_class_objects = {
+        k: v for k, v in ordered_class_objects.items() if k not in early_class_objects
+    }
+    early_class_objects_spec = "\n\n\n".join(early_class_objects.values())
     ordered_class_objects_spec = "\n\n\n".join(ordered_class_objects.values())
 
     # Access global dict of config vars for runtime configurables
@@ -231,6 +256,9 @@ def objects_to_spec(
         CONSTANT_DEP_SUNDRY_CONSTANTS_FUNCTIONS,
         # The constants that some SSZ containers require. Need to be defined before `constants_spec`
         ssz_dep_constants,
+        # Primitive classes with no spec dependencies, which the generated type
+        # definitions below may reference.
+        early_class_objects_spec,
         new_type_definitions,
         constant_vars_spec,
         # The presets that some SSZ types require.
@@ -262,14 +290,12 @@ def combine_protocols(
     return old_protocols
 
 
-T = TypeVar("T")
-
-
-def combine_dicts(old_dict: dict[str, T], new_dict: dict[str, T]) -> dict[str, T]:
+def combine_dicts[T](old_dict: dict[str, T], new_dict: dict[str, T]) -> dict[str, T]:
     return {**old_dict, **new_dict}
 
 
 ignored_dependencies = [
+    "BaseBytes",
     "bit",
     "Bitlist",
     "Bitvector",

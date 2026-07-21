@@ -31,7 +31,7 @@ from typing import (
 
 from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root, copy, uint_to_bytes
 from ssz import (
-    Boolean, Container, List, Vector, Uint8, Uint32, Uint64, Uint256, Bytes4, Bytes32)
+    Boolean, Container, List, Vector, Uint8, Uint32, Uint64, Uint256)
 from ssz.bitfields import BaseBitlist as Bitlist, BaseBitvector as Bitvector
 from ssz.byte_arrays import BaseBytes
 from ssz.ssz_base import SSZType
@@ -43,18 +43,6 @@ from eth_consensus_specs.utils.hash_function import hash
     def preparations(cls) -> str:
         return """
 SSZObject = TypeVar('SSZObject', bound=SSZType)
-
-
-class Bytes1(BaseBytes):
-    LENGTH = 1
-
-
-class Bytes48(BaseBytes):
-    LENGTH = 48
-
-
-class Bytes96(BaseBytes):
-    LENGTH = 96
 """
 
     @classmethod

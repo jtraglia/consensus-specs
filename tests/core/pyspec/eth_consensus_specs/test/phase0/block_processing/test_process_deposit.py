@@ -17,7 +17,7 @@ def test_new_deposit_under_max(spec, state):
     # fresh deposit = next validator index = validator appended to registry
     validator_index = len(state.validators)
     # effective balance will be 1 EFFECTIVE_BALANCE_INCREMENT smaller because of this small decrement.
-    amount = spec.MAX_EFFECTIVE_BALANCE - 1
+    amount = spec.MAX_EFFECTIVE_BALANCE - spec.Gwei(1)
     deposit = prepare_state_and_deposit(spec, state, validator_index, amount, signed=True)
 
     yield from run_deposit_processing(spec, state, deposit, validator_index)
@@ -41,7 +41,7 @@ def test_new_deposit_over_max(spec, state):
     # fresh deposit = next validator index = validator appended to registry
     validator_index = len(state.validators)
     # just 1 over the limit, effective balance should be set MAX_EFFECTIVE_BALANCE during processing
-    amount = spec.MAX_EFFECTIVE_BALANCE + 1
+    amount = spec.MAX_EFFECTIVE_BALANCE + spec.Gwei(1)
     deposit = prepare_state_and_deposit(spec, state, validator_index, amount, signed=True)
 
     yield from run_deposit_processing(spec, state, deposit, validator_index)
@@ -118,7 +118,7 @@ def test_incorrect_sig_new_deposit(spec, state):
 @spec_state_test
 def test_top_up__max_effective_balance(spec, state):
     validator_index = 0
-    amount = spec.MAX_EFFECTIVE_BALANCE // 4
+    amount = spec.MAX_EFFECTIVE_BALANCE // spec.Gwei(4)
     deposit = prepare_state_and_deposit(spec, state, validator_index, amount, signed=True)
 
     state.balances[validator_index] = spec.MAX_EFFECTIVE_BALANCE
@@ -135,10 +135,10 @@ def test_top_up__max_effective_balance(spec, state):
 @spec_state_test
 def test_top_up__less_effective_balance(spec, state):
     validator_index = 0
-    amount = spec.MAX_EFFECTIVE_BALANCE // 4
+    amount = spec.MAX_EFFECTIVE_BALANCE // spec.Gwei(4)
     deposit = prepare_state_and_deposit(spec, state, validator_index, amount, signed=True)
 
-    initial_balance = spec.MAX_EFFECTIVE_BALANCE - 1000
+    initial_balance = spec.MAX_EFFECTIVE_BALANCE - spec.Gwei(1000)
     initial_effective_balance = spec.MAX_EFFECTIVE_BALANCE - spec.EFFECTIVE_BALANCE_INCREMENT
     state.balances[validator_index] = initial_balance
     state.validators[validator_index].effective_balance = initial_effective_balance
@@ -155,10 +155,10 @@ def test_top_up__less_effective_balance(spec, state):
 @spec_state_test
 def test_top_up__zero_balance(spec, state):
     validator_index = 0
-    amount = spec.MAX_EFFECTIVE_BALANCE // 4
+    amount = spec.MAX_EFFECTIVE_BALANCE // spec.Gwei(4)
     deposit = prepare_state_and_deposit(spec, state, validator_index, amount, signed=True)
 
-    initial_balance = 0
+    initial_balance = spec.Gwei(0)
     initial_effective_balance = 0
     state.balances[validator_index] = initial_balance
     state.validators[validator_index].effective_balance = initial_effective_balance
@@ -176,7 +176,7 @@ def test_top_up__zero_balance(spec, state):
 @always_bls
 def test_incorrect_sig_top_up(spec, state):
     validator_index = 0
-    amount = spec.MAX_EFFECTIVE_BALANCE // 4
+    amount = spec.MAX_EFFECTIVE_BALANCE // spec.Gwei(4)
     deposit = prepare_state_and_deposit(spec, state, validator_index, amount)
 
     # invalid signatures, in top-ups, are allowed!
@@ -187,7 +187,7 @@ def test_incorrect_sig_top_up(spec, state):
 @spec_state_test
 def test_incorrect_withdrawal_credentials_top_up(spec, state):
     validator_index = 0
-    amount = spec.MAX_EFFECTIVE_BALANCE // 4
+    amount = spec.MAX_EFFECTIVE_BALANCE // spec.Gwei(4)
     withdrawal_credentials = spec.BLS_WITHDRAWAL_PREFIX + spec.hash(b"junk")[1:]
     deposit = prepare_state_and_deposit(
         spec, state, validator_index, amount, withdrawal_credentials=withdrawal_credentials

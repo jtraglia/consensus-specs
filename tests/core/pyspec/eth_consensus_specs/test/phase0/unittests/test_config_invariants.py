@@ -24,7 +24,9 @@ def test_validators(spec, state):
 
     # Note: can be less if you assume stricters bounds on validator set based on total ETH supply
     maximum_validators_per_committee = (
-        spec.VALIDATOR_REGISTRY_LIMIT // spec.SLOTS_PER_EPOCH // spec.MAX_COMMITTEES_PER_SLOT
+        spec.VALIDATOR_REGISTRY_LIMIT
+        // spec.Uint64(spec.SLOTS_PER_EPOCH)
+        // spec.MAX_COMMITTEES_PER_SLOT
     )
     check_bound(spec.MAX_VALIDATORS_PER_COMMITTEE, 1, maximum_validators_per_committee)
     check_bound(spec.config.MIN_PER_EPOCH_CHURN_LIMIT, 1, spec.VALIDATOR_REGISTRY_LIMIT)
@@ -84,7 +86,7 @@ def test_time(spec, state):
 @spec_state_test
 def test_networking(spec, state):
     assert spec.config.SUBNETS_PER_NODE <= spec.config.ATTESTATION_SUBNET_COUNT
-    node_id_length = spec.NodeID(1).type_byte_length()  # in bytes
+    node_id_length = spec.NodeID(1).get_byte_length()  # in bytes
     assert node_id_length * 8 == spec.NODE_ID_BITS  # in bits
 
 

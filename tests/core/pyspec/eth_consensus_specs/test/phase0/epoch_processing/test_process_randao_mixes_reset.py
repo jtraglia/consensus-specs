@@ -9,7 +9,7 @@ def run_process_randao_mixes_reset(spec, state):
 @with_all_phases
 @spec_state_test
 def test_updated_randao_mixes(spec, state):
-    next_epoch = spec.get_current_epoch(state) + 1
+    next_epoch = spec.get_current_epoch(state) + spec.Epoch(1)
     state.randao_mixes[next_epoch % spec.EPOCHS_PER_HISTORICAL_VECTOR] = b"\x56" * 32
 
     yield from run_process_randao_mixes_reset(spec, state)
