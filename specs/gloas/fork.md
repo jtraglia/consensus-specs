@@ -133,7 +133,7 @@ change is made to upgrade to Gloas.
 
 ```python
 def upgrade_to_gloas(pre: fulu.BeaconState) -> BeaconState:
-    epoch = compute_epoch_at_slot(Slot(pre.slot))
+    epoch = fulu.get_current_epoch(pre)
 
     post = BeaconState(
         genesis_time=pre.genesis_time,

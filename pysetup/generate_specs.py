@@ -17,7 +17,7 @@ from pysetup.helpers import (
     objects_to_spec,
     parse_config_vars,
 )
-from pysetup.md_doc_paths import get_md_doc_paths
+from pysetup.md_doc_paths import get_md_doc_paths, PREVIOUS_FORK_OF
 from pysetup.md_to_spec import MarkdownToSpec
 from pysetup.spec_builders import spec_builders
 from pysetup.typing import BuildTarget, SpecObject  # type: ignore[attr-defined]
@@ -86,6 +86,29 @@ def build_spec(
     config = load_config(config_file)
     all_specs = [get_spec(spec, preset, config, preset_name) for spec in source_files]
 
+    # Names (re)defined by documents that are not part of the previous
+    # fork's build. Anything else is inherited verbatim from the previous
+    # fork and may be emitted as an alias to the previous fork's class
+    # rather than a fresh definition.
+    previous_fork = PREVIOUS_FORK_OF[fork]
+    previous_docs = set(get_md_doc_paths(previous_fork).split()) if previous_fork else set()
+    fork_defined_names: set[str] = set()
+    for source_file, file_spec in zip(source_files, all_specs):
+        if str(source_file) in previous_docs:
+            continue
+        for field in (
+            "config_vars",
+            "constant_vars",
+            "custom_types",
+            "dataclasses",
+            "func_dep_presets",
+            "preset_dep_constant_vars",
+            "preset_vars",
+            "ssz_dep_constants",
+            "ssz_objects",
+        ):
+            fork_defined_names |= set(getattr(file_spec, field))
+
     spec_object = all_specs[0]
     for value in all_specs[1:]:
         spec_object = combine_spec_objects(spec_object, value)
@@ -102,7 +125,7 @@ def build_spec(
             spec_object.custom_types,
         )
 
-    return objects_to_spec(preset_name, spec_object, fork, class_objects)
+    return objects_to_spec(preset_name, spec_object, fork, class_objects, fork_defined_names)
 
 
 def parse_build_targets(targets_str: str) -> list[BuildTarget]:

@@ -43,18 +43,15 @@ def make_function_abstract(protocol_def: ProtocolDefinition, key: str):
 
 
 def objects_to_spec(
-    preset_name: str, spec_object: SpecObject, fork: str, ordered_class_objects: dict[str, str]
+    preset_name: str,
+    spec_object: SpecObject,
+    fork: str,
+    ordered_class_objects: dict[str, str],
+    fork_defined_names: set[str] | None = None,
 ) -> str:
     """
     Given all the objects that constitute a spec, combine them into a single pyfile.
     """
-
-    def gen_new_type_definitions(custom_types: dict[str, str]) -> str:
-        return "\n\n\n".join(
-            [gen_new_type_definition(key, value) for key, value in custom_types.items()]
-        )
-
-    new_type_definitions = gen_new_type_definitions(spec_object.custom_types)
 
     # Collect builders with the reversed previous forks
     # e.g. `[bellatrix, altair, phase0]` -> `[phase0, altair, bellatrix]`
@@ -97,6 +94,53 @@ def objects_to_spec(
     ordered_class_objects = {
         k: v for k, v in ordered_class_objects.items() if k not in deprecate_containers
     }
+    classes = reduce(
+        lambda txt, builder: (txt + "\n\n" + builder.classes()).strip("\n"), builders, ""
+    )
+
+    # Types that this fork inherits unchanged are emitted as aliases to the
+    # previous fork's classes rather than fresh definitions, so values flow
+    # across fork boundaries without exact-type mismatches. A type must be
+    # re-emitted if this fork redefines it or anything it references.
+    prev_forks_chain = collect_prev_forks(fork)
+    previous_fork = prev_forks_chain[1] if len(prev_forks_chain) > 1 else None
+    aliased_names: set[str] = set()
+    inherited_type_aliases = ""
+    if previous_fork is not None and fork_defined_names is not None:
+        builder_defined = set(re.findall(r"^class (\w+)", classes, re.MULTILINE))
+        builder_defined |= set(re.findall(r"^(\w+)\s*(?::[^=\n]+)?=", classes, re.MULTILINE))
+        redefined = set(fork_defined_names) | builder_defined
+        candidates: dict[str, str] = {
+            name: gen_new_type_definition(name, value)
+            for name, value in spec_object.custom_types.items()
+        }
+        candidates.update(ordered_class_objects)
+        references = {
+            name: set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", source))
+            for name, source in candidates.items()
+        }
+        aliased_names = {name for name in candidates if name not in redefined}
+        shrinking = True
+        while shrinking:
+            shrinking = False
+            blocked = redefined | (set(candidates) - aliased_names)
+            for name in list(aliased_names):
+                if references[name] & blocked:
+                    aliased_names.discard(name)
+                    shrinking = True
+        if aliased_names:
+            inherited_type_aliases = f"# Types inherited unchanged from {previous_fork}\n" + "\n".join(
+                f"{name} = {previous_fork}.{name}" for name in candidates if name in aliased_names
+            )
+        ordered_class_objects = {
+            k: v for k, v in ordered_class_objects.items() if k not in aliased_names
+        }
+
+    new_type_definitions = "\n\n\n".join(
+        gen_new_type_definition(key, value)
+        for key, value in spec_object.custom_types.items()
+        if key not in aliased_names
+    )
 
     # Classes with no dependency on the generated type definitions, constants,
     # presets, config, or other spec classes are emitted before the generated
@@ -198,9 +242,6 @@ def objects_to_spec(
     imports = reduce(
         lambda txt, builder: (txt + "\n\n" + builder.imports(preset_name)).strip("\n"), builders, ""
     )
-    classes = reduce(
-        lambda txt, builder: (txt + "\n\n" + builder.classes()).strip("\n"), builders, ""
-    )
     preparations = reduce(
         lambda txt, builder: (txt + "\n\n" + builder.preparations()).strip("\n"), builders, ""
     )
@@ -287,6 +328,8 @@ def objects_to_spec(
         CONSTANT_DEP_SUNDRY_CONSTANTS_FUNCTIONS,
         # The constants that some SSZ containers require. Need to be defined before `constants_spec`
         ssz_dep_constants,
+        # Types this fork inherits unchanged from the previous fork.
+        inherited_type_aliases,
         # Primitive classes with no spec dependencies, which the generated type
         # definitions below may reference.
         early_class_objects_spec,

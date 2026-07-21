@@ -52,7 +52,7 @@ state transition.
 
 ```python
 def upgrade_to_bellatrix(pre: altair.BeaconState) -> BeaconState:
-    epoch = compute_epoch_at_slot(Slot(pre.slot))
+    epoch = altair.get_current_epoch(pre)
     post = BeaconState(
         genesis_time=pre.genesis_time,
         genesis_validators_root=pre.genesis_validators_root,

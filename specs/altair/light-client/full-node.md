@@ -113,7 +113,7 @@ def create_light_client_update(
     attested_block: SignedBeaconBlock,
     finalized_block: Optional[SignedBeaconBlock],
 ) -> LightClientUpdate:
-    assert compute_epoch_at_slot(Slot(attested_state.slot)) >= ALTAIR_FORK_EPOCH
+    assert compute_epoch_at_slot(attested_state.slot) >= ALTAIR_FORK_EPOCH
     sync_committee_bits = block.message.body.sync_aggregate.sync_committee_bits
     num_active_participants = len([bit for bit in sync_committee_bits if bit])
     assert num_active_participants >= MIN_SYNC_COMMITTEE_PARTICIPANTS

@@ -67,7 +67,7 @@ def build_attestation_data(spec, state, slot, index, beacon_block_root=None, sha
     elif slot == state.slot:
         beacon_block_root = build_empty_block_for_next_slot(spec, state).parent_root
     else:
-        beacon_block_root = spec.get_block_root_at_slot(state, spec.Slot(slot))
+        beacon_block_root = spec.get_block_root_at_slot(state, slot)
 
     current_epoch_start_slot = spec.compute_start_slot_at_epoch(spec.get_current_epoch(state))
     if slot < current_epoch_start_slot:

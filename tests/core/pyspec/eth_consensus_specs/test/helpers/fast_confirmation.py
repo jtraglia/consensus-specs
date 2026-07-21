@@ -435,7 +435,7 @@ class FCRTest:
         for i in range(committees_count):
             committee.extend(
                 self.spec.get_beacon_committee(
-                    shuffling_source, self.spec.Slot(slot), self.spec.CommitteeIndex(i)
+                    shuffling_source, slot, self.spec.CommitteeIndex(i)
                 )
             )
         return committee

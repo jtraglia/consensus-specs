@@ -36,7 +36,7 @@ to transition the genesis state to this fork.
 
 ```python
 def upgrade_to_deneb(pre: capella.BeaconState) -> BeaconState:
-    epoch = compute_epoch_at_slot(Slot(pre.slot))
+    epoch = capella.get_current_epoch(pre)
     latest_execution_payload_header = ExecutionPayloadHeader(
         parent_hash=pre.latest_execution_payload_header.parent_hash,
         fee_recipient=pre.latest_execution_payload_header.fee_recipient,

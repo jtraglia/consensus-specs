@@ -123,7 +123,7 @@ def test_transition_attestation_from_previous_fork_with_new_range(
     transition_to(post_spec, state, penultimate_slot)
 
     # Ensure the new state is in the increased EIP-7045 slot inclusion range
-    assert penultimate_slot - post_spec.Slot(attestation.data.slot) > post_spec.SLOTS_PER_EPOCH
+    assert penultimate_slot - attestation.data.slot > post_spec.SLOTS_PER_EPOCH
 
     block = build_empty_block_for_next_slot(post_spec, state)
     block.body.attestations.append(attestation)

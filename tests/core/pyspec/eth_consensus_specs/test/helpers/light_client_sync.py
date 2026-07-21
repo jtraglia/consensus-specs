@@ -73,7 +73,7 @@ def setup_lc_sync_test(spec, state, s_spec=None, phases=None):
     trusted_block_root = hash_tree_root(trusted_block.message)
     yield "trusted_block_root", "meta", "0x" + trusted_block_root.hex()
 
-    data_epoch = spec.compute_epoch_at_slot(spec.Slot(trusted_block.message.slot))
+    data_epoch = spec.compute_epoch_at_slot(trusted_block.message.slot)
     data_fork_digest = spec.compute_fork_digest(test.genesis_validators_root, data_epoch)
     d_spec = get_spec_for_fork_version(spec, spec.compute_fork_version(data_epoch), phases)
     data = d_spec.create_light_client_bootstrap(state, trusted_block)
@@ -157,7 +157,7 @@ def emit_update(
     with_next=True,
     phases=None,
 ):
-    data_epoch = spec.compute_epoch_at_slot(spec.Slot(attested_block.message.slot))
+    data_epoch = spec.compute_epoch_at_slot(attested_block.message.slot)
     data_fork_digest = spec.compute_fork_digest(test.genesis_validators_root, data_epoch)
     d_spec = get_spec_for_fork_version(spec, spec.compute_fork_version(data_epoch), phases)
     data = d_spec.create_light_client_update(
@@ -231,7 +231,7 @@ def run_lc_sync_test_single_fork(spec, phases, state, fork):
     # Jump to two slots before fork
     fork_epoch = getattr(phases[fork].config, fork.upper() + "_FORK_EPOCH")
     transition_to(
-        spec, state, spec.compute_start_slot_at_epoch(spec.Epoch(fork_epoch)) - spec.Slot(4)
+        spec, state, spec.compute_start_slot_at_epoch(fork_epoch) - spec.Slot(4)
     )
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True

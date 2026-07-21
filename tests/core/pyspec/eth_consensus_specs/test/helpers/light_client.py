@@ -85,7 +85,6 @@ def get_sync_aggregate(spec, state, num_participants=None, signature_slot=None, 
     signature_spec, signature_state, _ = transition_across_forks(
         spec, state, signature_slot, phases
     )
-    signature_slot = signature_spec.Slot(signature_slot)
 
     # Fetch sync committee
     committee_indices = compute_committee_indices(signature_state)

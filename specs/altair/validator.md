@@ -169,9 +169,7 @@ to produce signatures for `compute_start_slot_at_epoch(ALTAIR_FORK_EPOCH) - 1`.
 
 ```python
 def compute_sync_committee_period(epoch: Epoch) -> Uint64:
-    # Light client data flows across forks, so the epoch may carry another
-    # fork's type; normalize before deriving the period.
-    return Uint64(Epoch(epoch) // EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
+    return Uint64(epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
 ```
 
 ```python
