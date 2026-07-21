@@ -460,10 +460,8 @@ An honest block proposer sets
 
 ```python
 def voting_period_start_time(state: BeaconState) -> Uint64:
-    eth1_voting_period_start_slot = Slot(
-        state.slot
-        - state.slot % Slot(Uint64(EPOCHS_PER_ETH1_VOTING_PERIOD) * Uint64(SLOTS_PER_EPOCH))
-    )
+    slots_per_voting_period = Slot(EPOCHS_PER_ETH1_VOTING_PERIOD) * SLOTS_PER_EPOCH
+    eth1_voting_period_start_slot = state.slot - state.slot % slots_per_voting_period
     return compute_time_at_slot(state, eth1_voting_period_start_slot)
 ```
 
