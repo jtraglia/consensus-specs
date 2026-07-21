@@ -30,9 +30,8 @@ from typing import (
 )
 
 from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root, copy, uint_to_bytes
-from eth_consensus_specs.utils.ssz.ssz_typing import Container
 from ssz import (
-    Boolean, List, Vector, Uint8, Uint32, Uint64, Uint256, Bytes4, Bytes32)
+    Boolean, Container, List, Vector, Uint8, Uint32, Uint64, Uint256, Bytes4, Bytes32)
 from ssz.bitfields import BaseBitlist as Bitlist, BaseBitvector as Bitvector
 from ssz.byte_arrays import BaseBytes
 from ssz.ssz_base import SSZType
