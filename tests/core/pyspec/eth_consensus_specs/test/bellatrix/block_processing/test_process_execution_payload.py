@@ -1,3 +1,4 @@
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from random import Random
 
 from eth_consensus_specs.test.context import (
@@ -224,9 +225,9 @@ def run_bad_timestamp_test(spec, state, is_future):
     # execution payload
     execution_payload = build_empty_execution_payload(spec, state)
     if is_future:
-        timestamp = execution_payload.timestamp + 1
+        timestamp = execution_payload.timestamp + spec.Uint64(1)
     else:
-        timestamp = execution_payload.timestamp - 1
+        timestamp = execution_payload.timestamp - spec.Uint64(1)
     execution_payload.timestamp = timestamp
     execution_payload.block_hash = compute_el_block_hash(spec, execution_payload, state)
 
@@ -292,7 +293,7 @@ def run_non_empty_transactions_test(spec, state):
     execution_payload = build_empty_execution_payload(spec, state)
     num_transactions = 2
     execution_payload.transactions = [
-        spec.Transaction(b"\x99" * 128) for _ in range(num_transactions)
+        spec.Transaction(data=b"\x99" * 128) for _ in range(num_transactions)
     ]
     execution_payload.block_hash = compute_el_block_hash(spec, execution_payload, state)
 
@@ -300,7 +301,7 @@ def run_non_empty_transactions_test(spec, state):
 
     assert (
         state.latest_execution_payload_header.transactions_root
-        == execution_payload.transactions.hash_tree_root()
+        == hash_tree_root(execution_payload.transactions)
     )
 
 
@@ -322,7 +323,7 @@ def run_zero_length_transaction_test(spec, state):
     next_slot(spec, state)
 
     execution_payload = build_empty_execution_payload(spec, state)
-    execution_payload.transactions = [spec.Transaction(b"")]
+    execution_payload.transactions = [spec.Transaction(data=b"")]
     assert len(execution_payload.transactions[0]) == 0
     execution_payload.block_hash = compute_el_block_hash(spec, execution_payload, state)
 
@@ -330,7 +331,7 @@ def run_zero_length_transaction_test(spec, state):
 
     assert (
         state.latest_execution_payload_header.transactions_root
-        == execution_payload.transactions.hash_tree_root()
+        == hash_tree_root(execution_payload.transactions)
     )
 
 

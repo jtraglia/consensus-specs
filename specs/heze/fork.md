@@ -34,7 +34,7 @@ change is made to upgrade to Heze.
 
 ```python
 def upgrade_to_heze(pre: gloas.BeaconState) -> BeaconState:
-    epoch = gloas.get_current_epoch(pre)
+    epoch = compute_epoch_at_slot(Slot(pre.slot))
     latest_execution_payload_bid = ExecutionPayloadBid(
         parent_block_hash=pre.latest_execution_payload_bid.parent_block_hash,
         parent_block_root=pre.latest_execution_payload_bid.parent_block_root,

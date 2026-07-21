@@ -171,4 +171,4 @@ order-by-type = false
 [tool.uv.sources]
 # Temporarily track the jtraglia fork for positional construction (`SSZCollection`)
 # until https://github.com/leanEthereum/ssz-specs receives it.
-eth-ssz-specs = { git = "https://github.com/jtraglia/eth-ssz-specs.git", rev = "6356a8af2a8c3ec4f2cd3427b7049eb5372e2ed4" }
+eth-ssz-specs = { git = "https://github.com/jtraglia/eth-ssz-specs.git", rev = "20e241f6379947e772e0fd62656bcf6cb57b173c" }

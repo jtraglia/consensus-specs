@@ -73,7 +73,11 @@ def test_update_ranking(spec, state):
     att_attested_state = state.copy()
     fin_finalized_block = att_attested_block
     _, _, state = next_slots_with_attestations(
-        spec, state, spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1), fill_cur_epoch=True, fill_prev_epoch=True
+        spec,
+        state,
+        spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1),
+        fill_cur_epoch=True,
+        fill_prev_epoch=True,
     )
     fin_attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True

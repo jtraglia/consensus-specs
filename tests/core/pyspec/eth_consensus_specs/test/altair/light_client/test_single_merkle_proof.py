@@ -1,4 +1,3 @@
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from eth_consensus_specs.test.context import (
     spec_state_test,
     with_light_client,
@@ -9,6 +8,7 @@ from eth_consensus_specs.test.helpers.light_client import (
     latest_finalized_root_gindex,
     latest_next_sync_committee_gindex,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 @with_test_suite_name("BeaconState")

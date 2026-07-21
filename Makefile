@@ -5,6 +5,8 @@ all: help
 ALL_EXECUTABLE_SPEC_NAMES = \
 	phase0    \
 	altair    \
+	bellatrix \
+	capella   \
 
 # A list of fake targets.
 .PHONY: \

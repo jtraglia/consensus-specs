@@ -30,7 +30,7 @@ def test_success_top_up_to_withdrawn_validator(spec, state):
     assert state.validators[validator_index].effective_balance == 0
 
     # Make a top-up balance to validator
-    amount = spec.MAX_EFFECTIVE_BALANCE // 4
+    amount = spec.MAX_EFFECTIVE_BALANCE // spec.Gwei(4)
     deposit = prepare_state_and_deposit(spec, state, validator_index, amount, signed=True)
 
     yield from run_deposit_processing(spec, state, deposit, validator_index)

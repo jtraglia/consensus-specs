@@ -1,3 +1,4 @@
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from dataclasses import dataclass
 from enum import Enum
 
@@ -57,13 +58,13 @@ class MegaStore:
 
 
 def get_optimistic_store(spec, anchor_state, anchor_block):
-    assert anchor_block.state_root == anchor_state.hash_tree_root()
+    assert anchor_block.state_root == hash_tree_root(anchor_state)
 
     opt_store = spec.OptimisticStore(
         optimistic_roots=set(),
-        head_block_root=anchor_block.hash_tree_root(),
+        head_block_root=hash_tree_root(anchor_block),
     )
-    anchor_block_root = anchor_block.hash_tree_root()
+    anchor_block_root = hash_tree_root(anchor_block)
     opt_store.blocks[anchor_block_root] = anchor_block.copy()
     opt_store.block_states[anchor_block_root] = anchor_state.copy()
 
@@ -96,7 +97,7 @@ def add_optimistic_block(
     from ``verify_and_notify_new_payload`` method response.
     """
     block = signed_block.message
-    block_root = block.hash_tree_root()
+    block_root = hash_tree_root(block)
     el_block_hash = block.body.execution_payload.block_hash
 
     if payload_status is None:
@@ -123,7 +124,7 @@ def add_optimistic_block(
         assert payload_status.latest_valid_hash is not None
         current_block = block
         while el_block_hash != payload_status.latest_valid_hash and el_block_hash != spec.Bytes32():
-            current_block_root = current_block.hash_tree_root()
+            current_block_root = hash_tree_root(current_block)
             assert current_block_root in mega_store.block_payload_statuses
             mega_store.block_payload_statuses[
                 current_block_root

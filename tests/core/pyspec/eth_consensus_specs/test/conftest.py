@@ -168,8 +168,6 @@ def pytest_ignore_collect(collection_path, config):
     migrated, at which point it can be removed from this gate.
     """
     unmigrated = {
-        "bellatrix",
-        "capella",
         "deneb",
         "electra",
         "fulu",

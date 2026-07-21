@@ -48,7 +48,7 @@ fork boundary. Instead, the logic must be within `process_slots`.
 
 ```python
 def upgrade_to_capella(pre: bellatrix.BeaconState) -> BeaconState:
-    epoch = bellatrix.get_current_epoch(pre)
+    epoch = compute_epoch_at_slot(Slot(pre.slot))
     latest_execution_payload_header = ExecutionPayloadHeader(
         parent_hash=pre.latest_execution_payload_header.parent_hash,
         fee_recipient=pre.latest_execution_payload_header.fee_recipient,
@@ -103,7 +103,7 @@ def upgrade_to_capella(pre: bellatrix.BeaconState) -> BeaconState:
         # [New in Capella]
         next_withdrawal_validator_index=ValidatorIndex(0),
         # [New in Capella]
-        historical_summaries=List[HistoricalSummary, HISTORICAL_ROOTS_LIMIT]([]),
+        historical_summaries=HistoricalSummaries(),
     )
 
     return post

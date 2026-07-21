@@ -73,7 +73,7 @@ def translate_participation(
 
 
 def upgrade_to_altair(pre: phase0.BeaconState) -> BeaconState:
-    epoch = phase0.get_current_epoch(pre)
+    epoch = compute_epoch_at_slot(Slot(pre.slot))
     post = BeaconState(
         genesis_time=pre.genesis_time,
         genesis_validators_root=pre.genesis_validators_root,

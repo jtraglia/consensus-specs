@@ -1,3 +1,5 @@
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
+
 BELLATRIX_FORK_TEST_META_TAGS = {
     "fork": "bellatrix",
 }
@@ -35,12 +37,16 @@ def run_fork_test(post_spec, pre_state):
         "next_sync_committee",
     ]
     for field in stable_fields:
-        assert getattr(pre_state, field) == getattr(post_state, field)
+        assert hash_tree_root(getattr(pre_state, field)) == hash_tree_root(
+            getattr(post_state, field)
+        )
 
     # Modified fields
     modified_fields = ["fork"]
     for field in modified_fields:
-        assert getattr(pre_state, field) != getattr(post_state, field)
+        assert (
+            getattr(pre_state, field).encode_bytes() != getattr(post_state, field).encode_bytes()
+        )
 
     assert pre_state.fork.current_version == post_state.fork.previous_version
     assert post_state.fork.current_version == post_spec.config.BELLATRIX_FORK_VERSION

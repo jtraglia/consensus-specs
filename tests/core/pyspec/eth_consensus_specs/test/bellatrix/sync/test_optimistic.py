@@ -1,3 +1,4 @@
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from eth_consensus_specs.test.context import (
     spec_state_test,
     with_all_phases_from_to,
@@ -47,8 +48,11 @@ def test_from_syncing_to_invalid(spec, state):
     next_epoch(spec, state)
 
     current_time = (
-        spec.SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY * 10 + state.slot
-    ) * spec.config.SLOT_DURATION_MS // 1000 + fc_store.genesis_time
+        spec.Uint64(spec.SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY * spec.Slot(10) + state.slot)
+        * spec.config.SLOT_DURATION_MS
+        // spec.Uint64(1000)
+        + fc_store.genesis_time
+    )
     on_tick_and_append_step(spec, fc_store, current_time, test_steps)
 
     # Block 0
@@ -128,6 +132,6 @@ def test_from_syncing_to_invalid(spec, state):
     yield from add_optimistic_block(
         spec, mega_store, signed_block, test_steps, payload_status=payload_status
     )
-    assert mega_store.opt_store.head_block_root == signed_blocks_a[-1].message.hash_tree_root()
+    assert mega_store.opt_store.head_block_root == hash_tree_root(signed_blocks_a[-1].message)
 
     yield "steps", test_steps

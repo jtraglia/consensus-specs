@@ -38,10 +38,11 @@ def run_bls_to_execution_change_processing(spec, state, signed_address_change, v
     # Make sure the address change has been processed
     validator_index = signed_address_change.message.validator_index
     validator = state.validators[validator_index]
-    assert validator.withdrawal_credentials[:1] == spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX
+    assert spec.Bytes1(validator.withdrawal_credentials[:1]) == spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX
     assert validator.withdrawal_credentials[1:12] == b"\x00" * 11
     assert (
-        validator.withdrawal_credentials[12:] == signed_address_change.message.to_execution_address
+        spec.ExecutionAddress(validator.withdrawal_credentials[12:])
+        == signed_address_change.message.to_execution_address
     )
 
     # yield post-state
@@ -60,7 +61,7 @@ def test_success(spec, state):
 def test_success_not_activated(spec, state):
     validator_index = 3
     validator = state.validators[validator_index]
-    validator.activation_eligibility_epoch += 4
+    validator.activation_eligibility_epoch += spec.Epoch(4)
     validator.activation_epoch = spec.FAR_FUTURE_EPOCH
 
     assert not spec.is_active_validator(validator, spec.get_current_epoch(state))
@@ -81,7 +82,7 @@ def test_success_in_activation_queue(spec, state):
     validator_index = 3
     validator = state.validators[validator_index]
     validator.activation_eligibility_epoch = spec.get_current_epoch(state)
-    validator.activation_epoch += 4
+    validator.activation_epoch += spec.Epoch(4)
 
     assert not spec.is_active_validator(validator, spec.get_current_epoch(state))
 

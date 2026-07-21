@@ -19,7 +19,7 @@ def get_signed_address_change(
         withdrawal_pubkey = pubkeys[key_index]
         withdrawal_privkey = privkeys[key_index]
     else:
-        withdrawal_privkey = pubkey_to_privkey[withdrawal_pubkey]
+        withdrawal_privkey = pubkey_to_privkey[bytes(withdrawal_pubkey)]
 
     if to_execution_address is None:
         to_execution_address = b"\x42" * 20

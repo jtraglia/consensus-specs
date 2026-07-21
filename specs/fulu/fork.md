@@ -61,7 +61,7 @@ change is made to upgrade to Fulu.
 
 ```python
 def upgrade_to_fulu(pre: electra.BeaconState) -> BeaconState:
-    epoch = electra.get_current_epoch(pre)
+    epoch = compute_epoch_at_slot(Slot(pre.slot))
     post = BeaconState(
         genesis_time=pre.genesis_time,
         genesis_validators_root=pre.genesis_validators_root,

@@ -33,9 +33,14 @@ Additional documents describe the impact of the upgrade on certain roles:
 
 ## Types
 
-| Name              | SSZ equivalent                                         | Description                                                   |
-| ----------------- | ------------------------------------------------------ | ------------------------------------------------------------- |
-| `ExecutionBranch` | `Vector[Bytes32, floorlog2(EXECUTION_PAYLOAD_GINDEX)]` | Merkle branch of `execution_payload` within `BeaconBlockBody` |
+### `ExecutionBranch`
+
+Merkle branch of `execution_payload` within `BeaconBlockBody`.
+
+```python
+class ExecutionBranch(Vector[Bytes32]):
+    LENGTH = floorlog2(EXECUTION_PAYLOAD_GINDEX)
+```
 
 ## Constants
 
@@ -117,8 +122,8 @@ class LightClientStore:
     best_valid_update: Optional[LightClientUpdate]
     # [Modified in Capella]
     optimistic_header: LightClientHeader
-    previous_max_active_participants: uint64
-    current_max_active_participants: uint64
+    previous_max_active_participants: Uint64
+    current_max_active_participants: Uint64
 ```
 
 ## Helpers

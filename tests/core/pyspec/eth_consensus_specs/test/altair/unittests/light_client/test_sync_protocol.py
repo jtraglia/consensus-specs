@@ -1,4 +1,3 @@
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from copy import deepcopy
 
 from eth_consensus_specs.test.context import (
@@ -20,6 +19,7 @@ from eth_consensus_specs.test.helpers.light_client import (
 from eth_consensus_specs.test.helpers.state import (
     next_slots,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def setup_test(spec, state):

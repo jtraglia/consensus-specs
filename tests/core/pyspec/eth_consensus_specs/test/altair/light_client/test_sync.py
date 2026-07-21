@@ -67,7 +67,11 @@ def test_light_client_sync(spec, state):
     )
     finalized_state = state.copy()
     _, _, state = next_slots_with_attestations(
-        spec, state, spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1), fill_cur_epoch=True, fill_prev_epoch=True
+        spec,
+        state,
+        spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1),
+        fill_cur_epoch=True,
+        fill_prev_epoch=True,
     )
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
@@ -103,7 +107,11 @@ def test_light_client_sync(spec, state):
     )
     finalized_state = state.copy()
     _, _, state = next_slots_with_attestations(
-        spec, state, spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1), fill_cur_epoch=True, fill_prev_epoch=True
+        spec,
+        state,
+        spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1),
+        fill_cur_epoch=True,
+        fill_prev_epoch=True,
     )
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
@@ -138,7 +146,11 @@ def test_light_client_sync(spec, state):
     )
     finalized_state = state.copy()
     _, _, state = next_slots_with_attestations(
-        spec, state, spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1), fill_cur_epoch=True, fill_prev_epoch=True
+        spec,
+        state,
+        spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1),
+        fill_cur_epoch=True,
+        fill_prev_epoch=True,
     )
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
@@ -299,7 +311,11 @@ def test_light_client_sync(spec, state):
     )
     finalized_state = state.copy()
     _, _, state = next_slots_with_attestations(
-        spec, state, spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1), fill_cur_epoch=True, fill_prev_epoch=True
+        spec,
+        state,
+        spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1),
+        fill_cur_epoch=True,
+        fill_prev_epoch=True,
     )
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
@@ -337,7 +353,11 @@ def test_supply_sync_committee_from_past_update(spec, state):
     )
     finalized_state = state.copy()
     _, _, state = next_slots_with_attestations(
-        spec, state, spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1), fill_cur_epoch=True, fill_prev_epoch=True
+        spec,
+        state,
+        spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1),
+        fill_cur_epoch=True,
+        fill_prev_epoch=True,
     )
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
@@ -385,7 +405,11 @@ def test_advance_finality_without_sync_committee(spec, state):
     )
     finalized_state = state.copy()
     _, _, state = next_slots_with_attestations(
-        spec, state, spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1), fill_cur_epoch=True, fill_prev_epoch=True
+        spec,
+        state,
+        spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1),
+        fill_cur_epoch=True,
+        fill_prev_epoch=True,
     )
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
@@ -531,7 +555,11 @@ def test_light_client_sync_no_force_update(spec, state):
     )
     finalized_state = state.copy()
     _, _, state = next_slots_with_attestations(
-        spec, state, spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1), fill_cur_epoch=True, fill_prev_epoch=True
+        spec,
+        state,
+        spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1),
+        fill_cur_epoch=True,
+        fill_prev_epoch=True,
     )
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True

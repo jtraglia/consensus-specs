@@ -1,4 +1,3 @@
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from dataclasses import dataclass
 from typing import Any
 
@@ -24,6 +23,7 @@ from eth_consensus_specs.test.helpers.light_client import (
     upgrade_lc_header_to_new_spec,
     upgrade_lc_update_to_new_spec,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def _next_epoch_boundary_slot(spec, slot):
@@ -197,7 +197,7 @@ def _block_id_at_finalized_slot(test, slot):  # -> Optional[BlockID]
         try:
             return BlockID(slot=slot, root=test.finalized_block_roots[slot])
         except KeyError:
-            slot = slot - 1
+            slot = slot - type(slot)(1)
     return None
 
 
@@ -468,7 +468,9 @@ def _process_head_change_for_light_client(test, spec, head_bid, old_finalized_bi
     low_period = spec.compute_sync_committee_period_at_slot(low_slot)
     bid = head_bid
     for period in reversed(range(low_period, int(head_period) + 1)):
-        period_end_slot = compute_start_slot_at_sync_committee_period(spec, period + 1) - spec.Slot(1)
+        period_end_slot = compute_start_slot_at_sync_committee_period(spec, period + 1) - spec.Slot(
+            1
+        )
         bid = get_ancestor_of_block_id(test, bid, period_end_slot)
         if bid is None or bid.slot < low_slot:
             break
@@ -665,8 +667,8 @@ def add_new_block(test, spec, state, slot=None, num_sync_participants=0):
     parent_bid = _state_to_block_id(state)
 
     # Advance to target slot - 1 to ensure sync aggregate can be efficiently computed
-    if state.slot < slot - 1:
-        spec, state, _ = transition_across_forks(spec, state, slot - 1, phases=test.phases)
+    if state.slot < int(slot) - 1:
+        spec, state, _ = transition_across_forks(spec, state, int(slot) - 1, phases=test.phases)
 
     # Compute sync aggregate, using:
     # - sync committee based on target slot
@@ -713,8 +715,10 @@ def select_new_head(test, spec, head_bid):
             new_finalized_epoch = state.data.finalized_checkpoint.epoch
             while bid.slot > test.latest_finalized_bid.slot:
                 test.finalized_block_roots[bid.slot] = bid.root
-                finalized_epoch = spec.compute_epoch_at_slot(bid.slot + spec.SLOTS_PER_EPOCH - spec.Slot(1))
-                if finalized_epoch != old_finalized_epoch:
+                finalized_epoch = spec.compute_epoch_at_slot(
+                    bid.slot + spec.SLOTS_PER_EPOCH - spec.Slot(1)
+                )
+                if old_finalized_epoch is None or finalized_epoch != old_finalized_epoch:
                     state = test.states[block.data.message.state_root]
                     test.finalized_checkpoint_states[block.data.message.state_root] = state
                     old_finalized_epoch = finalized_epoch
@@ -821,7 +825,7 @@ def run_lc_data_collection_test_multi_fork(spec, phases, state, fork_1, fork_2):
 
     # Genesis block is post Altair and is finalized, so can be used as bootstrap
     genesis_bid = BlockID(
-        slot=state.slot, root=create_signed_genesis_block(spec, state).hash_tree_root(message)
+        slot=state.slot, root=hash_tree_root(create_signed_genesis_block(spec, state).message)
     )
     assert (
         get_lc_bootstrap_block_id(get_light_client_bootstrap(test, genesis_bid.root).data)
@@ -878,7 +882,7 @@ def run_lc_data_collection_test_multi_fork(spec, phases, state, fork_1, fork_2):
                 == bids_a[-1]
             )
         else:
-            assert signature_period == attested_period + 1
+            assert int(signature_period) == int(attested_period) + 1
             assert (
                 get_lc_update_attested_block_id(
                     get_light_client_update_for_period(test, attested_period).data,
@@ -929,7 +933,7 @@ def run_lc_data_collection_test_multi_fork(spec, phases, state, fork_1, fork_2):
             == bids_b[-1]
         )
     else:
-        assert signature_period == attested_period + 1
+        assert int(signature_period) == int(attested_period) + 1
         assert (
             get_lc_update_attested_block_id(
                 get_light_client_update_for_period(test, attested_period).data,
@@ -948,12 +952,12 @@ def run_lc_data_collection_test_multi_fork(spec, phases, state, fork_1, fork_2):
     # All data for periods between the common ancestor of the two branches should have reorged.
     # As there was no sync participation on branch B, that means it is deleted.
     state_b_period = spec_b.compute_sync_committee_period_at_slot(state_b.slot)
-    for period in range(state_period + 1, state_b_period):
+    for period in range(int(state_period) + 1, state_b_period):
         assert get_light_client_update_for_period(test, period).spec is None
 
     # Branch A: Another block, reorging branch B once more
     attested_period = spec_a.compute_sync_committee_period_at_slot(slot_a)
-    slot_a = slot_b + 1
+    slot_a = slot_b + spec.Slot(1)
     signature_period = spec_a.compute_sync_committee_period_at_slot(slot_a)
     if signature_period != attested_period:
         num_sync_participants_a = 0
@@ -972,7 +976,7 @@ def run_lc_data_collection_test_multi_fork(spec, phases, state, fork_1, fork_2):
             == bids_a[-1]
         )
     else:
-        assert signature_period == attested_period + 1
+        assert int(signature_period) == int(attested_period) + 1
         assert (
             get_lc_update_attested_block_id(
                 get_light_client_update_for_period(test, attested_period).data,

@@ -33,6 +33,7 @@ from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root, copy, uint_to
 from ssz import (
     Boolean, Container, List, Vector, Uint8, Uint32, Uint64, Uint256)
 from ssz.bitfields import BaseBitlist as Bitlist, BaseBitvector as Bitvector
+from ssz.byte_arrays import BaseByteList as ByteList
 from ssz.byte_arrays import BaseBytes
 from ssz.ssz_base import SSZType
 from eth_consensus_specs.utils import bls

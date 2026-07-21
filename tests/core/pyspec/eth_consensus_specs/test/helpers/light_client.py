@@ -1,4 +1,3 @@
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from math import floor
 
 from frozendict import frozendict
@@ -22,6 +21,7 @@ from eth_consensus_specs.test.helpers.sync_committee import (
     compute_aggregate_sync_committee_signature,
     compute_committee_indices,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def sample_blob_schedule(initial_epoch=5, interval=5):
@@ -85,6 +85,7 @@ def get_sync_aggregate(spec, state, num_participants=None, signature_slot=None, 
     signature_spec, signature_state, _ = transition_across_forks(
         spec, state, signature_slot, phases
     )
+    signature_slot = signature_spec.Slot(signature_slot)
 
     # Fetch sync committee
     committee_indices = compute_committee_indices(signature_state)
@@ -167,7 +168,7 @@ def check_merkle_branch_equal(spec, new_spec, data, upgraded, gindex):
             upgraded, gindex
         ) == new_spec.normalize_merkle_branch(data, gindex)
     else:
-        assert upgraded == data
+        assert list(upgraded) == list(data)
 
 
 def check_lc_header_equal(spec, new_spec, data, upgraded):
@@ -204,7 +205,9 @@ def upgrade_lc_header_to_new_spec(spec, new_spec, data, phases):
 
 def check_lc_bootstrap_equal(spec, new_spec, data, upgraded):
     check_lc_header_equal(spec, new_spec, data.header, upgraded.header)
-    assert upgraded.current_sync_committee == data.current_sync_committee
+    assert hash_tree_root(upgraded.current_sync_committee) == hash_tree_root(
+        data.current_sync_committee
+    )
     check_merkle_branch_equal(
         spec,
         new_spec,
@@ -238,7 +241,9 @@ def upgrade_lc_bootstrap_to_new_spec(spec, new_spec, data, phases):
 
 def check_lc_update_equal(spec, new_spec, data, upgraded):
     check_lc_header_equal(spec, new_spec, data.attested_header, upgraded.attested_header)
-    assert upgraded.next_sync_committee == data.next_sync_committee
+    assert hash_tree_root(upgraded.next_sync_committee) == hash_tree_root(
+        data.next_sync_committee
+    )
     check_merkle_branch_equal(
         spec,
         new_spec,
@@ -254,7 +259,7 @@ def check_lc_update_equal(spec, new_spec, data, upgraded):
         upgraded.finality_branch,
         latest_finalized_root_gindex(new_spec),
     )
-    assert upgraded.sync_aggregate == data.sync_aggregate
+    assert hash_tree_root(upgraded.sync_aggregate) == hash_tree_root(data.sync_aggregate)
     assert upgraded.signature_slot == data.signature_slot
 
 
@@ -290,7 +295,7 @@ def check_lc_finality_update_equal(spec, new_spec, data, upgraded):
         upgraded.finality_branch,
         latest_finalized_root_gindex(new_spec),
     )
-    assert upgraded.sync_aggregate == data.sync_aggregate
+    assert hash_tree_root(upgraded.sync_aggregate) == hash_tree_root(data.sync_aggregate)
     assert upgraded.signature_slot == data.signature_slot
 
 
@@ -318,8 +323,12 @@ def upgrade_lc_finality_update_to_new_spec(spec, new_spec, data, phases):
 
 def check_lc_store_equal(spec, new_spec, data, upgraded):
     check_lc_header_equal(spec, new_spec, data.finalized_header, upgraded.finalized_header)
-    assert upgraded.current_sync_committee == data.current_sync_committee
-    assert upgraded.next_sync_committee == data.next_sync_committee
+    assert hash_tree_root(upgraded.current_sync_committee) == hash_tree_root(
+        data.current_sync_committee
+    )
+    assert hash_tree_root(upgraded.next_sync_committee) == hash_tree_root(
+        data.next_sync_committee
+    )
     if upgraded.best_valid_update is None:
         assert data.best_valid_update is None
     else:

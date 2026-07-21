@@ -14,6 +14,7 @@ actions of a "validator" participating in the Ethereum proof-of-stake protocol.
   - [Time parameters](#time-parameters)
 - [Containers](#containers)
   - [`SyncCommitteeMessage`](#synccommitteemessage)
+  - [`SyncSubcommitteeBits`](#syncsubcommitteebits)
   - [`SyncCommitteeContribution`](#synccommitteecontribution)
   - [`ContributionAndProof`](#contributionandproof)
   - [`SignedContributionAndProof`](#signedcontributionandproof)

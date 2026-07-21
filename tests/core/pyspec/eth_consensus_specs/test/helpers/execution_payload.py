@@ -72,7 +72,9 @@ def compute_trie_root_from_indexed_data(data):
     t = HexaryTrie(db={})
     for i, obj in enumerate(data):
         k = encode(i, big_endian_int)
-        t.set(k, obj)  # Implicitly skipped if `obj == b''` (invalid RLP)
+        # Byte-list values carry their payload in `data`.
+        payload = bytes(obj.data) if hasattr(obj, "data") else obj
+        t.set(k, payload)  # Implicitly skipped if `payload == b''` (invalid RLP)
     return t.root_hash
 
 
@@ -130,7 +132,7 @@ def compute_el_header_block_hash(
         # timestamp
         (big_endian_int, payload_header.timestamp),
         # extradata
-        (Binary(0, 32), payload_header.extra_data),
+        (Binary(0, 32), bytes(payload_header.extra_data.data)),
         # prev_randao
         (Binary(32, 32), payload_header.prev_randao),
         # nonce
@@ -350,18 +352,16 @@ def build_empty_execution_payload(spec, state, randao_mix=None):
         receipts_root=spec.Bytes32(
             bytes.fromhex("1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347")
         ),
-        logs_bloom=spec.ByteVector[
-            spec.BYTES_PER_LOGS_BLOOM
-        ](),  # TODO: zeroed logs bloom for empty logs ok?
+        logs_bloom=spec.LogsBloom(),  # TODO: zeroed logs bloom for empty logs ok?
         prev_randao=randao_mix,
         gas_used=0,  # empty block, 0 gas
         gas_limit=latest.gas_limit,
         timestamp=timestamp,
-        extra_data=spec.ByteList[spec.MAX_EXTRA_DATA_BYTES](),
+        extra_data=spec.ExtraData(),
     )
     if not is_post_gloas(spec):
         payload.state_root = latest.state_root  # no changes to the state
-        payload.block_number = latest.block_number + 1
+        payload.block_number = latest.block_number + spec.Uint64(1)
         payload.gas_limit = latest.gas_limit  # retain same limit
         payload.base_fee_per_gas = latest.base_fee_per_gas  # retain same base_fee
     if is_post_capella(spec):
@@ -370,7 +370,7 @@ def build_empty_execution_payload(spec, state, randao_mix=None):
         payload.blob_gas_used = 0
         payload.excess_blob_gas = 0
     if is_post_gloas(spec):
-        payload.block_access_list = spec.ByteList[spec.MAX_BYTES_PER_TRANSACTION]()
+        payload.block_access_list = spec.BlockAccessList()
         payload.slot_number = state.slot
 
     payload.block_hash = compute_el_block_hash(spec, payload, state)
@@ -383,14 +383,14 @@ def build_randomized_execution_payload(spec, state, rng):
     execution_payload.fee_recipient = spec.ExecutionAddress(get_random_bytes_list(rng, 20))
     execution_payload.state_root = spec.Bytes32(get_random_bytes_list(rng, 32))
     execution_payload.receipts_root = spec.Bytes32(get_random_bytes_list(rng, 32))
-    execution_payload.logs_bloom = spec.ByteVector[spec.BYTES_PER_LOGS_BLOOM](
-        get_random_bytes_list(rng, spec.BYTES_PER_LOGS_BLOOM)
+    execution_payload.logs_bloom = spec.LogsBloom(
+        get_random_bytes_list(rng, int(spec.BYTES_PER_LOGS_BLOOM))
     )
     execution_payload.block_number = rng.randint(0, int(10e10))
     execution_payload.gas_limit = rng.randint(0, int(10e10))
     execution_payload.gas_used = rng.randint(0, int(10e10))
-    extra_data_length = rng.randint(0, spec.MAX_EXTRA_DATA_BYTES)
-    execution_payload.extra_data = spec.ByteList[spec.MAX_EXTRA_DATA_BYTES](
+    extra_data_length = rng.randint(0, int(spec.MAX_EXTRA_DATA_BYTES))
+    execution_payload.extra_data = spec.ExtraData(
         data=get_random_bytes_list(rng, extra_data_length)
     )
     execution_payload.base_fee_per_gas = rng.randint(0, 2**256 - 1)

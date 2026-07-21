@@ -14,7 +14,7 @@ EIP8148 = "eip8148"
 # Forks that are compiled by `--all-forks`. During the eth-ssz-specs migration only
 # phase0 is active; the other forks' spec files are kept but not built.
 # TODO(ssz-specs migration): re-enable the remaining forks here as they are migrated.
-ENABLED_FORKS = [PHASE0, ALTAIR]
+ENABLED_FORKS = [PHASE0, ALTAIR, BELLATRIX, CAPELLA]
 
 
 # The helper functions that are used when defining constants

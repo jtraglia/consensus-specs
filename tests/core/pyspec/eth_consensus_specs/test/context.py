@@ -82,7 +82,10 @@ def with_custom_state(
     def deco(fn):
         def entry(*args, spec: Spec, phases: SpecForks, **kw):
             # make a key for the state, unique to the fork + config (incl preset choice) and balances/activations
-            key = (spec.fork, spec.config.__hash__(), spec.__file__, balances_fn, threshold_fn)
+            # Key by the module object itself: config-override tests run on a
+            # fresh copy of the module whose types are distinct classes, so a
+            # state built for one copy must not be served to another.
+            key = (spec, spec.config.__hash__(), balances_fn, threshold_fn)
             if key not in _custom_state_cache_dict:
                 state = _prepare_state(balances_fn, threshold_fn, spec, phases)
                 _custom_state_cache_dict[key] = state
@@ -822,6 +825,9 @@ def with_config_overrides(config_overrides):
                     phases[fork], _ = spec_with_config_overrides(
                         get_copy_of_spec(kw["phases"][fork]), config_overrides
                     )
+                # The spec's own fork must be the same module copy as ``spec``,
+                # or values from the two copies cannot mix.
+                phases[spec.fork] = spec
                 kw["phases"] = phases
 
             # The copied spec module has fresh classes; re-materialize the
@@ -863,6 +869,9 @@ def _with_config_overrides_emit(config_overrides, emitted_fork=None):
                     )
                     if emitted_fork == fork:
                         output_config = output
+                # The spec's own fork must be the same module copy as ``spec``,
+                # or values from the two copies cannot mix.
+                phases[spec.fork] = spec
                 kw["phases"] = phases
 
             # The copied spec module has fresh classes; re-materialize the

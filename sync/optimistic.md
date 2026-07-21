@@ -48,7 +48,7 @@ statelessness).
 
 | Name                                  | Value | Unit  |
 | ------------------------------------- | ----- | ----- |
-| `SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY` | `128` | slots |
+| `SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY` | `Slot(128)` | slots |
 
 *Note: the `SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY` must be user-configurable. See
 [Fork Choice Poisoning](#fork-choice-poisoning).*

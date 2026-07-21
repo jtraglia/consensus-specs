@@ -4,6 +4,9 @@
 
 - [Introduction](#introduction)
 - [Types](#types)
+  - [`FinalityBranch`](#finalitybranch)
+  - [`CurrentSyncCommitteeBranch`](#currentsynccommitteebranch)
+  - [`NextSyncCommitteeBranch`](#nextsynccommitteebranch)
 - [Constants](#constants)
 - [Preset](#preset)
   - [Misc](#misc)
@@ -98,10 +101,10 @@ class NextSyncCommitteeBranch(Vector[Bytes32]):
 
 ### Misc
 
-| Name                              | Value                                                | Unit       |
-| --------------------------------- | ---------------------------------------------------- | ---------- |
-| `MIN_SYNC_COMMITTEE_PARTICIPANTS` | `1`                                                  | validators |
-| `UPDATE_TIMEOUT`                  | `Slot(SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)` | slots |
+| Name                              | Value                                                      | Unit       |
+| --------------------------------- | ---------------------------------------------------------- | ---------- |
+| `MIN_SYNC_COMMITTEE_PARTICIPANTS` | `1`                                                        | validators |
+| `UPDATE_TIMEOUT`                  | `Slot(SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)` | slots      |
 
 ## Containers
 
@@ -241,12 +244,12 @@ def is_finality_update(update: LightClientUpdate) -> bool:
 def is_better_update(new_update: LightClientUpdate, old_update: LightClientUpdate) -> bool:
     # Compare supermajority (> 2/3) sync committee participation
     max_active_participants = len(new_update.sync_aggregate.sync_committee_bits)
-    new_num_active_participants = len(
-        [bit for bit in new_update.sync_aggregate.sync_committee_bits if bit]
-    )
-    old_num_active_participants = len(
-        [bit for bit in old_update.sync_aggregate.sync_committee_bits if bit]
-    )
+    new_num_active_participants = len([
+        bit for bit in new_update.sync_aggregate.sync_committee_bits if bit
+    ])
+    old_num_active_participants = len([
+        bit for bit in old_update.sync_aggregate.sync_committee_bits if bit
+    ])
     new_has_supermajority = new_num_active_participants * 3 >= max_active_participants * 2
     old_has_supermajority = old_num_active_participants * 3 >= max_active_participants * 2
     if new_has_supermajority != old_has_supermajority:
@@ -306,13 +309,10 @@ def is_next_sync_committee_known(store: LightClientStore) -> bool:
 
 ```python
 def get_safety_threshold(store: LightClientStore) -> Uint64:
-    return (
-        max(
-            store.previous_max_active_participants,
-            store.current_max_active_participants,
-        )
-        // Uint64(2)
-    )
+    return max(
+        store.previous_max_active_participants,
+        store.current_max_active_participants,
+    ) // Uint64(2)
 ```
 
 ### `get_subtree_index`

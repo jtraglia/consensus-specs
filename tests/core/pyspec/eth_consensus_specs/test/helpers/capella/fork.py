@@ -1,3 +1,5 @@
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
+
 CAPELLA_FORK_TEST_META_TAGS = {
     "fork": "capella",
 }
@@ -35,12 +37,18 @@ def run_fork_test(post_spec, pre_state):
         "next_sync_committee",
     ]
     for field in stable_fields:
-        assert getattr(pre_state, field) == getattr(post_state, field)
+        assert hash_tree_root(getattr(pre_state, field)) == hash_tree_root(
+            getattr(post_state, field)
+        )
 
     # Modified fields
     modified_fields = ["fork", "latest_execution_payload_header"]
     for field in modified_fields:
-        assert getattr(pre_state, field) != getattr(post_state, field)
+        # Compare encodings: a new zero-valued field keeps the tree root,
+        # so root equality cannot distinguish the upgraded structure.
+        assert (
+            getattr(pre_state, field).encode_bytes() != getattr(post_state, field).encode_bytes()
+        )
 
     assert len(pre_state.validators) == len(post_state.validators)
     for pre_validator, post_validator in zip(

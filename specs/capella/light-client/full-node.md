@@ -41,7 +41,7 @@ def block_to_light_client_header(block: SignedBeaconBlock) -> LightClientHeader:
             withdrawals_root=hash_tree_root(payload.withdrawals),
         )
         execution_branch = ExecutionBranch(
-            compute_merkle_proof(block.message.body, EXECUTION_PAYLOAD_GINDEX)
+            data=compute_merkle_proof(block.message.body, EXECUTION_PAYLOAD_GINDEX)
         )
     else:
         # Note that during fork transitions, `finalized_header` may still point to earlier forks.

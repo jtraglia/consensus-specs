@@ -1,4 +1,3 @@
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from enum import auto, Enum
 
 from eth_consensus_specs.test.helpers.attestations import (
@@ -53,6 +52,7 @@ from eth_consensus_specs.test.helpers.voluntary_exits import (
 from eth_consensus_specs.test.helpers.withdrawals import (
     prepare_withdrawal_request,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 class OperationType(Enum):
@@ -336,7 +336,9 @@ def run_transition_with_operation(
     The operation would be included into the block at `operation_at_slot`.
     """
     is_at_fork = operation_at_slot == spec.Slot(fork_epoch) * spec.SLOTS_PER_EPOCH
-    is_right_before_fork = operation_at_slot == spec.Slot(fork_epoch) * spec.SLOTS_PER_EPOCH - spec.Slot(1)
+    is_right_before_fork = operation_at_slot == spec.Slot(
+        fork_epoch
+    ) * spec.SLOTS_PER_EPOCH - spec.Slot(1)
     assert is_at_fork or is_right_before_fork
 
     if is_at_fork:

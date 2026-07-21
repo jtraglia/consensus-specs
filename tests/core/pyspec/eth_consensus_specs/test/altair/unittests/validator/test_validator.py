@@ -1,4 +1,3 @@
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 import random
 from collections import defaultdict
 
@@ -17,6 +16,7 @@ from eth_consensus_specs.test.helpers.keys import privkeys, pubkey_to_privkey, p
 from eth_consensus_specs.test.helpers.state import transition_to
 from eth_consensus_specs.test.helpers.sync_committee import compute_sync_committee_signature
 from eth_consensus_specs.utils import bls
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 rng = random.Random(1337)
 
@@ -173,7 +173,9 @@ def _get_expected_subnets_by_pubkey(sync_committee_members):
 @spec_state_test
 def test_compute_subnets_for_sync_committee(state, spec):
     # Transition to the head of the next period
-    transition_to(spec, state, spec.Slot(spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH)
+    transition_to(
+        spec, state, spec.Slot(spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
+    )
 
     next_slot_epoch = spec.compute_epoch_at_slot(state.slot + spec.Slot(1))
     assert spec.compute_sync_committee_period(

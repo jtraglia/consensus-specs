@@ -1,3 +1,4 @@
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from eth_consensus_specs.test.context import (
     spec_state_test,
     with_all_phases_from_to,
@@ -26,15 +27,15 @@ def test_execution_merkle_proof(spec, state):
     yield (
         "proof",
         {
-            "leaf": "0x" + block.message.body.execution_payload.hash_tree_root().hex(),
+            "leaf": "0x" + hash_tree_root(block.message.body.execution_payload).hex(),
             "leaf_index": gindex,
             "branch": ["0x" + root.hex() for root in branch],
         },
     )
     assert spec.is_valid_merkle_branch(
-        leaf=block.message.body.execution_payload.hash_tree_root(),
+        leaf=hash_tree_root(block.message.body.execution_payload),
         branch=branch,
         depth=spec.floorlog2(gindex),
         index=spec.get_subtree_index(gindex),
-        root=block.message.body.hash_tree_root(),
+        root=hash_tree_root(block.message.body),
     )

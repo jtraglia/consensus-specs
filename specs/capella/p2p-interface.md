@@ -39,14 +39,14 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 class Seen:
     proposer_slots: Set[Tuple[ValidatorIndex, Slot]]
     aggregator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
-    aggregate_data_roots: Dict[Root, Set[Tuple[boolean, ...]]]
+    aggregate_data_roots: Dict[Root, Set[Tuple[Boolean, ...]]]
     voluntary_exit_indices: Set[ValidatorIndex]
     proposer_slashing_indices: Set[ValidatorIndex]
     attester_slashing_indices: Set[ValidatorIndex]
     attestation_validator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
-    sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, uint64]]
-    sync_contribution_data: Dict[Tuple[Slot, Root, uint64], Set[Tuple[boolean, ...]]]
-    sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, uint64]]
+    sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, Uint64]]
+    sync_contribution_data: Dict[Tuple[Slot, Root, Uint64], Set[Tuple[Boolean, ...]]]
+    sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, Uint64]]
     # [New in Capella]
     bls_to_execution_change_indices: Set[ValidatorIndex]
 ```
@@ -112,7 +112,7 @@ def validate_beacon_block_gossip(
     store: Store,
     state: BeaconState,
     signed_beacon_block: SignedBeaconBlock,
-    current_time_ms: uint64,
+    current_time_ms: Uint64,
     block_payload_statuses: Dict[Root, PayloadValidationStatus],
 ) -> None:
     """
@@ -208,7 +208,7 @@ def validate_bls_to_execution_change_gossip(
     seen: Seen,
     state: BeaconState,
     signed_bls_to_execution_change: SignedBLSToExecutionChange,
-    current_time_ms: uint64,
+    current_time_ms: Uint64,
 ) -> None:
     """
     Validate a SignedBLSToExecutionChange for gossip propagation.
@@ -219,7 +219,7 @@ def validate_bls_to_execution_change_gossip(
 
     # [IGNORE] The current epoch is at or after the Capella fork epoch
     # (where current_epoch is defined by the current wall-clock time)
-    time_since_genesis_ms = current_time_ms - state.genesis_time * 1000
+    time_since_genesis_ms = current_time_ms - state.genesis_time * Uint64(1000)
     current_slot = Slot(time_since_genesis_ms // SLOT_DURATION_MS)
     current_epoch = compute_epoch_at_slot(current_slot)
     if current_epoch < CAPELLA_FORK_EPOCH:
@@ -236,7 +236,7 @@ def validate_bls_to_execution_change_gossip(
     validator = state.validators[validator_index]
 
     # [REJECT] The validator has BLS withdrawal credentials
-    if validator.withdrawal_credentials[:1] != BLS_WITHDRAWAL_PREFIX:
+    if Bytes1(validator.withdrawal_credentials[:1]) != BLS_WITHDRAWAL_PREFIX:
         raise GossipReject("validator does not have BLS withdrawal credentials")
 
     # [REJECT] The bls_to_execution_change is for the validator's withdrawal pubkey

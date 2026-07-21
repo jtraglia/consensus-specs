@@ -1,3 +1,4 @@
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from random import Random
 
 from eth_consensus_specs.test.context import BELLATRIX, spec_state_test, with_phases
@@ -21,7 +22,7 @@ from eth_consensus_specs.test.helpers.pow_block import (
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
-from eth_consensus_specs.utils.ssz.ssz_typing import uint256
+from ssz import Uint256
 
 
 def with_pow_block_patch(spec, blocks, func):
@@ -59,12 +60,12 @@ def test_all_valid(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
     pow_block_parent = prepare_random_pow_block(spec, rng=Random(1234))
-    pow_block_parent.total_difficulty = spec.config.TERMINAL_TOTAL_DIFFICULTY - uint256(1)
+    pow_block_parent.total_difficulty = spec.config.TERMINAL_TOTAL_DIFFICULTY - Uint256(1)
     pow_block = prepare_random_pow_block(spec, rng=Random(2345))
     pow_block.parent_hash = pow_block_parent.block_hash
     pow_block.total_difficulty = spec.config.TERMINAL_TOTAL_DIFFICULTY
@@ -81,7 +82,7 @@ def test_all_valid(spec, state):
         signed_block = state_transition_and_sign_block(spec, state, block)
         yield from tick_and_add_block(spec, store, signed_block, test_steps, merge_block=True)
         # valid
-        assert spec.get_head(store).root == signed_block.message.hash_tree_root()
+        assert spec.get_head(store).root == hash_tree_root(signed_block.message)
 
     yield from with_pow_block_patch(spec, pow_blocks, run_func)
     yield "steps", test_steps
@@ -96,12 +97,12 @@ def test_block_lookup_failed(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
     pow_block = prepare_random_pow_block(spec, rng=Random(1234))
-    pow_block.total_difficulty = spec.config.TERMINAL_TOTAL_DIFFICULTY - uint256(1)
+    pow_block.total_difficulty = spec.config.TERMINAL_TOTAL_DIFFICULTY - Uint256(1)
     pow_blocks = [pow_block]
     for pb in pow_blocks:
         yield from add_pow_block(spec, store, pb, test_steps)
@@ -136,15 +137,15 @@ def test_too_early_for_merge(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
     pow_block_parent = prepare_random_pow_block(spec, rng=Random(1234))
-    pow_block_parent.total_difficulty = spec.config.TERMINAL_TOTAL_DIFFICULTY - uint256(2)
+    pow_block_parent.total_difficulty = spec.config.TERMINAL_TOTAL_DIFFICULTY - Uint256(2)
     pow_block = prepare_random_pow_block(spec, rng=Random(2345))
     pow_block.parent_hash = pow_block_parent.block_hash
-    pow_block.total_difficulty = spec.config.TERMINAL_TOTAL_DIFFICULTY - uint256(1)
+    pow_block.total_difficulty = spec.config.TERMINAL_TOTAL_DIFFICULTY - Uint256(1)
     pow_blocks = [pow_block, pow_block_parent]
     for pb in pow_blocks:
         yield from add_pow_block(spec, store, pb, test_steps)
@@ -173,7 +174,7 @@ def test_too_late_for_merge(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
@@ -181,7 +182,7 @@ def test_too_late_for_merge(spec, state):
     pow_block_parent.total_difficulty = spec.config.TERMINAL_TOTAL_DIFFICULTY
     pow_block = prepare_random_pow_block(spec, rng=Random(2345))
     pow_block.parent_hash = pow_block_parent.block_hash
-    pow_block.total_difficulty = spec.config.TERMINAL_TOTAL_DIFFICULTY + uint256(1)
+    pow_block.total_difficulty = spec.config.TERMINAL_TOTAL_DIFFICULTY + Uint256(1)
     pow_blocks = [pow_block, pow_block_parent]
     for pb in pow_blocks:
         yield from add_pow_block(spec, store, pb, test_steps)

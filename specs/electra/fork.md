@@ -40,7 +40,7 @@ change is made to upgrade to Electra.
 
 ```python
 def upgrade_to_electra(pre: deneb.BeaconState) -> BeaconState:
-    epoch = deneb.get_current_epoch(pre)
+    epoch = compute_epoch_at_slot(Slot(pre.slot))
 
     earliest_exit_epoch = compute_activation_exit_epoch(get_current_epoch(pre))
     for validator in pre.validators:
