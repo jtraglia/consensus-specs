@@ -241,7 +241,7 @@ This section outlines configurations that are used in this specification.
 | `MESSAGE_DOMAIN_VALID_SNAPPY`        | `DomainType('0x01000000')`          | 4-byte domain for gossip message-id isolation of *valid* snappy messages          |
 | `SUBNETS_PER_NODE`                   | `2`                                 | Number of long-lived subnets a beacon node should be subscribed to                |
 | `ATTESTATION_SUBNET_COUNT`           | `2**6` (= 64)                       | Number of attestation subnets used in the gossipsub protocol                      |
-| `ATTESTATION_SUBNET_EXTRA_BITS`      | `0`                                 | Number of extra bits of a NodeId to use when mapping to a subscribed subnet       |
+| `ATTESTATION_SUBNET_EXTRA_BITS`      | `Uint64(0)`                         | Number of extra bits of a NodeId to use when mapping to a subscribed subnet       |
 | `MAX_CONCURRENT_REQUESTS`            | `2`                                 | Maximum number of concurrent requests per protocol ID that a client may issue     |
 
 ### Helpers
@@ -300,7 +300,7 @@ def compute_time_at_slot_ms(state: BeaconState, slot: Slot) -> Uint64:
     Return the time in milliseconds at the start of the given slot.
     """
     slots_since_genesis = slot - GENESIS_SLOT
-    return Uint64(state.genesis_time * 1000 + slots_since_genesis * SLOT_DURATION_MS)
+    return state.genesis_time * Uint64(1000) + Uint64(slots_since_genesis) * SLOT_DURATION_MS
 ```
 
 #### `is_not_from_future_slot`
@@ -358,7 +358,7 @@ def compute_min_epochs_for_block_requests() -> Uint64:
     """
     Return the minimum epoch range over which a node must serve blocks.
     """
-    return Uint64(MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2)
+    return Uint64(MIN_VALIDATOR_WITHDRAWABILITY_DELAY) + CHURN_LIMIT_QUOTIENT // Uint64(2)
 ```
 
 #### `is_non_strict_superset`

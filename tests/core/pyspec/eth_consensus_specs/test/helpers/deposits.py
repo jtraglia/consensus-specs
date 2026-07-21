@@ -78,7 +78,9 @@ def build_deposit(spec, deposit_data_list, pubkey, privkey, amount, withdrawal_c
 def deposit_from_context(spec, deposit_data_list, index):
     deposit_data = deposit_data_list[index]
     root = hash_tree_root(
-        List[spec.DepositData, 2**spec.DEPOSIT_CONTRACT_TREE_DEPTH](*deposit_data_list)
+        List[spec.DepositData, spec.Uint64(2) ** spec.DEPOSIT_CONTRACT_TREE_DEPTH].of(
+            *deposit_data_list
+        )
     )
     tree = calc_merkle_tree_from_leaves(tuple([d.hash_tree_root() for d in deposit_data_list]))
     proof = list(get_merkle_proof(tree, item_index=index, tree_len=32)) + [
@@ -86,7 +88,7 @@ def deposit_from_context(spec, deposit_data_list, index):
     ]
     leaf = deposit_data.hash_tree_root()
     assert spec.is_valid_merkle_branch(
-        leaf, proof, spec.DEPOSIT_CONTRACT_TREE_DEPTH + 1, index, root
+        leaf, proof, spec.DEPOSIT_CONTRACT_TREE_DEPTH + spec.Uint64(1), spec.Uint64(index), root
     )
     deposit = spec.Deposit(proof=proof, data=deposit_data)
 
@@ -99,7 +101,7 @@ def prepare_full_genesis_deposits(
     if deposit_data_list is None:
         deposit_data_list = []
     genesis_deposits = []
-    for pubkey_index in range(min_pubkey_index, min_pubkey_index + deposit_count):
+    for pubkey_index in range(min_pubkey_index, min_pubkey_index + int(deposit_count)):
         pubkey = pubkeys[pubkey_index]
         privkey = privkeys[pubkey_index]
         # insecurely use pubkey as withdrawal key if no credentials provided

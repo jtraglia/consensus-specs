@@ -100,9 +100,9 @@ specifications before continuing and use as a reference throughout.
 
 ### Misc
 
-| Name                               | Value         | Unit       |
-| ---------------------------------- | ------------- | ---------- |
-| `TARGET_AGGREGATORS_PER_COMMITTEE` | `2**4` (= 16) | validators |
+| Name                               | Value                | Unit       |
+| ---------------------------------- | -------------------- | ---------- |
+| `TARGET_AGGREGATORS_PER_COMMITTEE` | `Uint64(2**4)` (= 16) | validators |
 
 ## Configuration
 
@@ -291,7 +291,7 @@ def get_committee_assignment(
         * ``assignment[2]`` is the slot at which the committee is assigned
     Return None if no assignment.
     """
-    next_epoch = Epoch(get_current_epoch(state) + 1)
+    next_epoch = get_current_epoch(state) + Epoch(1)
     assert epoch <= next_epoch
 
     start_slot = compute_start_slot_at_epoch(epoch)
@@ -461,7 +461,8 @@ An honest block proposer sets
 ```python
 def voting_period_start_time(state: BeaconState) -> Uint64:
     eth1_voting_period_start_slot = Slot(
-        state.slot - state.slot % (EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH)
+        state.slot
+        - state.slot % Slot(Uint64(EPOCHS_PER_ETH1_VOTING_PERIOD) * Uint64(SLOTS_PER_EPOCH))
     )
     return compute_time_at_slot(state, eth1_voting_period_start_slot)
 ```
@@ -584,7 +585,7 @@ root for this purpose:
 def compute_new_state_root(state: BeaconState, block: BeaconBlock) -> Root:
     temp_state: BeaconState = state.copy()
     signed_block = SignedBeaconBlock(message=block)
-    temp_state = state_transition(temp_state, signed_block, validate_result=False)
+    state_transition(temp_state, signed_block, validate_result=False)
     return hash_tree_root(temp_state)
 ```
 
@@ -734,7 +735,7 @@ def is_aggregator(
     state: BeaconState, slot: Slot, index: CommitteeIndex, slot_signature: BLSSignature
 ) -> bool:
     committee = get_beacon_committee(state, slot, index)
-    modulo = max(1, len(committee) // TARGET_AGGREGATORS_PER_COMMITTEE)
+    modulo = max(Uint64(1), Uint64(len(committee)) // TARGET_AGGREGATORS_PER_COMMITTEE)
     return bytes_to_uint64(hash(slot_signature)[0:8]) % modulo == 0
 ```
 

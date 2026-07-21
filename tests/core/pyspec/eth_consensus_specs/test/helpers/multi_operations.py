@@ -31,7 +31,9 @@ def run_slash_and_exit(spec, state, slash_index, exit_index, valid=True):
     Helper function to run a test that slashes and exits two validators
     """
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(
+        spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.Uint64(spec.SLOTS_PER_EPOCH)
+    )
 
     yield "pre", state
 
@@ -166,7 +168,7 @@ def get_random_deposits(spec, state, rng, num_deposits=None):
 def prepare_state_and_get_random_deposits(spec, state, rng, num_deposits=None):
     deposits, root = get_random_deposits(spec, state, rng, num_deposits=num_deposits)
     state.eth1_data.deposit_root = root
-    state.eth1_data.deposit_count += len(deposits)
+    state.eth1_data.deposit_count += spec.Uint64(len(deposits))
     return deposits
 
 
@@ -271,7 +273,9 @@ def run_test_full_random_operations(spec, state, rng=None):
     if rng is None:
         rng = Random(2080)
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(
+        spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.Uint64(spec.SLOTS_PER_EPOCH)
+    )
 
     num_deposits = None
     if is_post_fulu(spec):

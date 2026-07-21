@@ -162,4 +162,6 @@ known-first-party = ["eth_consensus_specs"]
 order-by-type = false
 
 [tool.uv.sources]
-eth-ssz-specs = { git = "https://github.com/leanEthereum/ssz-specs.git", rev = "0acd2ae653af12472e9ced976cbbac4c2a42886b" }
+# Temporarily track the jtraglia fork for positional construction (`SSZCollection`)
+# until https://github.com/leanEthereum/ssz-specs receives it.
+eth-ssz-specs = { git = "https://github.com/jtraglia/eth-ssz-specs.git", rev = "d0fea1e70ae471ced2ddf635a40956655ead2b51" }

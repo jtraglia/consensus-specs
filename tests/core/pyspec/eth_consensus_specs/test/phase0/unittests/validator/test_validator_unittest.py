@@ -460,7 +460,7 @@ def test_get_aggregate_signature(spec, state):
         attestation_data.index,
     )
     committee_size = len(beacon_committee)
-    aggregation_bits = Bitlist[spec.MAX_VALIDATORS_PER_COMMITTEE](*([0] * committee_size))
+    aggregation_bits = Bitlist[spec.MAX_VALIDATORS_PER_COMMITTEE].of(**([0] * committee_size))
     for i, validator_index in enumerate(beacon_committee):
         bits = aggregation_bits.copy()
         bits[i] = True

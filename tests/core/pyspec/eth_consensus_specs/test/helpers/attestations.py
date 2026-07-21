@@ -228,7 +228,7 @@ def fill_aggregate_attestation(
         )
     else:
         committee_size = len(beacon_committee)
-        attestation.aggregation_bits = Bitlist[spec.MAX_VALIDATORS_PER_COMMITTEE](
+        attestation.aggregation_bits = Bitlist[spec.MAX_VALIDATORS_PER_COMMITTEE].of(
             *([0] * committee_size)
         )
 
@@ -398,13 +398,13 @@ def state_transition_with_full_block(
     if block is None:
         block = build_empty_block_for_next_slot(spec, state)
     if fill_cur_epoch and state.slot >= spec.MIN_ATTESTATION_INCLUSION_DELAY:
-        slot_to_attest = state.slot - spec.MIN_ATTESTATION_INCLUSION_DELAY + 1
+        slot_to_attest = state.slot - spec.MIN_ATTESTATION_INCLUSION_DELAY + spec.Slot(1)
         if slot_to_attest >= spec.compute_start_slot_at_epoch(spec.get_current_epoch(state)):
             _add_valid_attestations(
                 spec, state, block, slot_to_attest, participation_fn=participation_fn
             )
     if fill_prev_epoch and state.slot >= spec.SLOTS_PER_EPOCH:
-        slot_to_attest = state.slot - spec.SLOTS_PER_EPOCH + 1
+        slot_to_attest = state.slot - spec.SLOTS_PER_EPOCH + spec.Slot(1)
         _add_valid_attestations(
             spec, state, block, slot_to_attest, participation_fn=participation_fn
         )
@@ -462,7 +462,7 @@ def prepare_state_with_attestations(spec, state, participation_fn=None):
 
     start_slot = state.slot
     start_epoch = spec.get_current_epoch(state)
-    next_epoch_start_slot = spec.compute_start_slot_at_epoch(start_epoch + 1)
+    next_epoch_start_slot = spec.compute_start_slot_at_epoch(start_epoch + spec.Epoch(1))
     attestations = []
     for _ in range(spec.SLOTS_PER_EPOCH + spec.MIN_ATTESTATION_INCLUSION_DELAY):
         # create an attestation for each index in each slot in epoch

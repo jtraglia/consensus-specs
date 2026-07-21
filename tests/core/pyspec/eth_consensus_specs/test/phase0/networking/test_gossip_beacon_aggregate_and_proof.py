@@ -158,7 +158,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_committee_index_out_of_range(
         # at the smallest position that is both out-of-range and inside the bitvector.
         assert committee_count < spec.MAX_COMMITTEES_PER_SLOT
         oob_index = committee_count
-        signed_agg.message.aggregate.committee_bits = spec.Bitvector[spec.MAX_COMMITTEES_PER_SLOT](
+        signed_agg.message.aggregate.committee_bits = spec.Bitvector[spec.MAX_COMMITTEES_PER_SLOT].of(
             *[i == oob_index for i in range(spec.MAX_COMMITTEES_PER_SLOT)]
         )
     else:
@@ -491,14 +491,14 @@ def test_gossip_beacon_aggregate_and_proof__ignore_same_data_root_without_supers
         aggregate_2 = spec.Attestation(
             aggregation_bits=spec.Bitlist[
                 spec.MAX_VALIDATORS_PER_COMMITTEE * spec.MAX_COMMITTEES_PER_SLOT
-            ](*modified_bits),
+            ].of(**modified_bits),
             data=signed_agg_1.message.aggregate.data,
             committee_bits=signed_agg_1.message.aggregate.committee_bits,
             signature=signed_agg_1.message.aggregate.signature,
         )
     else:
         aggregate_2 = spec.Attestation(
-            aggregation_bits=spec.Bitlist[spec.MAX_VALIDATORS_PER_COMMITTEE](*modified_bits),
+            aggregation_bits=spec.Bitlist[spec.MAX_VALIDATORS_PER_COMMITTEE].of(**modified_bits),
             data=signed_agg_1.message.aggregate.data,
             signature=signed_agg_1.message.aggregate.signature,
         )
@@ -718,7 +718,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_aggregation_bits_size_mismatc
     wrong_size = len(committee) + 5
     wrong_bits = [False] * wrong_size
     wrong_bits[0] = True
-    signed_agg.message.aggregate.aggregation_bits = spec.Bitlist[spec.MAX_VALIDATORS_PER_COMMITTEE](
+    signed_agg.message.aggregate.aggregation_bits = spec.Bitlist[spec.MAX_VALIDATORS_PER_COMMITTEE].of(
         *wrong_bits
     )
 
@@ -778,7 +778,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_no_participants(spec, state):
     # Set all aggregation bits to False (no participants)
     committee = spec.get_beacon_committee(state, attestation.data.slot, attestation.data.index)
     empty_bits = [False] * len(committee)
-    signed_agg.message.aggregate.aggregation_bits = spec.Bitlist[spec.MAX_VALIDATORS_PER_COMMITTEE](
+    signed_agg.message.aggregate.aggregation_bits = spec.Bitlist[spec.MAX_VALIDATORS_PER_COMMITTEE].of(
         *empty_bits
     )
 

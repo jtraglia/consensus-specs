@@ -8,15 +8,15 @@ module adapts them to the ergonomics the specs and tests rely on:
 - Every leaf type (uints, booleans, byte vectors) supports zero-argument
   construction that yields its SSZ default (zero) value.
 - Containers fill any unspecified field with its SSZ default value.
-- Collections and bitfields accept a single positional argument as their data.
 - The legacy `List[T, N]` / `Vector[T, N]` / `Bitlist[N]` subscription syntax is
   supported alongside the named-subclass form (`class Foo(List[T]): LIMIT = N`).
+- Values are mutable: tests assign container fields and collection elements in
+  place, while the spec itself only uses the library's immutable/functional API.
 """
 
-from types import GeneratorType
 from typing import Any
 
-from pydantic import model_validator
+from pydantic import ConfigDict, model_validator
 from ssz.bitfields import BaseBitlist, BaseBitvector
 from ssz.boolean import Boolean as _Boolean
 from ssz.byte_arrays import BaseByteList, BaseBytes
@@ -41,24 +41,6 @@ View = SSZType
 BasicView = SSZType
 
 
-class _PositionalData:
-    """Mixin: build a sequence type from positional element arguments.
-
-    Mirrors remerkleable: multiple positional arguments become the elements, and a
-    single `list`/`tuple`/generator argument is spread into the elements. Any other
-    single argument (e.g. one SSZ value) becomes a one-element sequence.
-    """
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        if args and "data" not in kwargs:
-            elements = list(args)
-            if len(elements) == 1 and isinstance(elements[0], (list, tuple, GeneratorType)):
-                elements = list(elements[0])
-            super().__init__(data=elements, **kwargs)
-        else:
-            super().__init__(*args, **kwargs)
-
-
 class _IntBound:
     """Mixin: coerce a named type's LENGTH/LIMIT to a plain int.
 
@@ -73,6 +55,32 @@ class _IntBound:
         for bound in ("LENGTH", "LIMIT"):
             if bound in cls.__dict__:
                 setattr(cls, bound, int(cls.__dict__[bound]))
+
+
+class _MutableData:
+    """Mixin: in-place element mutation for collections.
+
+    The upstream types are frozen and the spec uses them functionally. Tests mutate
+    values in place (remerkleable ergonomics), so the shim re-enables assignment and
+    provides element-level mutation. Every mutation revalidates the whole collection,
+    so limits and element coercion behave exactly as they do at construction.
+
+    Pydantic reads `model_config` only from model bases, not plain mixins, so each
+    collection class using this mixin must set `frozen=False` in its own body.
+    """
+
+    def __setitem__(self, index: Any, value: Any) -> None:
+        elements = list(self.data)
+        elements[index] = value
+        self.data = type(self)(data=elements).data
+
+    def append(self, value: Any) -> None:
+        self.data = type(self)(data=[*self.data, value]).data
+
+    def pop(self) -> Any:
+        *rest, last = self.data
+        self.data = type(self)(data=rest).data
+        return last
 
 
 #
@@ -145,11 +153,22 @@ class Bytes96(_Bytes):
     LENGTH = 96
 
 
+_legacy_subscriptions: dict[Any, type] = {}
+"""Cache of classes synthesized by legacy `T[N]` subscriptions.
+
+Subscribing twice must return the same class, so `isinstance` checks hold between
+values built in tests and fields annotated in the compiled specs."""
+
+
 class ByteVector(_Bytes):
     """Legacy `ByteVector[N]` subscription that synthesizes a fixed byte vector."""
 
     def __class_getitem__(cls, length: Any) -> type["_Bytes"]:
-        return type(f"ByteVector{int(length)}", (_Bytes,), {"LENGTH": int(length)})
+        key = (cls, int(length))
+        if key not in _legacy_subscriptions:
+            name = f"ByteVector{int(length)}"
+            _legacy_subscriptions[key] = type(name, (_Bytes,), {"LENGTH": int(length)})
+        return _legacy_subscriptions[key]
 
 
 #
@@ -157,18 +176,17 @@ class ByteVector(_Bytes):
 #
 
 
-class ByteList(_IntBound, BaseByteList):
+class ByteList(_IntBound, _MutableData, BaseByteList):
     """Variable-length byte array. Use `class T(ByteList): LIMIT = N` or `ByteList[N]`."""
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        # A byte list holds a single bytes payload, not a sequence of elements.
-        if args and "data" not in kwargs:
-            super().__init__(data=args[0], **kwargs)
-        else:
-            super().__init__(*args, **kwargs)
+    model_config = ConfigDict(frozen=False)
 
     def __class_getitem__(cls, limit: Any) -> type["ByteList"]:
-        return type(f"ByteList{int(limit)}", (cls,), {"LIMIT": int(limit)})
+        key = (cls, int(limit))
+        if key not in _legacy_subscriptions:
+            name = f"ByteList{int(limit)}"
+            _legacy_subscriptions[key] = type(name, (cls,), {"LIMIT": int(limit)})
+        return _legacy_subscriptions[key]
 
 
 #
@@ -176,27 +194,37 @@ class ByteList(_IntBound, BaseByteList):
 #
 
 
-class List(_IntBound, _PositionalData, _List):
+class List(_IntBound, _MutableData, _List):
     """SSZ list. Use `class T(List[E]): LIMIT = N` or the legacy `List[E, N]`."""
+
+    model_config = ConfigDict(frozen=False)
 
     def __class_getitem__(cls, params: Any) -> Any:
         if isinstance(params, tuple):
             element_type, limit = params
-            base = super().__class_getitem__(element_type)
-            name = f"List_{getattr(element_type, '__name__', element_type)}_{limit}"
-            return type(name, (base,), {"LIMIT": int(limit)})
+            key = (cls, element_type, int(limit))
+            if key not in _legacy_subscriptions:
+                base = super().__class_getitem__(element_type)
+                name = f"List_{getattr(element_type, '__name__', element_type)}_{limit}"
+                _legacy_subscriptions[key] = type(name, (base,), {"LIMIT": int(limit)})
+            return _legacy_subscriptions[key]
         return super().__class_getitem__(params)
 
 
-class Vector(_IntBound, _PositionalData, _Vector):
+class Vector(_IntBound, _MutableData, _Vector):
     """SSZ vector. Use `class T(Vector[E]): LENGTH = N` or the legacy `Vector[E, N]`."""
+
+    model_config = ConfigDict(frozen=False)
 
     def __class_getitem__(cls, params: Any) -> Any:
         if isinstance(params, tuple):
             element_type, length = params
-            base = super().__class_getitem__(element_type)
-            name = f"Vector_{getattr(element_type, '__name__', element_type)}_{length}"
-            return type(name, (base,), {"LENGTH": int(length)})
+            key = (cls, element_type, int(length))
+            if key not in _legacy_subscriptions:
+                base = super().__class_getitem__(element_type)
+                name = f"Vector_{getattr(element_type, '__name__', element_type)}_{length}"
+                _legacy_subscriptions[key] = type(name, (base,), {"LENGTH": int(length)})
+            return _legacy_subscriptions[key]
         return super().__class_getitem__(params)
 
 
@@ -205,18 +233,30 @@ class Vector(_IntBound, _PositionalData, _Vector):
 #
 
 
-class Bitlist(_IntBound, _PositionalData, BaseBitlist):
+class Bitlist(_IntBound, _MutableData, BaseBitlist):
     """SSZ bitlist. Use `class T(Bitlist): LIMIT = N` or the legacy `Bitlist[N]`."""
 
+    model_config = ConfigDict(frozen=False)
+
     def __class_getitem__(cls, limit: Any) -> type["Bitlist"]:
-        return type(f"Bitlist{int(limit)}", (cls,), {"LIMIT": int(limit)})
+        key = (cls, int(limit))
+        if key not in _legacy_subscriptions:
+            name = f"Bitlist{int(limit)}"
+            _legacy_subscriptions[key] = type(name, (cls,), {"LIMIT": int(limit)})
+        return _legacy_subscriptions[key]
 
 
-class Bitvector(_IntBound, _PositionalData, BaseBitvector):
+class Bitvector(_IntBound, _MutableData, BaseBitvector):
     """SSZ bitvector. Use `class T(Bitvector): LENGTH = N` or the legacy `Bitvector[N]`."""
 
+    model_config = ConfigDict(frozen=False)
+
     def __class_getitem__(cls, length: Any) -> type["Bitvector"]:
-        return type(f"Bitvector{int(length)}", (cls,), {"LENGTH": int(length)})
+        key = (cls, int(length))
+        if key not in _legacy_subscriptions:
+            name = f"Bitvector{int(length)}"
+            _legacy_subscriptions[key] = type(name, (cls,), {"LENGTH": int(length)})
+        return _legacy_subscriptions[key]
 
 
 #
@@ -251,12 +291,16 @@ _COLLECTION_MODEL_BASES = (_List, _Vector, BaseBitlist, BaseBitvector, BaseByteL
 
 
 class Container(_Container):
-    """SSZ container that fills defaults and coerces raw sequences into collection fields.
+    """SSZ container that fills defaults and coerces raw values into typed fields.
 
     - Any unspecified field is filled with its SSZ default value.
     - A raw list/tuple/bytes given for a collection field is coerced into that field's
       SSZ collection type, matching remerkleable's implicit coercion.
+    - Fields are assignable (the upstream container is frozen); assigned values go
+      through the same coercion as construction.
     """
+
+    model_config = ConfigDict(frozen=False)
 
     @model_validator(mode="before")
     @classmethod
@@ -275,8 +319,19 @@ class Container(_Container):
                 and issubclass(annotation, _COLLECTION_MODEL_BASES)
                 and not isinstance(value, annotation)
             ):
-                filled[name] = annotation(value)
+                filled[name] = annotation(data=value)
         return filled
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        field = type(self).model_fields.get(name)
+        if field is not None:
+            annotation = field.annotation
+            if isinstance(annotation, type) and not isinstance(value, annotation):
+                if issubclass(annotation, _COLLECTION_MODEL_BASES):
+                    value = annotation(data=value)
+                elif issubclass(annotation, View):
+                    value = annotation(value)
+        super().__setattr__(name, value)
 
 
 def _hash_tree_root_method(self: Any) -> "Bytes32":

@@ -76,7 +76,9 @@ def check_proposer_slashing_effect(
     expected_withdrawable_from_exit = (
         post_validator.exit_epoch + spec.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
     )
-    expected_withdrawable_from_slashing = current_epoch + spec.EPOCHS_PER_SLASHINGS_VECTOR
+    expected_withdrawable_from_slashing = current_epoch + spec.Epoch(
+        spec.EPOCHS_PER_SLASHINGS_VECTOR
+    )
     expected_withdrawable = max(
         expected_withdrawable_from_exit, expected_withdrawable_from_slashing
     )
@@ -86,15 +88,17 @@ def check_proposer_slashing_effect(
 
     # Verify slashings array (only when proposer_slashing provided, to handle multiple slashings in same block)
     if proposer_slashing is not None:
-        slashings_index = current_epoch % spec.EPOCHS_PER_SLASHINGS_VECTOR
+        slashings_index = current_epoch % spec.Epoch(spec.EPOCHS_PER_SLASHINGS_VECTOR)
         expected_slashings = pre_state.slashings[slashings_index] + pre_validator.effective_balance
         assert state.slashings[slashings_index] == expected_slashings
 
     # Verify balance changes
     proposer_index = spec.get_beacon_proposer_index(state)
-    slash_penalty = post_validator.effective_balance // get_min_slashing_penalty_quotient(spec)
-    whistleblower_reward = post_validator.effective_balance // get_whistleblower_reward_quotient(
-        spec
+    slash_penalty = post_validator.effective_balance // spec.Gwei(
+        get_min_slashing_penalty_quotient(spec)
+    )
+    whistleblower_reward = post_validator.effective_balance // spec.Gwei(
+        get_whistleblower_reward_quotient(spec)
     )
 
     sc_reward_for_slashed = sc_penalty_for_slashed = 0
@@ -304,7 +308,7 @@ def prepare_process_proposer_slashing(
         for _ in range(advance_epochs):
             next_epoch(spec, state)
 
-    effective_slot_1 = state.slot + slot_offset
+    effective_slot_1 = state.slot + spec.Slot(slot_offset)
     effective_slot_2 = slot_2 if slot_2 is not None else effective_slot_1
 
     current_epoch = spec.get_current_epoch(state)
@@ -365,17 +369,17 @@ def prepare_process_proposer_slashing(
 
     if proposer_activation_epoch_offset is not None:
         state.validators[effective_proposer_1].activation_epoch = (
-            current_epoch + proposer_activation_epoch_offset
+            current_epoch + spec.Epoch(proposer_activation_epoch_offset)
         )
 
     if proposer_withdrawable_epoch_offset is not None:
         state.validators[effective_proposer_1].withdrawable_epoch = (
-            current_epoch + proposer_withdrawable_epoch_offset
+            current_epoch + spec.Epoch(proposer_withdrawable_epoch_offset)
         )
 
     if proposer_exit_epoch_offset is not None:
         state.validators[effective_proposer_1].exit_epoch = (
-            current_epoch + proposer_exit_epoch_offset
+            current_epoch + spec.Epoch(proposer_exit_epoch_offset)
         )
 
     if proposer_balance is not None:

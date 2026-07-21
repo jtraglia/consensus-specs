@@ -220,7 +220,7 @@ def get_forkchoice_store(anchor_state: BeaconState, anchor_block: BeaconBlock) -
     finalized_checkpoint = Checkpoint(epoch=anchor_epoch, root=anchor_root)
     proposer_boost_root = Root()
     return Store(
-        time=Uint64(anchor_state.genesis_time + SLOT_DURATION_MS * anchor_state.slot // 1000),
+        time=anchor_state.genesis_time + SLOT_DURATION_MS * Uint64(anchor_state.slot) // Uint64(1000),
         genesis_time=anchor_state.genesis_time,
         justified_checkpoint=justified_checkpoint,
         finalized_checkpoint=finalized_checkpoint,
@@ -239,7 +239,7 @@ def get_forkchoice_store(anchor_state: BeaconState, anchor_block: BeaconBlock) -
 
 ```python
 def get_slots_since_genesis(store: Store) -> int:
-    return (store.time - store.genesis_time) * 1000 // SLOT_DURATION_MS
+    return (store.time - store.genesis_time) * Uint64(1000) // SLOT_DURATION_MS
 ```
 
 #### `get_current_slot`
@@ -821,7 +821,7 @@ def store_target_checkpoint_state(store: Store, target: Checkpoint) -> None:
     if target not in store.checkpoint_states:
         base_state = copy(store.block_states[target.root])
         if base_state.slot < compute_start_slot_at_epoch(target.epoch):
-            base_state = process_slots(base_state, compute_start_slot_at_epoch(target.epoch))
+            process_slots(base_state, compute_start_slot_at_epoch(target.epoch))
         store.checkpoint_states[target] = base_state
 ```
 
@@ -865,7 +865,7 @@ def get_shuffling_dependent_root(store: Store, root: Root, epoch: Epoch) -> Root
         return Root()
 
     node = ForkChoiceNode(root=root)
-    dependent_slot = Slot(compute_start_slot_at_epoch(epoch - MIN_SEED_LOOKAHEAD) - 1)
+    dependent_slot = compute_start_slot_at_epoch(epoch - MIN_SEED_LOOKAHEAD) - Slot(1)
     return get_ancestor(store, node, dependent_slot).root
 ```
 
@@ -894,7 +894,7 @@ def update_proposer_boost_root(store: Store, head: Root, root: Root) -> None:
 def on_tick(store: Store, time: Uint64) -> None:
     # If the ``store.time`` falls behind, while loop catches up slot by slot
     # to ensure that every previous slot is processed with ``on_tick_per_slot``
-    tick_slot = (time - store.genesis_time) * 1000 // SLOT_DURATION_MS
+    tick_slot = (time - store.genesis_time) * Uint64(1000) // SLOT_DURATION_MS
     while get_current_slot(store) < tick_slot:
         previous_time = (
             store.genesis_time + (get_current_slot(store) + 1) * SLOT_DURATION_MS // 1000
@@ -929,7 +929,7 @@ def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
     # Check the block is valid and compute the post-state
     state = pre_state.copy()
     block_root = hash_tree_root(block)
-    state = state_transition(state, signed_block, validate_result=True)
+    state_transition(state, signed_block, validate_result=True)
 
     # Compute head before applying the block
     head = get_head(store)

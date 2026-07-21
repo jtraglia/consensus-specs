@@ -301,7 +301,7 @@ def build_empty_post_gloas_execution_payload_bid(spec, state):
         block_hash=empty_payload_hash,
         prev_randao=prev_randao,
         fee_recipient=spec.ExecutionAddress(),
-        gas_limit=spec.uint64(0),
+        gas_limit=spec.Uint64(0),
         builder_index=builder_index,
         slot=state.slot,
         value=spec.Gwei(0),
@@ -391,7 +391,7 @@ def build_randomized_execution_payload(spec, state, rng):
     execution_payload.gas_used = rng.randint(0, int(10e10))
     extra_data_length = rng.randint(0, spec.MAX_EXTRA_DATA_BYTES)
     execution_payload.extra_data = spec.ByteList[spec.MAX_EXTRA_DATA_BYTES](
-        get_random_bytes_list(rng, extra_data_length)
+        data=get_random_bytes_list(rng, extra_data_length)
     )
     execution_payload.base_fee_per_gas = rng.randint(0, 2**256 - 1)
 

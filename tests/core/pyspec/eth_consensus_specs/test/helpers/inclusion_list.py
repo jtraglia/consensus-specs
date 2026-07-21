@@ -17,7 +17,7 @@ def get_empty_inclusion_list(spec, state, slot=None, validator_index=None):
 
     committee = spec.get_inclusion_list_committee(state, slot)
     committee_root = hash_tree_root(
-        Vector[spec.ValidatorIndex, spec.INCLUSION_LIST_COMMITTEE_SIZE](*committee)
+        Vector[spec.ValidatorIndex, spec.INCLUSION_LIST_COMMITTEE_SIZE].of(**committee)
     )
 
     if validator_index is None:

@@ -1,8 +1,13 @@
 from typing import TypeVar
 
+from ssz.bitfields import BaseBitlist, BaseBitvector
+from ssz.byte_arrays import BaseByteList
+from ssz.collections import List as _List, Vector as _Vector
 from ssz.merkleization import hash_tree_root as _hash_tree_root
 
 from eth_consensus_specs.utils.ssz.ssz_typing import Bytes32, View
+
+_COLLECTION_BASES = (_List, _Vector, BaseBitlist, BaseBitvector, BaseByteList)
 
 
 def ssz_serialize(obj: View) -> bytes:
@@ -44,7 +49,12 @@ def replace(obj: V, **changes: object) -> V:
     coerced: dict[str, object] = {}
     for name, value in changes.items():
         annotation = fields[name].annotation
-        coerced[name] = value if isinstance(value, annotation) else annotation(value)
+        if isinstance(value, annotation):
+            coerced[name] = value
+        elif issubclass(annotation, _COLLECTION_BASES):
+            coerced[name] = annotation(data=value)
+        else:
+            coerced[name] = annotation(value)
     return obj.model_copy(update=coerced)
 
 

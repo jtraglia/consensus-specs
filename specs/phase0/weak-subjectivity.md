@@ -100,7 +100,7 @@ def compute_weak_subjectivity_period(state: BeaconState) -> Uint64:
     A detailed calculation can be found at:
     https://github.com/runtimeverification/beacon-chain-verification/blob/master/weak-subjectivity/weak-subjectivity-analysis.pdf
     """
-    ws_period = MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+    ws_period = Uint64(MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
     N = len(get_active_validator_indices(state, get_current_epoch(state)))
     t = get_total_active_balance(state) // N // ETH_TO_GWEI
     T = MAX_EFFECTIVE_BALANCE // ETH_TO_GWEI

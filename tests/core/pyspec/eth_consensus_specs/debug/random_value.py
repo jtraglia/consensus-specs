@@ -71,18 +71,18 @@ def get_random_ssz_object(
     if issubclass(typ, ByteList):
         # ByteList array
         if mode == RandomizationMode.mode_nil_count:
-            return typ(b"")
+            return typ(data=b"")
         elif mode == RandomizationMode.mode_max_count:
-            return typ(get_random_bytes_list(rng, min(max_bytes_length, typ.limit())))
+            return typ(data=get_random_bytes_list(rng, min(max_bytes_length, typ.limit())))
         elif mode == RandomizationMode.mode_one_count:
-            return typ(get_random_bytes_list(rng, min(1, typ.limit())))
+            return typ(data=get_random_bytes_list(rng, min(1, typ.limit())))
         elif mode == RandomizationMode.mode_zero:
-            return typ(b"\x00" * min(1, typ.limit()))
+            return typ(data=b"\x00" * min(1, typ.limit()))
         elif mode == RandomizationMode.mode_max:
-            return typ(b"\xff" * min(1, typ.limit()))
+            return typ(data=b"\xff" * min(1, typ.limit()))
         else:
             return typ(
-                get_random_bytes_list(rng, rng.randint(0, min(max_bytes_length, typ.limit())))
+                data=get_random_bytes_list(rng, rng.randint(0, min(max_bytes_length, typ.limit())))
             )
     if issubclass(typ, ByteVector):
         # Random byte vectors can be bigger than max bytes size, e.g. custody chunk data.
@@ -104,8 +104,10 @@ def get_random_ssz_object(
     elif issubclass(typ, Vector | Bitvector):
         elem_type = typ.element_cls() if issubclass(typ, Vector) else boolean
         return typ(
-            get_random_ssz_object(rng, elem_type, max_bytes_length, max_list_length, mode, chaos)
-            for _ in range(typ.vector_length())
+            data=(
+                get_random_ssz_object(rng, elem_type, max_bytes_length, max_list_length, mode, chaos)
+                for _ in range(typ.vector_length())
+            )
         )
     elif issubclass(typ, List | ProgressiveList | Bitlist | ProgressiveBitlist):
         limit = max_list_length
@@ -124,8 +126,10 @@ def get_random_ssz_object(
         elem_type = boolean if issubclass(typ, Bitlist | ProgressiveBitlist) else typ.element_cls()
         max_list_length = 1 << (max_list_length.bit_length() >> 1)
         return typ(
-            get_random_ssz_object(rng, elem_type, max_bytes_length, max_list_length, mode, chaos)
-            for _ in range(length)
+            data=(
+                get_random_ssz_object(rng, elem_type, max_bytes_length, max_list_length, mode, chaos)
+                for _ in range(length)
+            )
         )
     elif issubclass(typ, Container | ProgressiveContainer):
         fields = typ.fields()

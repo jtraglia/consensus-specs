@@ -92,7 +92,7 @@ def build_empty_block(spec, state, slot=None, proposer_index=None):
     if slot < state.slot:
         raise Exception("build_empty_block cannot build blocks for past slots")
     if state.slot < slot:
-        # transition forward in copied state to grab relevant data from state
+        # transition forward in a copied state to grab relevant data from state
         state = state.copy()
         spec.process_slots(state, slot)
 
@@ -134,14 +134,14 @@ def get_beacon_proposer_to_build(spec, state, proposer_index=None):
 
 
 def build_empty_block_for_next_slot(spec, state, proposer_index=None):
-    return build_empty_block(spec, state, state.slot + 1, proposer_index)
+    return build_empty_block(spec, state, state.slot + spec.Slot(1), proposer_index)
 
 
 def get_state_and_beacon_parent_root_at_slot(spec, state, slot):
     if slot < state.slot:
         raise Exception("Cannot build blocks for past slots")
     if slot > state.slot:
-        # transition forward in copied state to grab relevant data from state
+        # transition forward in a copied state to grab relevant data from state
         state = state.copy()
         spec.process_slots(state, slot)
 

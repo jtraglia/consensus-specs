@@ -63,7 +63,7 @@ def exit_random_validators(
     If exit_epoch is configured, use the given exit_epoch. Otherwise, randomly set exit_epoch and withdrawable_epoch.
     """
     if from_epoch is None:
-        from_epoch = spec.MAX_SEED_LOOKAHEAD + 1
+        from_epoch = spec.MAX_SEED_LOOKAHEAD + spec.Epoch(1)
     epoch_diff = int(from_epoch) - int(spec.get_current_epoch(state))
     for _ in range(epoch_diff):
         # NOTE: if `epoch_diff` is negative, then this loop body does not execute.
@@ -81,13 +81,18 @@ def exit_random_validators(
         if exit_epoch is None:
             assert withdrawable_epoch is None
             validator.exit_epoch = rng.choice(
-                [current_epoch, current_epoch - 1, current_epoch - 2, current_epoch - 3]
+                [
+                    current_epoch,
+                    current_epoch - spec.Epoch(1),
+                    current_epoch - spec.Epoch(2),
+                    current_epoch - spec.Epoch(3),
+                ]
             )
             # ~1/2 are withdrawable (note, unnatural span between exit epoch and withdrawable epoch)
             if rng.choice([True, False]):
                 validator.withdrawable_epoch = current_epoch
             else:
-                validator.withdrawable_epoch = current_epoch + 1
+                validator.withdrawable_epoch = current_epoch + spec.Epoch(1)
         else:
             validator.exit_epoch = exit_epoch
             if withdrawable_epoch is None:

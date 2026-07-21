@@ -244,14 +244,14 @@ def test_on_execution_payload_envelope_wrong_execution_requests_root(spec, state
 
     # Build envelope with non-empty requests but bid commits to empty requests
     non_empty_requests = spec.ExecutionRequests(
-        deposits=spec.ProgressiveList[spec.DepositRequest](
+        deposits=spec.ProgressiveList[spec.DepositRequest].of(*
             [
                 spec.DepositRequest(
                     pubkey=spec.BLSPubkey(b"\x01" * 48),
                     withdrawal_credentials=spec.Bytes32(b"\x02" * 32),
                     amount=spec.Gwei(32000000000),
                     signature=spec.BLSSignature(b"\x03" * 96),
-                    index=spec.uint64(0),
+                    index=spec.Uint64(0),
                 )
             ]
         ),
@@ -289,7 +289,7 @@ def test_on_execution_payload_envelope_wrong_withdrawals(spec, state):
         state,
         block_root,
         signed_block,
-        withdrawals=spec.ProgressiveList[spec.Withdrawal]([wrong_withdrawal]),
+        withdrawals=spec.ProgressiveList[spec.Withdrawal].of(*[wrong_withdrawal]),
     )
     yield from add_execution_payload(spec, store, envelope, test_steps, valid=False)
 
@@ -310,7 +310,7 @@ def test_on_execution_payload_envelope_missing_expected_withdrawal(spec, state):
     expected_withdrawal = spec.Withdrawal(
         index=0, validator_index=0, address=b"\x22" * 20, amount=spec.Gwei(1)
     )
-    state.payload_expected_withdrawals = spec.ProgressiveList[spec.Withdrawal](
+    state.payload_expected_withdrawals = spec.ProgressiveList[spec.Withdrawal].of(*
         [expected_withdrawal]
     )
 

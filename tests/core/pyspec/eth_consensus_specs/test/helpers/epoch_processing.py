@@ -63,8 +63,8 @@ def run_process_slots_up_to_epoch_boundary(spec, state):
     slot = state.slot + (spec.SLOTS_PER_EPOCH - state.slot % spec.SLOTS_PER_EPOCH)
 
     # transition state to slot before epoch state transition
-    if state.slot < slot - 1:
-        spec.process_slots(state, slot - 1)
+    if state.slot < slot - spec.Slot(1):
+        spec.process_slots(state, slot - spec.Slot(1))
 
     # start transitioning, do one slot update before the epoch itself.
     spec.process_slot(state)
@@ -74,7 +74,7 @@ def run_epoch_processing_from(spec, state, process_name: str):
     """
     Processes to the next epoch transition, from, but not including, the sub-transition named ``process_name``
     """
-    assert (state.slot + 1) % spec.SLOTS_PER_EPOCH == 0
+    assert (state.slot + spec.Slot(1)) % spec.SLOTS_PER_EPOCH == 0
 
     processing = False
     for name in get_process_calls(spec):

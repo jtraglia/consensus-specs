@@ -27,7 +27,7 @@ def build_max_size_indexed_attestation(spec):
 
 def build_max_size_payload_attestation(spec):
     return spec.PayloadAttestation(
-        aggregation_bits=spec.Bitvector[spec.PTC_SIZE]([True] * spec.PTC_SIZE),
+        aggregation_bits=spec.Bitvector[spec.PTC_SIZE].of(*[True] * spec.PTC_SIZE),
         data=spec.PayloadAttestationData(),
         signature=spec.BLSSignature(),
     )
@@ -53,7 +53,7 @@ def build_max_size_signed_aggregate_and_proof(spec):
 
 
 def build_max_size_signed_execution_payload_bid(spec):
-    blob_kzg_commitments = spec.ProgressiveList[spec.KZGCommitment](
+    blob_kzg_commitments = spec.ProgressiveList[spec.KZGCommitment].of(*
         [spec.KZGCommitment()] * spec.MAX_BLOB_COMMITMENTS_PER_BLOCK
     )
     bid = spec.ExecutionPayloadBid(blob_kzg_commitments=blob_kzg_commitments)
@@ -61,8 +61,8 @@ def build_max_size_signed_execution_payload_bid(spec):
 
 
 def build_max_size_data_column_sidecar(spec):
-    column = spec.ProgressiveList[spec.Cell]([spec.Cell()] * spec.MAX_BLOB_COMMITMENTS_PER_BLOCK)
-    kzg_proofs = spec.ProgressiveList[spec.KZGProof](
+    column = spec.ProgressiveList[spec.Cell].of(*[spec.Cell()] * spec.MAX_BLOB_COMMITMENTS_PER_BLOCK)
+    kzg_proofs = spec.ProgressiveList[spec.KZGProof].of(*
         [spec.KZGProof()] * spec.MAX_BLOB_COMMITMENTS_PER_BLOCK
     )
     return spec.DataColumnSidecar(
@@ -76,10 +76,10 @@ def build_max_size_data_column_sidecar(spec):
 
 def build_max_size_partial_data_column_sidecar(spec):
     cells_present_bitmap = spec.ProgressiveBitlist([True] * spec.MAX_BLOB_COMMITMENTS_PER_BLOCK)
-    partial_column = spec.ProgressiveList[spec.Cell](
+    partial_column = spec.ProgressiveList[spec.Cell].of(*
         [spec.Cell()] * spec.MAX_BLOB_COMMITMENTS_PER_BLOCK
     )
-    kzg_proofs = spec.ProgressiveList[spec.KZGProof](
+    kzg_proofs = spec.ProgressiveList[spec.KZGProof].of(*
         [spec.KZGProof()] * spec.MAX_BLOB_COMMITMENTS_PER_BLOCK
     )
     return spec.PartialDataColumnSidecar(
@@ -91,7 +91,7 @@ def build_max_size_partial_data_column_sidecar(spec):
 
 def build_max_size_signed_inclusion_list(spec):
     payload_size = spec.config.MAX_BYTES_PER_INCLUSION_LIST
-    transactions = spec.ProgressiveList[spec.Transaction](
+    transactions = spec.ProgressiveList[spec.Transaction].of(*
         [spec.Transaction(b"\x00" * payload_size)]
     )
     inclusion_list = spec.InclusionList(

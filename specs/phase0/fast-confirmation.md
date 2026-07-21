@@ -255,7 +255,7 @@ def get_pulled_up_head_state(store: Store) -> BeaconState:
     head_state = store.block_states[head]
     if get_current_epoch(head_state) < get_current_store_epoch(store):
         pulled_up_state = copy(head_state)
-        pulled_up_state = process_slots(
+        process_slots(
             pulled_up_state, compute_start_slot_at_epoch(get_current_store_epoch(store))
         )
         return pulled_up_state
@@ -358,7 +358,7 @@ def is_full_validator_set_covered(start_slot: Slot, end_slot: Slot) -> bool:
     """
     Return ``True`` if the range between ``start_slot`` and ``end_slot`` (inclusive of both) includes an entire epoch.
     """
-    start_full_epoch = compute_epoch_at_slot(start_slot + (SLOTS_PER_EPOCH - 1))
+    start_full_epoch = compute_epoch_at_slot(start_slot + (SLOTS_PER_EPOCH - Slot(1)))
     end_full_epoch = compute_epoch_at_slot(Slot(end_slot + 1))
     return start_full_epoch < end_full_epoch
 ```
@@ -403,25 +403,25 @@ def estimate_committee_weight_between_slots(
 
     start_epoch = compute_epoch_at_slot(start_slot)
     end_epoch = compute_epoch_at_slot(end_slot)
-    committee_weight = total_active_balance // SLOTS_PER_EPOCH
+    committee_weight = total_active_balance // Gwei(SLOTS_PER_EPOCH)
     if start_epoch == end_epoch:
-        return committee_weight * (end_slot - start_slot + 1)
+        return committee_weight * Gwei(end_slot - start_slot + Slot(1))
     else:
         # First, calculate the number of committees in the end epoch
-        num_slots_in_end_epoch = compute_slots_since_epoch_start(end_slot) + 1
+        num_slots_in_end_epoch = compute_slots_since_epoch_start(end_slot) + Slot(1)
         # Next, calculate the number of slots remaining in the end epoch
         remaining_slots_in_end_epoch = SLOTS_PER_EPOCH - num_slots_in_end_epoch
         # Then, calculate the number of slots in the start epoch
         num_slots_in_start_epoch = SLOTS_PER_EPOCH - compute_slots_since_epoch_start(start_slot)
 
-        start_epoch_weight = committee_weight * num_slots_in_start_epoch
-        end_epoch_weight = committee_weight * num_slots_in_end_epoch
+        start_epoch_weight = committee_weight * Gwei(num_slots_in_start_epoch)
+        end_epoch_weight = committee_weight * Gwei(num_slots_in_end_epoch)
 
         # A range that spans an epoch boundary, but does not span any full epoch
         # needs pro-rata calculation, see https://gist.github.com/saltiniroberto/9ee53d29c33878d79417abb2b4468c20
         # start_epoch_weight_pro_rated = start_epoch_weight * (1 - num_slots_in_end_epoch / SLOTS_PER_EPOCH)
         start_epoch_weight_pro_rated = (
-            start_epoch_weight // SLOTS_PER_EPOCH * remaining_slots_in_end_epoch
+            start_epoch_weight // Gwei(SLOTS_PER_EPOCH) * Gwei(remaining_slots_in_end_epoch)
         )
 
         return adjust_committee_weight_estimate_to_ensure_safety(

@@ -143,7 +143,7 @@ def test_process_execution_payload_bid_blob_kzg_commitments_at_limit(spec, state
         builder_index=spec.BUILDER_INDEX_SELF_BUILD,
         slot=block.slot,
         parent_block_root=block.parent_root,
-        blob_kzg_commitments=spec.ProgressiveList[spec.KZGCommitment](blob_kzg_commitments),
+        blob_kzg_commitments=spec.ProgressiveList[spec.KZGCommitment].of(*blob_kzg_commitments),
     )
 
     block.body.signed_execution_payload_bid = signed_bid
@@ -317,7 +317,7 @@ def test_process_execution_payload_bid_self_build_non_zero_value(spec, state):
         parent_block_root=block.parent_root,
         block_hash=spec.Hash32(),
         fee_recipient=spec.ExecutionAddress(),
-        gas_limit=spec.uint64(30000000),
+        gas_limit=spec.Uint64(30000000),
         builder_index=spec.BUILDER_INDEX_SELF_BUILD,
         slot=block.slot,
         value=spec.Gwei(1),
@@ -743,7 +743,7 @@ def test_process_execution_payload_bid_blob_kzg_commitments_over_limit(spec, sta
         builder_index=spec.BUILDER_INDEX_SELF_BUILD,
         slot=block.slot,
         parent_block_root=block.parent_root,
-        blob_kzg_commitments=spec.ProgressiveList[spec.KZGCommitment](blob_kzg_commitments),
+        blob_kzg_commitments=spec.ProgressiveList[spec.KZGCommitment].of(*blob_kzg_commitments),
     )
 
     block.body.signed_execution_payload_bid = signed_bid
