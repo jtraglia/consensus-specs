@@ -113,7 +113,7 @@ def create_light_client_update(
     attested_block: SignedBeaconBlock,
     finalized_block: Optional[SignedBeaconBlock],
 ) -> LightClientUpdate:
-    assert compute_epoch_at_slot(attested_state.slot) >= ALTAIR_FORK_EPOCH
+    assert compute_epoch_at_slot(Slot(attested_state.slot)) >= ALTAIR_FORK_EPOCH
     sync_committee_bits = block.message.body.sync_aggregate.sync_committee_bits
     num_active_participants = len([bit for bit in sync_committee_bits if bit])
     assert num_active_participants >= MIN_SYNC_COMMITTEE_PARTICIPANTS
@@ -122,7 +122,7 @@ def create_light_client_update(
     header = state.latest_block_header.copy()
     header.state_root = hash_tree_root(state)
     assert hash_tree_root(header) == hash_tree_root(block.message)
-    update_signature_period = compute_sync_committee_period_at_slot(block.message.slot)
+    update_signature_period = compute_sync_committee_period_at_slot(Slot(block.message.slot))
 
     assert attested_state.slot == attested_state.latest_block_header.slot
     attested_header = attested_state.latest_block_header.copy()
@@ -132,7 +132,9 @@ def create_light_client_update(
         == hash_tree_root(attested_block.message)
         == block.message.parent_root
     )
-    update_attested_period = compute_sync_committee_period_at_slot(attested_block.message.slot)
+    update_attested_period = compute_sync_committee_period_at_slot(
+        Slot(attested_block.message.slot)
+    )
 
     update = LightClientUpdate()
 

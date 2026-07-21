@@ -298,7 +298,11 @@ def run_lc_sync_test_single_fork(spec, phases, state, fork):
     assert test.store.optimistic_header.beacon.slot == attested_state.slot
 
     # Jump to next epoch
-    transition_to(spec, state, spec.compute_start_slot_at_epoch(fork_epoch + 1) - 2)
+    transition_to(
+        spec,
+        state,
+        spec.compute_start_slot_at_epoch(spec.Epoch(int(fork_epoch) + 1)) - spec.Slot(2),
+    )
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
@@ -367,7 +371,7 @@ def run_lc_sync_test_multi_fork(spec, phases, state, fork_1, fork_2):
     # ..., and signature is from `fork_2`
     fork_2_epoch = getattr(phases[fork_2].config, fork_2.upper() + "_FORK_EPOCH")
     spec, state, _ = transition_across_forks(
-        spec, state, spec.compute_start_slot_at_epoch(fork_2_epoch) - 1, phases
+        spec, state, spec.compute_start_slot_at_epoch(fork_2_epoch) - spec.Slot(1), phases
     )
     sync_aggregate, _ = get_sync_aggregate(spec, state, phases=phases)
     spec, state, block = transition_across_forks(

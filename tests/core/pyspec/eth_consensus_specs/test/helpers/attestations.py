@@ -197,8 +197,10 @@ def to_single_attestation(spec, state, attestation, attester_index=None):
 
 def compute_max_inclusion_slot(spec, attestation):
     if is_post_deneb(spec):
-        next_epoch = spec.compute_epoch_at_slot(attestation.data.slot) + 1
-        end_of_next_epoch = spec.compute_start_slot_at_epoch(next_epoch + 1) - 1
+        next_epoch = spec.compute_epoch_at_slot(attestation.data.slot) + spec.Epoch(1)
+        end_of_next_epoch = spec.compute_start_slot_at_epoch(
+            next_epoch + spec.Epoch(1)
+        ) - spec.Slot(1)
         return end_of_next_epoch
     return attestation.data.slot + spec.SLOTS_PER_EPOCH
 
@@ -532,7 +534,7 @@ def get_empty_eip7549_aggregation_bits(spec, state, committee_bits, slot):
     for index in committee_indices:
         committee = spec.get_beacon_committee(state, slot, index)
         participants_count += len(committee)
-    aggregation_bits = spec.AggregationBits([False] * participants_count)
+    aggregation_bits = spec.AggregationBits.of(*([False] * participants_count))
     return aggregation_bits
 
 

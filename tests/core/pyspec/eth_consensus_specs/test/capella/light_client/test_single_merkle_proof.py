@@ -1,4 +1,3 @@
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from eth_consensus_specs.test.context import (
     spec_state_test,
     with_all_phases_from_to,
@@ -11,6 +10,7 @@ from eth_consensus_specs.test.helpers.constants import (
     CAPELLA,
     GLOAS,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 @with_test_suite_name("BeaconBlockBody")

@@ -29,7 +29,7 @@ and allows validators to consolidate.
 #### Modified `compute_weak_subjectivity_period`
 
 ```python
-def compute_weak_subjectivity_period(state: BeaconState) -> uint64:
+def compute_weak_subjectivity_period(state: BeaconState) -> Uint64:
     """
     Returns the weak subjectivity period for the current ``state``.
     This computation takes into account the effect of:
@@ -37,10 +37,10 @@ def compute_weak_subjectivity_period(state: BeaconState) -> uint64:
     A detailed calculation can be found at:
     https://notes.ethereum.org/@CarlBeek/electra_weak_subjectivity
     """
-    t = get_total_active_balance(state)
-    delta = get_balance_churn_limit(state)
-    epochs_for_validator_set_churn = SAFETY_DECAY * t // (2 * delta * 100)
-    return MIN_VALIDATOR_WITHDRAWABILITY_DELAY + epochs_for_validator_set_churn
+    t = Uint64(get_total_active_balance(state))
+    delta = Uint64(get_balance_churn_limit(state))
+    epochs_for_validator_set_churn = SAFETY_DECAY * t // (Uint64(2) * delta * Uint64(100))
+    return Uint64(MIN_VALIDATOR_WITHDRAWABILITY_DELAY) + epochs_for_validator_set_churn
 ```
 
 A brief reference for what these values look like in practice

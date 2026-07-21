@@ -4,6 +4,8 @@
 
 - [Introduction](#introduction)
 - [Types](#types)
+  - [`Bytes20`](#bytes20)
+  - [`Transaction`](#transaction)
 - [Constants](#constants)
 - [Preset](#preset)
   - [Rewards and penalties](#rewards-and-penalties)
@@ -15,6 +17,10 @@
     - [`BeaconBlockBody`](#beaconblockbody)
     - [`BeaconState`](#beaconstate)
   - [New containers](#new-containers)
+    - [Misc dependencies](#misc-dependencies)
+      - [`LogsBloom`](#logsbloom)
+      - [`ExtraData`](#extradata)
+      - [`Transactions`](#transactions)
     - [`ExecutionPayload`](#executionpayload)
     - [`ExecutionPayloadHeader`](#executionpayloadheader)
 - [Helpers](#helpers)
@@ -53,7 +59,7 @@ Including:
 ## Types
 
 | Name               | SSZ equivalent | Description                               |
-| ------------------ | -------------- | ------------------------------------------ |
+| ------------------ | -------------- | ----------------------------------------- |
 | `ExecutionAddress` | `Bytes20`      | Address of account on the execution layer |
 
 ### `Bytes20`
@@ -106,11 +112,11 @@ final, maximum security values.
 
 ### Transition settings
 
-| Name                                   | Value                                                |
-| -------------------------------------- | ---------------------------------------------------- |
+| Name                                   | Value                                                         |
+| -------------------------------------- | ------------------------------------------------------------- |
 | `TERMINAL_TOTAL_DIFFICULTY`            | `Uint256(58750000000000000000000)` (Estimated: Sept 15, 2022) |
-| `TERMINAL_BLOCK_HASH`                  | `Hash32()`                                           |
-| `TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH` | `FAR_FUTURE_EPOCH`                                   |
+| `TERMINAL_BLOCK_HASH`                  | `Hash32()`                                                    |
+| `TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH` | `FAR_FUTURE_EPOCH`                                            |
 
 ## Containers
 

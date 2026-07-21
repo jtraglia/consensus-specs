@@ -42,7 +42,7 @@ change is made to upgrade to Electra.
 def upgrade_to_electra(pre: deneb.BeaconState) -> BeaconState:
     epoch = compute_epoch_at_slot(Slot(pre.slot))
 
-    earliest_exit_epoch = compute_activation_exit_epoch(get_current_epoch(pre))
+    earliest_exit_epoch = compute_activation_exit_epoch(epoch)
     for validator in pre.validators:
         if validator.exit_epoch != FAR_FUTURE_EPOCH:
             earliest_exit_epoch = max(earliest_exit_epoch, validator.exit_epoch)
@@ -93,7 +93,7 @@ def upgrade_to_electra(pre: deneb.BeaconState) -> BeaconState:
         # [New in Electra:EIP7251]
         consolidation_balance_to_consume=0,
         # [New in Electra:EIP7251]
-        earliest_consolidation_epoch=compute_activation_exit_epoch(get_current_epoch(pre)),
+        earliest_consolidation_epoch=compute_activation_exit_epoch(epoch),
         # [New in Electra:EIP7251]
         pending_deposits=[],
         # [New in Electra:EIP7251]

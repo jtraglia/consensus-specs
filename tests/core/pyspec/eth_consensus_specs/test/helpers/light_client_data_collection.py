@@ -863,7 +863,7 @@ def run_lc_data_collection_test_multi_fork(spec, phases, state, fork_1, fork_2):
     fork_2_epoch = getattr(phases[fork_2].config, fork_2.upper() + "_FORK_EPOCH")
     while spec_a.get_current_epoch(state_a) <= fork_2_epoch:
         attested_period = spec_a.compute_sync_committee_period_at_slot(slot_a)
-        slot_a += 4
+        slot_a += type(slot_a)(4)
         signature_period = spec_a.compute_sync_committee_period_at_slot(slot_a)
         if signature_period != attested_period:
             num_sync_participants_a = 0
@@ -906,7 +906,7 @@ def run_lc_data_collection_test_multi_fork(spec, phases, state, fork_1, fork_2):
     slot_b = state_b.slot
     bids_b = [bid]
     while spec_b.get_current_epoch(state_b) <= fork_2_epoch:
-        slot_b += 4
+        slot_b += type(slot_b)(4)
         signature_period = spec_b.compute_sync_committee_period_at_slot(slot_b)
         spec_b, state_b, bid_b = yield from add_new_block(test, spec_b, state_b, slot=slot_b)
         # Simulate that this does not become head yet, e.g., this branch was withheld
@@ -916,7 +916,7 @@ def run_lc_data_collection_test_multi_fork(spec, phases, state, fork_1, fork_2):
 
     # Branch B: Another block that becomes head
     attested_period = spec_b.compute_sync_committee_period_at_slot(slot_b)
-    slot_b += 1
+    slot_b += type(slot_b)(1)
     signature_period = spec_b.compute_sync_committee_period_at_slot(slot_b)
     num_sync_participants_b = 1
     spec_b, state_b, bid_b = yield from add_new_block(
@@ -994,7 +994,7 @@ def run_lc_data_collection_test_multi_fork(spec, phases, state, fork_1, fork_2):
 
     # Data has been restored
     state_a_period = spec_a.compute_sync_committee_period_at_slot(state_a.slot)
-    for period in range(state_period + 1, state_a_period):
+    for period in range(int(state_period) + 1, int(state_a_period)):
         assert get_light_client_update_for_period(test, period).spec is not None
 
     # Finish test

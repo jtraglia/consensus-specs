@@ -3,7 +3,16 @@ from eth_utils import (
     int_to_big_endian,
 )
 
-from eth_consensus_specs.fulu import mainnet as spec
+# TODO(ssz-specs migration): drop the deneb fallback once fulu is migrated;
+# until then the stale generated fulu module fails to import.
+try:
+    from eth_consensus_specs.fulu import mainnet as spec
+
+    _has_cells = True
+except ImportError:
+    from eth_consensus_specs.deneb import mainnet as spec
+
+    _has_cells = False
 from eth_consensus_specs.utils import bls
 
 ###############################################################################
@@ -143,43 +152,48 @@ INVALID_G1_POINTS = [
     G1_INVALID_P1_NOT_ON_CURVE,
 ]
 
-# Individual Cells
+if _has_cells:
+    # Individual Cells
 
-CELL_RANDOM_VALID1 = b"".join(
-    [
-        field_element_bytes(pow(2, n + 256, spec.BLS_MODULUS))
-        for n in range(spec.FIELD_ELEMENTS_PER_CELL)
-    ]
-)
-CELL_RANDOM_VALID2 = b"".join(
-    [
-        field_element_bytes(pow(3, n + 256, spec.BLS_MODULUS))
-        for n in range(spec.FIELD_ELEMENTS_PER_CELL)
-    ]
-)
-CELL_RANDOM_VALID3 = b"".join(
-    [
-        field_element_bytes(pow(5, n + 256, spec.BLS_MODULUS))
-        for n in range(spec.FIELD_ELEMENTS_PER_CELL)
-    ]
-)
+    CELL_RANDOM_VALID1 = b"".join(
+        [
+            field_element_bytes(pow(2, n + 256, spec.BLS_MODULUS))
+            for n in range(spec.FIELD_ELEMENTS_PER_CELL)
+        ]
+    )
+    CELL_RANDOM_VALID2 = b"".join(
+        [
+            field_element_bytes(pow(3, n + 256, spec.BLS_MODULUS))
+            for n in range(spec.FIELD_ELEMENTS_PER_CELL)
+        ]
+    )
+    CELL_RANDOM_VALID3 = b"".join(
+        [
+            field_element_bytes(pow(5, n + 256, spec.BLS_MODULUS))
+            for n in range(spec.FIELD_ELEMENTS_PER_CELL)
+        ]
+    )
 
-CELL_ALL_MAX_VALUE = b"".join(
-    [field_element_bytes_unchecked(2**256 - 1) for n in range(spec.FIELD_ELEMENTS_PER_CELL)]
-)
-CELL_ONE_INVALID_FIELD = b"".join(
-    [
-        field_element_bytes_unchecked(spec.BLS_MODULUS) if n == 7 else field_element_bytes(0)
-        for n in range(spec.FIELD_ELEMENTS_PER_CELL)
-    ]
-)
-CELL_INVALID_TOO_FEW_BYTES = CELL_RANDOM_VALID1[:-1]
-CELL_INVALID_TOO_MANY_BYTES = CELL_RANDOM_VALID2 + b"\x00"
+    CELL_ALL_MAX_VALUE = b"".join(
+        [field_element_bytes_unchecked(2**256 - 1) for n in range(spec.FIELD_ELEMENTS_PER_CELL)]
+    )
+    CELL_ONE_INVALID_FIELD = b"".join(
+        [
+            field_element_bytes_unchecked(spec.BLS_MODULUS) if n == 7 else field_element_bytes(0)
+            for n in range(spec.FIELD_ELEMENTS_PER_CELL)
+        ]
+    )
+    CELL_INVALID_TOO_FEW_BYTES = CELL_RANDOM_VALID1[:-1]
+    CELL_INVALID_TOO_MANY_BYTES = CELL_RANDOM_VALID2 + b"\x00"
 
-VALID_INDIVIDUAL_RANDOM_CELL_BYTES = [CELL_RANDOM_VALID1, CELL_RANDOM_VALID2, CELL_RANDOM_VALID3]
-INVALID_INDIVIDUAL_CELL_BYTES = [
-    CELL_ALL_MAX_VALUE,
-    CELL_ONE_INVALID_FIELD,
-    CELL_INVALID_TOO_FEW_BYTES,
-    CELL_INVALID_TOO_MANY_BYTES,
-]
+    VALID_INDIVIDUAL_RANDOM_CELL_BYTES = [
+        CELL_RANDOM_VALID1,
+        CELL_RANDOM_VALID2,
+        CELL_RANDOM_VALID3,
+    ]
+    INVALID_INDIVIDUAL_CELL_BYTES = [
+        CELL_ALL_MAX_VALUE,
+        CELL_ONE_INVALID_FIELD,
+        CELL_INVALID_TOO_FEW_BYTES,
+        CELL_INVALID_TOO_MANY_BYTES,
+    ]

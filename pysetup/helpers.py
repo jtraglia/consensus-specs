@@ -229,11 +229,42 @@ def objects_to_spec(
         k: v for k, v in hardcoded_func_dep_presets.items() if k not in deprecate_presets
     }
 
+    # Constants that are constructed from classes defined in the markdown
+    # (e.g. the KZG trusted setups) must be emitted after those definitions.
+    def is_class_dep_constant(vardef) -> bool:
+        return (
+            not isinstance(vardef, list)
+            and vardef.type_name is not None
+            and any(
+                re.search(rf"\b{re.escape(name)}\b", vardef.type_name)
+                for name in ordered_class_objects
+            )
+        )
+
+    class_dep_constant_vars = {
+        k: v
+        for k, v in {
+            **spec_object.constant_vars,
+            **spec_object.preset_dep_constant_vars,
+        }.items()
+        if is_class_dep_constant(v)
+    }
+
     constant_vars_spec = "# Constant vars\n" + "\n".join(
-        format_constant(k, v) for k, v in spec_object.constant_vars.items()
+        format_constant(k, v)
+        for k, v in spec_object.constant_vars.items()
+        if k not in class_dep_constant_vars
     )
     preset_dep_constant_vars_spec = "# Preset computed constants\n" + "\n".join(
-        format_constant(k, v) for k, v in spec_object.preset_dep_constant_vars.items()
+        format_constant(k, v)
+        for k, v in spec_object.preset_dep_constant_vars.items()
+        if k not in class_dep_constant_vars
+    )
+    class_dep_constant_vars_spec = (
+        "# Constants that depend on SSZ classes\n"
+        + "\n".join(format_constant(k, v) for k, v in class_dep_constant_vars.items())
+        if class_dep_constant_vars
+        else ""
     )
     preset_vars_spec = "# Preset vars\n" + "\n".join(
         format_constant(k, v) for k, v in spec_object.preset_vars.items()
@@ -268,6 +299,7 @@ def objects_to_spec(
         # Custom classes which are not required to be SSZ containers.
         classes,
         ordered_class_objects_spec,
+        class_dep_constant_vars_spec,
         protocols_spec,
         functions_spec,
         sundry_functions,

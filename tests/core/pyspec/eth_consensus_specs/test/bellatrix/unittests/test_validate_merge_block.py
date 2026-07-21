@@ -12,9 +12,8 @@ from eth_consensus_specs.test.helpers.execution_payload import (
 from eth_consensus_specs.test.helpers.pow_block import (
     prepare_random_pow_chain,
 )
-from ssz import Uint256
-
 from eth_consensus_specs.utils.hash_function import Bytes32
+from ssz import Uint256
 
 TERMINAL_BLOCK_HASH_CONFIG_VAR = (
     "0x0000000000000000000000000000000000000000000000000000000000000001"

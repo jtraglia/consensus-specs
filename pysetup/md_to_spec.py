@@ -580,17 +580,16 @@ def _update_constant_vars_with_kzg_setups(
     preset_dep_constant_vars: dict[str, VariableDefinition],
     preset_name: str,
 ) -> None:
-    comment = "noqa: E501"
+    comment = "type: ignore[list-item]  # noqa: E501"
     kzg_setups = ALL_KZG_SETUPS[preset_name]
-    preset_dep_constant_vars["KZG_SETUP_G1_MONOMIAL"] = VariableDefinition(
-        preset_dep_constant_vars["KZG_SETUP_G1_MONOMIAL"].value, str(kzg_setups[0]), comment, None
-    )
-    preset_dep_constant_vars["KZG_SETUP_G1_LAGRANGE"] = VariableDefinition(
-        preset_dep_constant_vars["KZG_SETUP_G1_LAGRANGE"].value, str(kzg_setups[1]), comment, None
-    )
-    constant_vars["KZG_SETUP_G2_MONOMIAL"] = VariableDefinition(
-        constant_vars["KZG_SETUP_G2_MONOMIAL"].value, str(kzg_setups[2]), comment, None
-    )
+    setup_values = {
+        "KZG_SETUP_G1_MONOMIAL": kzg_setups[0],
+        "KZG_SETUP_G1_LAGRANGE": kzg_setups[1],
+        "KZG_SETUP_G2_MONOMIAL": kzg_setups[2],
+    }
+    for name, setup in setup_values.items():
+        vars_dict = preset_dep_constant_vars if name in preset_dep_constant_vars else constant_vars
+        vars_dict[name] = VariableDefinition(vars_dict[name].value, f"data={setup}", comment, None)
 
 
 @cache

@@ -341,7 +341,9 @@ def is_valid_normalized_merkle_branch(
 
 ```python
 def compute_sync_committee_period_at_slot(slot: Slot) -> Uint64:
-    return compute_sync_committee_period(compute_epoch_at_slot(slot))
+    # Light client data flows across forks, so the slot may carry another
+    # fork's type; normalize before deriving the period.
+    return compute_sync_committee_period(compute_epoch_at_slot(Slot(slot)))
 ```
 
 ## Light client initialization

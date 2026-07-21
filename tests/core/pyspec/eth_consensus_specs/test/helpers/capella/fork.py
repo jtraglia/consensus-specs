@@ -46,9 +46,7 @@ def run_fork_test(post_spec, pre_state):
     for field in modified_fields:
         # Compare encodings: a new zero-valued field keeps the tree root,
         # so root equality cannot distinguish the upgraded structure.
-        assert (
-            getattr(pre_state, field).encode_bytes() != getattr(post_state, field).encode_bytes()
-        )
+        assert getattr(pre_state, field).encode_bytes() != getattr(post_state, field).encode_bytes()
 
     assert len(pre_state.validators) == len(post_state.validators)
     for pre_validator, post_validator in zip(

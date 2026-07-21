@@ -931,8 +931,9 @@ def _verify_withdrawals_next_withdrawal_index(spec, pre_state, post_state, expec
     """
     Verify post_state.next_withdrawal_index
     """
-    assert post_state.next_withdrawal_index == pre_state.next_withdrawal_index + spec.WithdrawalIndex(
-        len(expected_withdrawals)
+    assert (
+        post_state.next_withdrawal_index
+        == pre_state.next_withdrawal_index + spec.WithdrawalIndex(len(expected_withdrawals))
     )
     if len(expected_withdrawals) == 0:
         assert post_state.next_withdrawal_index == pre_state.next_withdrawal_index

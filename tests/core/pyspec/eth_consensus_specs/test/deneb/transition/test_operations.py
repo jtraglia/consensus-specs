@@ -77,7 +77,7 @@ def test_transition_with_btec_right_before_fork(
         pre_tag,
         post_tag,
         operation_type=OperationType.BLS_TO_EXECUTION_CHANGE,
-        operation_at_slot=spec.Slot(fork_epoch) * spec.SLOTS_PER_EPOCH - 1,
+        operation_at_slot=spec.Slot(fork_epoch) * spec.SLOTS_PER_EPOCH - spec.Slot(1),
     )
 
 
@@ -114,14 +114,16 @@ def test_transition_attestation_from_previous_fork_with_new_range(
     transition_until_fork(spec, state, fork_epoch)
     state, fork_block = do_fork(state, spec, post_spec, fork_epoch)
     attestation = upgrade_attestation_to_new_spec(spec, post_spec, attestation)
-    current_epoch = spec.get_current_epoch(state)
+    current_epoch = post_spec.get_current_epoch(state)
     assert current_epoch == fork_epoch
     # Transition to second to last slot in `fork_epoch`
-    penultimate_slot = post_spec.compute_start_slot_at_epoch(current_epoch + 1) - 2
+    penultimate_slot = post_spec.compute_start_slot_at_epoch(
+        current_epoch + post_spec.Epoch(1)
+    ) - post_spec.Slot(2)
     transition_to(post_spec, state, penultimate_slot)
 
     # Ensure the new state is in the increased EIP-7045 slot inclusion range
-    assert penultimate_slot - attestation.data.slot > post_spec.SLOTS_PER_EPOCH
+    assert penultimate_slot - post_spec.Slot(attestation.data.slot) > post_spec.SLOTS_PER_EPOCH
 
     block = build_empty_block_for_next_slot(post_spec, state)
     block.body.attestations.append(attestation)

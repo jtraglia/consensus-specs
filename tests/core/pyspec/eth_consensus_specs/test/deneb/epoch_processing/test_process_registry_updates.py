@@ -22,10 +22,10 @@ def run_process_registry_updates(spec, state):
 def run_test_activation_churn_limit(spec, state):
     if is_post_electra(spec):
         mock_activations = (
-            get_activation_churn_limit(spec, state) // spec.MIN_ACTIVATION_BALANCE
-        ) * 2
+            int(get_activation_churn_limit(spec, state) // spec.MIN_ACTIVATION_BALANCE) * 2
+        )
     else:
-        mock_activations = spec.get_validator_activation_churn_limit(state) * 2
+        mock_activations = int(spec.get_validator_activation_churn_limit(state)) * 2
 
     validator_count_0 = len(state.validators)
 
@@ -52,9 +52,9 @@ def run_test_activation_churn_limit(spec, state):
         state.validators[index].activation_epoch = spec.FAR_FUTURE_EPOCH
 
     if is_post_electra(spec):
-        churn_limit_0 = get_activation_churn_limit(spec, state) // spec.MIN_ACTIVATION_BALANCE
+        churn_limit_0 = int(get_activation_churn_limit(spec, state) // spec.MIN_ACTIVATION_BALANCE)
     else:
-        churn_limit_0 = spec.get_validator_activation_churn_limit(state)
+        churn_limit_0 = int(spec.get_validator_activation_churn_limit(state))
 
     yield from run_process_registry_updates(spec, state)
 

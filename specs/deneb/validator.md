@@ -5,6 +5,8 @@
 - [Introduction](#introduction)
 - [Prerequisites](#prerequisites)
 - [Helpers](#helpers)
+  - [`KZGProofs`](#kzgproofs)
+  - [`Blobs`](#blobs)
   - [`BlobsBundle`](#blobsbundle)
   - [Modified `GetPayloadResponse`](#modified-getpayloadresponse)
 - [Protocols](#protocols)
@@ -39,6 +41,20 @@ specifications before continuing and use them as a reference throughout.
 
 ## Helpers
 
+### `KZGProofs`
+
+```python
+class KZGProofs(List[KZGProof]):
+    LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
+```
+
+### `Blobs`
+
+```python
+class Blobs(List[Blob]):
+    LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
+```
+
 ### `BlobsBundle`
 
 *[New in Deneb:EIP4844]*
@@ -46,9 +62,9 @@ specifications before continuing and use them as a reference throughout.
 ```python
 @dataclass
 class BlobsBundle:
-    commitments: List[KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK]
-    proofs: List[KZGProof, MAX_BLOB_COMMITMENTS_PER_BLOCK]
-    blobs: List[Blob, MAX_BLOB_COMMITMENTS_PER_BLOCK]
+    commitments: BlobKZGCommitments
+    proofs: KZGProofs
+    blobs: Blobs
 ```
 
 ### Modified `GetPayloadResponse`
@@ -57,7 +73,7 @@ class BlobsBundle:
 @dataclass
 class GetPayloadResponse:
     execution_payload: ExecutionPayload
-    block_value: uint256
+    block_value: Uint256
     # [New in Deneb:EIP4844]
     blobs_bundle: BlobsBundle
 ```
@@ -87,7 +103,7 @@ object.
 ```python
 def get_payload(self: ExecutionEngine, payload_id: PayloadId) -> GetPayloadResponse:
     """
-    Return ExecutionPayload, uint256, and BlobsBundle objects.
+    Return ExecutionPayload, Uint256, and BlobsBundle objects.
     """
 ```
 
@@ -192,7 +208,7 @@ The `subnet_id` for the `blob_sidecar` is calculated with:
 
 ```python
 def compute_subnet_for_blob_sidecar(blob_index: BlobIndex) -> SubnetID:
-    return SubnetID(blob_index % BLOB_SIDECAR_SUBNET_COUNT)
+    return SubnetID(Uint64(blob_index) % BLOB_SIDECAR_SUBNET_COUNT)
 ```
 
 After publishing the peers on the network may request the sidecar through

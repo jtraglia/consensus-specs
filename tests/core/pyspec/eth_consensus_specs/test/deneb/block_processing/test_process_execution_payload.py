@@ -300,7 +300,7 @@ def test_zeroed_commitment(spec, state):
     opaque_tx, _, blob_kzg_commitments, _ = get_sample_blob_tx(
         spec, blob_count=1, is_valid_blob=False
     )
-    assert all(commitment == b"\x00" * 48 for commitment in blob_kzg_commitments)
+    assert all(commitment == spec.KZGCommitment() for commitment in blob_kzg_commitments)
 
     execution_payload.transactions = [opaque_tx]
     execution_payload.block_hash = compute_el_block_hash(spec, execution_payload, state)

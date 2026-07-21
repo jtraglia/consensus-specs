@@ -1,9 +1,9 @@
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from eth_consensus_specs.test.context import (
     spec_state_test,
     with_capella_and_later,
 )
 from eth_consensus_specs.test.helpers.epoch_processing import run_epoch_processing_with
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def run_process_historical_summaries_update(spec, state):

@@ -744,7 +744,9 @@ def test_success_excess_balance_but_no_max_effective_balance(spec, state):
 @with_capella_and_later
 @spec_state_test
 def test_success_one_partial_withdrawable_not_yet_active(spec, state):
-    validator_index = min(len(state.validators) // 2, int(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP) - 1)
+    validator_index = min(
+        len(state.validators) // 2, int(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP) - 1
+    )
     state.validators[validator_index].activation_epoch += spec.Epoch(4)
     set_validator_partially_withdrawable(spec, state, validator_index)
 
@@ -762,7 +764,9 @@ def test_success_one_partial_withdrawable_not_yet_active(spec, state):
 @with_capella_and_later
 @spec_state_test
 def test_success_one_partial_withdrawable_in_exit_queue(spec, state):
-    validator_index = min(len(state.validators) // 2, int(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP) - 1)
+    validator_index = min(
+        len(state.validators) // 2, int(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP) - 1
+    )
     state.validators[validator_index].exit_epoch = spec.get_current_epoch(state) + spec.Epoch(1)
     set_validator_partially_withdrawable(spec, state, validator_index)
 
@@ -783,7 +787,9 @@ def test_success_one_partial_withdrawable_in_exit_queue(spec, state):
 @with_capella_and_later
 @spec_state_test
 def test_success_one_partial_withdrawable_exited(spec, state):
-    validator_index = min(len(state.validators) // 2, int(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP) - 1)
+    validator_index = min(
+        len(state.validators) // 2, int(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP) - 1
+    )
     state.validators[validator_index].exit_epoch = spec.get_current_epoch(state)
     set_validator_partially_withdrawable(spec, state, validator_index)
 
@@ -801,7 +807,9 @@ def test_success_one_partial_withdrawable_exited(spec, state):
 @with_capella_and_later
 @spec_state_test
 def test_success_one_partial_withdrawable_active_and_slashed(spec, state):
-    validator_index = min(len(state.validators) // 2, int(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP) - 1)
+    validator_index = min(
+        len(state.validators) // 2, int(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP) - 1
+    )
     state.validators[validator_index].slashed = True
     set_validator_partially_withdrawable(spec, state, validator_index)
 
@@ -819,7 +827,9 @@ def test_success_one_partial_withdrawable_active_and_slashed(spec, state):
 @with_capella_and_later
 @spec_state_test
 def test_success_one_partial_withdrawable_exited_and_slashed(spec, state):
-    validator_index = min(len(state.validators) // 2, int(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP) - 1)
+    validator_index = min(
+        len(state.validators) // 2, int(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP) - 1
+    )
     state.validators[validator_index].slashed = True
     state.validators[validator_index].exit_epoch = spec.get_current_epoch(state)
     set_validator_partially_withdrawable(spec, state, validator_index)

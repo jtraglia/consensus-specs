@@ -1,4 +1,3 @@
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from dataclasses import dataclass
 from enum import Enum
 
@@ -8,6 +7,7 @@ from eth_consensus_specs.test.helpers.fork_choice import (
     add_block,
 )
 from eth_consensus_specs.utils.hash_function import Bytes32
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 class PayloadStatusV1StatusAlias(Enum):

@@ -1,4 +1,3 @@
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from eth_consensus_specs.test.context import (
     spec_state_test,
     with_all_phases_from_to,
@@ -31,6 +30,7 @@ from eth_consensus_specs.test.helpers.state import (
     next_epoch,
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 @with_all_phases_from_to(BELLATRIX, GLOAS)

@@ -4,6 +4,9 @@
 
 - [Introduction](#introduction)
 - [Types](#types)
+  - [`Blob`](#blob)
+  - [`KZGSetupG1`](#kzgsetupg1)
+  - [`KZGSetupG2`](#kzgsetupg2)
 - [Cryptographic types](#cryptographic-types)
 - [Constants](#constants)
 - [Preset](#preset)
@@ -59,19 +62,45 @@ cryptographic normalization before invoking any internal functions.
 
 ## Types
 
-| Name            | SSZ equivalent                                                  | Description                                                                                                                                                                  |
-| --------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `G1Point`       | `Bytes48`                                                       |                                                                                                                                                                              |
-| `G2Point`       | `Bytes96`                                                       |                                                                                                                                                                              |
-| `KZGCommitment` | `Bytes48`                                                       | Validation: Perform [BLS standard's](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-bls-signature-04#section-2.5) "KeyValidate" check but do allow the identity point |
-| `KZGProof`      | `Bytes48`                                                       | Same as for `KZGCommitment`                                                                                                                                                  |
-| `Blob`          | `ByteVector[BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB]` | A basic data blob                                                                                                                                                            |
+| Name            | SSZ equivalent | Description                                                                                                                                                                  |
+| --------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `G1Point`       | `Bytes48`      |                                                                                                                                                                              |
+| `G2Point`       | `Bytes96`      |                                                                                                                                                                              |
+| `KZGCommitment` | `Bytes48`      | Validation: Perform [BLS standard's](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-bls-signature-04#section-2.5) "KeyValidate" check but do allow the identity point |
+| `KZGProof`      | `Bytes48`      | Same as for `KZGCommitment`                                                                                                                                                  |
+
+### `Blob`
+
+A basic data blob.
+
+```python
+class Blob(BaseBytes):
+    LENGTH = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB
+```
+
+### `KZGSetupG1`
+
+The G1 part of a KZG trusted setup.
+
+```python
+class KZGSetupG1(Vector[G1Point]):
+    LENGTH = FIELD_ELEMENTS_PER_BLOB
+```
+
+### `KZGSetupG2`
+
+The G2 part of a KZG trusted setup.
+
+```python
+class KZGSetupG2(Vector[G2Point]):
+    LENGTH = KZG_SETUP_G2_LENGTH
+```
 
 ## Cryptographic types
 
 | Name                                                                                                                                                  | SSZ equivalent                                     | Description                                                                   |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------- |
-| [`BLSFieldElement`](https://github.com/ethereum/consensus-specs/blob/36a5719b78523c057065515c8f8fcaeba75d065b/pysetup/spec_builders/deneb.py#L18-L19) | `uint256`                                          | <!-- predefined-type --> A value in the finite field defined by `BLS_MODULUS` |
+| [`BLSFieldElement`](https://github.com/ethereum/consensus-specs/blob/36a5719b78523c057065515c8f8fcaeba75d065b/pysetup/spec_builders/deneb.py#L18-L19) | `Uint256`                                          | <!-- predefined-type --> A value in the finite field defined by `BLS_MODULUS` |
 | [`Polynomial`](https://github.com/ethereum/consensus-specs/blob/36a5719b78523c057065515c8f8fcaeba75d065b/pysetup/spec_builders/deneb.py#L22-L28)      | `Vector[BLSFieldElement, FIELD_ELEMENTS_PER_BLOB]` | <!-- predefined-type --> A polynomial in evaluation form                      |
 
 ## Constants
@@ -80,9 +109,9 @@ cryptographic normalization before invoking any internal functions.
 | ------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | `PRIMITIVE_ROOT_OF_UNITY` | `7`                                                                             | The primitive root of unity from which all roots of unity should be derived |
 | `BLS_MODULUS`             | `52435875175126190479447740508185965837690552500527637822603658699938581184513` | Scalar field modulus of BLS12-381                                           |
-| `BYTES_PER_COMMITMENT`    | `uint64(48)`                                                                    | The number of bytes in a KZG commitment                                     |
-| `BYTES_PER_PROOF`         | `uint64(48)`                                                                    | The number of bytes in a KZG proof                                          |
-| `BYTES_PER_FIELD_ELEMENT` | `uint64(32)`                                                                    | Bytes used to encode a BLS scalar field element                             |
+| `BYTES_PER_COMMITMENT`    | `Uint64(48)`                                                                    | The number of bytes in a KZG commitment                                     |
+| `BYTES_PER_PROOF`         | `Uint64(48)`                                                                    | The number of bytes in a KZG proof                                          |
+| `BYTES_PER_FIELD_ELEMENT` | `Uint64(32)`                                                                    | Bytes used to encode a BLS scalar field element                             |
 | `BYTES_PER_BLOB`          | `BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB`                             | The number of bytes in a blob                                               |
 | `G1_POINT_AT_INFINITY`    | `Bytes48(b'\xc0' + b'\x00' * 47)`                                               | Serialized form of the point at infinity on the G1 group                    |
 | `KZG_ENDIANNESS`          | `'big'`                                                                         | The endianness of the field elements including blobs                        |
@@ -93,18 +122,18 @@ cryptographic normalization before invoking any internal functions.
 
 | Name                                | Value                     |
 | ----------------------------------- | ------------------------- |
-| `FIELD_ELEMENTS_PER_BLOB`           | `uint64(2**12)` (= 4,096) |
+| `FIELD_ELEMENTS_PER_BLOB`           | `Uint64(2**12)` (= 4,096) |
 | `FIAT_SHAMIR_PROTOCOL_DOMAIN`       | `b'FSBLOBVERIFY_V1_'`     |
 | `RANDOM_CHALLENGE_KZG_BATCH_DOMAIN` | `b'RCKZGBATCH___V1_'`     |
 
 ### Trusted setup
 
-| Name                    | Value                                      |
-| ----------------------- | ------------------------------------------ |
-| `KZG_SETUP_G2_LENGTH`   | `uint64(65)`                               |
-| `KZG_SETUP_G1_MONOMIAL` | `Vector[G1Point, FIELD_ELEMENTS_PER_BLOB]` |
-| `KZG_SETUP_G1_LAGRANGE` | `Vector[G1Point, FIELD_ELEMENTS_PER_BLOB]` |
-| `KZG_SETUP_G2_MONOMIAL` | `Vector[G2Point, KZG_SETUP_G2_LENGTH]`     |
+| Name                    | Value        |
+| ----------------------- | ------------ |
+| `KZG_SETUP_G2_LENGTH`   | `Uint64(65)` |
+| `KZG_SETUP_G1_MONOMIAL` | `KZGSetupG1` |
+| `KZG_SETUP_G1_LAGRANGE` | `KZGSetupG1` |
+| `KZG_SETUP_G2_MONOMIAL` | `KZGSetupG2` |
 
 ## Helpers
 
@@ -227,10 +256,8 @@ def blob_to_polynomial(blob: Blob) -> Polynomial:
     """
     polynomial = Polynomial()
     for i in range(FIELD_ELEMENTS_PER_BLOB):
-        value = bytes_to_bls_field(
-            blob[i * BYTES_PER_FIELD_ELEMENT : (i + 1) * BYTES_PER_FIELD_ELEMENT]
-        )
-        polynomial[i] = value
+        start = Uint64(i) * BYTES_PER_FIELD_ELEMENT
+        polynomial[i] = bytes_to_bls_field(blob[start : start + BYTES_PER_FIELD_ELEMENT])
     return polynomial
 ```
 
@@ -278,7 +305,7 @@ def g1_lincomb(
 #### `compute_powers`
 
 ```python
-def compute_powers(x: BLSFieldElement, n: uint64) -> Sequence[BLSFieldElement]:
+def compute_powers(x: BLSFieldElement, n: Uint64) -> Sequence[BLSFieldElement]:
     """
     Return ``x`` to power of [0, n-1], if n > 0. When n==0, an empty array is returned.
     """
@@ -293,7 +320,7 @@ def compute_powers(x: BLSFieldElement, n: uint64) -> Sequence[BLSFieldElement]:
 #### `compute_roots_of_unity`
 
 ```python
-def compute_roots_of_unity(order: uint64) -> Sequence[BLSFieldElement]:
+def compute_roots_of_unity(order: Uint64) -> Sequence[BLSFieldElement]:
     """
     Return roots of unity of ``order``.
     """
@@ -513,7 +540,7 @@ def compute_kzg_proof_impl(
     denominator_poly = [x - z for x in roots_of_unity_brp]
 
     # Compute the quotient polynomial directly in evaluation form
-    quotient_polynomial = [BLSFieldElement(0)] * FIELD_ELEMENTS_PER_BLOB
+    quotient_polynomial = Polynomial()
     for i, (a, b) in enumerate(zip(polynomial_shifted, denominator_poly, strict=True)):
         if b == BLSFieldElement(0):
             # The denominator is zero hence `z` is a root of unity: we must handle it as a special case

@@ -241,9 +241,7 @@ def upgrade_lc_bootstrap_to_new_spec(spec, new_spec, data, phases):
 
 def check_lc_update_equal(spec, new_spec, data, upgraded):
     check_lc_header_equal(spec, new_spec, data.attested_header, upgraded.attested_header)
-    assert hash_tree_root(upgraded.next_sync_committee) == hash_tree_root(
-        data.next_sync_committee
-    )
+    assert hash_tree_root(upgraded.next_sync_committee) == hash_tree_root(data.next_sync_committee)
     check_merkle_branch_equal(
         spec,
         new_spec,
@@ -326,9 +324,7 @@ def check_lc_store_equal(spec, new_spec, data, upgraded):
     assert hash_tree_root(upgraded.current_sync_committee) == hash_tree_root(
         data.current_sync_committee
     )
-    assert hash_tree_root(upgraded.next_sync_committee) == hash_tree_root(
-        data.next_sync_committee
-    )
+    assert hash_tree_root(upgraded.next_sync_committee) == hash_tree_root(data.next_sync_committee)
     if upgraded.best_valid_update is None:
         assert data.best_valid_update is None
     else:

@@ -231,7 +231,7 @@ def test_validate_kzg_g1_generator(spec):
     Verify that `validate_kzg_g1` allows the generator G1
     """
 
-    spec.validate_kzg_g1(bls.G1_to_bytes48(bls.G1()))
+    spec.validate_kzg_g1(spec.Bytes48(bls.G1_to_bytes48(bls.G1())))
 
 
 @with_deneb_and_later
@@ -242,7 +242,7 @@ def test_validate_kzg_g1_neutral_element(spec):
     Verify that `validate_kzg_g1` allows the neutral element in G1
     """
 
-    spec.validate_kzg_g1(bls.G1_to_bytes48(bls.G1.identity()))
+    spec.validate_kzg_g1(spec.Bytes48(bls.G1_to_bytes48(bls.G1.identity())))
 
 
 @with_deneb_and_later
@@ -254,7 +254,7 @@ def test_validate_kzg_g1_not_in_g1(spec):
     Verify that `validate_kzg_g1` fails on point not in G1
     """
 
-    expect_assertion_error(lambda: spec.validate_kzg_g1(P1_NOT_IN_G1))
+    expect_assertion_error(lambda: spec.validate_kzg_g1(spec.Bytes48(P1_NOT_IN_G1)))
 
 
 @with_deneb_and_later
@@ -266,7 +266,7 @@ def test_validate_kzg_g1_not_on_curve(spec):
     Verify that `validate_kzg_g1` fails on point not in G1
     """
 
-    expect_assertion_error(lambda: spec.validate_kzg_g1(P1_NOT_ON_CURVE))
+    expect_assertion_error(lambda: spec.validate_kzg_g1(spec.Bytes48(P1_NOT_ON_CURVE)))
 
 
 @with_deneb_and_later

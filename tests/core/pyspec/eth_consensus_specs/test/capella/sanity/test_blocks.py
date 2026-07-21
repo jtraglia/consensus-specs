@@ -365,11 +365,12 @@ def _perform_valid_withdrawal(spec, state):
     if is_post_gloas(spec):
         # In Gloas, only a limited number of withdrawals can be processed at a time
         expected_processed = min(len(expected_withdrawals), spec.MAX_WITHDRAWALS_PER_PAYLOAD)
-        assert state.next_withdrawal_index == pre_next_withdrawal_index + spec.WithdrawalIndex(expected_processed)
+        assert state.next_withdrawal_index == pre_next_withdrawal_index + spec.WithdrawalIndex(
+            expected_processed
+        )
     else:
-        assert (
-            state.next_withdrawal_index
-            == pre_next_withdrawal_index + spec.WithdrawalIndex(spec.MAX_WITHDRAWALS_PER_PAYLOAD)
+        assert state.next_withdrawal_index == pre_next_withdrawal_index + spec.WithdrawalIndex(
+            spec.MAX_WITHDRAWALS_PER_PAYLOAD
         )
 
     withdrawn_indices = [withdrawal.validator_index for withdrawal in expected_withdrawals]
@@ -383,11 +384,12 @@ def _perform_valid_withdrawal(spec, state):
     # Repeat the same assertion logic
     if is_post_gloas(spec):
         expected_processed = min(len(expected_withdrawals), spec.MAX_WITHDRAWALS_PER_PAYLOAD)
-        assert state.next_withdrawal_index == pre_next_withdrawal_index + spec.WithdrawalIndex(expected_processed)
+        assert state.next_withdrawal_index == pre_next_withdrawal_index + spec.WithdrawalIndex(
+            expected_processed
+        )
     else:
-        assert (
-            state.next_withdrawal_index
-            == pre_next_withdrawal_index + spec.WithdrawalIndex(spec.MAX_WITHDRAWALS_PER_PAYLOAD)
+        assert state.next_withdrawal_index == pre_next_withdrawal_index + spec.WithdrawalIndex(
+            spec.MAX_WITHDRAWALS_PER_PAYLOAD
         )
 
     return pre_state, signed_block_1, pre_next_withdrawal_index
@@ -409,9 +411,8 @@ def test_withdrawal_success_two_blocks(spec, state):
     if is_post_gloas(spec):
         pass  # The withdrawal index should remain the same as after block 1
     else:
-        assert (
-            state.next_withdrawal_index
-            == pre_next_withdrawal_index + spec.WithdrawalIndex(int(spec.MAX_WITHDRAWALS_PER_PAYLOAD) * 2)
+        assert state.next_withdrawal_index == pre_next_withdrawal_index + spec.WithdrawalIndex(
+            int(spec.MAX_WITHDRAWALS_PER_PAYLOAD) * 2
         )
 
     yield "blocks", [signed_block_1, signed_block_2]

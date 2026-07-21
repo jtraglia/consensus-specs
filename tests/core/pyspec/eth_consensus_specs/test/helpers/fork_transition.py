@@ -453,7 +453,10 @@ def run_transition_with_operation(
             assert validator.exit_epoch < post_spec.FAR_FUTURE_EPOCH
         elif operation_type == OperationType.BLS_TO_EXECUTION_CHANGE:
             validator = state.validators[selected_validator_index]
-            assert validator.withdrawal_credentials[:1] == spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX
+            assert (
+                spec.Bytes1(validator.withdrawal_credentials[:1])
+                == spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX
+            )
         elif operation_type == OperationType.DEPOSIT_REQUEST:
             assert state.pending_deposits == [
                 post_spec.PendingDeposit(

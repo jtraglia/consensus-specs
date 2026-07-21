@@ -7,6 +7,7 @@
   - [Preset](#preset)
   - [Configuration](#configuration)
   - [Containers](#containers)
+    - [New `KZGCommitmentInclusionProof`](#new-kzgcommitmentinclusionproof)
     - [New `BlobSidecar`](#new-blobsidecar)
     - [New `BlobIdentifier`](#new-blobidentifier)
   - [Helpers](#helpers)
@@ -52,9 +53,9 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 
 *[New in Deneb:EIP4844]*
 
-| Name                                   | Value                                                                                                                                     | Description                                                                 |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `KZG_COMMITMENT_INCLUSION_PROOF_DEPTH` | `uint64(floorlog2(get_generalized_index(BeaconBlockBody, 'blob_kzg_commitments')) + 1 + ceillog2(MAX_BLOB_COMMITMENTS_PER_BLOCK))` (= 17) | <!-- predefined --> Merkle proof depth for `blob_kzg_commitments` list item |
+| Name                                   | Value                                                                                                                                             | Description                                                                 |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `KZG_COMMITMENT_INCLUSION_PROOF_DEPTH` | `Uint64(floorlog2(get_generalized_index(BeaconBlockBody, 'blob_kzg_commitments')) + Uint64(1) + ceillog2(MAX_BLOB_COMMITMENTS_PER_BLOCK))` (= 17) | <!-- predefined --> Merkle proof depth for `blob_kzg_commitments` list item |
 
 ### Configuration
 
@@ -62,11 +63,20 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 
 | Name                                    | Value                    | Description                                                    |
 | --------------------------------------- | ------------------------ | -------------------------------------------------------------- |
-| `MAX_REQUEST_BLOCKS_DENEB`              | `2**7` (= 128)           | Maximum number of blocks in a single request                   |
+| `MAX_REQUEST_BLOCKS_DENEB`              | `Uint64(2**7)` (= 128)   | Maximum number of blocks in a single request                   |
 | `MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS` | `2**12` (= 4,096 epochs) | Minimum epoch range over which a node must serve blob sidecars |
-| `BLOB_SIDECAR_SUBNET_COUNT`             | `6`                      | Number of blob sidecar subnets used in the gossipsub protocol  |
+| `BLOB_SIDECAR_SUBNET_COUNT`             | `Uint64(6)`              | Number of blob sidecar subnets used in the gossipsub protocol  |
 
 ### Containers
+
+#### New `KZGCommitmentInclusionProof`
+
+*[New in Deneb:EIP4844]*
+
+```python
+class KZGCommitmentInclusionProof(Vector[Bytes32]):
+    LENGTH = KZG_COMMITMENT_INCLUSION_PROOF_DEPTH
+```
 
 #### New `BlobSidecar`
 
@@ -81,7 +91,7 @@ class BlobSidecar(Container):
     kzg_commitment: KZGCommitment
     kzg_proof: KZGProof
     signed_block_header: SignedBeaconBlockHeader
-    kzg_commitment_inclusion_proof: Vector[Bytes32, KZG_COMMITMENT_INCLUSION_PROOF_DEPTH]
+    kzg_commitment_inclusion_proof: KZGCommitmentInclusionProof
 ```
 
 #### New `BlobIdentifier`
@@ -103,14 +113,14 @@ class BlobIdentifier(Container):
 class Seen:
     proposer_slots: Set[Tuple[ValidatorIndex, Slot]]
     aggregator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
-    aggregate_data_roots: Dict[Root, Set[Tuple[boolean, ...]]]
+    aggregate_data_roots: Dict[Root, Set[Tuple[Boolean, ...]]]
     voluntary_exit_indices: Set[ValidatorIndex]
     proposer_slashing_indices: Set[ValidatorIndex]
     attester_slashing_indices: Set[ValidatorIndex]
     attestation_validator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
-    sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, uint64]]
-    sync_contribution_data: Dict[Tuple[Slot, Root, uint64], Set[Tuple[boolean, ...]]]
-    sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, uint64]]
+    sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, Uint64]]
+    sync_contribution_data: Dict[Tuple[Slot, Root, Uint64], Set[Tuple[Boolean, ...]]]
+    sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, Uint64]]
     bls_to_execution_change_indices: Set[ValidatorIndex]
     # [New in Deneb]
     blob_sidecar_tuples: Set[Tuple[Slot, ValidatorIndex, BlobIndex]]
@@ -140,7 +150,7 @@ def compute_fork_version(epoch: Epoch) -> Version:
 def is_within_epoch(
     state: BeaconState,
     epoch: Epoch,
-    current_time_ms: uint64,
+    current_time_ms: Uint64,
 ) -> bool:
     """
     Check if the current time is within the given epoch
@@ -149,7 +159,7 @@ def is_within_epoch(
     return is_within_slot_range(
         state,
         compute_start_slot_at_epoch(epoch),
-        SLOTS_PER_EPOCH - 1,
+        SLOTS_PER_EPOCH - Slot(1),
         current_time_ms,
     )
 ```
@@ -160,25 +170,25 @@ def is_within_epoch(
 def is_current_or_previous_epoch(
     state: BeaconState,
     epoch: Epoch,
-    current_time_ms: uint64,
+    current_time_ms: Uint64,
 ) -> bool:
     """
     Check if the given epoch is the current or previous epoch
     (with MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
     """
     is_current = is_within_epoch(state, epoch, current_time_ms)
-    is_previous = is_within_epoch(state, Epoch(epoch + 1), current_time_ms)
+    is_previous = is_within_epoch(state, epoch + Epoch(1), current_time_ms)
     return is_current or is_previous
 ```
 
 #### New `compute_max_request_blob_sidecars`
 
 ```python
-def compute_max_request_blob_sidecars() -> uint64:
+def compute_max_request_blob_sidecars() -> Uint64:
     """
     Return the maximum number of blob sidecars in a single request.
     """
-    return uint64(MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK)
+    return MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK
 ```
 
 #### New `verify_blob_sidecar_inclusion_proof`
@@ -241,7 +251,7 @@ def validate_beacon_block_gossip(
     store: Store,
     state: BeaconState,
     signed_beacon_block: SignedBeaconBlock,
-    current_time_ms: uint64,
+    current_time_ms: Uint64,
     block_payload_statuses: Dict[Root, PayloadValidationStatus],
 ) -> None:
     """
@@ -343,7 +353,7 @@ def validate_beacon_aggregate_and_proof_gossip(
     store: Store,
     state: BeaconState,
     signed_aggregate_and_proof: SignedAggregateAndProof,
-    current_time_ms: uint64,
+    current_time_ms: Uint64,
 ) -> None:
     """
     Validate a SignedAggregateAndProof for gossip propagation.
@@ -529,7 +539,7 @@ def validate_beacon_attestation_gossip(
     store: Store,
     state: BeaconState,
     attestation: Attestation,
-    current_time_ms: uint64,
+    current_time_ms: Uint64,
     subnet_id: SubnetID,
 ) -> None:
     """
@@ -580,7 +590,7 @@ def validate_beacon_attestation_gossip(
         raise GossipReject("aggregation bits length does not match committee size")
 
     # [IGNORE] No other valid attestation seen for this validator and target epoch
-    participant_index = committee[aggregation_bits.index(True)]
+    participant_index = committee[list(aggregation_bits).index(True)]
     if (participant_index, target_epoch) in seen.attestation_validator_epochs:
         raise GossipIgnore("already seen attestation from this validator for this epoch")
 
@@ -630,7 +640,7 @@ def validate_blob_sidecar_gossip(
     store: Store,
     state: BeaconState,
     blob_sidecar: BlobSidecar,
-    current_time_ms: uint64,
+    current_time_ms: Uint64,
     subnet_id: SubnetID,
 ) -> None:
     """
