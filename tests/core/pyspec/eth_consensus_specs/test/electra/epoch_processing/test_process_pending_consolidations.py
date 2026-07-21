@@ -483,7 +483,7 @@ def prepare_consolidation_and_state(
 
     if balance_to_eb == "<":
         state.balances[source_index] = (
-            source.effective_balance - spec.EFFECTIVE_BALANCE_INCREMENT // 2
+            source.effective_balance - spec.EFFECTIVE_BALANCE_INCREMENT // spec.Gwei(2)
         )
     elif balance_to_eb == "=":
         state.balances[source_index] = source.effective_balance

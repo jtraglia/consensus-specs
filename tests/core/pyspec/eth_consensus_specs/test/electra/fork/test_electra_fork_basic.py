@@ -149,7 +149,7 @@ def test_fork_has_compounding_withdrawal_credential(spec, phases, state):
     index = 0
     post_spec = phases[ELECTRA]
     validator = state.validators[index]
-    state.balances[index] = post_spec.MIN_ACTIVATION_BALANCE + 1
+    state.balances[index] = post_spec.MIN_ACTIVATION_BALANCE + post_spec.Gwei(1)
     validator.withdrawal_credentials = (
         post_spec.COMPOUNDING_WITHDRAWAL_PREFIX + validator.withdrawal_credentials[1:]
     )
@@ -177,7 +177,7 @@ def test_fork_inactive_compounding_validator_with_excess_balance(spec, phases, s
     validator = state.validators[index]
 
     # set validator balance greater than min_activation_balance
-    state.balances[index] = post_spec.MIN_ACTIVATION_BALANCE + 1
+    state.balances[index] = post_spec.MIN_ACTIVATION_BALANCE + post_spec.Gwei(1)
     # set validator as not active yet
     validator.activation_epoch = spec.FAR_FUTURE_EPOCH
     # set validator activation eligibility epoch to the latest finalized epoch

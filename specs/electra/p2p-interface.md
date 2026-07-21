@@ -44,7 +44,7 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 
 | Name                                | Value | Description                                                   |
 | ----------------------------------- | ----- | ------------------------------------------------------------- |
-| `BLOB_SIDECAR_SUBNET_COUNT_ELECTRA` | `9`   | Number of blob sidecar subnets used in the gossipsub protocol |
+| `BLOB_SIDECAR_SUBNET_COUNT_ELECTRA` | `Uint64(9)` | Number of blob sidecar subnets used in the gossipsub protocol |
 
 ### Helpers
 
@@ -56,7 +56,7 @@ class Seen:
     proposer_slots: Set[Tuple[ValidatorIndex, Slot]]
     aggregator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
     # [Modified in Electra:EIP7549]
-    aggregate_data_roots: Dict[Tuple[Root, CommitteeIndex], Set[Tuple[boolean, ...]]]
+    aggregate_data_roots: Dict[Tuple[Root, CommitteeIndex], Set[Tuple[Boolean, ...]]]
     voluntary_exit_indices: Set[ValidatorIndex]
     proposer_slashing_indices: Set[ValidatorIndex]
     attester_slashing_indices: Set[ValidatorIndex]

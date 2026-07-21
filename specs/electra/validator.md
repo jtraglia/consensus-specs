@@ -234,7 +234,7 @@ def get_execution_requests(execution_requests_list: Sequence[bytes]) -> Executio
 
     prev_request_type = None
     for request in execution_requests_list:
-        request_type, request_data = request[0:1], request[1:]
+        request_type, request_data = Bytes1(request[0:1]), request[1:]
 
         # Check that the request type is valid
         assert request_type in request_types
@@ -267,7 +267,7 @@ def get_execution_requests(execution_requests_list: Sequence[bytes]) -> Executio
 
 ```python
 def compute_subnet_for_blob_sidecar(blob_index: BlobIndex) -> SubnetID:
-    return SubnetID(blob_index % BLOB_SIDECAR_SUBNET_COUNT_ELECTRA)
+    return SubnetID(Uint64(blob_index) % BLOB_SIDECAR_SUBNET_COUNT_ELECTRA)
 ```
 
 ## Attesting

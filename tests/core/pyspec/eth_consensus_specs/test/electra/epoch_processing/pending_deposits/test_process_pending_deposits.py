@@ -50,10 +50,10 @@ def _prepare_eth1_bridge_deprecation(spec, state, eth1_bridge_flags):
             spec.add_validator_to_registry(
                 state, pending_deposit.pubkey, pending_deposit.withdrawal_credentials, spec.Gwei(0)
             )
-            state.eth1_deposit_index += 1
+            state.eth1_deposit_index += spec.Uint64(1)
 
     # Advance state to make pending deposits finalized
-    advance_finality_to(spec, state, spec.compute_epoch_at_slot(deposit_request_slot) + 1)
+    advance_finality_to(spec, state, spec.compute_epoch_at_slot(deposit_request_slot) + spec.Epoch(1))
 
     # Add pending deposits
     for pending_deposit in new_pending_deposits:
@@ -269,7 +269,7 @@ def test_process_pending_deposits_balance_above_churn(spec, state):
 def test_process_pending_deposits_preexisting_churn(spec, state):
     index = 0
     amount = spec.EFFECTIVE_BALANCE_INCREMENT + 1
-    state.deposit_balance_to_consume = 2 * amount
+    state.deposit_balance_to_consume = spec.Gwei(2) * amount
     state.pending_deposits.append(prepare_pending_deposit(spec, index, amount))
     pre_balance = state.balances[index]
 
@@ -318,7 +318,7 @@ def test_process_pending_deposits_multiple_pending_deposits_above_churn(spec, st
         assert state.balances[i] == pre_balances[i] + amount
     assert state.balances[2] == pre_balances[2]
     # Only first two subtract from the deposit balance to consume
-    assert state.deposit_balance_to_consume == get_activation_churn_limit(spec, state) - 2 * amount
+    assert state.deposit_balance_to_consume == get_activation_churn_limit(spec, state) - spec.Gwei(2) * amount
     # third deposit is still in the queue
     assert state.pending_deposits == [
         prepare_pending_deposit(spec, validator_index=2, amount=amount)
@@ -480,7 +480,7 @@ def test_process_pending_deposits_withdrawable_validator(spec, state):
     spec.initiate_validator_exit(state, index)
     # Set epoch to withdrawable epoch + 1 to allow processing of the deposit
     withdrawable_epoch = state.validators[index].withdrawable_epoch
-    state.slot = spec.SLOTS_PER_EPOCH * (withdrawable_epoch + 1)
+    state.slot = spec.compute_start_slot_at_epoch(withdrawable_epoch + spec.Epoch(1))
 
     yield from run_process_pending_deposits(spec, state)
 
@@ -504,7 +504,7 @@ def test_process_pending_deposits_withdrawable_validator_not_churned(spec, state
     spec.initiate_validator_exit(state, 0)
     # Set epoch to withdrawable epoch + 1 to allow processing of the deposit
     withdraw_epoch = state.validators[0].withdrawable_epoch
-    state.slot = spec.SLOTS_PER_EPOCH * (withdraw_epoch + 1)
+    state.slot = spec.compute_start_slot_at_epoch(withdraw_epoch + spec.Epoch(1))
     # Don't use run_epoch_processing_with to avoid penalties being applied
     yield "pre", state
     spec.process_pending_deposits(state)

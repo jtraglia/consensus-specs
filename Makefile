@@ -8,6 +8,7 @@ ALL_EXECUTABLE_SPEC_NAMES = \
 	bellatrix \
 	capella   \
 	deneb     \
+	electra   \
 
 # A list of fake targets.
 .PHONY: \

@@ -76,9 +76,9 @@ def get_random_ssz_object(
         # Random byte vectors can be bigger than max bytes size, e.g. custody chunk data.
         # No max-bytes-length limitation here.
         if mode == RandomizationMode.mode_zero:
-            return typ(b"\x00" * typ.LENGTH)
+            return typ(b"\x00" * int(typ.LENGTH))
         elif mode == RandomizationMode.mode_max:
-            return typ(b"\xff" * typ.LENGTH)
+            return typ(b"\xff" * int(typ.LENGTH))
         else:
             return typ(get_random_bytes_list(rng, typ.LENGTH))
     elif issubclass(typ, Boolean | BaseUint):

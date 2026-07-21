@@ -12,7 +12,7 @@ def run_epoch_processing(spec, state, pending_deposits=None, pending_consolidati
     if pending_consolidations is None:
         pending_consolidations = []
     # Transition to the last slot of the epoch
-    slot = state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
+    slot = state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - spec.Slot(1)
     transition_to(spec, state, slot)
     state.pending_deposits = pending_deposits
     state.pending_consolidations = pending_consolidations

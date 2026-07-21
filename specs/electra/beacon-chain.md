@@ -581,7 +581,7 @@ def is_eligible_for_activation_queue(validator: Validator) -> bool:
 
 ```python
 def is_compounding_withdrawal_credential(withdrawal_credentials: Bytes32) -> bool:
-    return withdrawal_credentials[:1] == COMPOUNDING_WITHDRAWAL_PREFIX
+    return Bytes1(withdrawal_credentials[:1]) == COMPOUNDING_WITHDRAWAL_PREFIX
 ```
 
 #### New `has_compounding_withdrawal_credential`
@@ -699,7 +699,7 @@ def get_balance_churn_limit(state: BeaconState) -> Gwei:
     Return the churn limit for the current epoch.
     """
     churn = max(
-        MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA, get_total_active_balance(state) // CHURN_LIMIT_QUOTIENT
+        MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA, get_total_active_balance(state) // Gwei(CHURN_LIMIT_QUOTIENT)
     )
     return churn - churn % EFFECTIVE_BALANCE_INCREMENT
 ```
@@ -772,7 +772,7 @@ def get_next_sync_committee_indices(state: BeaconState) -> Sequence[ValidatorInd
     """
     Return the sync committee indices, with possible duplicates, for the next sync committee.
     """
-    epoch = Epoch(get_current_epoch(state) + 1)
+    epoch = get_current_epoch(state) + Epoch(1)
 
     # [Modified in Electra]
     MAX_RANDOM_VALUE = 2**16 - 1
@@ -875,9 +875,9 @@ def compute_exit_epoch_and_update_churn(state: BeaconState, exit_balance: Gwei) 
     # Exit doesn't fit in the current earliest epoch.
     if exit_balance > exit_balance_to_consume:
         balance_to_process = exit_balance - exit_balance_to_consume
-        additional_epochs = (balance_to_process - 1) // per_epoch_churn + 1
-        earliest_exit_epoch += additional_epochs
-        exit_balance_to_consume += additional_epochs * per_epoch_churn
+        additional_epochs = Uint64(balance_to_process - Gwei(1)) // Uint64(per_epoch_churn) + Uint64(1)
+        earliest_exit_epoch += Epoch(additional_epochs)
+        exit_balance_to_consume += Gwei(additional_epochs) * per_epoch_churn
 
     # Consume the balance and update state variables.
     state.exit_balance_to_consume = exit_balance_to_consume - exit_balance
@@ -905,9 +905,12 @@ def compute_consolidation_epoch_and_update_churn(
     # Consolidation doesn't fit in the current earliest epoch.
     if consolidation_balance > consolidation_balance_to_consume:
         balance_to_process = consolidation_balance - consolidation_balance_to_consume
-        additional_epochs = (balance_to_process - 1) // per_epoch_consolidation_churn + 1
-        earliest_consolidation_epoch += additional_epochs
-        consolidation_balance_to_consume += additional_epochs * per_epoch_consolidation_churn
+        additional_epochs = (
+            Uint64(balance_to_process - Gwei(1)) // Uint64(per_epoch_consolidation_churn)
+            + Uint64(1)
+        )
+        earliest_consolidation_epoch += Epoch(additional_epochs)
+        consolidation_balance_to_consume += Gwei(additional_epochs) * per_epoch_consolidation_churn
 
     # Consume the balance and update state variables.
     state.consolidation_balance_to_consume = (
@@ -942,7 +945,7 @@ def slash_validator(
     )
     state.slashings[epoch % EPOCHS_PER_SLASHINGS_VECTOR] += validator.effective_balance
     # [Modified in Electra:EIP7251]
-    slashing_penalty = validator.effective_balance // MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA
+    slashing_penalty = validator.effective_balance // Gwei(MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA)
     decrease_balance(state, slashed_index, slashing_penalty)
 
     # Apply proposer and whistleblower rewards
@@ -1008,7 +1011,7 @@ def process_registry_updates(state: BeaconState) -> None:
     for index, validator in enumerate(state.validators):
         # [Modified in Electra:EIP7251]
         if is_eligible_for_activation_queue(validator):
-            validator.activation_eligibility_epoch = current_epoch + 1
+            validator.activation_eligibility_epoch = current_epoch + Epoch(1)
         elif (
             is_active_validator(validator, current_epoch)
             and validator.effective_balance <= EJECTION_BALANCE
@@ -1083,11 +1086,11 @@ before applying pending deposit:
 
 ```python
 def process_pending_deposits(state: BeaconState) -> None:
-    next_epoch = Epoch(get_current_epoch(state) + 1)
+    next_epoch = get_current_epoch(state) + Epoch(1)
     available_for_processing = state.deposit_balance_to_consume + get_activation_exit_churn_limit(
         state
     )
-    processed_amount = 0
+    processed_amount = Gwei(0)
     next_deposit_index = 0
     deposits_to_postpone = []
     is_churn_limit_reached = False
@@ -1140,7 +1143,7 @@ def process_pending_deposits(state: BeaconState) -> None:
         # Regardless of how the deposit was handled, we move on in the queue.
         next_deposit_index += 1
 
-    state.pending_deposits = state.pending_deposits[next_deposit_index:] + deposits_to_postpone
+    state.pending_deposits = list(state.pending_deposits[next_deposit_index:]) + deposits_to_postpone
 
     # Accumulate churn only if the churn limit has been hit.
     if is_churn_limit_reached:
@@ -1153,7 +1156,7 @@ def process_pending_deposits(state: BeaconState) -> None:
 
 ```python
 def process_pending_consolidations(state: BeaconState) -> None:
-    next_epoch = Epoch(get_current_epoch(state) + 1)
+    next_epoch = get_current_epoch(state) + Epoch(1)
     next_pending_consolidation = 0
     for pending_consolidation in state.pending_consolidations:
         source_validator = state.validators[pending_consolidation.source_index]
@@ -1405,8 +1408,10 @@ def get_validators_sweep_withdrawals(
             )
             withdrawal_index += WithdrawalIndex(1)
 
-        validator_index = ValidatorIndex((validator_index + 1) % len(state.validators))
-        processed_count += 1
+        validator_index = (validator_index + ValidatorIndex(1)) % ValidatorIndex(
+            len(state.validators)
+        )
+        processed_count += Uint64(1)
 
     return withdrawals, withdrawal_index, processed_count
 ```
@@ -1770,7 +1775,7 @@ def process_deposit(state: BeaconState, deposit: Deposit) -> None:
         leaf=hash_tree_root(deposit.data),
         branch=deposit.proof,
         # Add 1 for the List length mix-in
-        depth=DEPOSIT_CONTRACT_TREE_DEPTH + 1,
+        depth=DEPOSIT_CONTRACT_TREE_DEPTH + Uint64(1),
         index=state.eth1_deposit_index,
         root=state.eth1_data.deposit_root,
     )
@@ -1847,7 +1852,7 @@ def process_withdrawal_request(state: BeaconState, withdrawal_request: Withdrawa
     # Verify withdrawal credentials
     has_correct_credential = has_execution_withdrawal_credential(validator)
     is_correct_source_address = (
-        validator.withdrawal_credentials[12:] == withdrawal_request.source_address
+        ExecutionAddress(validator.withdrawal_credentials[12:]) == withdrawal_request.source_address
     )
     if not (has_correct_credential and is_correct_source_address):
         return
@@ -1936,7 +1941,7 @@ def is_valid_switch_to_compounding_request(
     source_validator = state.validators[ValidatorIndex(validator_pubkeys.index(source_pubkey))]
 
     # Verify request has been authorized
-    if source_validator.withdrawal_credentials[12:] != consolidation_request.source_address:
+    if ExecutionAddress(source_validator.withdrawal_credentials[12:]) != consolidation_request.source_address:
         return False
 
     # Verify source withdrawal credentials
@@ -1994,7 +1999,7 @@ def process_consolidation_request(
     # Verify source withdrawal credentials
     has_correct_credential = has_execution_withdrawal_credential(source_validator)
     is_correct_source_address = (
-        source_validator.withdrawal_credentials[12:] == consolidation_request.source_address
+        ExecutionAddress(source_validator.withdrawal_credentials[12:]) == consolidation_request.source_address
     )
     if not (has_correct_credential and is_correct_source_address):
         return

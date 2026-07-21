@@ -27,7 +27,7 @@ def normalize_merkle_branch(
     branch: Sequence[Bytes32], gindex: GeneralizedIndex
 ) -> Sequence[Bytes32]:
     depth = floorlog2(gindex)
-    num_extra = depth - len(branch)
+    num_extra = int(depth) - len(branch)
     return [Bytes32()] * num_extra + [*branch]
 ```
 
