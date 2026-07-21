@@ -1113,7 +1113,7 @@ def compute_start_slot_at_epoch(epoch: Epoch) -> Slot:
     """
     Return the start slot of ``epoch``.
     """
-    return Slot(Uint64(epoch) * Uint64(SLOTS_PER_EPOCH))
+    return Slot(epoch) * SLOTS_PER_EPOCH
 ```
 
 #### `compute_activation_exit_epoch`
@@ -1401,7 +1401,7 @@ def increase_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> 
     """
     Increase the validator balance at index ``index`` by ``delta``.
     """
-    state.balances[index] = Gwei(state.balances[index] + delta)
+    state.balances[index] += delta
 ```
 
 #### `decrease_balance`
@@ -1412,7 +1412,7 @@ def decrease_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> 
     Decrease the validator balance at index ``index`` by ``delta``, with underflow protection.
     """
     state.balances[index] = (
-        Gwei(0) if delta > state.balances[index] else Gwei(state.balances[index] - delta)
+        Gwei(0) if delta > state.balances[index] else state.balances[index] - delta
     )
 ```
 
@@ -1458,25 +1458,21 @@ def slash_validator(
     validator.withdrawable_epoch = max(
         validator.withdrawable_epoch, epoch + EPOCHS_PER_SLASHINGS_VECTOR
     )
-    state.slashings[epoch % EPOCHS_PER_SLASHINGS_VECTOR] = Gwei(
-        state.slashings[epoch % EPOCHS_PER_SLASHINGS_VECTOR] + validator.effective_balance
-    )
+    state.slashings[epoch % EPOCHS_PER_SLASHINGS_VECTOR] += validator.effective_balance
     decrease_balance(
         state,
         slashed_index,
-        Gwei(Uint64(validator.effective_balance) // MIN_SLASHING_PENALTY_QUOTIENT),
+        validator.effective_balance // Gwei(MIN_SLASHING_PENALTY_QUOTIENT),
     )
 
     # Apply proposer and whistleblower rewards
     proposer_index = get_beacon_proposer_index(state)
     if whistleblower_index is None:
         whistleblower_index = proposer_index
-    whistleblower_reward = Gwei(
-        Uint64(validator.effective_balance) // WHISTLEBLOWER_REWARD_QUOTIENT
-    )
-    proposer_reward = Gwei(Uint64(whistleblower_reward) // PROPOSER_REWARD_QUOTIENT)
+    whistleblower_reward = validator.effective_balance // Gwei(WHISTLEBLOWER_REWARD_QUOTIENT)
+    proposer_reward = whistleblower_reward // Gwei(PROPOSER_REWARD_QUOTIENT)
     increase_balance(state, proposer_index, proposer_reward)
-    increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
+    increase_balance(state, whistleblower_index, whistleblower_reward - proposer_reward)
 ```
 
 ## Genesis
@@ -1774,7 +1770,7 @@ def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
 
 ```python
 def get_proposer_reward(state: BeaconState, attesting_index: ValidatorIndex) -> Gwei:
-    return Gwei(Uint64(get_base_reward(state, attesting_index)) // PROPOSER_REWARD_QUOTIENT)
+    return get_base_reward(state, attesting_index) // Gwei(PROPOSER_REWARD_QUOTIENT)
 ```
 
 ```python
@@ -1877,10 +1873,8 @@ def get_inclusion_delay_deltas(state: BeaconState) -> Tuple[Sequence[Gwei], Sequ
             key=lambda a: a.inclusion_delay,
         )
         rewards[attestation.proposer_index] += get_proposer_reward(state, index)
-        max_attester_reward = Gwei(
-            get_base_reward(state, index) - get_proposer_reward(state, index)
-        )
-        rewards[index] += Gwei(Uint64(max_attester_reward) // Uint64(attestation.inclusion_delay))
+        max_attester_reward = get_base_reward(state, index) - get_proposer_reward(state, index)
+        rewards[index] += max_attester_reward // Gwei(attestation.inclusion_delay)
 
     # No penalties associated with inclusion delay
     penalties = [Gwei(0) for _ in range(len(state.validators))]
