@@ -1,42 +1,33 @@
 from typing import TypeVar
 
-from ssz.merkleization import hash_tree_root as _hash_tree_root
+from ssz.merkleization import hash_tree_root as hash_tree_root
+from ssz.ssz_base import SSZModel, SSZType
 
-from eth_consensus_specs.utils.ssz.ssz_typing import Bytes32, View
+V = TypeVar("V", bound=SSZType)
 
 
-def ssz_serialize(obj: View) -> bytes:
+def ssz_serialize(obj: SSZType) -> bytes:
     return obj.encode_bytes()
 
 
-def serialize(obj: View) -> bytes:
+def serialize(obj: SSZType) -> bytes:
     return ssz_serialize(obj)
 
 
-def ssz_deserialize(typ: type[View], data: bytes) -> View:
+def ssz_deserialize(typ: type[V], data: bytes) -> V:
     return typ.decode_bytes(data)
 
 
-def deserialize(typ: type[View], data: bytes) -> View:
+def deserialize(typ: type[V], data: bytes) -> V:
     return ssz_deserialize(typ, data)
 
 
-def hash_tree_root(obj: View) -> Bytes32:
-    # Wrap in the local Bytes32 so the result compares by value against raw bytes.
-    return Bytes32(_hash_tree_root(obj))
-
-
-def uint_to_bytes(n: View) -> bytes:
+def uint_to_bytes(n: SSZType) -> bytes:
     return serialize(n)
 
 
-V = TypeVar("V", bound=View)
-
-
 def copy(obj: V) -> V:
-    # SSZ values are immutable. Containers and collections are Pydantic models and
-    # expose model_copy; leaf values (uints, bytes, booleans) are returned as-is.
-    model_copy = getattr(obj, "model_copy", None)
-    if model_copy is not None:
-        return model_copy(deep=True)
+    # Models copy deeply; leaf values (uints, bytes, booleans) are immutable.
+    if isinstance(obj, SSZModel):
+        return obj.copy()
     return obj

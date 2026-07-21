@@ -186,7 +186,7 @@ def get_valid_proposer_slashing(
     if slashed_index is None:
         current_epoch = spec.get_current_epoch(state)
         slashed_index = spec.get_active_validator_indices(state, current_epoch)[-1]
-    privkey = pubkey_to_privkey[state.validators[slashed_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[slashed_index].pubkey)]
     if slot is None:
         slot = state.slot
 
@@ -321,7 +321,7 @@ def prepare_process_proposer_slashing(
         proposer_index_2 if proposer_index_2 is not None else effective_proposer_1
     )
 
-    privkey = pubkey_to_privkey[state.validators[effective_proposer_1].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[effective_proposer_1].pubkey)]
 
     # Build header 1
     effective_parent_root = parent_root if parent_root is not None else b"\x33" * 32
@@ -357,7 +357,7 @@ def prepare_process_proposer_slashing(
     if signed_2:
         # Use privkey for header_2's proposer (may be different if proposer_index_2 differs)
         if proposer_index_2 is not None and proposer_index_2 != effective_proposer_1:
-            privkey_2 = pubkey_to_privkey[state.validators[proposer_index_2].pubkey]
+            privkey_2 = pubkey_to_privkey[bytes(state.validators[proposer_index_2].pubkey)]
         else:
             privkey_2 = privkey
         signed_header_2 = sign_block_header(spec, state, header_2, privkey_2)

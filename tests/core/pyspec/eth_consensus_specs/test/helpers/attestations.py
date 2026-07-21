@@ -15,7 +15,6 @@ from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
 from eth_consensus_specs.utils import bls
-from eth_consensus_specs.utils.ssz.ssz_typing import Bitlist
 
 
 def run_attestation_processing(spec, state, attestation, valid=True):
@@ -228,9 +227,7 @@ def fill_aggregate_attestation(
         )
     else:
         committee_size = len(beacon_committee)
-        attestation.aggregation_bits = Bitlist[spec.MAX_VALIDATORS_PER_COMMITTEE].of(
-            *([0] * committee_size)
-        )
+        attestation.aggregation_bits = spec.AggregationBits.of(*([0] * committee_size))
 
     # fill in the `aggregation_bits`
     for i in range(len(beacon_committee)):
@@ -514,12 +511,10 @@ def cached_prepare_state_with_attestations(spec, state):
     key = (spec.fork, state.hash_tree_root())
     if key not in _prep_state_cache_dict:
         prepare_state_with_attestations(spec, state)
-        _prep_state_cache_dict[key] = (
-            state.get_backing()
-        )  # cache the tree structure, not the view wrapping it.
-
-    # Put the LRU cache result into the state view, as if we transitioned the original view
-    state.set_backing(_prep_state_cache_dict[key])
+        _prep_state_cache_dict[key] = state.copy()
+    else:
+        # Adopt the cached prepared state, as if we transitioned the original in place.
+        state.__dict__.update(_prep_state_cache_dict[key].copy().__dict__)
 
 
 def get_max_attestations(spec):

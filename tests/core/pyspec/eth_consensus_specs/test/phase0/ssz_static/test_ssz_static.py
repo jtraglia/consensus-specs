@@ -18,7 +18,7 @@ from eth_consensus_specs.utils.ssz.ssz_impl import (
     hash_tree_root,
     serialize,
 )
-from eth_consensus_specs.utils.ssz.ssz_typing import Container, ProgressiveContainer
+from ssz import Container
 
 MAX_BYTES_LENGTH = 1000
 MAX_LIST_LENGTH = 10
@@ -109,10 +109,9 @@ def _create_test_cases():
         return [
             name
             for (name, value) in getmembers(spec, isclass)
-            if issubclass(value, Container | ProgressiveContainer)
+            if issubclass(value, Container)
             # only the subclasses, not the imported base class
             and value != Container
-            and value != ProgressiveContainer
         ]
 
     def _get_ssz_types_to_specs_mapping() -> dict[str, list[str]]:

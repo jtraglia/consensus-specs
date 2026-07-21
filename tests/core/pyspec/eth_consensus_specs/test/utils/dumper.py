@@ -5,7 +5,8 @@ from ruamel.yaml import YAML
 from snappy import compress
 
 from eth_consensus_specs.test import context
-from eth_consensus_specs.utils.ssz.ssz_typing import boolean, uint
+from ssz.boolean import Boolean
+from ssz.uint import BaseUint
 
 
 def _add_basic_type_representers(yaml: YAML) -> None:
@@ -23,8 +24,8 @@ def _add_basic_type_representers(yaml: YAML) -> None:
     def _represent_boolean(self, data):
         return self.represent_bool(bool(data))
 
-    yaml.representer.add_multi_representer(uint, _represent_uint)
-    yaml.representer.add_multi_representer(boolean, _represent_boolean)
+    yaml.representer.add_multi_representer(BaseUint, _represent_uint)
+    yaml.representer.add_multi_representer(Boolean, _represent_boolean)
 
 
 def get_default_yaml():

@@ -1,39 +1,30 @@
 from typing import Any
 
+from ssz.bitfields import BaseBitlist, BaseBitvector
+from ssz.boolean import Boolean
+from ssz.byte_arrays import BaseByteList, BaseBytes
+from ssz.collections import List, Vector
+from ssz.container import Container
+from ssz.uint import BaseUint
+
 from eth_consensus_specs.utils.ssz.ssz_impl import deserialize, hash_tree_root
-from eth_consensus_specs.utils.ssz.ssz_typing import (
-    Bitlist,
-    Bitvector,
-    boolean,
-    byte,
-    ByteList,
-    ByteVector,
-    Container,
-    List,
-    ProgressiveBitlist,
-    ProgressiveList,
-    uint,
-    Union,
-    Vector,
-    View,
-)
 
 
 def decode(data: Any, typ):
-    if issubclass(typ, uint | boolean):
+    if issubclass(typ, BaseUint | Boolean):
         return typ(data)
-    elif issubclass(typ, Bitlist | ProgressiveBitlist | Bitvector) or (
-        issubclass(typ, ProgressiveList) and issubclass(typ.element_cls(), byte)
-    ):
+    elif issubclass(typ, BaseBitlist | BaseBitvector):
         return deserialize(typ, bytes.fromhex(data[2:]))
-    elif issubclass(typ, List | ProgressiveList | Vector):
-        return typ(decode(element, typ.element_cls()) for element in data)
-    elif issubclass(typ, ByteVector) or issubclass(typ, ByteList):
+    elif issubclass(typ, List | Vector):
+        return typ(data=(decode(element, typ.ELEMENT_TYPE) for element in data))
+    elif issubclass(typ, BaseBytes):
         return typ(bytes.fromhex(data[2:]))
+    elif issubclass(typ, BaseByteList):
+        return typ(data=bytes.fromhex(data[2:]))
     elif issubclass(typ, Container):
         temp = {}
-        for field_name, field_type in typ.fields().items():
-            temp[field_name] = decode(data[field_name], field_type)
+        for field_name, field in typ.model_fields.items():
+            temp[field_name] = decode(data[field_name], field.annotation)
             if field_name + "_hash_tree_root" in data:
                 assert (
                     data[field_name + "_hash_tree_root"][2:]
@@ -43,16 +34,5 @@ def decode(data: Any, typ):
         if "hash_tree_root" in data:
             assert data["hash_tree_root"][2:] == hash_tree_root(ret).hex()
         return ret
-    elif issubclass(typ, Union):
-        selector = int(data["selector"])
-        options = typ.options()
-        value_typ = options[selector]
-        value: View
-        if value_typ is None:  # handle the "nil" type case
-            assert data["value"] is None
-            value = None
-        else:
-            value = decode(data["value"], value_typ)
-        return typ(selector=selector, value=value)
     else:
         raise Exception(f"Type not recognized: data={data}, typ={typ}")

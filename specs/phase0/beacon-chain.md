@@ -662,6 +662,13 @@ class Eth1DataVotes(List[Eth1Data]):
     LIMIT = Uint64(EPOCHS_PER_ETH1_VOTING_PERIOD) * Uint64(SLOTS_PER_EPOCH)
 ```
 
+#### `DepositDataList`
+
+```python
+class DepositDataList(List[DepositData]):
+    LIMIT = Uint64(2) ** Uint64(DEPOSIT_CONTRACT_TREE_DEPTH)
+```
+
 #### `Validators`
 
 ```python
@@ -913,7 +920,7 @@ def is_valid_indexed_attestation(
     Check if ``indexed_attestation`` is not empty, has sorted and unique indices and has a valid aggregate signature.
     """
     # Verify indices are sorted and unique
-    indices = indexed_attestation.attesting_indices
+    indices = list(indexed_attestation.attesting_indices)
     if len(indices) == 0 or indices != sorted(set(indices)):
         return False
     # Verify aggregate signature
@@ -1470,9 +1477,7 @@ def initialize_beacon_state_from_eth1(
     # Process deposits
     leaves = [deposit.data for deposit in deposits]
     for index, deposit in enumerate(deposits):
-        deposit_data_list = List[DepositData, 2 ** int(DEPOSIT_CONTRACT_TREE_DEPTH)].of(
-            *leaves[: index + 1]
-        )
+        deposit_data_list = DepositDataList.of(*leaves[: index + 1])
         state.eth1_data.deposit_root = hash_tree_root(deposit_data_list)
         process_deposit(state, deposit)
 

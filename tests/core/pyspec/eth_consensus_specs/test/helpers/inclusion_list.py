@@ -3,7 +3,7 @@ from random import randbytes
 
 from eth_consensus_specs.test.helpers.keys import privkeys
 from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
-from eth_consensus_specs.utils.ssz.ssz_typing import Vector
+from ssz import Vector
 
 
 def get_empty_inclusion_list(spec, state, slot=None, validator_index=None):
@@ -17,7 +17,7 @@ def get_empty_inclusion_list(spec, state, slot=None, validator_index=None):
 
     committee = spec.get_inclusion_list_committee(state, slot)
     committee_root = hash_tree_root(
-        Vector[spec.ValidatorIndex, spec.INCLUSION_LIST_COMMITTEE_SIZE].of(**committee)
+        Vector[spec.ValidatorIndex, spec.INCLUSION_LIST_COMMITTEE_SIZE].of(*committee)
     )
 
     if validator_index is None:

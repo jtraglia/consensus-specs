@@ -15,12 +15,18 @@ from eth_consensus_specs.test.helpers.random import (
 from eth_consensus_specs.test.helpers.state import (
     next_epoch,
 )
-from eth_consensus_specs.utils.ssz.ssz_typing import Container, ProgressiveList, uint64
+from ssz import Container, List, Uint64
+
+
+class DeltaList(List[Uint64]):
+    """Per-validator reward or penalty amounts (VALIDATOR_REGISTRY_LIMIT)."""
+
+    LIMIT = Uint64(2**40)
 
 
 class Deltas(Container):
-    rewards: ProgressiveList[uint64]
-    penalties: ProgressiveList[uint64]
+    rewards: DeltaList
+    penalties: DeltaList
 
 
 def get_inactivity_penalty_quotient(spec):
@@ -323,13 +329,11 @@ def leaking(epochs=None):
             )
             if key not in _cache_dict:
                 transition_state_to_leak(spec, state, epochs=epochs)
-                _cache_dict[key] = (
-                    state.get_backing()
-                )  # cache the tree structure, not the view wrapping it.
+                _cache_dict[key] = state
 
             # Take an entry out of the LRU.
-            # No copy is necessary, as we wrap the immutable backing with a new view.
-            state = spec.BeaconState(backing=_cache_dict[key])
+            # Deep-copy so cached states are never polluted by test mutations.
+            state = _cache_dict[key].copy()
             return fn(*args, spec=spec, state=state, **kw)
 
         return entry

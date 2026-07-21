@@ -10,7 +10,7 @@ from eth_consensus_specs.test.helpers.forks import is_post_altair
 from eth_consensus_specs.test.helpers.voluntary_exits import get_unslashed_exited_validators
 from eth_consensus_specs.utils.hash_function import hash
 from eth_consensus_specs.utils.ssz.ssz_impl import uint_to_bytes
-from eth_consensus_specs.utils.ssz.ssz_typing import Bytes32, uint64
+from ssz import Bytes32, Uint64
 
 
 def get_balance(state, index):

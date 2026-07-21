@@ -30,10 +30,12 @@ from typing import (
 )
 
 from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root, copy, uint_to_bytes
-from eth_consensus_specs.utils.ssz.ssz_typing import (
-    View, Boolean, Container, List, Vector, Uint8, Uint32, Uint64, Uint256,
-    Bytes1, Bytes4, Bytes32, Bytes48, Bytes96, Bitlist, Bitvector)
-from eth_consensus_specs.utils.ssz.ssz_typing import boolean  # noqa: F401
+from eth_consensus_specs.utils.ssz.ssz_typing import Container
+from ssz import (
+    Boolean, List, Vector, Uint8, Uint32, Uint64, Uint256, Bytes4, Bytes32)
+from ssz.bitfields import BaseBitlist as Bitlist, BaseBitvector as Bitvector
+from ssz.byte_arrays import BaseBytes
+from ssz.ssz_base import SSZType
 from eth_consensus_specs.utils import bls
 from eth_consensus_specs.utils.hash_function import hash
 """
@@ -41,7 +43,19 @@ from eth_consensus_specs.utils.hash_function import hash
     @classmethod
     def preparations(cls) -> str:
         return """
-SSZObject = TypeVar('SSZObject', bound=View)
+SSZObject = TypeVar('SSZObject', bound=SSZType)
+
+
+class Bytes1(BaseBytes):
+    LENGTH = 1
+
+
+class Bytes48(BaseBytes):
+    LENGTH = 48
+
+
+class Bytes96(BaseBytes):
+    LENGTH = 96
 """
 
     @classmethod

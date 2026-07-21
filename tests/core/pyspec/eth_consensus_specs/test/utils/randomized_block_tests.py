@@ -27,7 +27,6 @@ from eth_consensus_specs.test.helpers.multi_operations import (
     get_random_sync_aggregate,
     prepare_state_and_get_random_deposits,
 )
-from eth_consensus_specs.test.helpers.payload_attestation import get_random_payload_attestations
 from eth_consensus_specs.test.helpers.random import (
     patch_state_to_non_leaking,
     randomize_state as randomize_state_helper,
@@ -341,6 +340,12 @@ def random_block_gloas(spec, state, signed_blocks, scenario_state, rng=None):
     block.body.signed_execution_payload_bid = _build_random_signed_bid(spec, state, block, rng)
 
     # Add payload_attestations
+    # Deferred import: the payload attestation helpers pull in gloas test modules,
+    # which are not importable until that fork is migrated.
+    from eth_consensus_specs.test.helpers.payload_attestation import (
+        get_random_payload_attestations,
+    )
+
     block.body.payload_attestations = get_random_payload_attestations(spec, state, rng)
 
     return block

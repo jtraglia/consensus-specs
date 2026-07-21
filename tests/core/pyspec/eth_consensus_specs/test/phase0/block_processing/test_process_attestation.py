@@ -20,7 +20,6 @@ from eth_consensus_specs.test.helpers.state import (
     next_slots,
     transition_to_slot_via_block,
 )
-from eth_consensus_specs.utils.ssz.ssz_typing import Bitlist
 
 
 @with_all_phases
@@ -367,7 +366,7 @@ def test_invalid_too_few_aggregation_bits(spec, state):
     attestation = get_valid_attestation(spec, state)
     next_slots(spec, state, spec.MIN_ATTESTATION_INCLUSION_DELAY)
 
-    attestation.aggregation_bits = Bitlist[spec.MAX_VALIDATORS_PER_COMMITTEE].of(
+    attestation.aggregation_bits = spec.AggregationBits.of(
         *([0b1] + [0b0] * (len(attestation.aggregation_bits) - 1))
     )
 

@@ -19,7 +19,6 @@ from eth_consensus_specs.test.helpers.constants import FULU, PHASE0
 from eth_consensus_specs.test.helpers.keys import privkeys, pubkeys
 from eth_consensus_specs.test.helpers.state import next_epoch
 from eth_consensus_specs.utils import bls
-from eth_consensus_specs.utils.ssz.ssz_typing import Bitlist
 
 
 def run_get_signature_test(
@@ -460,7 +459,7 @@ def test_get_aggregate_signature(spec, state):
         attestation_data.index,
     )
     committee_size = len(beacon_committee)
-    aggregation_bits = Bitlist[spec.MAX_VALIDATORS_PER_COMMITTEE].of(**([0] * committee_size))
+    aggregation_bits = spec.AggregationBits.of(*([0] * committee_size))
     for i, validator_index in enumerate(beacon_committee):
         bits = aggregation_bits.copy()
         bits[i] = True
