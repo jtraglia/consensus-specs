@@ -176,7 +176,7 @@ def test_missed_payload_next_block_with_withdrawals_satisfying_payload(spec, sta
     assert list(current_expected) != block_1_withdrawals
 
     # A payload with Block 1's stale withdrawals (W_1) is accepted
-    satisfying = spec.ProgressiveList[spec.Withdrawal].of(*block_1_withdrawals)
+    satisfying = spec.ProgressiveList[spec.Withdrawal](block_1_withdrawals)
     assert _attempt_payload_with_withdrawals(spec, state, satisfying)
 
 
@@ -202,7 +202,7 @@ def test_missed_payload_recovery_resumes_with_remaining_withdrawals(spec, state)
     signed_block_2 = state_transition_and_sign_block(spec, state, block_2)
 
     # Block 2 must still accept Block 1's stale withdrawals.
-    satisfying = spec.ProgressiveList[spec.Withdrawal].of(*block_1_withdrawals)
+    satisfying = spec.ProgressiveList[spec.Withdrawal](block_1_withdrawals)
     assert _attempt_payload_with_withdrawals(spec, state, satisfying)
 
     # Build Block 3 so block processing treats Block 2 as a FULL parent.
@@ -229,7 +229,7 @@ def test_missed_payload_recovery_resumes_with_remaining_withdrawals(spec, state)
     # Exactly two validators remained after Block 1's full payload-sized sweep.
     assert len(resumed_withdrawals) == 2
 
-    resumed = spec.ProgressiveList[spec.Withdrawal].of(*resumed_withdrawals)
+    resumed = spec.ProgressiveList[spec.Withdrawal](resumed_withdrawals)
     assert _attempt_payload_with_withdrawals(spec, state, resumed)
 
     # Once recovery resumes, Block 1's stale withdrawals must be rejected.
@@ -258,7 +258,7 @@ def test_missed_payload_recovery_resumes_without_remaining_withdrawals(spec, sta
     signed_block_2 = state_transition_and_sign_block(spec, state, block_2)
 
     # Block 2 must still accept Block 1's stale withdrawals.
-    satisfying = spec.ProgressiveList[spec.Withdrawal].of(*block_1_withdrawals)
+    satisfying = spec.ProgressiveList[spec.Withdrawal](block_1_withdrawals)
     assert _attempt_payload_with_withdrawals(spec, state, satisfying)
 
     # Build Block 3 so block processing treats Block 2 as a FULL parent.
@@ -316,7 +316,7 @@ def test_missed_payload_next_block_with_withdrawals_unsatisfying_payload(spec, s
     assert list(current_expected) != block_1_withdrawals
 
     # A payload with fresh withdrawals (not W_1) is rejected
-    unsatisfying = spec.ProgressiveList[spec.Withdrawal].of(*current_expected)
+    unsatisfying = spec.ProgressiveList[spec.Withdrawal](current_expected)
     assert not _attempt_payload_with_withdrawals(spec, state, unsatisfying)
 
 
@@ -345,7 +345,7 @@ def test_missed_payload_next_block_without_withdrawals_satisfying_payload(spec, 
     assert len(current_expected) == 0
 
     # Despite no current withdrawals, payload must include W_1 — and it's accepted
-    satisfying = spec.ProgressiveList[spec.Withdrawal].of(*block_1_withdrawals)
+    satisfying = spec.ProgressiveList[spec.Withdrawal](block_1_withdrawals)
     assert _attempt_payload_with_withdrawals(spec, state, satisfying)
 
 
@@ -866,7 +866,7 @@ def test_voluntary_exit_fails_after_parent_payload_withdrawal_request(spec, stat
     set_parent_block_full(spec, state)
     withdrawal_request = prepare_withdrawal_request(spec, state, validator_index)
     requests = spec.ExecutionRequests(
-        withdrawals=spec.ProgressiveList[spec.WithdrawalRequest].of(*[withdrawal_request]),
+        withdrawals=spec.ProgressiveList[spec.WithdrawalRequest]([withdrawal_request]),
     )
     state.latest_execution_payload_bid.execution_requests_root = spec.hash_tree_root(requests)
 

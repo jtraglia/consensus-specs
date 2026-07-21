@@ -1,13 +1,8 @@
 from typing import TypeVar
 
-from ssz.bitfields import BaseBitlist, BaseBitvector
-from ssz.byte_arrays import BaseByteList
-from ssz.collections import List as _List, Vector as _Vector
 from ssz.merkleization import hash_tree_root as _hash_tree_root
 
 from eth_consensus_specs.utils.ssz.ssz_typing import Bytes32, View
-
-_COLLECTION_BASES = (_List, _Vector, BaseBitlist, BaseBitvector, BaseByteList)
 
 
 def ssz_serialize(obj: View) -> bytes:
@@ -36,26 +31,6 @@ def uint_to_bytes(n: View) -> bytes:
 
 
 V = TypeVar("V", bound=View)
-
-
-def replace(obj: V, **changes: object) -> V:
-    """Return a copy of an SSZ container with the given fields replaced.
-
-    Each replacement value is coerced into its field's declared SSZ type, so raw
-    lists/ints/bytes may be passed directly. This is the functional counterpart to
-    in-place field assignment (`obj.field = value`).
-    """
-    fields = type(obj).model_fields
-    coerced: dict[str, object] = {}
-    for name, value in changes.items():
-        annotation = fields[name].annotation
-        if isinstance(value, annotation):
-            coerced[name] = value
-        elif issubclass(annotation, _COLLECTION_BASES):
-            coerced[name] = annotation(data=value)
-        else:
-            coerced[name] = annotation(value)
-    return obj.model_copy(update=coerced)
 
 
 def copy(obj: V) -> V:

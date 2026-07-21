@@ -250,7 +250,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_multiple_committees(spec, sta
     bits = [False] * spec.MAX_COMMITTEES_PER_SLOT
     bits[0] = True
     bits[1] = True
-    signed_agg.message.aggregate.committee_bits = spec.Bitvector[spec.MAX_COMMITTEES_PER_SLOT].of(
+    signed_agg.message.aggregate.committee_bits = spec.Bitvector[spec.MAX_COMMITTEES_PER_SLOT](
         *bits
     )
 
