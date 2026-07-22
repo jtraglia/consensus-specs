@@ -364,12 +364,10 @@ def combine_dicts[T](old_dict: dict[str, T], new_dict: dict[str, T]) -> dict[str
 
 ignored_dependencies = [
     "BaseBytes",
-    "bit",
     "Bitlist",
     "Bitvector",
-    "boolean",
     "Boolean",
-    "byte",
+    "Byte",
     "ByteList",
     "bytes",
     "Bytes1",

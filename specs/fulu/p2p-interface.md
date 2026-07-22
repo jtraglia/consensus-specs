@@ -222,10 +222,10 @@ communicate the custody group count.
 
 ```
 (
-  seq_number: uint64
+  seq_number: Uint64
   attnets: Bitvector[ATTESTATION_SUBNET_COUNT]
   syncnets: Bitvector[SYNC_COMMITTEE_SUBNET_COUNT]
-  custody_group_count: uint64 # cgc
+  custody_group_count: Uint64 # cgc
 )
 ```
 
@@ -561,7 +561,7 @@ Request Content:
 ```
 (
   start_slot: Slot
-  count: uint64
+  count: Uint64
   columns: List[ColumnIndex, NUMBER_OF_COLUMNS]
 )
 ```
@@ -753,7 +753,7 @@ Request Content:
 ```
 (
   beacon_root: Root
-  count: uint64
+  count: Uint64
 )
 ```
 
@@ -868,7 +868,7 @@ assigned any value other than `FAR_FUTURE_EPOCH`.
 
 | Key   | Value                                                                                                             |
 | ----- | ----------------------------------------------------------------------------------------------------------------- |
-| `cgc` | Custody group count, `uint64` big endian integer with no leading zero bytes (`0` is encoded as empty byte string) |
+| `cgc` | Custody group count, `Uint64` big endian integer with no leading zero bytes (`0` is encoded as empty byte string) |
 
 ##### Next fork digest
 

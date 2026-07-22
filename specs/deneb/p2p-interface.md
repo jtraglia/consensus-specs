@@ -772,8 +772,8 @@ Request Content:
 ```
 (
   start_slot: Slot
-  count: uint64
-  step: uint64 # Deprecated, must be set to 1
+  count: Uint64
+  step: Uint64 # Deprecated, must be set to 1
 )
 ```
 
@@ -850,7 +850,7 @@ Request Content:
 ```
 (
   start_slot: Slot
-  count: uint64
+  count: Uint64
 )
 ```
 

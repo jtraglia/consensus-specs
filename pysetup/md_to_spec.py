@@ -221,7 +221,6 @@ class MarkdownToSpec:
                 # Check for short type declarations
                 if value.startswith(
                     (
-                        "uint",
                         "Uint",
                         "Boolean",
                         "Bitlist",
