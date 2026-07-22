@@ -16,7 +16,8 @@ from marko.inline import CodeSpan
 
 from .typing import ProtocolDefinition, SpecObject, VariableDefinition
 
-# SSZ collection bases that a named type may subclass, e.g. `class Validators(List[Validator])`.
+# SSZ collection bases that a named type may subclass, e.g.
+# `class Validators(List[Validator])`.
 COLLECTION_BASE_CLASSES = {
     "List",
     "Vector",
@@ -185,8 +186,8 @@ class MarkdownToSpec:
         """
         class_name, parent_class = _get_class_info_from_ast(cls)
 
-        # Named SSZ collection types (e.g. `class Validators(List[Validator])`) are grouped
-        # together rather than each getting its own spec section, so skip the heading check.
+        # Named SSZ collection types (e.g. `class Validators(List[Validator])`)
+        # are grouped together, so skip the heading-consistency check.
         if parent_class in COLLECTION_BASE_CLASSES:
             self.spec["ssz_objects"][class_name] = source
             return
@@ -195,12 +196,9 @@ class MarkdownToSpec:
         if class_name != self.current_heading_name:
             raise Exception(f"class_name {class_name} != current_name {self.current_heading_name}")
 
-        if parent_class == "ProgressiveContainer":
-            source = re.sub(
-                r"^(.*ProgressiveContainer.*)$", r"\1  # type: ignore", source, flags=re.MULTILINE
-            )
-        else:
-            # Containers, and primitive fixed byte arrays the custom types build upon.
+        if parent_class != "ProgressiveContainer":
+            # Containers, plus the primitive fixed byte arrays that the custom
+            # types build upon.
             assert parent_class is None or parent_class in ("Container", "BaseBytes")
         self.spec["ssz_objects"][class_name] = source
 
@@ -278,7 +276,7 @@ class MarkdownToSpec:
             # It is a constant variable or a preset_dep_constant_vars
             else:
                 if name in ("ENDIANNESS", "KZG_ENDIANNESS"):
-                    # Deal with mypy Literal typing check
+                    # Annotate as Final so the value is treated as a Literal.
                     value_def = _parse_value(name, value, type_hint="Final")
                 if any(k in value for k in self.preset) or any(
                     k in value for k in self.spec["preset_dep_constant_vars"]
@@ -580,7 +578,7 @@ def _update_constant_vars_with_kzg_setups(
     preset_dep_constant_vars: dict[str, VariableDefinition],
     preset_name: str,
 ) -> None:
-    comment = "type: ignore[list-item]  # noqa: E501"
+    comment = "noqa: E501"
     kzg_setups = ALL_KZG_SETUPS[preset_name]
     setup_values = {
         "KZG_SETUP_G1_MONOMIAL": kzg_setups[0],

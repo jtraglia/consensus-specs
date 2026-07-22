@@ -9,7 +9,7 @@ from eth_consensus_specs.test.context import (
 
 def _run_compute_columns_for_custody_group(spec, rng, custody_group=None):
     if custody_group is None:
-        custody_group = rng.randint(0, spec.config.NUMBER_OF_CUSTODY_GROUPS - 1)
+        custody_group = rng.randint(0, int(spec.config.NUMBER_OF_CUSTODY_GROUPS) - 1)
 
     result = spec.compute_columns_for_custody_group(custody_group)
     yield "custody_group", "meta", custody_group
@@ -36,7 +36,7 @@ def test_compute_columns_for_custody_group__min_custody_group(spec):
 def test_compute_columns_for_custody_group__max_custody_group(spec):
     rng = random.Random(1111)
     yield from _run_compute_columns_for_custody_group(
-        spec, rng, custody_group=spec.config.NUMBER_OF_CUSTODY_GROUPS - 1
+        spec, rng, custody_group=int(spec.config.NUMBER_OF_CUSTODY_GROUPS) - 1
     )
 
 

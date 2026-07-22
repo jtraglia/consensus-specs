@@ -1262,6 +1262,7 @@ def get_seed(state: BeaconState, epoch: Epoch, domain_type: DomainType) -> Bytes
     """
     Return the seed at ``epoch``.
     """
+    # Avoid underflow
     mix = get_randao_mix(
         state,
         epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD - Epoch(1),
@@ -1724,14 +1725,13 @@ def weigh_justification_and_finalization(
     bits = state.justification_bits
     bits[1:] = bits[: JUSTIFICATION_BITS_LENGTH - Uint64(1)]
     bits[0] = 0b0
-    if Uint64(previous_epoch_target_balance) * Uint64(3) >= Uint64(total_active_balance) * Uint64(
-        2
-    ):
+    total_active = Uint64(total_active_balance)
+    if Uint64(previous_epoch_target_balance) * Uint64(3) >= total_active * Uint64(2):
         state.current_justified_checkpoint = Checkpoint(
             epoch=previous_epoch, root=get_block_root(state, previous_epoch)
         )
         bits[1] = 0b1
-    if Uint64(current_epoch_target_balance) * Uint64(3) >= Uint64(total_active_balance) * Uint64(2):
+    if Uint64(current_epoch_target_balance) * Uint64(3) >= total_active * Uint64(2):
         state.current_justified_checkpoint = Checkpoint(
             epoch=current_epoch, root=get_block_root(state, current_epoch)
         )
@@ -1808,9 +1808,8 @@ def get_attestation_component_deltas(
     attesting_balance = get_total_balance(state, unslashed_attesting_indices)
     for index in get_eligible_validator_indices(state):
         if index in unslashed_attesting_indices:
-            increment = Uint64(
-                EFFECTIVE_BALANCE_INCREMENT
-            )  # Factored out from balance totals to avoid Uint64 overflow
+            # Factored out from balance totals to avoid Uint64 overflow
+            increment = Uint64(EFFECTIVE_BALANCE_INCREMENT)
             if is_in_inactivity_leak(state):
                 # Since full base reward will be canceled out by inactivity penalty deltas,
                 # optimal participation receives full base reward compensation here.
@@ -2000,9 +1999,8 @@ def process_slashings(state: BeaconState) -> None:
             validator.slashed
             and epoch + EPOCHS_PER_SLASHINGS_VECTOR // Epoch(2) == validator.withdrawable_epoch
         ):
-            increment = Uint64(
-                EFFECTIVE_BALANCE_INCREMENT
-            )  # Factored out from penalty numerator to avoid Uint64 overflow
+            # Factored out from penalty numerator to avoid Uint64 overflow
+            increment = Uint64(EFFECTIVE_BALANCE_INCREMENT)
             penalty_numerator = (
                 Uint64(validator.effective_balance) // increment * adjusted_total_slashing_balance
             )
@@ -2138,9 +2136,9 @@ def process_randao(state: BeaconState, body: BeaconBlockBody) -> None:
 ```python
 def process_eth1_data(state: BeaconState, body: BeaconBlockBody) -> None:
     state.eth1_data_votes.append(body.eth1_data)
-    if Uint64(list(state.eth1_data_votes).count(body.eth1_data)) * Uint64(2) > Uint64(
-        EPOCHS_PER_ETH1_VOTING_PERIOD
-    ) * Uint64(SLOTS_PER_EPOCH):
+    vote_count = Uint64(list(state.eth1_data_votes).count(body.eth1_data))
+    threshold = Uint64(EPOCHS_PER_ETH1_VOTING_PERIOD) * Uint64(SLOTS_PER_EPOCH)
+    if vote_count * Uint64(2) > threshold:
         state.eth1_data = body.eth1_data
 ```
 

@@ -10,7 +10,7 @@ from .typing import (
 )
 
 # Only the active forks (see `ALL_PHASES` in constants) are imported. During the
-# eth-ssz-specs migration this is just phase0; disabled forks are not compiled.
+# eth-ssz-specs migration these are phase0 through fulu; disabled forks are not compiled.
 ALL_EXECUTABLE_SPEC_NAMES = ALL_PHASES
 
 # import the spec for each fork and preset

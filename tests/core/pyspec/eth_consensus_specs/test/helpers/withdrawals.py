@@ -186,6 +186,8 @@ def prepare_pending_withdrawal(
     if withdrawable_epoch is None:
         withdrawable_epoch = spec.get_current_epoch(state)
 
+    effective_balance = spec.Gwei(effective_balance)
+    amount = spec.Gwei(amount)
     balance = effective_balance + amount
     set_compounding_withdrawal_credential_with_balance(
         spec, state, validator_index, effective_balance, balance

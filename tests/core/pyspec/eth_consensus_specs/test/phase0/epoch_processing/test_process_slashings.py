@@ -50,7 +50,7 @@ def _compute_expected_correlation_penalty(
 ):
     if is_post_electra(spec):
         return (
-            (get_slashing_multiplier(spec) * total_slashed_balance)
+            (spec.Gwei(get_slashing_multiplier(spec)) * total_slashed_balance)
             // (total_balance // spec.EFFECTIVE_BALANCE_INCREMENT)
             * (effective_balance // spec.EFFECTIVE_BALANCE_INCREMENT)
         )

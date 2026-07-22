@@ -202,7 +202,7 @@ def set_some_pending_deposits(spec, state, rng):
         # Set ~1/10 validators to have pending deposits
         if rng.randrange(num_validators) < num_validators // 10:
             validator = state.validators[index]
-            amount = spec.EFFECTIVE_BALANCE_INCREMENT * rng.randint(1, 4)
+            amount = spec.EFFECTIVE_BALANCE_INCREMENT * spec.Gwei(rng.randint(1, 4))
 
             pending_deposit = spec.PendingDeposit(
                 pubkey=validator.pubkey,
@@ -240,8 +240,8 @@ def set_some_pending_partial_withdrawals(spec, state, rng):
             )
 
             # Create pending partial withdrawal
-            amount = spec.EFFECTIVE_BALANCE_INCREMENT * rng.randint(1, 4)
-            withdrawable_epoch = current_epoch + rng.randint(0, 3)
+            amount = spec.EFFECTIVE_BALANCE_INCREMENT * spec.Gwei(rng.randint(1, 4))
+            withdrawable_epoch = current_epoch + spec.Epoch(rng.randint(0, 3))
 
             pending_withdrawal = spec.PendingPartialWithdrawal(
                 validator_index=index,

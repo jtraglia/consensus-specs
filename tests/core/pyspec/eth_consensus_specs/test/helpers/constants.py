@@ -38,11 +38,11 @@ ALL_KNOWN_PHASES = (
     EIP8025,
     EIP8148,
 )
-# During the eth-ssz-specs migration, only phase0 is active. The other forks' spec and
-# test files are kept but are neither compiled nor collected (see the conftest, which
-# skips the disabled forks' test directories).
+# During the eth-ssz-specs migration, forks phase0 through fulu are active. The remaining
+# forks' spec and test files are kept but are neither compiled nor collected (see the
+# conftest, which skips the disabled forks' test directories).
 # TODO(ssz-specs migration): restore `ALL_PHASES = ALL_KNOWN_PHASES` as forks are migrated.
-ALL_PHASES = (PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA)
+ALL_PHASES = (PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU)
 DISABLED_PHASES = tuple(phase for phase in ALL_KNOWN_PHASES if phase not in ALL_PHASES)
 # The forks that have light client specs
 LIGHT_CLIENT_TESTING_FORKS = [item for item in MAINNET_FORKS if item != PHASE0] + [GLOAS]

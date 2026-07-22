@@ -20,7 +20,7 @@ from pysetup.helpers import (
 from pysetup.md_doc_paths import get_md_doc_paths, PREVIOUS_FORK_OF
 from pysetup.md_to_spec import MarkdownToSpec
 from pysetup.spec_builders import spec_builders
-from pysetup.typing import BuildTarget, SpecObject  # type: ignore[attr-defined]
+from pysetup.typing import BuildTarget, SpecObject
 
 
 def get_spec(
@@ -93,7 +93,7 @@ def build_spec(
     previous_fork = PREVIOUS_FORK_OF[fork]
     previous_docs = set(get_md_doc_paths(previous_fork).split()) if previous_fork else set()
     fork_defined_names: set[str] = set()
-    for source_file, file_spec in zip(source_files, all_specs):
+    for source_file, file_spec in zip(source_files, all_specs, strict=False):
         if str(source_file) in previous_docs:
             continue
         for field in (

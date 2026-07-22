@@ -10,6 +10,8 @@
 - [Configuration](#configuration)
   - [Custody setting](#custody-setting)
 - [Containers](#containers)
+  - [`DataColumn`](#datacolumn)
+  - [`KZGCommitmentsInclusionProof`](#kzgcommitmentsinclusionproof)
   - [`DataColumnSidecar`](#datacolumnsidecar)
   - [`MatrixEntry`](#matrixentry)
 - [Helpers](#helpers)
@@ -36,9 +38,9 @@
 
 | Name           | SSZ equivalent | Description                                           |
 | -------------- | -------------- | ----------------------------------------------------- |
-| `RowIndex`     | `uint64`       | Row identifier in the matrix of cells                 |
-| `ColumnIndex`  | `uint64`       | Column identifier in the matrix of cells              |
-| `CustodyIndex` | `uint64`       | Custody group identifier in the set of custody groups |
+| `RowIndex`     | `Uint64`       | Row identifier in the matrix of cells                 |
+| `ColumnIndex`  | `Uint64`       | Column identifier in the matrix of cells              |
+| `CustodyIndex` | `Uint64`       | Custody group identifier in the set of custody groups |
 
 ## Constants
 
@@ -49,15 +51,15 @@ specification.
 
 | Name          | Value                 |
 | ------------- | --------------------- |
-| `UINT256_MAX` | `uint256(2**256 - 1)` |
+| `UINT256_MAX` | `Uint256(2**256 - 1)` |
 
 ## Preset
 
 ### Size parameters
 
-| Name                | Value                        | Description                                   |
-| ------------------- | ---------------------------- | --------------------------------------------- |
-| `NUMBER_OF_COLUMNS` | `CELLS_PER_EXT_BLOB` (= 128) | Number of columns in the extended data matrix |
+| Name                | Value                                | Description                                   |
+| ------------------- | ------------------------------------ | --------------------------------------------- |
+| `NUMBER_OF_COLUMNS` | `Uint64(CELLS_PER_EXT_BLOB)` (= 128) | Number of columns in the extended data matrix |
 
 ## Configuration
 
@@ -65,22 +67,36 @@ specification.
 
 | Name                       | Value         | Description                                                                       |
 | -------------------------- | ------------- | --------------------------------------------------------------------------------- |
-| `SAMPLES_PER_SLOT`         | `uint64(8)`   | Minimum number of samples for an honest node                                      |
-| `NUMBER_OF_CUSTODY_GROUPS` | `uint64(128)` | Number of custody groups available for nodes to custody                           |
-| `CUSTODY_REQUIREMENT`      | `uint64(4)`   | Minimum number of custody groups an honest node custodies and serves samples from |
+| `SAMPLES_PER_SLOT`         | `Uint64(8)`   | Minimum number of samples for an honest node                                      |
+| `NUMBER_OF_CUSTODY_GROUPS` | `Uint64(128)` | Number of custody groups available for nodes to custody                           |
+| `CUSTODY_REQUIREMENT`      | `Uint64(4)`   | Minimum number of custody groups an honest node custodies and serves samples from |
 
 ## Containers
+
+### `DataColumn`
+
+```python
+class DataColumn(List[Cell]):
+    LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
+```
+
+### `KZGCommitmentsInclusionProof`
+
+```python
+class KZGCommitmentsInclusionProof(Vector[Bytes32]):
+    LENGTH = KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH
+```
 
 ### `DataColumnSidecar`
 
 ```python
 class DataColumnSidecar(Container):
     index: ColumnIndex
-    column: List[Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK]
-    kzg_commitments: List[KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK]
-    kzg_proofs: List[KZGProof, MAX_BLOB_COMMITMENTS_PER_BLOCK]
+    column: DataColumn
+    kzg_commitments: BlobKZGCommitments
+    kzg_proofs: KZGProofs
     signed_block_header: SignedBeaconBlockHeader
-    kzg_commitments_inclusion_proof: Vector[Bytes32, KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH]
+    kzg_commitments_inclusion_proof: KZGCommitmentsInclusionProof
 ```
 
 ### `MatrixEntry`
@@ -98,14 +114,14 @@ class MatrixEntry(Container):
 ### `get_custody_groups`
 
 ```python
-def get_custody_groups(node_id: NodeID, custody_group_count: uint64) -> Sequence[CustodyIndex]:
+def get_custody_groups(node_id: NodeID, custody_group_count: Uint64) -> Sequence[CustodyIndex]:
     assert custody_group_count <= NUMBER_OF_CUSTODY_GROUPS
 
     # Skip computation if all groups are custodied
     if custody_group_count == NUMBER_OF_CUSTODY_GROUPS:
         return [CustodyIndex(i) for i in range(NUMBER_OF_CUSTODY_GROUPS)]
 
-    current_id = uint256(node_id)
+    current_id = Uint256(node_id)
     custody_groups: List[CustodyIndex] = []
     while len(custody_groups) < custody_group_count:
         custody_group = CustodyIndex(
@@ -115,9 +131,9 @@ def get_custody_groups(node_id: NodeID, custody_group_count: uint64) -> Sequence
             custody_groups.append(custody_group)
         if current_id == UINT256_MAX:
             # Overflow prevention
-            current_id = uint256(0)
+            current_id = Uint256(0)
         else:
-            current_id += 1
+            current_id += Uint256(1)
 
     assert len(custody_groups) == len(set(custody_groups))
     return sorted(custody_groups)
@@ -130,7 +146,8 @@ def compute_columns_for_custody_group(custody_group: CustodyIndex) -> Sequence[C
     assert custody_group < NUMBER_OF_CUSTODY_GROUPS
     columns_per_group = NUMBER_OF_COLUMNS // NUMBER_OF_CUSTODY_GROUPS
     return [
-        ColumnIndex(NUMBER_OF_CUSTODY_GROUPS * i + custody_group) for i in range(columns_per_group)
+        ColumnIndex(NUMBER_OF_CUSTODY_GROUPS * Uint64(i) + Uint64(custody_group))
+        for i in range(columns_per_group)
     ]
 ```
 
@@ -163,7 +180,7 @@ def compute_matrix(blobs: Sequence[Blob]) -> Sequence[MatrixEntry]:
 
 ```python
 def recover_matrix(
-    partial_matrix: Sequence[MatrixEntry], blob_count: uint64
+    partial_matrix: Sequence[MatrixEntry], blob_count: Uint64
 ) -> Sequence[MatrixEntry]:
     """
     Recover the full, flattened sequence of matrix entries.

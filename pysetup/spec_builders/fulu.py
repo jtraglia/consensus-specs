@@ -26,7 +26,7 @@ class PolynomialCoeff(list):
 class Coset(list):
     def __init__(self, coeffs: Optional[Sequence[BLSFieldElement]] = None):
         if coeffs is None:
-            coeffs = [BLSFieldElement(0)] * FIELD_ELEMENTS_PER_CELL
+            coeffs = [BLSFieldElement(0)] * int(FIELD_ELEMENTS_PER_CELL)
         if len(coeffs) != FIELD_ELEMENTS_PER_CELL:
             raise ValueError("expected FIELD_ELEMENTS_PER_CELL coeffs")
         super().__init__(coeffs)
@@ -35,7 +35,7 @@ class Coset(list):
 class CosetEvals(list):
     def __init__(self, evals: Optional[Sequence[BLSFieldElement]] = None):
         if evals is None:
-            evals = [BLSFieldElement(0)] * FIELD_ELEMENTS_PER_CELL
+            evals = [BLSFieldElement(0)] * int(FIELD_ELEMENTS_PER_CELL)
         if len(evals) != FIELD_ELEMENTS_PER_CELL:
             raise ValueError("expected FIELD_ELEMENTS_PER_CELL coeffs")
         super().__init__(evals)

@@ -898,9 +898,8 @@ def on_tick(store: Store, time: Uint64) -> None:
     # to ensure that every previous slot is processed with ``on_tick_per_slot``
     tick_slot = (time - store.genesis_time) * Uint64(1000) // SLOT_DURATION_MS
     while get_current_slot(store) < tick_slot:
-        previous_time = store.genesis_time + Uint64(
-            get_current_slot(store) + Slot(1)
-        ) * SLOT_DURATION_MS // Uint64(1000)
+        next_slot = get_current_slot(store) + Slot(1)
+        previous_time = store.genesis_time + Uint64(next_slot) * SLOT_DURATION_MS // Uint64(1000)
         on_tick_per_slot(store, previous_time)
     on_tick_per_slot(store, time)
 ```

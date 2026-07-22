@@ -75,9 +75,8 @@ def _get_sync_committee_signature(
     index_in_subcommittee,
 ):
     subcommittee_size = spec.SYNC_COMMITTEE_SIZE // spec.SYNC_COMMITTEE_SUBNET_COUNT
-    sync_committee_index = spec.Uint64(subcommittee_index) * subcommittee_size + spec.Uint64(
-        index_in_subcommittee
-    )
+    base_index = spec.Uint64(subcommittee_index) * subcommittee_size
+    sync_committee_index = base_index + spec.Uint64(index_in_subcommittee)
     pubkey = state.current_sync_committee.pubkeys[sync_committee_index]
     privkey = pubkey_to_privkey[bytes(pubkey)]
 

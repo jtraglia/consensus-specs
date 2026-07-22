@@ -69,7 +69,7 @@ def test_gossip_beacon_block__valid_at_blob_parameters_limit(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         block_payload_statuses={},
     )
     assert result == "valid"

@@ -132,7 +132,7 @@ def prepare_state_and_block(
             keypair_index,
             # use min activation balance
             spec.MIN_ACTIVATION_BALANCE,
-            first_deposit_request_index + offset,
+            int(first_deposit_request_index) + offset,
             signed=True,
         )
         deposit_requests.append(deposit_request)
@@ -161,7 +161,7 @@ def test_deposit_transition__start_index_is_set(spec, state):
         state,
         deposit_cnt=0,
         deposit_request_cnt=2,
-        first_deposit_request_index=state.eth1_data.deposit_count + 11,
+        first_deposit_request_index=state.eth1_data.deposit_count + spec.Uint64(11),
     )
 
     yield from run_deposit_transition_block(spec, state, block)
@@ -196,7 +196,7 @@ def test_deposit_transition__process_max_eth1_deposits(spec, state):
         state,
         deposit_cnt=spec.MAX_DEPOSITS,
         deposit_request_cnt=1,
-        first_deposit_request_index=spec.MAX_DEPOSITS + 1,
+        first_deposit_request_index=spec.MAX_DEPOSITS + spec.Uint64(1),
         deposit_requests_start_index=spec.MAX_DEPOSITS,
         eth1_data_deposit_count=23,
     )
@@ -265,7 +265,7 @@ def test_deposit_transition__invalid_eth1_deposits_overlap_in_protocol_deposits(
         deposit_cnt=spec.MAX_DEPOSITS,
         deposit_request_cnt=1,
         first_deposit_request_index=spec.MAX_DEPOSITS,
-        deposit_requests_start_index=spec.MAX_DEPOSITS - 1,
+        deposit_requests_start_index=spec.MAX_DEPOSITS - spec.Uint64(1),
         eth1_data_deposit_count=23,
     )
 

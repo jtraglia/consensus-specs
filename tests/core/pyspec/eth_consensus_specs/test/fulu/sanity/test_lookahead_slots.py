@@ -41,13 +41,13 @@ def test_effective_decrease_balance_updates_lookahead(spec, state):
     pre_eb = state.validators[validator_change_index].effective_balance
 
     # Transition to the last slot of the epoch
-    slot = state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
+    slot = state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - spec.Slot(1)
     transition_to(spec, state, slot)
 
     # Do the epoch transition that should change the validator balance.
     yield "pre", state
     yield "slots", 1
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
     yield "post", state
 
     post_eb = state.validators[validator_change_index].effective_balance

@@ -699,7 +699,8 @@ def get_balance_churn_limit(state: BeaconState) -> Gwei:
     Return the churn limit for the current epoch.
     """
     churn = max(
-        MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA, get_total_active_balance(state) // Gwei(CHURN_LIMIT_QUOTIENT)
+        MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA,
+        get_total_active_balance(state) // Gwei(CHURN_LIMIT_QUOTIENT),
     )
     return churn - churn % EFFECTIVE_BALANCE_INCREMENT
 ```
@@ -875,7 +876,8 @@ def compute_exit_epoch_and_update_churn(state: BeaconState, exit_balance: Gwei) 
     # Exit doesn't fit in the current earliest epoch.
     if exit_balance > exit_balance_to_consume:
         balance_to_process = exit_balance - exit_balance_to_consume
-        additional_epochs = Uint64(balance_to_process - Gwei(1)) // Uint64(per_epoch_churn) + Uint64(1)
+        full_epochs = Uint64(balance_to_process - Gwei(1)) // Uint64(per_epoch_churn)
+        additional_epochs = full_epochs + Uint64(1)
         earliest_exit_epoch += Epoch(additional_epochs)
         exit_balance_to_consume += Gwei(additional_epochs) * per_epoch_churn
 
@@ -905,10 +907,8 @@ def compute_consolidation_epoch_and_update_churn(
     # Consolidation doesn't fit in the current earliest epoch.
     if consolidation_balance > consolidation_balance_to_consume:
         balance_to_process = consolidation_balance - consolidation_balance_to_consume
-        additional_epochs = (
-            Uint64(balance_to_process - Gwei(1)) // Uint64(per_epoch_consolidation_churn)
-            + Uint64(1)
-        )
+        full_epochs = Uint64(balance_to_process - Gwei(1)) // Uint64(per_epoch_consolidation_churn)
+        additional_epochs = full_epochs + Uint64(1)
         earliest_consolidation_epoch += Epoch(additional_epochs)
         consolidation_balance_to_consume += Gwei(additional_epochs) * per_epoch_consolidation_churn
 
@@ -953,12 +953,11 @@ def slash_validator(
     if whistleblower_index is None:
         whistleblower_index = proposer_index
     # [Modified in Electra:EIP7251]
-    whistleblower_reward = Gwei(
-        validator.effective_balance // WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA
-    )
-    proposer_reward = Gwei(whistleblower_reward * PROPOSER_WEIGHT // WEIGHT_DENOMINATOR)
+    whistleblower_reward_quotient = Gwei(WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA)
+    whistleblower_reward = validator.effective_balance // whistleblower_reward_quotient
+    proposer_reward = whistleblower_reward * Gwei(PROPOSER_WEIGHT) // Gwei(WEIGHT_DENOMINATOR)
     increase_balance(state, proposer_index, proposer_reward)
-    increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
+    increase_balance(state, whistleblower_index, whistleblower_reward - proposer_reward)
 ```
 
 ## Beacon chain state transition function
@@ -1035,9 +1034,8 @@ def process_slashings(state: BeaconState) -> None:
         Uint64(sum(state.slashings, Gwei(0))) * PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX,
         Uint64(total_balance),
     )
-    increment = Uint64(
-        EFFECTIVE_BALANCE_INCREMENT
-    )  # Factored out from total balance to avoid Uint64 overflow
+    # Factored out from total balance to avoid Uint64 overflow
+    increment = Uint64(EFFECTIVE_BALANCE_INCREMENT)
     penalty_per_effective_balance_increment = adjusted_total_slashing_balance // (
         Uint64(total_balance) // increment
     )
@@ -1143,7 +1141,9 @@ def process_pending_deposits(state: BeaconState) -> None:
         # Regardless of how the deposit was handled, we move on in the queue.
         next_deposit_index += 1
 
-    state.pending_deposits = list(state.pending_deposits[next_deposit_index:]) + deposits_to_postpone
+    state.pending_deposits = (
+        list(state.pending_deposits[next_deposit_index:]) + deposits_to_postpone
+    )
 
     # Accumulate churn only if the churn limit has been hit.
     if is_churn_limit_reached:
@@ -1645,20 +1645,20 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     else:
         epoch_participation = state.previous_epoch_participation
 
-    proposer_reward_numerator = 0
+    proposer_reward_numerator = Gwei(0)
     for index in get_attesting_indices(state, attestation):
         for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
             if flag_index in participation_flag_indices and not has_flag(
                 epoch_participation[index], flag_index
             ):
                 epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
-                proposer_reward_numerator += get_base_reward(state, index) * weight
+                proposer_reward_numerator += get_base_reward(state, index) * Gwei(weight)
 
     # Reward proposer
     proposer_reward_denominator = (
         (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR // PROPOSER_WEIGHT
     )
-    proposer_reward = Gwei(proposer_reward_numerator // proposer_reward_denominator)
+    proposer_reward = proposer_reward_numerator // Gwei(proposer_reward_denominator)
     increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
 ```
 
@@ -1781,7 +1781,7 @@ def process_deposit(state: BeaconState, deposit: Deposit) -> None:
     )
 
     # Deposits must be processed in order
-    state.eth1_deposit_index += 1
+    state.eth1_deposit_index += Uint64(1)
 
     # [Modified in Electra:EIP7251]
     apply_deposit(
@@ -1941,7 +1941,10 @@ def is_valid_switch_to_compounding_request(
     source_validator = state.validators[ValidatorIndex(validator_pubkeys.index(source_pubkey))]
 
     # Verify request has been authorized
-    if ExecutionAddress(source_validator.withdrawal_credentials[12:]) != consolidation_request.source_address:
+    if (
+        ExecutionAddress(source_validator.withdrawal_credentials[12:])
+        != consolidation_request.source_address
+    ):
         return False
 
     # Verify source withdrawal credentials
@@ -1999,7 +2002,8 @@ def process_consolidation_request(
     # Verify source withdrawal credentials
     has_correct_credential = has_execution_withdrawal_credential(source_validator)
     is_correct_source_address = (
-        ExecutionAddress(source_validator.withdrawal_credentials[12:]) == consolidation_request.source_address
+        ExecutionAddress(source_validator.withdrawal_credentials[12:])
+        == consolidation_request.source_address
     )
     if not (has_correct_credential and is_correct_source_address):
         return

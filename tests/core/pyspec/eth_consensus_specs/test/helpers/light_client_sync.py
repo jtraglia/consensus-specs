@@ -230,9 +230,7 @@ def run_lc_sync_test_single_fork(spec, phases, state, fork):
 
     # Jump to two slots before fork
     fork_epoch = getattr(phases[fork].config, fork.upper() + "_FORK_EPOCH")
-    transition_to(
-        spec, state, spec.compute_start_slot_at_epoch(fork_epoch) - spec.Slot(4)
-    )
+    transition_to(spec, state, spec.compute_start_slot_at_epoch(fork_epoch) - spec.Slot(4))
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )

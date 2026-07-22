@@ -45,7 +45,7 @@ def test_compute_matrix(spec):
             extended_blob.extend(spec.cell_to_coset_evals(entry.cell))
         blob_part = extended_blob[0 : len(extended_blob) // 2]
         blob = b"".join([spec.bls_field_to_bytes(x) for x in blob_part])
-        assert blob == input_blobs[blob_index]
+        assert spec.Blob(blob) == input_blobs[blob_index]
 
 
 @with_fulu_and_later

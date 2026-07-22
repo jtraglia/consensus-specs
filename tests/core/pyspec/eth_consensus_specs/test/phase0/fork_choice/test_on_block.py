@@ -79,9 +79,8 @@ def test_basic(spec, state):
     check_head_against_root(spec, store, hash_tree_root(signed_block.message))
 
     # On receiving a block of next epoch
-    store.time = current_time + spec.config.SLOT_DURATION_MS * spec.Uint64(
-        spec.SLOTS_PER_EPOCH
-    ) // spec.Uint64(1000)
+    epoch_duration_ms = spec.config.SLOT_DURATION_MS * spec.Uint64(spec.SLOTS_PER_EPOCH)
+    store.time = current_time + epoch_duration_ms // spec.Uint64(1000)
     block = build_empty_block(spec, state, state.slot + spec.SLOTS_PER_EPOCH)
     signed_block = state_transition_and_sign_block(spec, state, block)
     yield from tick_and_add_block(spec, store, signed_block, test_steps)
@@ -584,9 +583,8 @@ def test_proposer_boost(spec, state):
     signed_block = state_transition_and_sign_block(spec, state, block)
 
     # Process block on timely arrival at start of boost interval
-    time = store.genesis_time + spec.Uint64(
-        block.slot
-    ) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+    tick_slot = spec.Uint64(block.slot)
+    time = store.genesis_time + tick_slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
     on_tick_and_append_step(spec, store, time, test_steps)
     yield from add_block(spec, store, signed_block, test_steps)
     assert store.proposer_boost_root == spec.hash_tree_root(block)

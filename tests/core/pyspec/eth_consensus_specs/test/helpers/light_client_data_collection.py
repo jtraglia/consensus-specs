@@ -468,9 +468,8 @@ def _process_head_change_for_light_client(test, spec, head_bid, old_finalized_bi
     low_period = spec.compute_sync_committee_period_at_slot(low_slot)
     bid = head_bid
     for period in reversed(range(low_period, int(head_period) + 1)):
-        period_end_slot = compute_start_slot_at_sync_committee_period(spec, period + 1) - spec.Slot(
-            1
-        )
+        period_start_slot = compute_start_slot_at_sync_committee_period(spec, period + 1)
+        period_end_slot = period_start_slot - spec.Slot(1)
         bid = get_ancestor_of_block_id(test, bid, period_end_slot)
         if bid is None or bid.slot < low_slot:
             break

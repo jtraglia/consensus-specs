@@ -117,9 +117,8 @@ def test_transition_attestation_from_previous_fork_with_new_range(
     current_epoch = post_spec.get_current_epoch(state)
     assert current_epoch == fork_epoch
     # Transition to second to last slot in `fork_epoch`
-    penultimate_slot = post_spec.compute_start_slot_at_epoch(
-        current_epoch + post_spec.Epoch(1)
-    ) - post_spec.Slot(2)
+    next_epoch_start = post_spec.compute_start_slot_at_epoch(current_epoch + post_spec.Epoch(1))
+    penultimate_slot = next_epoch_start - post_spec.Slot(2)
     transition_to(post_spec, state, penultimate_slot)
 
     # Ensure the new state is in the increased EIP-7045 slot inclusion range

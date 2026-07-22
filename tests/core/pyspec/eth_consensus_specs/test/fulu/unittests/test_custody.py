@@ -57,7 +57,7 @@ def test_get_custody_columns_maximum_groups(spec):
 @single_phase
 def test_get_custody_columns_custody_size_more_than_number_of_groups(spec):
     node_id = 1
-    custody_group_count = spec.config.NUMBER_OF_CUSTODY_GROUPS + 1
+    custody_group_count = int(spec.config.NUMBER_OF_CUSTODY_GROUPS) + 1
     expect_assertion_error(lambda: spec.get_custody_groups(node_id, custody_group_count))
 
 

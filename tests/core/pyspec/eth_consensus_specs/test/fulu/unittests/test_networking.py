@@ -146,7 +146,7 @@ def test_verify_data_column_sidecar__invalid_kzg_commitments_over_max_blobs(spec
     epoch = spec.compute_epoch_at_slot(slot)
     max_blobs = spec.get_blob_parameters(epoch).max_blobs_per_block
 
-    for _ in range(max_blobs - len(sidecar.kzg_commitments) + 1):
+    for _ in range(int(max_blobs) - len(sidecar.kzg_commitments) + 1):
         sidecar.kzg_commitments.append(sidecar.kzg_commitments[0])
     assert len(sidecar.kzg_commitments) > max_blobs
 
@@ -290,7 +290,9 @@ def test_get_validators_custody_requirement__multiple_validators(spec, state):
     result = spec.get_validators_custody_requirement(state, validator_indices)
 
     # Calculate expected: total_balance // BALANCE_PER_ADDITIONAL_CUSTODY_GROUP
-    total_balance = sum(state.validators[i].effective_balance for i in validator_indices)
+    total_balance = sum(
+        (state.validators[i].effective_balance for i in validator_indices), spec.Gwei(0)
+    )
     expected_count = total_balance // spec.config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP
     expected = min(
         max(expected_count, spec.config.VALIDATOR_CUSTODY_REQUIREMENT),
@@ -307,20 +309,22 @@ def _run_get_validators_custody_requirement__maximum(spec, state, validator_indi
             (
                 (
                     spec.config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP
-                    * spec.config.NUMBER_OF_CUSTODY_GROUPS
+                    * spec.Gwei(spec.config.NUMBER_OF_CUSTODY_GROUPS)
                 )
-                // len(validator_indices)
+                // spec.Gwei(len(validator_indices))
             )
             + spec.config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP
-            + 1
+            + spec.Gwei(1)
         )
 
     # Check here that it is
     total_node_balance = sum(
-        state.validators[index].effective_balance for index in validator_indices
+        (state.validators[index].effective_balance for index in validator_indices),
+        spec.Gwei(0),
     )
     assert total_node_balance > (
-        spec.config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP * spec.config.NUMBER_OF_CUSTODY_GROUPS
+        spec.config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP
+        * spec.Gwei(spec.config.NUMBER_OF_CUSTODY_GROUPS)
     )
     count = total_node_balance // spec.config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP
     assert count > spec.config.NUMBER_OF_CUSTODY_GROUPS
@@ -363,16 +367,19 @@ def _run_get_validators_custody_requirement__minimum(spec, state, validator_indi
     # This will force count to be more than NUMBER_OF_CUSTODY_GROUPS
     for validator_index in validator_indices:
         state.validators[validator_index].effective_balance = (
-            (spec.config.VALIDATOR_CUSTODY_REQUIREMENT * spec.config.NUMBER_OF_CUSTODY_GROUPS)
+            int(spec.config.VALIDATOR_CUSTODY_REQUIREMENT)
+            * int(spec.config.NUMBER_OF_CUSTODY_GROUPS)
             // len(validator_indices)
         ) - 1
 
     # Check here that it is
     total_node_balance = sum(
-        state.validators[index].effective_balance for index in validator_indices
+        (state.validators[index].effective_balance for index in validator_indices),
+        spec.Gwei(0),
     )
     assert total_node_balance < (
-        spec.config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP * spec.config.VALIDATOR_CUSTODY_REQUIREMENT
+        spec.config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP
+        * spec.Gwei(spec.config.VALIDATOR_CUSTODY_REQUIREMENT)
     )
     count = total_node_balance // spec.config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP
     assert count < spec.config.VALIDATOR_CUSTODY_REQUIREMENT

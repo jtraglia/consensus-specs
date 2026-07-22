@@ -90,7 +90,7 @@ def test_process_deposit_request_greater_than_max_effective_balance_compounding(
 @spec_state_test
 def test_process_deposit_request_top_up_min_activation(spec, state):
     validator_index = 0
-    amount = spec.MIN_ACTIVATION_BALANCE // 4
+    amount = spec.MIN_ACTIVATION_BALANCE // spec.Gwei(4)
     deposit_request = prepare_deposit_request(spec, validator_index, amount, signed=True)
 
     state.balances[validator_index] = spec.MIN_ACTIVATION_BALANCE
@@ -108,7 +108,7 @@ def test_process_deposit_request_top_up_still_less_than_min_activation(spec, sta
     amount = spec.EFFECTIVE_BALANCE_INCREMENT
     deposit_request = prepare_deposit_request(spec, validator_index, amount, signed=True)
 
-    balance = 20 * spec.EFFECTIVE_BALANCE_INCREMENT
+    balance = spec.Gwei(20) * spec.EFFECTIVE_BALANCE_INCREMENT
     assert balance < spec.MIN_ACTIVATION_BALANCE
     state.balances[validator_index] = balance
     state.validators[validator_index].effective_balance = balance
@@ -122,7 +122,7 @@ def test_process_deposit_request_top_up_still_less_than_min_activation(spec, sta
 @spec_state_test
 def test_process_deposit_request_top_up_max_effective_balance_compounding(spec, state):
     validator_index = 0
-    amount = spec.MIN_ACTIVATION_BALANCE // 4
+    amount = spec.MIN_ACTIVATION_BALANCE // spec.Gwei(4)
     withdrawal_credentials = (
         spec.COMPOUNDING_WITHDRAWAL_PREFIX
         + b"\x00" * 11  # specified 0s
@@ -162,7 +162,7 @@ def test_process_deposit_request_invalid_sig(spec, state):
 @always_bls
 def test_process_deposit_request_top_up_invalid_sig(spec, state):
     validator_index = 0
-    amount = spec.MIN_ACTIVATION_BALANCE // 4
+    amount = spec.MIN_ACTIVATION_BALANCE // spec.Gwei(4)
     deposit_request = prepare_deposit_request(spec, validator_index, amount)
 
     state.balances[validator_index] = spec.MIN_ACTIVATION_BALANCE

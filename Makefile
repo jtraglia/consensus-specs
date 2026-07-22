@@ -9,6 +9,7 @@ ALL_EXECUTABLE_SPEC_NAMES = \
 	capella   \
 	deneb     \
 	electra   \
+	fulu
 
 # A list of fake targets.
 .PHONY: \
@@ -90,7 +91,7 @@ help-verbose:
 	@echo "    - mdformat: Formats markdown files"
 	@echo "    - codespell: Checks for spelling mistakes"
 	@echo "    - ruff: Python linter and formatter"
-	@echo "    - mypy: Static type checker for Python"
+	@echo "    - ty: Static type checker for Python"
 	@echo "    - Fork comments validation (scripts/check_fork_comments.py)"
 	@echo "    - Markdown headings validation (scripts/check_markdown_headings.py)"
 	@echo "    - Markdown note style fix (scripts/fix_note_style.py)"
@@ -179,6 +180,7 @@ PYSPEC_DIR = $(TEST_LIBS_DIR)/pyspec
 _pyspec: MAYBE_VERBOSE := $(if $(filter true,$(verbose)),--verbose)
 _pyspec: _sync
 	@$(UV_RUN) python -m pysetup.generate_specs --all-forks $(MAYBE_VERBOSE)
+	@$(UV_RUN) python -m pysetup.verify_type_inheritance
 
 ###############################################################################
 # Testing
@@ -254,8 +256,10 @@ serve_docs: _pyspec _copy_docs
 LINT_DIFF_BEFORE := .lint_diff_before
 LINT_DIFF_AFTER := .lint_diff_after
 MARKDOWN_FILES := $(shell find $(CURDIR) -name '*.md' -not -path '$(CURDIR)/.git/*' -not -path '$(CURDIR)/.venv/*')
-MYPY_PACKAGE_BASE := $(subst /,.,$(PYSPEC_DIR:$(CURDIR)/%=%))
-MYPY_SCOPE := $(foreach S,$(ALL_EXECUTABLE_SPEC_NAMES), -p $(MYPY_PACKAGE_BASE).eth_consensus_specs.$S)
+# Type-check the generated spec modules for each executable fork. Paths are
+# relative to CURDIR (the project root).
+TY_SPEC_DIR := $(PYSPEC_DIR:$(CURDIR)/%=%)/eth_consensus_specs
+TY_SCOPE := $(foreach S,$(ALL_EXECUTABLE_SPEC_NAMES),$(TY_SPEC_DIR)/$S)
 
 # Check for mistakes.
 lint: _pyspec
@@ -272,8 +276,7 @@ lint: _pyspec
 	@$(UV_RUN) ruff check --fix --quiet $(CURDIR)/tests $(CURDIR)/pysetup $(CURDIR)/specs
 	@$(UV_RUN) ruff format --quiet $(CURDIR)/tests $(CURDIR)/pysetup
 	@$(UV_RUN) ruff format --preview --quiet $(CURDIR)/specs
-	@output="$$($(UV_RUN) mypy $(MYPY_SCOPE) 2>&1)" || \
-		{ echo "$$output"; exit 1; }
+	@$(UV_RUN) ty check $(TY_SCOPE)
 	@git diff > $(LINT_DIFF_AFTER)
 	@diff -q $(LINT_DIFF_BEFORE) $(LINT_DIFF_AFTER) >/dev/null 2>&1 || \
 		echo "$(BOLD)Note: make lint modified tracked files$(NORM)"

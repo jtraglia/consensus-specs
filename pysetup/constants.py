@@ -11,10 +11,11 @@ HEZE = "heze"
 EIP8025 = "eip8025"
 EIP8148 = "eip8148"
 
-# Forks that are compiled by `--all-forks`. During the eth-ssz-specs migration only
-# phase0 is active; the other forks' spec files are kept but not built.
-# TODO(ssz-specs migration): re-enable the remaining forks here as they are migrated.
-ENABLED_FORKS = [PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA]
+# Forks compiled by `--all-forks`. phase0 through fulu have been migrated to
+# eth-ssz-specs; gloas, heze, and the eip* forks are not built yet because they
+# rely on progressive-SSZ types the library does not provide. Their spec files
+# are kept in the tree; add a fork here once it is migrated.
+ENABLED_FORKS = [PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU]
 
 
 # The helper functions that are used when defining constants

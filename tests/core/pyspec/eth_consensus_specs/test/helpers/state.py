@@ -89,8 +89,8 @@ def get_state_root(spec, state, slot) -> bytes:
     """
     Return the state root at a recent ``slot``.
     """
-    assert slot < state.slot <= spec.Slot(slot) + spec.Slot(spec.SLOTS_PER_HISTORICAL_ROOT)
-    return state.state_roots[spec.Slot(slot) % spec.Slot(spec.SLOTS_PER_HISTORICAL_ROOT)]
+    assert slot < state.slot <= spec.Slot(slot) + spec.SLOTS_PER_HISTORICAL_ROOT
+    return state.state_roots[spec.Slot(slot) % spec.SLOTS_PER_HISTORICAL_ROOT]
 
 
 def state_transition_and_sign_block(spec, state, block, expect_fail=False):
@@ -200,7 +200,7 @@ def simulate_lookahead(spec, state):
     """
     lookahead = []
     simulation_state = state.copy()
-    for _ in range(spec.SLOTS_PER_EPOCH * (spec.MIN_SEED_LOOKAHEAD + 1)):
+    for _ in range(int(spec.SLOTS_PER_EPOCH) * (int(spec.MIN_SEED_LOOKAHEAD) + 1)):
         proposer_index = spec.get_beacon_proposer_index(simulation_state)
         lookahead.append(proposer_index)
         next_slot(spec, simulation_state)
@@ -214,11 +214,12 @@ def cause_effective_balance_decrease_below_threshold(
     Cause an effective balance decrease change for the validator at
     `validator_index` below a threshold
     """
-    HYSTERESIS_INCREMENT = Uint64(spec.EFFECTIVE_BALANCE_INCREMENT // spec.HYSTERESIS_QUOTIENT)
-    DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * spec.HYSTERESIS_DOWNWARD_MULTIPLIER
-    state.balances[validator_index] = (
-        min(threshold, state.validators[validator_index].effective_balance - DOWNWARD_THRESHOLD) - 1
+    HYSTERESIS_INCREMENT = Uint64(spec.EFFECTIVE_BALANCE_INCREMENT) // spec.HYSTERESIS_QUOTIENT
+    DOWNWARD_THRESHOLD = spec.Gwei(HYSTERESIS_INCREMENT * spec.HYSTERESIS_DOWNWARD_MULTIPLIER)
+    balance_below_threshold = min(
+        threshold, state.validators[validator_index].effective_balance - DOWNWARD_THRESHOLD
     )
+    state.balances[validator_index] = balance_below_threshold - spec.Gwei(1)
 
 
 def simulate_lookahead_with_thresholds(spec, state) -> Sequence[tuple[Uint64, Uint64]]:
@@ -228,7 +229,7 @@ def simulate_lookahead_with_thresholds(spec, state) -> Sequence[tuple[Uint64, Ui
     """
     lookahead = []
     simulation_state = state.copy()
-    for _ in range(spec.SLOTS_PER_EPOCH * (spec.MIN_SEED_LOOKAHEAD + 1)):
+    for _ in range(int(spec.SLOTS_PER_EPOCH) * (int(spec.MIN_SEED_LOOKAHEAD) + 1)):
         proposer_index = get_beacon_proposer_index_and_threshold(spec, simulation_state)
         lookahead.append(proposer_index)
         next_slot(spec, simulation_state)
@@ -262,16 +263,15 @@ def electra_compute_proposer_index_and_threshold(
     while True:
         candidate_index = indices[spec.compute_shuffled_index(i % total, total, seed)]
         # [Modified in Electra]
-        random_bytes = hash(seed + uint_to_bytes(i // 16))
-        offset = i % 16 * 2
-        random_value = spec.bytes_to_uint64(random_bytes[offset : offset + 2])
+        random_bytes = hash(seed + uint_to_bytes(i // Uint64(16)))
+        offset = i % Uint64(16) * Uint64(2)
+        random_value = spec.bytes_to_uint64(random_bytes[offset : offset + Uint64(2)])
         effective_balance = state.validators[candidate_index].effective_balance
         # [Modified in Electra:EIP7251]
-        if (
-            effective_balance * MAX_RANDOM_VALUE
-            >= spec.MAX_EFFECTIVE_BALANCE_ELECTRA * random_value
-        ):
+        if effective_balance * spec.Gwei(
+            MAX_RANDOM_VALUE
+        ) >= spec.MAX_EFFECTIVE_BALANCE_ELECTRA * spec.Gwei(random_value):
             return candidate_index, (
-                spec.MAX_EFFECTIVE_BALANCE_ELECTRA * random_value
-            ) // MAX_RANDOM_VALUE
-        i += 1
+                spec.MAX_EFFECTIVE_BALANCE_ELECTRA * spec.Gwei(random_value)
+            ) // spec.Gwei(MAX_RANDOM_VALUE)
+        i += Uint64(1)

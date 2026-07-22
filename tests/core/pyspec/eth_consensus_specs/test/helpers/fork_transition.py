@@ -335,10 +335,9 @@ def run_transition_with_operation(
     Generate `operation_type` operation with the spec before fork.
     The operation would be included into the block at `operation_at_slot`.
     """
-    is_at_fork = operation_at_slot == spec.Slot(fork_epoch) * spec.SLOTS_PER_EPOCH
-    is_right_before_fork = operation_at_slot == spec.Slot(
-        fork_epoch
-    ) * spec.SLOTS_PER_EPOCH - spec.Slot(1)
+    fork_slot = spec.Slot(fork_epoch) * spec.SLOTS_PER_EPOCH
+    is_at_fork = operation_at_slot == fork_slot
+    is_right_before_fork = operation_at_slot == fork_slot - spec.Slot(1)
     assert is_at_fork or is_right_before_fork
 
     if is_at_fork:
@@ -472,7 +471,10 @@ def run_transition_with_operation(
             assert validator.exit_epoch < post_spec.FAR_FUTURE_EPOCH
         elif operation_type == OperationType.CONSOLIDATION_REQUEST:
             validator = state.validators[selected_validator_index]
-            assert validator.withdrawal_credentials[:1] == post_spec.COMPOUNDING_WITHDRAWAL_PREFIX
+            assert (
+                post_spec.Bytes1(validator.withdrawal_credentials[:1])
+                == post_spec.COMPOUNDING_WITHDRAWAL_PREFIX
+            )
 
     yield "pre", state
 

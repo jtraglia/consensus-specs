@@ -3,13 +3,7 @@ from typing import Any, NamedTuple
 
 from eth_utils import encode_hex
 
-try:
-    from eth_consensus_specs.fulu.mainnet import DataColumnSidecar
-except Exception:
-    # The fulu spec is not compiled during the eth-ssz-specs migration (phase0 only), so
-    # importing it fails (missing, or a stale build that no longer imports). DataColumnSidecar
-    # is only used in type annotations here, so a placeholder suffices.
-    DataColumnSidecar = Any
+from eth_consensus_specs.fulu.mainnet import DataColumnSidecar
 from eth_consensus_specs.test.context import expect_assertion_error
 from eth_consensus_specs.test.exceptions import BlockNotFoundException
 from eth_consensus_specs.test.helpers.attestations import (
@@ -188,13 +182,13 @@ def tick_and_add_block(
     if merge_block:
         assert spec.is_merge_transition_block(pre_state, signed_block.message.body)
 
-    block_time = pre_state.genesis_time + spec.Uint64(
-        signed_block.message.slot
-    ) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+    block_slot = spec.Uint64(signed_block.message.slot)
+    block_offset = block_slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+    block_time = pre_state.genesis_time + block_offset
     while store.time < block_time:
-        time = pre_state.genesis_time + spec.Uint64(
-            spec.get_current_slot(store) + spec.Slot(1)
-        ) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        next_slot = spec.Uint64(spec.get_current_slot(store) + spec.Slot(1))
+        next_offset = next_slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        time = pre_state.genesis_time + next_offset
         on_tick_and_append_step(spec, store, time, test_steps)
 
     post_state = yield from add_block(
@@ -720,7 +714,8 @@ def tick_store_to_slot(spec, store, slot, test_steps):
     """
     Tick the store forward to the start of ``slot``.
     """
-    slot_time = store.genesis_time + slot * spec.config.SLOT_DURATION_MS // 1000
+    slot_offset = spec.Uint64(slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+    slot_time = store.genesis_time + slot_offset
     if store.time < slot_time:
         on_tick_and_append_step(spec, store, slot_time, test_steps)
 

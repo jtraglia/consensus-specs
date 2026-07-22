@@ -59,7 +59,7 @@ def run_test_effective_balance_hysteresis(spec, state, with_compounding_credenti
     ]
 
     if with_compounding_credentials:
-        min = spec.MIN_ACTIVATION_BALANCE
+        min = int(spec.MIN_ACTIVATION_BALANCE)
         cases = cases + [
             (min, min + (hys_inc * up), min, "bigger balance, but not high enough"),
             (
@@ -80,7 +80,7 @@ def run_test_effective_balance_hysteresis(spec, state, with_compounding_credenti
             (
                 min,
                 min * 2 - 1,
-                min * 2 - spec.EFFECTIVE_BALANCE_INCREMENT,
+                min * 2 - int(spec.EFFECTIVE_BALANCE_INCREMENT),
                 "top up or consolidation almost doubling the balance",
             ),
         ]

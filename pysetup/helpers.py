@@ -21,20 +21,8 @@ def collect_prev_forks(fork: str) -> list[str]:
         forks.append(fork)
 
 
-def requires_mypy_type_ignore(value: str) -> bool:
-    return (
-        value.startswith(("Bitlist", "ByteVector"))
-        or (value.startswith("List") and not re.match(r"^List\[\w+,\s*\w+\]$", value))
-        or (value.startswith("Vector") and any(k in value for k in ["ceillog2", "floorlog2"]))
-    )
-
-
 def gen_new_type_definition(name: str, value: str) -> str:
-    return (
-        f"class {name}({value}):\n    pass"
-        if not requires_mypy_type_ignore(value)
-        else f"class {name}(\n    {value}  # type: ignore\n):\n    pass"
-    )
+    return f"class {name}({value}):\n    pass"
 
 
 def make_function_abstract(protocol_def: ProtocolDefinition, key: str):
@@ -129,8 +117,13 @@ def objects_to_spec(
                     aliased_names.discard(name)
                     shrinking = True
         if aliased_names:
-            inherited_type_aliases = f"# Types inherited unchanged from {previous_fork}\n" + "\n".join(
-                f"{name} = {previous_fork}.{name}" for name in candidates if name in aliased_names
+            inherited_type_aliases = (
+                f"# Types inherited unchanged from {previous_fork}\n"
+                + "\n".join(
+                    f"{name} = {previous_fork}.{name}"
+                    for name in candidates
+                    if name in aliased_names
+                )
             )
         ordered_class_objects = {
             k: v for k, v in ordered_class_objects.items() if k not in aliased_names

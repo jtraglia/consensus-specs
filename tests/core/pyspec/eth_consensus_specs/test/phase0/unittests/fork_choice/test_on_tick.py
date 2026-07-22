@@ -42,27 +42,27 @@ def test_update_justified_single_on_store_finalized_chain(spec, state):
     next_epoch(spec, state)
     block = build_empty_block_for_next_slot(spec, state)
     state_transition_and_sign_block(spec, state, block)
-    store.blocks[hash_tree_root(block)] = block.copy()
-    store.block_states[hash_tree_root(block)] = state.copy()
+    store.blocks[block.hash_tree_root()] = block.copy()
+    store.block_states[block.hash_tree_root()] = state.copy()
     parent_block = block.copy()
     # To make compute_slots_since_epoch_start(current_slot) == 0, transition to the end of the epoch
-    slot = state.slot + spec.SLOTS_PER_EPOCH - state.slot % spec.SLOTS_PER_EPOCH - spec.Slot(1)
+    slot = state.slot + spec.SLOTS_PER_EPOCH - state.slot % spec.SLOTS_PER_EPOCH - 1
     transition_to(spec, state, slot)
     # Create a block at the start of epoch 2
     block = build_empty_block_for_next_slot(spec, state)
     # Mock state
     state.current_justified_checkpoint = spec.Checkpoint(
         epoch=spec.compute_epoch_at_slot(parent_block.slot),
-        root=hash_tree_root(parent_block),
+        root=parent_block.hash_tree_root(),
     )
     state_transition_and_sign_block(spec, state, block)
-    store.blocks[hash_tree_root(block)] = block
-    store.block_states[hash_tree_root(block)] = state
+    store.blocks[block.hash_tree_root()] = block
+    store.block_states[block.hash_tree_root()] = state
 
     run_on_tick(
         spec,
         store,
-        store.genesis_time + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // 1000,
         new_justified_checkpoint=True
     )
 """

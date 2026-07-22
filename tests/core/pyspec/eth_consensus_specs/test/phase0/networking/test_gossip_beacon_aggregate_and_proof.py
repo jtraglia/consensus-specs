@@ -158,9 +158,9 @@ def test_gossip_beacon_aggregate_and_proof__reject_committee_index_out_of_range(
         # at the smallest position that is both out-of-range and inside the bitvector.
         assert committee_count < spec.MAX_COMMITTEES_PER_SLOT
         oob_index = committee_count
-        signed_agg.message.aggregate.committee_bits = spec.Bitvector[
-            spec.MAX_COMMITTEES_PER_SLOT
-        ].of(*[i == oob_index for i in range(spec.MAX_COMMITTEES_PER_SLOT)])
+        signed_agg.message.aggregate.committee_bits = spec.CommitteeBits.of(
+            *[i == oob_index for i in range(spec.MAX_COMMITTEES_PER_SLOT)]
+        )
     else:
         signed_agg.message.aggregate.data.index = committee_count + spec.Uint64(10)
 
@@ -489,9 +489,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_same_data_root_without_supers
         # ``MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT`` and includes
         # ``committee_bits``; preserve both from the first aggregate.
         aggregate_2 = spec.Attestation(
-            aggregation_bits=spec.Bitlist[
-                spec.MAX_VALIDATORS_PER_COMMITTEE * spec.MAX_COMMITTEES_PER_SLOT
-            ].of(*modified_bits),
+            aggregation_bits=spec.AggregationBits.of(*modified_bits),
             data=signed_agg_1.message.aggregate.data,
             committee_bits=signed_agg_1.message.aggregate.committee_bits,
             signature=signed_agg_1.message.aggregate.signature,

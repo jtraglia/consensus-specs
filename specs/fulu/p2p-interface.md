@@ -7,6 +7,7 @@
   - [Preset](#preset)
   - [Configuration](#configuration)
   - [Containers](#containers)
+    - [New `DataColumnIndices`](#new-datacolumnindices)
     - [New `DataColumnsByRootIdentifier`](#new-datacolumnsbyrootidentifier)
   - [Helpers](#helpers)
     - [Modified `Seen`](#modified-seen)
@@ -57,7 +58,7 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 
 | Name                                    | Value                                                                                     | Description                                                       |
 | --------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH` | `uint64(floorlog2(get_generalized_index(BeaconBlockBody, 'blob_kzg_commitments')))` (= 4) | <!-- predefined --> Merkle proof index for `blob_kzg_commitments` |
+| `KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH` | `Uint64(floorlog2(get_generalized_index(BeaconBlockBody, 'blob_kzg_commitments')))` (= 4) | <!-- predefined --> Merkle proof index for `blob_kzg_commitments` |
 
 ### Configuration
 
@@ -65,17 +66,24 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 
 | Name                                           | Value                     | Description                                                           |
 | ---------------------------------------------- | ------------------------- | --------------------------------------------------------------------- |
-| `DATA_COLUMN_SIDECAR_SUBNET_COUNT`             | `uint64(2**7)` (= 128)    | Number of data column sidecar subnets used in the gossipsub protocol  |
-| `MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS` | `uint64(2**12)` (= 4,096) | Minimum epoch range over which a node must serve data column sidecars |
+| `DATA_COLUMN_SIDECAR_SUBNET_COUNT`             | `Uint64(2**7)` (= 128)    | Number of data column sidecar subnets used in the gossipsub protocol  |
+| `MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS` | `Uint64(2**12)` (= 4,096) | Minimum epoch range over which a node must serve data column sidecars |
 
 ### Containers
+
+#### New `DataColumnIndices`
+
+```python
+class DataColumnIndices(List[ColumnIndex]):
+    LIMIT = NUMBER_OF_COLUMNS
+```
 
 #### New `DataColumnsByRootIdentifier`
 
 ```python
 class DataColumnsByRootIdentifier(Container):
     block_root: Root
-    columns: List[ColumnIndex, NUMBER_OF_COLUMNS]
+    columns: DataColumnIndices
 ```
 
 ### Helpers
@@ -87,14 +95,14 @@ class DataColumnsByRootIdentifier(Container):
 class Seen:
     proposer_slots: Set[Tuple[ValidatorIndex, Slot]]
     aggregator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
-    aggregate_data_roots: Dict[Tuple[Root, CommitteeIndex], Set[Tuple[boolean, ...]]]
+    aggregate_data_roots: Dict[Tuple[Root, CommitteeIndex], Set[Tuple[Boolean, ...]]]
     voluntary_exit_indices: Set[ValidatorIndex]
     proposer_slashing_indices: Set[ValidatorIndex]
     attester_slashing_indices: Set[ValidatorIndex]
     attestation_validator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
-    sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, uint64]]
-    sync_contribution_data: Dict[Tuple[Slot, Root, uint64], Set[Tuple[boolean, ...]]]
-    sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, uint64]]
+    sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, Uint64]]
+    sync_contribution_data: Dict[Tuple[Slot, Root, Uint64], Set[Tuple[Boolean, ...]]]
+    sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, Uint64]]
     bls_to_execution_change_indices: Set[ValidatorIndex]
     # [Modified in Fulu:EIP7594]
     # Removed `blob_sidecar_tuples`
@@ -129,11 +137,11 @@ def compute_fork_version(epoch: Epoch) -> Version:
 #### New `compute_max_request_data_column_sidecars`
 
 ```python
-def compute_max_request_data_column_sidecars() -> uint64:
+def compute_max_request_data_column_sidecars() -> Uint64:
     """
     Return the maximum number of data column sidecars in a single request.
     """
-    return uint64(MAX_REQUEST_BLOCKS_DENEB * NUMBER_OF_COLUMNS)
+    return Uint64(MAX_REQUEST_BLOCKS_DENEB * NUMBER_OF_COLUMNS)
 ```
 
 #### New `verify_data_column_sidecar`
@@ -204,7 +212,7 @@ def verify_data_column_sidecar_inclusion_proof(sidecar: DataColumnSidecar) -> bo
 
 ```python
 def compute_subnet_for_data_column_sidecar(column_index: ColumnIndex) -> SubnetID:
-    return SubnetID(column_index % DATA_COLUMN_SIDECAR_SUBNET_COUNT)
+    return SubnetID(Uint64(column_index) % DATA_COLUMN_SIDECAR_SUBNET_COUNT)
 ```
 
 ### MetaData
@@ -248,7 +256,7 @@ def validate_beacon_block_gossip(
     store: Store,
     state: BeaconState,
     signed_beacon_block: SignedBeaconBlock,
-    current_time_ms: uint64,
+    current_time_ms: Uint64,
     block_payload_statuses: Optional[Dict[Root, PayloadValidationStatus]] = None,
 ) -> None:
     """
@@ -359,7 +367,7 @@ def validate_data_column_sidecar_gossip(
     store: Store,
     state: BeaconState,
     sidecar: DataColumnSidecar,
-    current_time_ms: uint64,
+    current_time_ms: Uint64,
     subnet_id: SubnetID,
 ) -> None:
     """

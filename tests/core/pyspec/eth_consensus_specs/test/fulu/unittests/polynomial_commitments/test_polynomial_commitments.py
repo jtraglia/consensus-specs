@@ -104,8 +104,8 @@ def test_construct_vanishing_polynomial(spec):
     zero_poly_eval_brp = spec.bit_reversal_permutation(zero_poly_eval)
 
     for cell_index in range(spec.CELLS_PER_EXT_BLOB):
-        start = cell_index * spec.FIELD_ELEMENTS_PER_CELL
-        end = (cell_index + 1) * spec.FIELD_ELEMENTS_PER_CELL
+        start = cell_index * int(spec.FIELD_ELEMENTS_PER_CELL)
+        end = (cell_index + 1) * int(spec.FIELD_ELEMENTS_PER_CELL)
         if cell_index in unique_missing_cell_indices:
             assert all(a == spec.BLSFieldElement(0) for a in zero_poly_eval_brp[start:end])
         else:  # cell_index in cell_indices
@@ -281,6 +281,6 @@ def test_multiply_polynomial_degree_overflow(spec):
     # Now overflow the degree by pumping the degree of one of the inputs by one
     poly2_coeff = [
         spec.BLSFieldElement(rng.randint(0, spec.BLS_MODULUS - 1))
-        for _ in range(spec.FIELD_ELEMENTS_PER_BLOB + 1)
+        for _ in range(int(spec.FIELD_ELEMENTS_PER_BLOB) + 1)
     ]
     expect_assertion_error(lambda: spec.multiply_polynomialcoeff(poly1_coeff, poly2_coeff))

@@ -59,10 +59,10 @@ def get_eth1_data(block: Eth1Block) -> Eth1Data:
         block_hash=hash_tree_root(block))
 
 
-def cache_this(key_fn, value_fn, lru_size):  # type: ignore
+def cache_this(key_fn, value_fn, lru_size):
     cache_dict = LRU(size=lru_size)
 
-    def wrapper(*args, **kw):  # type: ignore
+    def wrapper(*args, **kw):
         key = key_fn(*args, **kw)
         if key not in cache_dict:
             cache_dict[key] = value_fn(*args, **kw)

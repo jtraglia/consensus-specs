@@ -50,12 +50,22 @@ except that only the cells and proofs identified by the bitmap are present.
 *Note*: The column index is inferred from the gossipsub topic subnet.
 
 ```python
+class CellsBitlist(Bitlist):
+    LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
+```
+
+```python
+class PartialDataColumnHeaderList(List[PartialDataColumnHeader]):
+    LIMIT = Uint64(1)
+```
+
+```python
 class PartialDataColumnSidecar(Container):
-    cells_present_bitmap: Bitlist[MAX_BLOB_COMMITMENTS_PER_BLOCK]
-    partial_column: List[Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK]
-    kzg_proofs: List[KZGProof, MAX_BLOB_COMMITMENTS_PER_BLOCK]
+    cells_present_bitmap: CellsBitlist
+    partial_column: DataColumn
+    kzg_proofs: KZGProofs
     # Optional header, only sent on eager pushes
-    header: List[PartialDataColumnHeader, 1]
+    header: PartialDataColumnHeaderList
 ```
 
 ### New `PartialDataColumnPartsMetadata`
@@ -71,8 +81,8 @@ This is encoded as the following SSZ container:
 
 ```python
 class PartialDataColumnPartsMetadata(Container):
-    available: Bitlist[MAX_BLOB_COMMITMENTS_PER_BLOCK]
-    requests: Bitlist[MAX_BLOB_COMMITMENTS_PER_BLOCK]
+    available: CellsBitlist
+    requests: CellsBitlist
 ```
 
 This means that for each cell there are two bits of state. Where the first bit
@@ -98,9 +108,9 @@ This header can be derived from a beacon block or a `DataColumnSidecar`.
 
 ```python
 class PartialDataColumnHeader(Container):
-    kzg_commitments: List[KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK]
+    kzg_commitments: BlobKZGCommitments
     signed_block_header: SignedBeaconBlockHeader
-    kzg_commitments_inclusion_proof: Vector[Bytes32, KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH]
+    kzg_commitments_inclusion_proof: KZGCommitmentsInclusionProof
 ```
 
 ### New `PartialDataColumnGroupID`
@@ -133,7 +143,7 @@ def verify_partial_data_column_header_inclusion_proof(header: PartialDataColumnH
 ```python
 def verify_partial_data_column_sidecar_kzg_proofs(
     sidecar: PartialDataColumnSidecar,
-    all_commitments: List[KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK],
+    all_commitments: BlobKZGCommitments,
     column_index: ColumnIndex,
 ) -> bool:
     """
@@ -182,7 +192,7 @@ def validate_partial_data_column_sidecar_gossip(
     store: Store,
     state: BeaconState,
     sidecar: PartialDataColumnSidecar,
-    current_time_ms: uint64,
+    current_time_ms: Uint64,
     group_id: PartialDataColumnGroupID,
     column_index: ColumnIndex,
 ) -> None:

@@ -162,13 +162,13 @@ pytest_plugins = ["eth_consensus_specs.test.pytest_plugins.yield_generator"]
 def pytest_ignore_collect(collection_path, config):
     """Skip collecting test directories for forks that were not requested.
 
-    Only phase0 is migrated to the eth-ssz-specs types so far; test modules of
-    other forks still import names that no longer exist and would fail at
-    collection time. Their directories are skipped entirely until each fork is
-    migrated, at which point it can be removed from this gate.
+    Forks phase0 through fulu are migrated to the eth-ssz-specs types; the
+    remaining forks (gloas, heze, and the eip features) are not yet migrated,
+    so their test modules still import names that no longer exist and would
+    fail at collection time. Their directories are skipped entirely until each
+    fork is migrated, at which point it can be removed from this gate.
     """
     unmigrated = {
-        "fulu",
         "gloas",
         "heze",
     }

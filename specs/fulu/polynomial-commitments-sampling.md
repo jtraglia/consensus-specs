@@ -5,6 +5,7 @@
 - [Introduction](#introduction)
 - [Public methods](#public-methods)
 - [Types](#types)
+  - [`Cell`](#cell)
 - [Cryptographic types](#cryptographic-types)
 - [Preset](#preset)
   - [Blob](#blob)
@@ -70,11 +71,19 @@ The following is a list of the public methods:
 
 ## Types
 
-| Name              | SSZ equivalent                                                  | Description                                                                  |
-| ----------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `Cell`            | `ByteVector[BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL]` | The unit of blob data that can come with its own KZG proof                   |
-| `CellIndex`       | `uint64`                                                        | Validation: `x < CELLS_PER_EXT_BLOB`                                         |
-| `CommitmentIndex` | `uint64`                                                        | The type which represents the index of an element in the list of commitments |
+| Name              | SSZ equivalent | Description                                                                  |
+| ----------------- | -------------- | ---------------------------------------------------------------------------- |
+| `CellIndex`       | `Uint64`       | Validation: `x < CELLS_PER_EXT_BLOB`                                         |
+| `CommitmentIndex` | `Uint64`       | The type which represents the index of an element in the list of commitments |
+
+### `Cell`
+
+The unit of blob data that can come with its own KZG proof.
+
+```python
+class Cell(BaseBytes):
+    LENGTH = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL
+```
 
 ## Cryptographic types
 
@@ -95,7 +104,7 @@ cell or line).
 | Name                                     | Value                                                    | Description                                              |
 | ---------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------- |
 | `FIELD_ELEMENTS_PER_EXT_BLOB`            | `2 * FIELD_ELEMENTS_PER_BLOB`                            | Number of field elements in a Reed-Solomon extended blob |
-| `FIELD_ELEMENTS_PER_CELL`                | `uint64(2**6)` (= 64)                                    | Number of field elements in a cell                       |
+| `FIELD_ELEMENTS_PER_CELL`                | `Uint64(2**6)` (= 64)                                    | Number of field elements in a cell                       |
 | `BYTES_PER_CELL`                         | `FIELD_ELEMENTS_PER_CELL * BYTES_PER_FIELD_ELEMENT`      | The number of bytes in a cell                            |
 | `CELLS_PER_EXT_BLOB`                     | `FIELD_ELEMENTS_PER_EXT_BLOB // FIELD_ELEMENTS_PER_CELL` | The number of cells in an extended blob                  |
 | `RANDOM_CHALLENGE_KZG_CELL_BATCH_DOMAIN` | `b'RCKZGCBATCH__V1_'`                                    |                                                          |
@@ -113,8 +122,8 @@ def cell_to_coset_evals(cell: Cell) -> CosetEvals:
     """
     evals = CosetEvals()
     for i in range(FIELD_ELEMENTS_PER_CELL):
-        start = i * BYTES_PER_FIELD_ELEMENT
-        end = (i + 1) * BYTES_PER_FIELD_ELEMENT
+        start = Uint64(i) * BYTES_PER_FIELD_ELEMENT
+        end = (Uint64(i) + Uint64(1)) * BYTES_PER_FIELD_ELEMENT
         evals[i] = bytes_to_bls_field(cell[start:end])
     return evals
 ```
@@ -190,7 +199,7 @@ def coset_fft_field(
         Multiply each entry in `vals` by succeeding powers of `factor`
         i.e., [vals[0] * factor^0, vals[1] * factor^1, ..., vals[n] * factor^n]
         """
-        updated_vals: List[BLSFieldElement] = []
+        updated_vals: list[BLSFieldElement] = []
         shift = BLSFieldElement(1)
         for i in range(len(vals)):
             updated_vals.append(vals[i] * shift)
@@ -469,7 +478,7 @@ def verify_cell_kzg_proof_batch_impl(
 
     # Step 4.2: Compute RLI = [sum_k r^k interpolation_poly_k(s)]
     # Note: an efficient implementation would use the IDFT based method explained in the blog post
-    sum_interp_polys_coeff = PolynomialCoeff([BLSFieldElement(0)] * n)
+    sum_interp_polys_coeff = PolynomialCoeff([BLSFieldElement(0)] * int(n))
     for k in range(num_cells):
         interp_poly_coeff = interpolate_polynomialcoeff(
             coset_for_cell(cell_indices[k]), cosets_evals[k]
@@ -519,7 +528,7 @@ def coset_shift_for_cell(cell_index: CellIndex) -> BLSFieldElement:
     roots_of_unity_brp = bit_reversal_permutation(
         compute_roots_of_unity(FIELD_ELEMENTS_PER_EXT_BLOB)
     )
-    return roots_of_unity_brp[FIELD_ELEMENTS_PER_CELL * cell_index]
+    return roots_of_unity_brp[FIELD_ELEMENTS_PER_CELL * Uint64(cell_index)]
 ```
 
 #### `coset_for_cell`
@@ -537,11 +546,9 @@ def coset_for_cell(cell_index: CellIndex) -> Coset:
     roots_of_unity_brp = bit_reversal_permutation(
         compute_roots_of_unity(FIELD_ELEMENTS_PER_EXT_BLOB)
     )
-    return Coset(
-        roots_of_unity_brp[
-            FIELD_ELEMENTS_PER_CELL * cell_index : FIELD_ELEMENTS_PER_CELL * (cell_index + 1)
-        ]
-    )
+    start = FIELD_ELEMENTS_PER_CELL * Uint64(cell_index)
+    end = FIELD_ELEMENTS_PER_CELL * (Uint64(cell_index) + Uint64(1))
+    return Coset(roots_of_unity_brp[start:end])
 ```
 
 ## Cells
@@ -551,7 +558,7 @@ def coset_for_cell(cell_index: CellIndex) -> Coset:
 #### `compute_cells`
 
 ```python
-def compute_cells(blob: Blob) -> Vector[Cell, CELLS_PER_EXT_BLOB]:
+def compute_cells(blob: Blob) -> Sequence[Cell]:
     """
     Given a blob, extend it and return all the cells of the extended blob.
 
@@ -575,7 +582,7 @@ def compute_cells(blob: Blob) -> Vector[Cell, CELLS_PER_EXT_BLOB]:
 ```python
 def compute_cells_and_kzg_proofs_polynomialcoeff(
     polynomial_coeff: PolynomialCoeff,
-) -> Tuple[Vector[Cell, CELLS_PER_EXT_BLOB], Vector[KZGProof, CELLS_PER_EXT_BLOB]]:
+) -> Tuple[Sequence[Cell], Sequence[KZGProof]]:
     """
     Helper function which computes cells/proofs for a polynomial in coefficient form.
     """
@@ -593,7 +600,7 @@ def compute_cells_and_kzg_proofs_polynomialcoeff(
 ```python
 def compute_cells_and_kzg_proofs(
     blob: Blob,
-) -> Tuple[Vector[Cell, CELLS_PER_EXT_BLOB], Vector[KZGProof, CELLS_PER_EXT_BLOB]]:
+) -> Tuple[Sequence[Cell], Sequence[KZGProof]]:
     """
     Compute all the cell proofs for an extended blob. This is an inefficient O(n^2) algorithm,
     for performant implementation the FK20 algorithm that runs in O(n log n) should be
@@ -693,7 +700,7 @@ def construct_vanishing_polynomial(
     # Extend vanishing polynomial to full domain using the closed form of the vanishing polynomial over a coset
     zero_poly_coeff = [BLSFieldElement(0)] * FIELD_ELEMENTS_PER_EXT_BLOB
     for i, coeff in enumerate(short_zero_poly):
-        zero_poly_coeff[i * FIELD_ELEMENTS_PER_CELL] = coeff
+        zero_poly_coeff[Uint64(i) * FIELD_ELEMENTS_PER_CELL] = coeff
 
     return zero_poly_coeff
 ```
@@ -716,8 +723,8 @@ def recover_polynomialcoeff(
     # that interpolates the evaluations including the zeros for missing ones.
     extended_evaluation_rbo = [BLSFieldElement(0)] * FIELD_ELEMENTS_PER_EXT_BLOB
     for cell_index, cell in zip(cell_indices, cosets_evals, strict=True):
-        start = cell_index * FIELD_ELEMENTS_PER_CELL
-        end = (cell_index + 1) * FIELD_ELEMENTS_PER_CELL
+        start = Uint64(cell_index) * FIELD_ELEMENTS_PER_CELL
+        end = (Uint64(cell_index) + Uint64(1)) * FIELD_ELEMENTS_PER_CELL
         extended_evaluation_rbo[start:end] = cell
     extended_evaluation = bit_reversal_permutation(extended_evaluation_rbo)
 
@@ -777,7 +784,7 @@ def recover_polynomialcoeff(
 ```python
 def recover_cells_and_kzg_proofs(
     cell_indices: Sequence[CellIndex], cells: Sequence[Cell]
-) -> Tuple[Vector[Cell, CELLS_PER_EXT_BLOB], Vector[KZGProof, CELLS_PER_EXT_BLOB]]:
+) -> Tuple[Sequence[Cell], Sequence[KZGProof]]:
     """
     Given at least 50% of cells for a blob, recover all the cells/proofs.
     This algorithm uses FFTs to recover cells faster than using Lagrange

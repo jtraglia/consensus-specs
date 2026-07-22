@@ -26,6 +26,7 @@ from eth_consensus_specs.test.helpers.state import (
     next_slot,
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 @with_all_phases_from_to(ELECTRA, GLOAS)
@@ -66,7 +67,7 @@ def test_new_validator_deposit_with_multiple_epoch_transitions(spec, state):
     yield from tick_and_add_block(spec, store, signed_deposit_block, test_steps)
 
     # (2) finalize and process pending deposit on one fork
-    slots = 4 * spec.SLOTS_PER_EPOCH - state.slot
+    slots = spec.Slot(4) * spec.SLOTS_PER_EPOCH - state.slot
     post_state, _, latest_block = yield from apply_next_slots_with_attestations(
         spec, state, store, slots, fill_cur_epoch=True, fill_prev_epoch=True, test_steps=test_steps
     )
@@ -82,7 +83,7 @@ def test_new_validator_deposit_with_multiple_epoch_transitions(spec, state):
     # important to skip last block of the epoch to make client do the epoch processing
     # otherwise, client can read the post-epoch from cache
     prev_epoch_ancestor = store.blocks[prev_epoch_ancestor.parent_root]
-    another_fork_state = store.block_states[prev_epoch_ancestor.hash_tree_root()].copy()
+    another_fork_state = store.block_states[hash_tree_root(prev_epoch_ancestor)].copy()
 
     assert another_fork_state.pending_deposits == [pending_deposit]
 

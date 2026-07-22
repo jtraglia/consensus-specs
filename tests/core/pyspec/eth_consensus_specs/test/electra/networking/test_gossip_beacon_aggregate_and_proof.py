@@ -113,7 +113,7 @@ def test_gossip_beacon_aggregate_and_proof__accept_same_data_for_disjoint_commit
         store=store,
         state=state,
         signed_aggregate_and_proof=signed_agg_1,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
     )
     assert result == "valid"
     assert reason is None
@@ -125,7 +125,7 @@ def test_gossip_beacon_aggregate_and_proof__accept_same_data_for_disjoint_commit
         store=store,
         state=state,
         signed_aggregate_and_proof=signed_agg_2,
-        current_time_ms=block_time_ms + 600,
+        current_time_ms=block_time_ms + spec.Uint64(600),
     )
     assert result == "valid"
     assert reason is None
@@ -163,7 +163,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_nonzero_data_index(spec, stat
         store=store,
         state=state,
         signed_aggregate_and_proof=signed_agg,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
     )
     assert result == "reject"
     assert reason == "aggregate data index is non-zero"
@@ -211,7 +211,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_zero_committees(spec, state):
         store=store,
         state=state,
         signed_aggregate_and_proof=signed_agg,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
     )
     assert result == "reject"
     assert reason == "aggregate committee bits must specify exactly one committee"
@@ -263,7 +263,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_multiple_committees(spec, sta
         store=store,
         state=state,
         signed_aggregate_and_proof=signed_agg,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
     )
     assert result == "reject"
     assert reason == "aggregate committee bits must specify exactly one committee"

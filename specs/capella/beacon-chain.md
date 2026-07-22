@@ -527,7 +527,7 @@ def update_next_withdrawal_validator_index(
 def process_withdrawals(state: BeaconState, payload: ExecutionPayload) -> None:
     # Get expected withdrawals
     expected = get_expected_withdrawals(state)
-    assert list(payload.withdrawals) == list(expected.withdrawals)
+    assert payload.withdrawals == expected.withdrawals
 
     # Apply expected withdrawals
     apply_withdrawals(state, expected.withdrawals)

@@ -89,7 +89,9 @@ def test_blob_kzg_commitments_merkle_proof__random_block_1(spec, state):
 @with_all_phases_from_to(FULU, GLOAS)
 @spec_state_test
 def test_blob_kzg_commitments_merkle_proof__multiple_blobs(spec, state):
-    blob_count = spec.get_blob_parameters(spec.get_current_epoch(state)).max_blobs_per_block // 2
+    blob_count = (
+        int(spec.get_blob_parameters(spec.get_current_epoch(state)).max_blobs_per_block) // 2
+    )
     rng = random.Random(2222)
     yield from _run_blob_kzg_commitments_merkle_proof_test(
         spec, state, rng=rng, blob_count=blob_count

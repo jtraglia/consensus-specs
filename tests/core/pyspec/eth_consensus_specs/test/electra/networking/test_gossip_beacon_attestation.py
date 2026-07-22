@@ -66,7 +66,7 @@ def test_gossip_beacon_attestation__reject_nonzero_data_index(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -123,7 +123,7 @@ def test_gossip_beacon_attestation__reject_attester_not_in_committee(spec, state
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"

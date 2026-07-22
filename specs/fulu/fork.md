@@ -32,15 +32,15 @@ Warning: this configuration is not definitive.
 ```python
 def initialize_proposer_lookahead(
     state: electra.BeaconState,
-) -> Vector[ValidatorIndex, (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH]:
+) -> Sequence[ValidatorIndex]:
     """
     Return the proposer indices for the full available lookahead starting from current epoch.
     Used to initialize the ``proposer_lookahead`` field in the beacon state at genesis and after forks.
     """
     current_epoch = get_current_epoch(state)
     lookahead = []
-    for i in range(MIN_SEED_LOOKAHEAD + 1):
-        lookahead.extend(get_beacon_proposer_indices(state, Epoch(current_epoch + i)))
+    for i in range(MIN_SEED_LOOKAHEAD + Epoch(1)):
+        lookahead.extend(get_beacon_proposer_indices(state, current_epoch + Epoch(i)))
     return lookahead
 ```
 

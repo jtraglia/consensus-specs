@@ -52,10 +52,8 @@ def translate_participation(
     state: BeaconState, pending_attestations: Sequence[phase0.PendingAttestation]
 ) -> None:
     for attestation in pending_attestations:
-        # The pending attestation carries the previous fork's types; convert
-        # so the data can flow through this fork's accessors.
-        data = AttestationData(attestation.data)
-        inclusion_delay = Slot(attestation.inclusion_delay)
+        data = attestation.data
+        inclusion_delay = attestation.inclusion_delay
         # Translate attestation inclusion info to flag indices
         participation_flag_indices = get_attestation_participation_flag_indices(
             state, data, inclusion_delay
@@ -63,11 +61,7 @@ def translate_participation(
 
         # Apply flags to all attesting validators
         epoch_participation = state.previous_epoch_participation
-        adapted_attestation = Attestation(
-            aggregation_bits=attestation.aggregation_bits,
-            data=data,
-        )
-        for index in get_attesting_indices(state, adapted_attestation):
+        for index in get_attesting_indices(state, attestation):
             for flag_index in participation_flag_indices:
                 epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
 

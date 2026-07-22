@@ -76,9 +76,7 @@ def check_proposer_slashing_effect(
     expected_withdrawable_from_exit = (
         post_validator.exit_epoch + spec.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
     )
-    expected_withdrawable_from_slashing = current_epoch + spec.Epoch(
-        spec.EPOCHS_PER_SLASHINGS_VECTOR
-    )
+    expected_withdrawable_from_slashing = current_epoch + spec.EPOCHS_PER_SLASHINGS_VECTOR
     expected_withdrawable = max(
         expected_withdrawable_from_exit, expected_withdrawable_from_slashing
     )
@@ -88,7 +86,7 @@ def check_proposer_slashing_effect(
 
     # Verify slashings array (only when proposer_slashing provided, to handle multiple slashings in same block)
     if proposer_slashing is not None:
-        slashings_index = current_epoch % spec.Epoch(spec.EPOCHS_PER_SLASHINGS_VECTOR)
+        slashings_index = current_epoch % spec.EPOCHS_PER_SLASHINGS_VECTOR
         expected_slashings = pre_state.slashings[slashings_index] + pre_validator.effective_balance
         assert state.slashings[slashings_index] == expected_slashings
 
