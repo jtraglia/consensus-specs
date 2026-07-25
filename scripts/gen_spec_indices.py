@@ -1,44 +1,44 @@
 #!/usr/bin/env python3
 """
-Generate index.md files for specification directories to enable directory browsing in mkdocs.
+Generate index.md files for specification directories to enable directory browsing.
 
-This script is used by the mkdocs-gen-files plugin to create virtual index pages
-that list all files in each specification directory, providing a GitHub-like
-directory browsing experience on the mkdocs documentation site.
+Each specification directory gets an index page listing the documents it contains,
+providing a GitHub-like directory browsing experience on the documentation site.
+The pages are written directly into the docs directory, which is a copy of the
+specification sources assembled by the `_copy_docs` make target.
 """
 
 import os
-import mkdocs_gen_files
+import sys
+
+REPLACEMENTS = {
+    "api": "API",
+    "bls": "BLS",
+    "das": "DAS",
+    "p2p": "P2P",
+    "ssz": "SSZ",
+}
 
 
 def format_filename_as_title(filename: str) -> str:
     """Convert a filename to a human-readable title."""
     name = filename[:-3] if filename.endswith(".md") else filename
 
-    replacements = {
-        "api": "API",
-        "bls": "BLS",
-        "das": "DAS",
-        "p2p": "P2P",
-        "ssz": "SSZ",
-    }
-
     name = name.replace("-", " ").replace("_", " ")
 
-    words = name.split()
     formatted_words = []
-    for word in words:
+    for word in name.split():
         lower_word = word.lower()
-        if lower_word in replacements:
-            formatted_words.append(replacements[lower_word])
+        if lower_word in REPLACEMENTS:
+            formatted_words.append(REPLACEMENTS[lower_word])
         else:
             formatted_words.append(word.title())
 
     return " ".join(formatted_words)
 
 
-def generate_spec_index(dir_path: str, level: int = 1) -> str:
-    """Generate index content for a specification directory."""
+def list_dir(dir_path: str) -> tuple[list[str], list[str]]:
+    """Return the markdown files and subdirectories of a directory."""
     files = []
     subdirs = []
 
@@ -50,6 +50,17 @@ def generate_spec_index(dir_path: str, level: int = 1) -> str:
             elif item.endswith(".md") and item != "index.md":
                 files.append(item)
 
+    return files, subdirs
+
+
+def generate_spec_index(dir_path: str, level: int = 1, prefix: str = "") -> str:
+    """Generate index content for a specification directory.
+
+    The prefix is the path of dir_path relative to the directory that the index
+    page is written to, so that links to nested documents resolve correctly.
+    """
+    files, subdirs = list_dir(dir_path)
+
     content = ""
 
     if level == 1:
@@ -59,14 +70,14 @@ def generate_spec_index(dir_path: str, level: int = 1) -> str:
 
     for file in files:
         name = format_filename_as_title(file)
-        content += f"- [{name}](./{file})\n"
+        content += f"- [{name}](./{prefix}{file})\n"
 
     for subdir in subdirs:
         formatted_name = format_filename_as_title(subdir)
         heading_level = "#" * (level + 1)
         content += f"\n{heading_level} {formatted_name}\n\n"
         subdir_path = os.path.join(dir_path, subdir)
-        subdir_content = generate_spec_index(subdir_path, level + 1)
+        subdir_content = generate_spec_index(subdir_path, level + 1, f"{prefix}{subdir}/")
         if subdir_content.strip():
             content += subdir_content
         else:
@@ -78,62 +89,23 @@ def generate_spec_index(dir_path: str, level: int = 1) -> str:
     return content
 
 
-def generate_pages_file(dir_path: str) -> str:
-    """Generate .pages file content for navigation titles."""
-    files = []
-    subdirs = []
+def main(docs_dir: str) -> None:
+    """Write an index page into every fork directory of the specifications."""
+    print("Generating specification index pages...")
 
-    if os.path.exists(dir_path):
-        for item in sorted(os.listdir(dir_path)):
-            item_path = os.path.join(dir_path, item)
-            if os.path.isdir(item_path):
-                subdirs.append(item)
-            elif item.endswith(".md") and item != "index.md":
-                files.append(item)
+    specs_dir = os.path.join(docs_dir, "specs")
+    if not os.path.isdir(specs_dir):
+        print(f"error: specifications directory does not exist: {specs_dir}")
+        sys.exit(1)
 
-    if not files and not subdirs:
-        return ""
-
-    content = "nav:\n"
-    for file in files:
-        title = format_filename_as_title(file)
-        content += f"  - {title}: {file}\n"
-
-    for subdir in subdirs:
-        title = format_filename_as_title(subdir)
-        content += f"  - {title}: {subdir}\n"
-
-    return content
+    _, fork_dirs = list_dir(specs_dir)
+    for fork in fork_dirs:
+        fork_path = os.path.join(specs_dir, fork)
+        index_path = os.path.join(fork_path, "index.md")
+        print(f"  - Generating {index_path}")
+        with open(index_path, "w") as f:
+            f.write(generate_spec_index(fork_path))
 
 
-print("Generating specification index pages...")
-
-spec_forks = []
-if os.path.exists("specs"):
-    for item in sorted(os.listdir("specs")):
-        item_path = os.path.join("specs", item)
-        if os.path.isdir(item_path) and item not in {"_deprecated"}:
-            spec_forks.append(item)
-
-
-def generate_pages_recursively(base_path: str) -> None:
-    """Recursively generate .pages files for all directories."""
-    pages_content = generate_pages_file(base_path)
-    if pages_content:
-        print(f"  - Generating .pages for {base_path}")
-        with mkdocs_gen_files.open(f"{base_path}/.pages", "w") as f:
-            f.write(pages_content)
-
-    if os.path.exists(base_path):
-        for item in sorted(os.listdir(base_path)):
-            item_path = os.path.join(base_path, item)
-            if os.path.isdir(item_path):
-                generate_pages_recursively(item_path)
-
-
-for fork in spec_forks:
-    spec_path = f"specs/{fork}"
-    print(f"  - Generating index for {spec_path}")
-    with mkdocs_gen_files.open(f"{spec_path}/index.md", "w") as f:
-        f.write(generate_spec_index(spec_path))
-    generate_pages_recursively(spec_path)
+if __name__ == "__main__":
+    main(sys.argv[1] if len(sys.argv) > 1 else "docs")

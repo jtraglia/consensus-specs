@@ -17,6 +17,7 @@ ALL_EXECUTABLE_SPEC_NAMES = \
 # A list of fake targets.
 .PHONY: \
 	_sync         \
+	build_docs    \
 	clean         \
 	help          \
 	lint          \
@@ -134,11 +135,11 @@ help-verbose:
 	@echo ""
 	@echo "$(BOLD)make serve_docs$(NORM)"
 	@echo ""
-	@echo "  Builds and serves the documentation locally using MkDocs. Copies spec files,"
+	@echo "  Builds and serves the documentation locally using Zensical. Copies spec files,"
 	@echo "  removes deprecated content, and starts a local web server for viewing docs."
 	@echo ""
 	@echo "  Example: make serve_docs"
-	@echo "  Then open: http://127.0.0.1:8000"
+	@echo "  Then open: http://127.0.0.1:8000/consensus-specs/"
 	@echo ""
 	@echo "$(BOLD)MAINTENANCE$(NORM)"
 	@echo "$(BOLD)--------------------------------------------------------------------------------$(NORM)"
@@ -240,16 +241,25 @@ SSZ_DIR = ./ssz
 SYNC_DIR = ./sync
 
 # Copy files to the docs directory.
+# The directory is recreated from scratch, as copying into an existing docs
+# directory would nest the sources one level deeper on every invocation.
 _copy_docs:
-	@cp -r $(SPEC_DIR) $(DOCS_DIR)
-	@cp -r $(SYNC_DIR) $(DOCS_DIR)
-	@cp -r $(SSZ_DIR) $(DOCS_DIR)
+	@rm -rf $(DOCS_DIR)
+	@mkdir -p $(DOCS_DIR)
+	@cp -r $(SPEC_DIR) $(DOCS_DIR)/specs
+	@cp -r $(SYNC_DIR) $(DOCS_DIR)/sync
+	@cp -r $(SSZ_DIR) $(DOCS_DIR)/ssz
 	@cp $(CURDIR)/README.md $(DOCS_DIR)/README.md
+	@$(UV_RUN) python $(CURDIR)/scripts/strip_inline_tocs.py $(DOCS_DIR)
+	@$(UV_RUN) python $(CURDIR)/scripts/gen_spec_indices.py $(DOCS_DIR)
+
+# Build the documentation.
+build_docs: _pyspec _copy_docs
+	@$(UV_RUN) zensical build --clean
 
 # Start a local documentation server.
 serve_docs: _pyspec _copy_docs
-	@$(UV_RUN) mkdocs build
-	@$(UV_RUN) mkdocs serve
+	@$(UV_RUN) zensical serve
 
 ###############################################################################
 # Checks
