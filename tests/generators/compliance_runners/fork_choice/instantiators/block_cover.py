@@ -17,6 +17,7 @@ from eth_consensus_specs.test.helpers.state import (
     transition_to,
 )
 from eth_consensus_specs.utils import bls
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 from .helpers import (
     advance_state_to_anchor_epoch,
@@ -181,7 +182,7 @@ def _generate_filter_block_tree(
 
         for index, block in enumerate(block_distribution):
             slot = threshold_slot + index
-            state = common_state.copy()
+            state = copy(common_state)
 
             # Advance state to the slot
             if state.slot < slot:
@@ -206,7 +207,7 @@ def _generate_filter_block_tree(
                 signed_blocks.append(new_block)
                 if block == target_block:
                     target_signed_block = new_block
-                    target_post_state = state.copy()
+                    target_post_state = copy(state)
 
             # Attest
             # TODO pick a random tip to make attestation with if the slot is empty
@@ -219,7 +220,7 @@ def _generate_filter_block_tree(
             if block > -1:
                 not_included_attestations = [a for a in attestations if a not in block_attestations]
 
-                check_up_state = state.copy()
+                check_up_state = copy(state)
                 spec.process_justification_and_finalization(check_up_state)
 
                 if current_justifications[block]:
@@ -275,7 +276,7 @@ def _debug_run_sanity_checks(
             run_on_attester_slashing(spec, store, attester_slashing, valid=True)
 
         if is_post_gloas(spec):
-            state = store.block_states[signed_block.message.hash_tree_root()]
+            state = store.block_states[hash_tree_root(signed_block.message)]
             for payload_attestation in signed_block.message.body.payload_attestations:
                 for ptc_message in payload_attestation_to_messages(
                     spec, state, payload_attestation
@@ -284,12 +285,12 @@ def _debug_run_sanity_checks(
                         spec, store, ptc_message, is_from_block=True, valid=True
                     )
 
-            envelope = envelopes_by_block_root.get(signed_block.message.hash_tree_root())
+            envelope = envelopes_by_block_root.get(hash_tree_root(signed_block.message))
             if envelope is not None:
                 run_on_execution_payload_envelope(spec, store, envelope, valid=True)
 
             for ptc_message in payload_attestations_by_block_root.get(
-                signed_block.message.hash_tree_root(), []
+                hash_tree_root(signed_block.message), []
             ):
                 run_on_payload_attestation_message(spec, store, ptc_message, valid=True)
 

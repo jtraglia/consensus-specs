@@ -19,11 +19,12 @@ from eth_consensus_specs.test.helpers.light_client import (
 from eth_consensus_specs.test.helpers.state import (
     next_slots,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def setup_test(spec, state):
     trusted_block = create_signed_genesis_block(spec, state)
-    trusted_block_root = trusted_block.message.hash_tree_root()
+    trusted_block_root = hash_tree_root(trusted_block.message)
     bootstrap = spec.create_light_client_bootstrap(state, trusted_block)
     store = spec.initialize_light_client_store(trusted_block_root, bootstrap)
     store.next_sync_committee = state.next_sync_committee
@@ -188,7 +189,7 @@ def test_process_light_client_update_finality_updated(spec, state):
     assert finalized_block.message.slot == spec.compute_start_slot_at_epoch(
         state.finalized_checkpoint.epoch
     )
-    assert finalized_block.message.hash_tree_root() == state.finalized_checkpoint.root
+    assert hash_tree_root(finalized_block.message) == state.finalized_checkpoint.root
 
     update = create_update(
         spec,

@@ -19,6 +19,7 @@ from eth_consensus_specs.test.helpers.withdrawals import (
 #  ***********************
 #  * CONSOLIDATION TESTS *
 #  ***********************
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 @with_electra_and_later
@@ -589,7 +590,7 @@ def test_switch_to_compounding_with_excess(spec, state):
 def test_switch_to_compounding_with_pending_consolidations_at_limit(spec, state):
     state.pending_consolidations = [
         spec.PendingConsolidation(source_index=0, target_index=1)
-    ] * spec.PENDING_CONSOLIDATIONS_LIMIT
+    ] * int(spec.PENDING_CONSOLIDATIONS_LIMIT)
 
     current_epoch = spec.get_current_epoch(state)
     source_index = spec.get_active_validator_indices(state, current_epoch)[0]
@@ -659,7 +660,7 @@ def test_incorrect_exceed_pending_consolidations_limit(spec, state):
 
     state.pending_consolidations = [
         spec.PendingConsolidation(source_index=0, target_index=1)
-    ] * spec.PENDING_CONSOLIDATIONS_LIMIT
+    ] * int(spec.PENDING_CONSOLIDATIONS_LIMIT)
 
     # Set up an otherwise correct consolidation
     current_epoch = spec.get_current_epoch(state)
@@ -1327,11 +1328,11 @@ def run_consolidation_processing(spec, state, consolidation, success=True):
         target_validator = state.validators[target_index]
         pre_exit_epoch_source = source_validator.exit_epoch
         pre_exit_epoch_target = target_validator.exit_epoch
-        pre_pending_consolidations = state.pending_consolidations.copy()
+        pre_pending_consolidations = copy(state.pending_consolidations)
         pre_source_balance = state.balances[source_index]
         pre_target_balance = state.balances[target_index]
     else:
-        pre_state = state.copy()
+        pre_state = copy(state)
 
     yield "pre", state
     yield "consolidation_request", consolidation
@@ -1389,11 +1390,11 @@ def run_switch_to_compounding_processing(spec, state, consolidation, success=Tru
         source_index = spec.ValidatorIndex(validator_pubkeys.index(consolidation.source_pubkey))
         target_index = spec.ValidatorIndex(validator_pubkeys.index(consolidation.target_pubkey))
         source_validator = state.validators[source_index]
-        pre_pending_consolidations = state.pending_consolidations.copy()
+        pre_pending_consolidations = copy(state.pending_consolidations)
         pre_withdrawal_credentials = source_validator.withdrawal_credentials
         pre_balance = state.balances[source_index]
     else:
-        pre_state = state.copy()
+        pre_state = copy(state)
 
     yield "pre", state
     yield "consolidation_request", consolidation

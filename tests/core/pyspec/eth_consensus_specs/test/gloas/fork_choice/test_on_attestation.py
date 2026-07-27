@@ -14,6 +14,7 @@ from eth_consensus_specs.test.helpers.fork_choice import (
     tick_store_to_slot,
 )
 from eth_consensus_specs.test.helpers.state import transition_to
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 @with_gloas_and_later
@@ -67,7 +68,7 @@ def test_validate_on_attestation_later_slot_full_vote_valid(spec, state):
     envelope = build_signed_execution_payload_envelope(spec, block_state, block_root, signed_block)
     yield from add_execution_payload(spec, store, envelope, test_steps)
 
-    state_at_2 = block_state.copy()
+    state_at_2 = copy(block_state)
     transition_to(spec, state_at_2, spec.Slot(2))
 
     # Get valid attestation at slot 2 for a full-node vote for slot 1.
@@ -113,7 +114,7 @@ def test_validate_on_attestation_beacon_root_payload_check(spec, state):
     # Build across the epoch boundary
     target_slot = spec.compute_start_slot_at_epoch(spec.Epoch(1))
     beacon_slot = spec.Slot(target_slot + 1)
-    chain_state = block_state.copy()
+    chain_state = copy(block_state)
     while chain_state.slot < target_slot:
         target_root, target_state, target_block = yield from add_signed_empty_block(
             spec, store, chain_state, test_steps
@@ -132,7 +133,7 @@ def test_validate_on_attestation_beacon_root_payload_check(spec, state):
 
     # Build a full-node vote past the head
     att_slot = spec.Slot(beacon_slot + 1)
-    att_state = beacon_state.copy()
+    att_state = copy(beacon_state)
     transition_to(spec, att_state, att_slot)
     att = get_valid_attestation(spec, att_state, slot=att_slot, payload_index=1, signed=True)
     assert att.data.target.root == target_root

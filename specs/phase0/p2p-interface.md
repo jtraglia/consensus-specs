@@ -413,7 +413,7 @@ def compute_attestation_subnet_prefix_bits() -> Uint64:
     """
     Return the number of NodeId bits to use when mapping to a subscribed subnet.
     """
-    return Uint64(ceillog2(ATTESTATION_SUBNET_COUNT) + ATTESTATION_SUBNET_EXTRA_BITS)
+    return ceillog2(ATTESTATION_SUBNET_COUNT) + Uint64(ATTESTATION_SUBNET_EXTRA_BITS)
 ```
 
 #### `compute_min_epochs_for_block_requests`

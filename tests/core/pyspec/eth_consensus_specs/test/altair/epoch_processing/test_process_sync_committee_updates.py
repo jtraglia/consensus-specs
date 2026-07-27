@@ -13,6 +13,7 @@ from eth_consensus_specs.test.helpers.epoch_processing import (
     run_epoch_processing_with,
 )
 from eth_consensus_specs.test.helpers.state import transition_to
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 #
 # Note:
@@ -21,8 +22,8 @@ from eth_consensus_specs.test.helpers.state import transition_to
 
 
 def run_sync_committees_progress_test(spec, state):
-    first_sync_committee = state.current_sync_committee.copy()
-    second_sync_committee = state.next_sync_committee.copy()
+    first_sync_committee = copy(state.current_sync_committee)
+    second_sync_committee = copy(state.next_sync_committee)
 
     current_period = spec.compute_sync_committee_period(spec.get_current_epoch(state))
     next_period = current_period + 1
@@ -119,8 +120,8 @@ def test_sync_committees_no_progress_not_at_period_boundary(spec, state):
     slot_not_at_period_boundary = state.slot + spec.SLOTS_PER_EPOCH
     transition_to(spec, state, slot_not_at_period_boundary)
 
-    first_sync_committee = state.current_sync_committee.copy()
-    second_sync_committee = state.next_sync_committee.copy()
+    first_sync_committee = copy(state.current_sync_committee)
+    second_sync_committee = copy(state.next_sync_committee)
 
     yield from run_epoch_processing_with(spec, state, "process_sync_committee_updates")
 

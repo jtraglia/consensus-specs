@@ -38,6 +38,7 @@ from eth_consensus_specs.test.helpers.state import (
     next_slot,
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 # primitives:
 # state
@@ -225,7 +226,7 @@ def random_block(spec, state, signed_blocks, scenario_state):
     # after this function returns.
     # Using a copy of the state for proposer sampling is also sound as any inputs used for the
     # shuffling are fixed a few epochs prior to ``spec.get_current_epoch(state)``.
-    temp_state = state.copy()
+    temp_state = copy(state)
     next_slot(spec, temp_state)
     for _ in range(BLOCK_ATTEMPTS):
         proposer_index = spec.get_beacon_proposer_index(temp_state)
@@ -273,7 +274,7 @@ def random_block_bellatrix(spec, state, signed_blocks, scenario_state, rng=None)
         spec, state, signed_blocks, scenario_state
     )
     # build execution_payload at the next slot
-    state = state.copy()
+    state = copy(state)
     next_slot(spec, state)
     block.body.execution_payload = build_randomized_execution_payload(spec, state, rng=rng)
     return block

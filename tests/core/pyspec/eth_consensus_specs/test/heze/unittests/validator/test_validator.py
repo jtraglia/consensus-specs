@@ -17,7 +17,11 @@ from eth_consensus_specs.test.phase0.unittests.validator.test_validator_unittest
 
 
 def inclusion_committee_balances(spec):
-    return [spec.MAX_EFFECTIVE_BALANCE] * spec.SLOTS_PER_EPOCH * spec.INCLUSION_LIST_COMMITTEE_SIZE
+    return (
+        [spec.MAX_EFFECTIVE_BALANCE]
+        * int(spec.SLOTS_PER_EPOCH)
+        * int(spec.INCLUSION_LIST_COMMITTEE_SIZE)
+    )
 
 
 def run_get_inclusion_list_committee_assignments(spec, state, epoch, valid=True):

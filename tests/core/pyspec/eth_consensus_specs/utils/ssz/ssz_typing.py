@@ -13,21 +13,17 @@ only does two things on top of it:
    declares the widths it uses.
 """
 
+from pydantic import model_validator
 from ssz.uint import BaseUint as Uint
 
+import ssz
 from ssz import (
-    BaseBitlist as Bitlist,
-    BaseBitvector as Bitvector,
-    BaseByteList as ByteList,
     BaseBytes as ByteVector,
     Boolean,
     Byte,
     CompatibleUnion,
     Container,
-    List,
-    ProgressiveBitlist,
     ProgressiveContainer,
-    ProgressiveList,
     SSZType,
     Uint8,
     Uint16,
@@ -35,8 +31,50 @@ from ssz import (
     Uint64,
     Uint128,
     Uint256,
-    Vector,
 )
+
+# TODO: drop this once eth-ssz-specs coerces a bare sequence itself.
+# A collection keeps its contents in a `data` field, so a plain list handed to
+# a collection-typed field is rejected. remerkleable accepted one, and the
+# specs and their tests pass sequences around constantly, so the bare form is
+# wrapped back up here.
+
+
+class _AcceptsBareSequence:
+    @model_validator(mode="before")
+    @classmethod
+    def _wrap_bare_sequence(cls, value: object) -> object:
+        if isinstance(value, (list, tuple, bytes, bytearray)):
+            return {"data": value}
+        return value
+
+
+class List[T: SSZType](_AcceptsBareSequence, ssz.List[T]):
+    pass
+
+
+class Vector[T: SSZType](_AcceptsBareSequence, ssz.Vector[T]):
+    pass
+
+
+class ProgressiveList[T: SSZType](_AcceptsBareSequence, ssz.ProgressiveList[T]):
+    pass
+
+
+class Bitlist(_AcceptsBareSequence, ssz.BaseBitlist):
+    pass
+
+
+class Bitvector(_AcceptsBareSequence, ssz.BaseBitvector):
+    pass
+
+
+class ProgressiveBitlist(_AcceptsBareSequence, ssz.ProgressiveBitlist):
+    pass
+
+
+class ByteList(_AcceptsBareSequence, ssz.BaseByteList):
+    pass
 
 
 class Bytes1(ByteVector):

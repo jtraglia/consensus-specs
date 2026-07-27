@@ -2,9 +2,8 @@ from random import Random
 
 from eth_consensus_specs.debug.random_value import get_random_ssz_object, RandomizationMode
 from eth_consensus_specs.utils.ssz.ssz_impl import serialize
-from eth_consensus_specs.utils.ssz.ssz_typing import Bitvector
 
-from .ssz_test_case import invalid_test_case, valid_test_case
+from .ssz_test_case import bitvector_of, invalid_test_case, valid_test_case
 
 
 def bitvector_case_fn(
@@ -12,7 +11,7 @@ def bitvector_case_fn(
 ):
     bits = get_random_ssz_object(
         rng,
-        Bitvector[size],
+        bitvector_of(size),
         max_bytes_length=(size + 7) // 8,
         max_list_length=size,
         mode=mode,
@@ -47,7 +46,7 @@ def valid_cases():
 
 def invalid_cases():
     # zero length bitvecors are illegal
-    yield "bitvec_0", invalid_test_case(Bitvector[1], lambda: b"")
+    yield "bitvec_0", invalid_test_case(bitvector_of(1), lambda: b"")
     rng = Random(1234)
     # Create a vector with test_size bits, but make the type typ_size instead,
     # which is invalid when used with the given type size
@@ -72,7 +71,7 @@ def invalid_cases():
             yield (
                 f"bitvec_{typ_size}_{mode.to_name()}_{test_size}",
                 invalid_test_case(
-                    Bitvector[typ_size],
+                    bitvector_of(typ_size),
                     lambda rng, mode=mode, test_size=test_size, typ_size=typ_size: serialize(
                         bitvector_case_fn(rng, mode, test_size, invalid_making_pos=typ_size)
                     ),

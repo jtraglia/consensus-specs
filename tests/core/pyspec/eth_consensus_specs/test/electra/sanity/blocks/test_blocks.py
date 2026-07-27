@@ -657,7 +657,7 @@ def test_switch_to_compounding_requests_when_pending_consolidation_queue_is_full
     # test starts off as full and consolidations requests are made.
     state.pending_consolidations = [
         spec.PendingConsolidation(source_index=0x1111, target_index=0x2222)
-    ] * spec.PENDING_CONSOLIDATIONS_LIMIT
+    ] * int(spec.PENDING_CONSOLIDATIONS_LIMIT)
 
     # This will contain two requests:
     #   1. A regular consolidation request

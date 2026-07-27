@@ -67,6 +67,7 @@ from eth_consensus_specs.test.helpers.sync_committee import (
 )
 from eth_consensus_specs.test.helpers.voluntary_exits import prepare_signed_exits
 from eth_consensus_specs.utils import bls
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 @with_all_phases
@@ -84,7 +85,7 @@ def test_invalid_prev_slot_block_transition(spec, state):
     # State is beyond block slot, but the block can still be realistic when invalid.
     # Try the transition, and update the state root to where it is halted. Then sign with the supposed proposer.
     expect_assertion_error(lambda: transition_unsigned_block(spec, state, block))
-    block.state_root = state.hash_tree_root()
+    block.state_root = hash_tree_root(state)
     signed_block = sign_block(spec, state, block, proposer_index=proposer_index)
     yield "blocks", [signed_block]
     yield "post", None
@@ -171,7 +172,7 @@ def process_and_sign_block_without_header_validations(spec, state, block):
         proposer_index=block.proposer_index,
         parent_root=block.parent_root,
         state_root=spec.Bytes32(),
-        body_root=block.body.hash_tree_root(),
+        body_root=hash_tree_root(block.body),
     )
     if is_post_bellatrix(spec) and not is_post_gloas(spec):
         if is_post_capella(spec) or spec.is_execution_enabled(state, block.body):
@@ -190,7 +191,7 @@ def process_and_sign_block_without_header_validations(spec, state, block):
         spec.process_sync_aggregate(state, block.body.sync_aggregate)
 
     # Insert post-state root
-    block.state_root = state.hash_tree_root()
+    block.state_root = hash_tree_root(state)
 
     # Sign block
     return sign_block(spec, state, block)
@@ -204,10 +205,10 @@ def test_invalid_proposal_for_genesis_slot(spec, state):
     yield "pre", state
 
     block = build_empty_block(spec, state, spec.GENESIS_SLOT)
-    block.parent_root = state.latest_block_header.hash_tree_root()
+    block.parent_root = hash_tree_root(state.latest_block_header)
 
     # Show that normal path through transition fails
-    failed_state = state.copy()
+    failed_state = copy(state)
     expect_assertion_error(
         lambda: spec.state_transition(
             failed_state, spec.SignedBeaconBlock(message=block), validate_result=False
@@ -229,8 +230,8 @@ def test_invalid_parent_from_same_slot(spec, state):
     parent_block = build_empty_block_for_next_slot(spec, state)
     signed_parent_block = state_transition_and_sign_block(spec, state, parent_block)
 
-    child_block = parent_block.copy()
-    child_block.parent_root = state.latest_block_header.hash_tree_root()
+    child_block = copy(parent_block)
+    child_block.parent_root = hash_tree_root(state.latest_block_header)
 
     if is_post_gloas(spec):
         child_block.body.signed_execution_payload_bid = build_empty_signed_execution_payload_bid(
@@ -239,7 +240,7 @@ def test_invalid_parent_from_same_slot(spec, state):
     elif is_post_bellatrix(spec):
         child_block.body.execution_payload = build_empty_execution_payload(spec, state)
 
-    child_block.parent_root = state.latest_block_header.hash_tree_root()
+    child_block.parent_root = hash_tree_root(state.latest_block_header)
     if is_post_gloas(spec):
         payload = build_empty_execution_payload(spec, state)
         child_block.body.signed_execution_payload_bid.message.block_hash = compute_el_block_hash(
@@ -251,7 +252,7 @@ def test_invalid_parent_from_same_slot(spec, state):
         )
 
     # Show that normal path through transition fails
-    failed_state = state.copy()
+    failed_state = copy(state)
     expect_assertion_error(
         lambda: spec.state_transition(
             failed_state, spec.SignedBeaconBlock(message=child_block), validate_result=False
@@ -473,7 +474,7 @@ def test_proposer_self_slashing(spec, state):
 @spec_state_test
 def test_proposer_slashing(spec, state):
     # copy for later balance lookups.
-    pre_state = state.copy()
+    pre_state = copy(state)
     proposer_slashing = get_valid_proposer_slashing(spec, state, signed_1=True, signed_2=True)
     slashed_index = proposer_slashing.signed_header_1.message.proposer_index
 
@@ -549,7 +550,7 @@ def test_invalid_similar_proposer_slashings_same_block(spec, state):
 @with_all_phases
 @spec_state_test
 def test_multiple_different_proposer_slashings_same_block(spec, state):
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     num_slashings = 3
     proposer_slashings = get_valid_proposer_slashings(spec, state, num_slashings)
@@ -590,7 +591,7 @@ def check_attester_slashing_effect(spec, pre_state, state, slashed_indices):
 @spec_state_test
 def test_attester_slashing(spec, state):
     # copy for later balance lookups.
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     attester_slashing = get_valid_attester_slashing(spec, state, signed_1=True, signed_2=True)
     slashed_indices = get_indexed_attestation_participants(spec, attester_slashing.attestation_1)
@@ -622,7 +623,7 @@ def test_invalid_duplicate_attester_slashing_same_block(spec, state):
         )
 
     attester_slashing = get_valid_attester_slashing(spec, state, signed_1=True, signed_2=True)
-    attester_slashings = [attester_slashing, attester_slashing.copy()]
+    attester_slashings = [attester_slashing, copy(attester_slashing)]
     slashed_indices = get_indexed_attestation_participants(spec, attester_slashing.attestation_1)
 
     assert not any(state.validators[i].slashed for i in slashed_indices)
@@ -650,7 +651,7 @@ def test_multiple_attester_slashings_no_overlap(spec, state):
         )
 
     # copy for later balance lookups.
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     full_indices = spec.get_active_validator_indices(state, spec.get_current_epoch(state))[:8]
     half_length = len(full_indices) // 2
@@ -698,7 +699,7 @@ def test_multiple_attester_slashings_partial_overlap(spec, state):
         )
 
     # copy for later balance lookups.
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     full_indices = spec.get_active_validator_indices(state, spec.get_current_epoch(state))[:8]
     one_third_length = len(full_indices) // 3
@@ -869,7 +870,7 @@ def test_deposit_top_up(spec, state):
     initial_balances_len = len(state.balances)
     validator_pre_balance = get_balance(state, validator_index)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
     yield "pre", pre_state
 
     block = build_empty_block_for_next_slot(spec, state)
@@ -1137,10 +1138,10 @@ def test_balance_driven_status_transitions(spec, state):
 @always_bls
 def test_historical_batch(spec, state):
     state.slot += spec.SLOTS_PER_HISTORICAL_ROOT - (state.slot % spec.SLOTS_PER_HISTORICAL_ROOT) - 1
-    pre_historical_roots = state.historical_roots.copy()
+    pre_historical_roots = copy(state.historical_roots)
 
     if is_post_capella(spec):
-        pre_historical_summaries = state.historical_summaries.copy()
+        pre_historical_summaries = copy(state.historical_summaries)
 
     yield "pre", state
 

@@ -1,6 +1,7 @@
 from eth_consensus_specs.test.context import expect_assertion_error
 from eth_consensus_specs.test.helpers.forks import is_post_heze
 from eth_consensus_specs.test.helpers.keys import builder_privkeys
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def run_execution_payload_bid_processing(spec, state, block, valid=True):
@@ -57,7 +58,7 @@ def prepare_signed_execution_payload_bid(
         parent_block_hash = state.latest_block_hash
 
     if parent_block_root is None:
-        parent_block_root = state.latest_block_header.hash_tree_root()
+        parent_block_root = hash_tree_root(state.latest_block_header)
 
     if fee_recipient is None:
         fee_recipient = spec.ExecutionAddress()

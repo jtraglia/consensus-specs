@@ -15,6 +15,7 @@ from eth_consensus_specs.test.helpers.random import (
 from eth_consensus_specs.test.helpers.state import (
     next_epoch,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 from eth_consensus_specs.utils.ssz.ssz_typing import Container, ProgressiveList, Uint64
 
 
@@ -316,20 +317,18 @@ def leaking(epochs=None):
             # transition it to leak, and put it in the LRU.
             # The input state is likely already cached, so the hash-tree-root does not affect speed.
             key = (
-                state.hash_tree_root(),
+                hash_tree_root(state),
                 spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY,
                 spec.SLOTS_PER_EPOCH,
                 epochs,
             )
             if key not in _cache_dict:
                 transition_state_to_leak(spec, state, epochs=epochs)
-                _cache_dict[key] = (
-                    state.get_backing()
-                )  # cache the tree structure, not the view wrapping it.
+                _cache_dict[key] = state
 
-            # Take an entry out of the LRU.
-            # No copy is necessary, as we wrap the immutable backing with a new view.
-            state = spec.BeaconState(backing=_cache_dict[key])
+            # Take an entry out of the LRU. The copy keeps the cached state
+            # from being mutated by whichever test receives it.
+            state = spec.copy(_cache_dict[key])
             return fn(*args, spec=spec, state=state, **kw)
 
         return entry
@@ -525,7 +524,7 @@ def run_test_duplicate_attestations_at_later_slots(spec, state):
         # duplicate if slot exceeds the max slot in previous_epoch_attestations
         if a.data.slot + a.inclusion_delay >= max_slot:
             continue
-        later_a = a.copy()
+        later_a = copy(a)
         later_a.inclusion_delay += 1
         later_a.proposer_index = per_slot_proposers[later_a.data.slot + later_a.inclusion_delay]
         later_attestations.append(later_a)

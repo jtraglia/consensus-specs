@@ -8,6 +8,7 @@ from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
     transition_to,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def run_on_tick(spec, store, time, new_justified_checkpoint=False):
@@ -41,9 +42,9 @@ def test_update_justified_single_on_store_finalized_chain(spec, state):
     next_epoch(spec, state)
     block = build_empty_block_for_next_slot(spec, state)
     state_transition_and_sign_block(spec, state, block)
-    store.blocks[block.hash_tree_root()] = block.copy()
-    store.block_states[block.hash_tree_root()] = state.copy()
-    parent_block = block.copy()
+    store.blocks[hash_tree_root(block)] = copy(block)
+    store.block_states[hash_tree_root(block)] = copy(state)
+    parent_block = copy(block)
     # To make compute_slots_since_epoch_start(current_slot) == 0, transition to the end of the epoch
     slot = state.slot + spec.SLOTS_PER_EPOCH - state.slot % spec.SLOTS_PER_EPOCH - 1
     transition_to(spec, state, slot)
@@ -52,11 +53,11 @@ def test_update_justified_single_on_store_finalized_chain(spec, state):
     # Mock state
     state.current_justified_checkpoint = spec.Checkpoint(
         epoch=spec.compute_epoch_at_slot(parent_block.slot),
-        root=parent_block.hash_tree_root(),
+        root=hash_tree_root(parent_block),
     )
     state_transition_and_sign_block(spec, state, block)
-    store.blocks[block.hash_tree_root()] = block
-    store.block_states[block.hash_tree_root()] = state
+    store.blocks[hash_tree_root(block)] = block
+    store.block_states[hash_tree_root(block)] = state
 
     run_on_tick(
         spec,
@@ -71,7 +72,7 @@ def test_update_justified_single_on_store_finalized_chain(spec, state):
 @spec_state_test
 def test_update_justified_single_not_on_store_finalized_chain(spec, state):
     store = get_genesis_forkchoice_store(spec, state)
-    init_state = state.copy()
+    init_state = copy(state)
 
     # Chain grows
     # Create a block at epoch 1
@@ -79,23 +80,23 @@ def test_update_justified_single_not_on_store_finalized_chain(spec, state):
     block = build_empty_block_for_next_slot(spec, state)
     block.body.graffiti = b"\x11" * 32
     state_transition_and_sign_block(spec, state, block)
-    store.blocks[block.hash_tree_root()] = block.copy()
-    store.block_states[block.hash_tree_root()] = state.copy()
+    store.blocks[hash_tree_root(block)] = copy(block)
+    store.block_states[hash_tree_root(block)] = copy(state)
     # Mock store.finalized_checkpoint
     store.finalized_checkpoint = spec.Checkpoint(
         epoch=spec.compute_epoch_at_slot(block.slot),
-        root=block.hash_tree_root(),
+        root=hash_tree_root(block),
     )
 
     # Create a block at epoch 1
-    state = init_state.copy()
+    state = copy(init_state)
     next_epoch(spec, state)
     block = build_empty_block_for_next_slot(spec, state)
     block.body.graffiti = b"\x22" * 32
     state_transition_and_sign_block(spec, state, block)
-    store.blocks[block.hash_tree_root()] = block.copy()
-    store.block_states[block.hash_tree_root()] = state.copy()
-    parent_block = block.copy()
+    store.blocks[hash_tree_root(block)] = copy(block)
+    store.block_states[hash_tree_root(block)] = copy(state)
+    parent_block = copy(block)
     # To make compute_slots_since_epoch_start(current_slot) == 0, transition to the end of the epoch
     slot = state.slot + spec.SLOTS_PER_EPOCH - state.slot % spec.SLOTS_PER_EPOCH - 1
     transition_to(spec, state, slot)
@@ -104,11 +105,11 @@ def test_update_justified_single_not_on_store_finalized_chain(spec, state):
     # Mock state
     state.current_justified_checkpoint = spec.Checkpoint(
         epoch=spec.compute_epoch_at_slot(parent_block.slot),
-        root=parent_block.hash_tree_root(),
+        root=hash_tree_root(parent_block),
     )
     state_transition_and_sign_block(spec, state, block)
-    store.blocks[block.hash_tree_root()] = block.copy()
-    store.block_states[block.hash_tree_root()] = state.copy()
+    store.blocks[hash_tree_root(block)] = copy(block)
+    store.block_states[hash_tree_root(block)] = copy(state)
 
     run_on_tick(
         spec,

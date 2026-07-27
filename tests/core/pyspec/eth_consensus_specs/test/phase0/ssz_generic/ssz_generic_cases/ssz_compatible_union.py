@@ -1,12 +1,13 @@
 from itertools import permutations
 from random import Random
+from typing import ClassVar
 
 from eth_consensus_specs.debug.random_value import RandomizationMode
 from eth_consensus_specs.test.exceptions import SkippedTest
 from eth_consensus_specs.utils.ssz.ssz_impl import deserialize, serialize
 from eth_consensus_specs.utils.ssz.ssz_typing import (
     CompatibleUnion,
-    View,
+    SSZType,
 )
 
 from .ssz_container import (
@@ -19,30 +20,33 @@ from .ssz_progressive_container import (
 )
 from .ssz_test_case import invalid_test_case, valid_test_case
 
-CompatibleUnionA = CompatibleUnion({1: ProgressiveSingleFieldContainerTestStruct})
 
-CompatibleUnionBC = CompatibleUnion(
-    {2: ProgressiveSingleListContainerTestStruct, 3: ProgressiveVarTestStruct}
-)
+class CompatibleUnionA(CompatibleUnion):
+    OPTIONS: ClassVar = {1: ProgressiveSingleFieldContainerTestStruct}
 
-CompatibleUnionABCA = CompatibleUnion(
-    {
+
+class CompatibleUnionBC(CompatibleUnion):
+    OPTIONS: ClassVar = {2: ProgressiveSingleListContainerTestStruct, 3: ProgressiveVarTestStruct}
+
+
+class CompatibleUnionABCA(CompatibleUnion):
+    OPTIONS: ClassVar = {
         1: ProgressiveSingleFieldContainerTestStruct,
         2: ProgressiveSingleListContainerTestStruct,
         3: ProgressiveVarTestStruct,
         4: ProgressiveSingleFieldContainerTestStruct,
     }
-)
 
-PRESET_COMPATIBLE_UNIONS: dict[str, type[View]] = {
+
+PRESET_COMPATIBLE_UNIONS: dict[str, type[SSZType]] = {
     "CompatibleUnionA": CompatibleUnionA,
     "CompatibleUnionBC": CompatibleUnionBC,
     "CompatibleUnionABCA": CompatibleUnionABCA,
 }
 
 
-def valid_compatible_union_cases(rng: Random, name: str, typ: type[View]):
-    for option, elem_type in typ.options().items():
+def valid_compatible_union_cases(rng: Random, name: str, typ: type[SSZType]):
+    for option, elem_type in typ.OPTIONS.items():
         for mode in [RandomizationMode.mode_zero, RandomizationMode.mode_max]:
             yield (
                 f"{name}_{mode.to_name()}_selector_{option}",
@@ -95,7 +99,7 @@ def valid_cases():
 def invalid_cases():
     rng = Random(1234)
     for name, typ in PRESET_COMPATIBLE_UNIONS.items():
-        options = typ.options()
+        options = typ.OPTIONS
 
         # Focus testing on edge cases
         unsupported_options_of_interest = {0, 128, 129, 254, 255}

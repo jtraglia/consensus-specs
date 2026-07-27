@@ -18,6 +18,7 @@ from eth_consensus_specs.test.helpers.gossip import (
 )
 from eth_consensus_specs.test.helpers.keys import privkeys
 from eth_consensus_specs.test.helpers.state import next_slot
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def create_signed_aggregate_and_proof(spec, state, attestation):
@@ -47,7 +48,7 @@ def create_signed_aggregate_and_proof(spec, state, attestation):
 def prepare_signed_aggregate(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
     next_slot(spec, state)
     attestation = get_valid_attestation(spec, state, signed=True, beacon_block_root=anchor_root)
     signed_agg = create_signed_aggregate_and_proof(spec, state, attestation)
@@ -69,7 +70,7 @@ def test_gossip_beacon_aggregate_and_proof__accept_same_data_for_disjoint_commit
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -95,7 +96,7 @@ def test_gossip_beacon_aggregate_and_proof__accept_same_data_for_disjoint_commit
         filter_participant_set=lambda participants: {min(participants)},
     )
 
-    assert attestation_1.data.hash_tree_root() == attestation_2.data.hash_tree_root()
+    assert hash_tree_root(attestation_1.data) == hash_tree_root(attestation_2.data)
     assert attestation_1.committee_bits != attestation_2.committee_bits
 
     signed_agg_1 = create_signed_aggregate_and_proof(spec, state, attestation_1)
@@ -247,7 +248,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_multiple_committees(spec, sta
 
     # Set two committee bits.
     assert spec.MAX_COMMITTEES_PER_SLOT >= 2
-    bits = [False] * spec.MAX_COMMITTEES_PER_SLOT
+    bits = [False] * int(spec.MAX_COMMITTEES_PER_SLOT)
     bits[0] = True
     bits[1] = True
     signed_agg.message.aggregate.committee_bits = spec.Bitvector[spec.MAX_COMMITTEES_PER_SLOT](

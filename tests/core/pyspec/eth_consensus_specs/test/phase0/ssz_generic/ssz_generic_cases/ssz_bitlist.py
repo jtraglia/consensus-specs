@@ -2,9 +2,8 @@ from random import Random
 
 from eth_consensus_specs.debug.random_value import get_random_ssz_object, RandomizationMode
 from eth_consensus_specs.utils.ssz.ssz_impl import serialize
-from eth_consensus_specs.utils.ssz.ssz_typing import Bitlist
 
-from .ssz_test_case import invalid_test_case, valid_test_case
+from .ssz_test_case import bitlist_of, invalid_test_case, valid_test_case
 
 INVALID_BITLIST_CASES = [
     ("no_delimiter_empty", b""),
@@ -18,7 +17,7 @@ def bitlist_case_fn(
 ):
     bits = get_random_ssz_object(
         rng,
-        Bitlist[limit],
+        bitlist_of(limit),
         max_bytes_length=(limit // 8) + 1,
         max_list_length=limit,
         mode=mode,
@@ -72,12 +71,12 @@ def invalid_cases():
         for description, data in INVALID_BITLIST_CASES:
             yield (
                 f"bitlist_{typ_limit}_{description}",
-                invalid_test_case(Bitlist[typ_limit], lambda data=data: data),
+                invalid_test_case(bitlist_of(typ_limit), lambda data=data: data),
             )
         yield (
             f"bitlist_{typ_limit}_but_{test_limit}",
             invalid_test_case(
-                Bitlist[typ_limit],
+                bitlist_of(typ_limit),
                 lambda rng, test_limit=test_limit: serialize(
                     bitlist_case_fn(rng, RandomizationMode.mode_max_count, test_limit)
                 ),

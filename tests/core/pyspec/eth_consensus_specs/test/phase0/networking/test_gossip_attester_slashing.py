@@ -7,6 +7,7 @@ from eth_consensus_specs.test.helpers.attester_slashings import (
     get_valid_attester_slashing,
 )
 from eth_consensus_specs.test.helpers.gossip import get_filename, get_seen, run_validate_gossip
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 @with_all_phases
@@ -95,7 +96,7 @@ def test_gossip_attester_slashing__reject_not_slashable_data(spec, state):
     attester_slashing = get_valid_attester_slashing(spec, state, signed_1=True, signed_2=True)
 
     # Make the attestation data identical (not a double vote or surround vote)
-    attester_slashing.attestation_2.data = attester_slashing.attestation_1.data.copy()
+    attester_slashing.attestation_2.data = copy(attester_slashing.attestation_1.data)
 
     yield get_filename(attester_slashing), attester_slashing
 

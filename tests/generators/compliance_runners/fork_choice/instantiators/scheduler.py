@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from enum import Enum
 
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
+
 from .helpers import payload_attestation_to_messages
 
 
@@ -150,7 +152,7 @@ class MessageScheduler:
     def process_block_messages(self, signed_block):
         block = signed_block.message
         if hasattr(block.body, "payload_attestations"):
-            state = self.store.block_states[block.hash_tree_root()]
+            state = self.store.block_states[hash_tree_root(block)]
             for payload_attestation in block.body.payload_attestations:
                 for ptc_message in payload_attestation_to_messages(
                     self.spec, state, payload_attestation

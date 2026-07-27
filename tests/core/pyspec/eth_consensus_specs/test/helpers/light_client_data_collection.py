@@ -23,6 +23,7 @@ from eth_consensus_specs.test.helpers.light_client import (
     upgrade_lc_header_to_new_spec,
     upgrade_lc_update_to_new_spec,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def _next_epoch_boundary_slot(spec, slot):
@@ -41,27 +42,27 @@ class BlockID:
 def _block_to_block_id(block):
     return BlockID(
         slot=block.message.slot,
-        root=block.message.hash_tree_root(),
+        root=hash_tree_root(block.message),
     )
 
 
 def _state_to_block_id(state):
-    parent_header = state.latest_block_header.copy()
-    parent_header.state_root = state.hash_tree_root()
-    return BlockID(slot=parent_header.slot, root=parent_header.hash_tree_root())
+    parent_header = copy(state.latest_block_header)
+    parent_header.state_root = hash_tree_root(state)
+    return BlockID(slot=parent_header.slot, root=hash_tree_root(parent_header))
 
 
 def get_lc_bootstrap_block_id(bootstrap):
     return BlockID(
         slot=bootstrap.header.beacon.slot,
-        root=bootstrap.header.beacon.hash_tree_root(),
+        root=hash_tree_root(bootstrap.header.beacon),
     )
 
 
 def get_lc_update_attested_block_id(update):
     return BlockID(
         slot=update.attested_header.beacon.slot,
-        root=update.attested_header.beacon.hash_tree_root(),
+        root=hash_tree_root(update.attested_header.beacon),
     )
 
 
@@ -618,8 +619,8 @@ def setup_lc_data_collection_test(spec, state, phases=None):
         spec=spec, data=create_signed_genesis_block(spec, state)
     )
     test.finalized_block_roots[bid.slot] = bid.root
-    test.states[state.hash_tree_root()] = ForkedBeaconState(spec=spec, data=state)
-    test.finalized_checkpoint_states[state.hash_tree_root()] = ForkedBeaconState(
+    test.states[hash_tree_root(state)] = ForkedBeaconState(spec=spec, data=state)
+    test.finalized_checkpoint_states[hash_tree_root(state)] = ForkedBeaconState(
         spec=spec, data=state
     )
     _cache_lc_data(
@@ -642,7 +643,7 @@ def finish_lc_data_collection_test(test):
 def _encode_lc_object(test, prefix, obj, slot, genesis_validators_root):
     yield from []  # Consistently enable `yield from` syntax in calling tests
 
-    file_name = f"{prefix}_{slot}_{encode_hex(obj.data.hash_tree_root())}"
+    file_name = f"{prefix}_{slot}_{encode_hex(hash_tree_root(obj.data))}"
     if file_name not in test.files:
         test.files.add(file_name)
         yield file_name, obj.data
@@ -820,7 +821,7 @@ def run_lc_data_collection_test_multi_fork(spec, phases, state, fork_1, fork_2):
 
     # Genesis block is post Altair and is finalized, so can be used as bootstrap
     genesis_bid = BlockID(
-        slot=state.slot, root=create_signed_genesis_block(spec, state).message.hash_tree_root()
+        slot=state.slot, root=hash_tree_root(create_signed_genesis_block(spec, state).message)
     )
     assert (
         get_lc_bootstrap_block_id(get_light_client_bootstrap(test, genesis_bid.root).data)

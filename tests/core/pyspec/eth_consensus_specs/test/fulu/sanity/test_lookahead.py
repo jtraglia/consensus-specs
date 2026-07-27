@@ -13,6 +13,7 @@ from eth_consensus_specs.test.helpers.state import (
 from eth_consensus_specs.test.helpers.withdrawals import (
     set_compounding_withdrawal_credential,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def run_test_effective_balance_increase_changes_lookahead(
@@ -80,7 +81,7 @@ def test_effective_balance_increase_changes_lookahead(spec, state):
     # We start with 4 epochs because the test is known to pass with 4 epochs.
     for randao_setup_epochs in range(4, 20):
         try:
-            state_copy = state.copy()
+            state_copy = copy(state)
             yield from run_test_with_randao_setup_epochs(spec, state_copy, randao_setup_epochs)
             return
         except AssertionError:

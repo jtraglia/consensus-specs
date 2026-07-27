@@ -16,6 +16,7 @@ from eth_consensus_specs.test.helpers.keys import privkeys, pubkey_to_privkey, p
 from eth_consensus_specs.test.helpers.state import transition_to
 from eth_consensus_specs.test.helpers.sync_committee import compute_sync_committee_signature
 from eth_consensus_specs.utils import bls
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from eth_consensus_specs.utils.ssz.ssz_typing import Bitvector
 
 rng = random.Random(1337)
@@ -132,8 +133,8 @@ def test_process_sync_committee_contributions(spec, state):
 @always_bls
 def test_get_sync_committee_message(spec, state):
     validator_index = 0
-    block = spec.BeaconBlock(state_root=state.hash_tree_root())
-    block_root = spec.Root(block.hash_tree_root())
+    block = spec.BeaconBlock(state_root=hash_tree_root(state))
+    block_root = spec.Root(hash_tree_root(block))
     sync_committee_message = spec.get_sync_committee_message(
         state=state,
         block_root=block_root,

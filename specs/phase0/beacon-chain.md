@@ -991,10 +991,10 @@ def integer_squareroot(n: Uint64) -> Uint64:
     if n == UINT64_MAX:
         return UINT64_MAX_SQRT
     x = n
-    y = (x + 1) // 2
+    y = (x + Uint64(1)) // Uint64(2)
     while y < x:
         x = y
-        y = (x + n // x) // 2
+        y = (x + n // x) // Uint64(2)
     return x
 ```
 
@@ -1186,19 +1186,19 @@ def compute_shuffled_permutation(index_count: Uint64, seed: Bytes32) -> Sequence
     indices = [Uint64(i) for i in range(index_count)]
     for current_round in range(SHUFFLE_ROUND_COUNT):
         round_bytes = current_round.to_bytes(1, "little")
-        pivot = int.from_bytes(hash(seed + round_bytes)[0:8], "little") % index_count
+        pivot = Uint64(int.from_bytes(hash(seed + round_bytes)[0:8], "little")) % index_count
         source_by_bucket: Dict[Uint64, Bytes32] = {}
         for i in range(index_count):
             flip = (pivot + index_count - indices[i]) % index_count
             position = max(indices[i], flip)
-            position_bucket = position // 256
+            position_bucket = position // Uint64(256)
             if position_bucket not in source_by_bucket:
                 source_by_bucket[position_bucket] = hash(
                     seed + round_bytes + position_bucket.to_bytes(4, "little")
                 )
             source = source_by_bucket[position_bucket]
-            byte_val = source[(position % 256) // 8]
-            bit = (byte_val >> int(position % 8)) % 2
+            byte_val = source[int(position % Uint64(256)) // 8]
+            bit = (byte_val >> int(position % Uint64(8))) % 2
             indices[i] = flip if bit else indices[i]
     return indices
 ```
@@ -1270,7 +1270,7 @@ def compute_epoch_at_slot(slot: Slot) -> Epoch:
     """
     Return the epoch number at ``slot``.
     """
-    return Epoch(slot // SLOTS_PER_EPOCH)
+    return Epoch(slot // Slot(SLOTS_PER_EPOCH))
 ```
 
 #### `compute_start_slot_at_epoch`

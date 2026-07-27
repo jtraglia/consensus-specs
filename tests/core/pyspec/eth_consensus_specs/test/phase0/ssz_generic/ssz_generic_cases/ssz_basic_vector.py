@@ -1,9 +1,12 @@
 from random import Random
 
-from eth_consensus_specs.debug.random_value import get_random_ssz_object, RandomizationMode
+from eth_consensus_specs.debug.random_value import (
+    BasicType,
+    get_random_ssz_object,
+    RandomizationMode,
+)
 from eth_consensus_specs.utils.ssz.ssz_impl import serialize
 from eth_consensus_specs.utils.ssz.ssz_typing import (
-    BasicView,
     Boolean,
     Uint8,
     Uint16,
@@ -11,19 +14,18 @@ from eth_consensus_specs.utils.ssz.ssz_typing import (
     Uint64,
     Uint128,
     Uint256,
-    Vector,
 )
 
 from .ssz_boolean import INVALID_BOOL_CASES
-from .ssz_test_case import invalid_test_case, valid_test_case
+from .ssz_test_case import invalid_test_case, valid_test_case, vector_of
 
 
 def basic_vector_case_fn(
-    rng: Random, mode: RandomizationMode, elem_type: type[BasicView], length: int
+    rng: Random, mode: RandomizationMode, elem_type: type[BasicType], length: int
 ):
     return get_random_ssz_object(
         rng,
-        Vector[elem_type, length],
+        vector_of(elem_type, length),
         max_bytes_length=length * 8,
         max_list_length=length,
         mode=mode,
@@ -31,7 +33,7 @@ def basic_vector_case_fn(
     )
 
 
-BASIC_TYPES: dict[str, type[BasicView]] = {
+BASIC_TYPES: dict[str, type[BasicType]] = {
     "bool": Boolean,
     "uint8": Uint8,
     "uint16": Uint16,
@@ -64,7 +66,7 @@ def valid_cases():
 def invalid_cases():
     # zero length vectors are illegal
     for name, typ in BASIC_TYPES.items():
-        yield f"vec_{name}_0", invalid_test_case(Vector[typ, 1], lambda: b"")
+        yield f"vec_{name}_0", invalid_test_case(vector_of(typ, 1), lambda: b"")
 
     rng = Random(1234)
     for name, typ in BASIC_TYPES.items():
@@ -72,14 +74,14 @@ def invalid_cases():
         if name != "bool":
             random_modes.append(RandomizationMode.mode_random)
         for length in [1, 2, 3, 4, 5, 8, 16, 31, 512, 513]:
-            yield f"vec_{name}_{length}_nil", invalid_test_case(Vector[typ, length], lambda: b"")
+            yield f"vec_{name}_{length}_nil", invalid_test_case(vector_of(typ, length), lambda: b"")
             for mode in random_modes:
                 if name == "bool":
                     for description, data in INVALID_BOOL_CASES:
                         yield (
                             f"vec_{name}_{length}_{mode.to_name()}_{description}",
                             invalid_test_case(
-                                Vector[typ, length],
+                                vector_of(typ, length),
                                 lambda rng, mode=mode, typ=typ, length=length, data=data: (
                                     serialize(basic_vector_case_fn(rng, mode, typ, length))[:-1]
                                     + data
@@ -91,13 +93,13 @@ def invalid_cases():
                     # empty bytes, no elements. It may seem valid, but empty fixed-size elements are not valid SSZ.
                     yield (
                         f"vec_{name}_{length}_{mode.to_name()}_one_less",
-                        invalid_test_case(Vector[typ, length], lambda: b""),
+                        invalid_test_case(vector_of(typ, length), lambda: b""),
                     )
                 else:
                     yield (
                         f"vec_{name}_{length}_{mode.to_name()}_one_less",
                         invalid_test_case(
-                            Vector[typ, length],
+                            vector_of(typ, length),
                             lambda rng, mode=mode, typ=typ, length=length: serialize(
                                 basic_vector_case_fn(rng, mode, typ, length - 1)
                             ),
@@ -107,7 +109,7 @@ def invalid_cases():
                 yield (
                     f"vec_{name}_{length}_{mode.to_name()}_one_more",
                     invalid_test_case(
-                        Vector[typ, length],
+                        vector_of(typ, length),
                         lambda rng, mode=mode, typ=typ, length=length: serialize(
                             basic_vector_case_fn(rng, mode, typ, length + 1)
                         ),
@@ -117,7 +119,7 @@ def invalid_cases():
                 yield (
                     f"vec_{name}_{length}_{mode.to_name()}_one_byte_less",
                     invalid_test_case(
-                        Vector[typ, length],
+                        vector_of(typ, length),
                         lambda rng, mode=mode, typ=typ, length=length: serialize(
                             basic_vector_case_fn(rng, mode, typ, length)
                         )[:-1],
@@ -127,7 +129,7 @@ def invalid_cases():
                 yield (
                     f"vec_{name}_{length}_{mode.to_name()}_one_byte_more",
                     invalid_test_case(
-                        Vector[typ, length],
+                        vector_of(typ, length),
                         lambda rng, mode=mode, typ=typ, length=length: (
                             serialize(basic_vector_case_fn(rng, mode, typ, length))
                             + serialize(basic_vector_case_fn(rng, mode, Uint8, 1))

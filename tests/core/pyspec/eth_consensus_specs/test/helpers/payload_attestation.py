@@ -11,6 +11,7 @@ from eth_consensus_specs.test.helpers.fork_choice import (
     tick_and_add_block,
 )
 from eth_consensus_specs.test.helpers.state import state_transition_and_sign_block
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def get_random_payload_attestations(spec, state, rng):
@@ -21,7 +22,7 @@ def get_random_payload_attestations(spec, state, rng):
         return []
 
     # Compute the beacon_block_root from the parent block header
-    parent_header = state.latest_block_header.copy()
+    parent_header = copy(state.latest_block_header)
     if parent_header.state_root == spec.Root():
         parent_header.state_root = spec.hash_tree_root(state)
     beacon_block_root = spec.hash_tree_root(parent_header)
@@ -52,7 +53,7 @@ def ptc_size_balances(spec):
     """
     Return a balances list sized to PTC_SIZE so each PTC seat can be pinned to a unique validator.
     """
-    return [spec.MAX_EFFECTIVE_BALANCE] * spec.PTC_SIZE
+    return [spec.MAX_EFFECTIVE_BALANCE] * int(spec.PTC_SIZE)
 
 
 def setup_verified_parent_with_distinct_ptc(spec, state):
@@ -98,9 +99,9 @@ def vote_via_child_block(
         attesting_indices=[spec.ValidatorIndex(p) for p in positions],
     )
 
-    child_state = parent_state.copy()
+    child_state = copy(parent_state)
     child_block = build_empty_block_for_next_slot(spec, child_state)
     child_block.body.payload_attestations.append(aggregate)
     signed_child = state_transition_and_sign_block(spec, child_state, child_block)
     yield from tick_and_add_block(spec, store, signed_child, test_steps)
-    return signed_child.message.hash_tree_root()
+    return hash_tree_root(signed_child.message)

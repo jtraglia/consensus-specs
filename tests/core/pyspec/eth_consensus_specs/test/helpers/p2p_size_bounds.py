@@ -27,7 +27,7 @@ def build_max_size_indexed_attestation(spec):
 
 def build_max_size_payload_attestation(spec):
     return spec.PayloadAttestation(
-        aggregation_bits=spec.Bitvector[spec.PTC_SIZE]([True] * spec.PTC_SIZE),
+        aggregation_bits=spec.Bitvector[spec.PTC_SIZE]([True] * int(spec.PTC_SIZE)),
         data=spec.PayloadAttestationData(),
         signature=spec.BLSSignature(),
     )
@@ -54,16 +54,18 @@ def build_max_size_signed_aggregate_and_proof(spec):
 
 def build_max_size_signed_execution_payload_bid(spec):
     blob_kzg_commitments = spec.ProgressiveList[spec.KZGCommitment](
-        [spec.KZGCommitment()] * spec.MAX_BLOB_COMMITMENTS_PER_BLOCK
+        [spec.KZGCommitment()] * int(spec.MAX_BLOB_COMMITMENTS_PER_BLOCK)
     )
     bid = spec.ExecutionPayloadBid(blob_kzg_commitments=blob_kzg_commitments)
     return spec.SignedExecutionPayloadBid(message=bid, signature=spec.BLSSignature())
 
 
 def build_max_size_data_column_sidecar(spec):
-    column = spec.ProgressiveList[spec.Cell]([spec.Cell()] * spec.MAX_BLOB_COMMITMENTS_PER_BLOCK)
+    column = spec.ProgressiveList[spec.Cell](
+        [spec.Cell()] * int(spec.MAX_BLOB_COMMITMENTS_PER_BLOCK)
+    )
     kzg_proofs = spec.ProgressiveList[spec.KZGProof](
-        [spec.KZGProof()] * spec.MAX_BLOB_COMMITMENTS_PER_BLOCK
+        [spec.KZGProof()] * int(spec.MAX_BLOB_COMMITMENTS_PER_BLOCK)
     )
     return spec.DataColumnSidecar(
         index=spec.ColumnIndex(0),
@@ -75,12 +77,14 @@ def build_max_size_data_column_sidecar(spec):
 
 
 def build_max_size_partial_data_column_sidecar(spec):
-    cells_present_bitmap = spec.ProgressiveBitlist([True] * spec.MAX_BLOB_COMMITMENTS_PER_BLOCK)
+    cells_present_bitmap = spec.ProgressiveBitlist(
+        [True] * int(spec.MAX_BLOB_COMMITMENTS_PER_BLOCK)
+    )
     partial_column = spec.ProgressiveList[spec.Cell](
-        [spec.Cell()] * spec.MAX_BLOB_COMMITMENTS_PER_BLOCK
+        [spec.Cell()] * int(spec.MAX_BLOB_COMMITMENTS_PER_BLOCK)
     )
     kzg_proofs = spec.ProgressiveList[spec.KZGProof](
-        [spec.KZGProof()] * spec.MAX_BLOB_COMMITMENTS_PER_BLOCK
+        [spec.KZGProof()] * int(spec.MAX_BLOB_COMMITMENTS_PER_BLOCK)
     )
     return spec.PartialDataColumnSidecar(
         cells_present_bitmap=cells_present_bitmap,

@@ -11,6 +11,7 @@ from eth_consensus_specs.test.helpers.deposit_requests import (
 # that deposits with builder withdrawal credentials, or for pubkeys that are
 # already builders, are queued as ordinary pending deposits.
 #
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 @with_gloas_and_later
@@ -37,7 +38,7 @@ def test_process_deposit_request__builder_credentials_queued(spec, state):
         signed=True,
         withdrawal_credentials=withdrawal_credentials,
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_deposit_request_processing(spec, state, deposit_request)
 
@@ -78,7 +79,7 @@ def test_process_deposit_request__builder_pubkey_queued(spec, state):
         signed=True,
         withdrawal_credentials=withdrawal_credentials,
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_deposit_request_processing(spec, state, deposit_request)
 
@@ -119,7 +120,7 @@ def test_process_deposit_request__builder_pubkey_validator_credentials(spec, sta
         signed=True,
         withdrawal_credentials=withdrawal_credentials,
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_deposit_request_processing(spec, state, deposit_request)
 

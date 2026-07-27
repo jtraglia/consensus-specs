@@ -44,6 +44,7 @@ from eth_consensus_specs.test.helpers.withdrawals import (
     set_parent_block_full,
     set_validator_fully_withdrawable,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def _setup_missed_payload_with_withdrawals(spec, state, num_withdrawal_validators=1):
@@ -73,7 +74,7 @@ def _setup_missed_payload_with_withdrawals(spec, state, num_withdrawal_validator
     assert len(get_expected_withdrawals(spec, state)) > 0
 
     # Save pre-state before any blocks
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     # Process Block 1 — process_withdrawals runs (parent is full),
     # computes withdrawals W_1, applies balance changes, stores in payload_expected_withdrawals.
@@ -101,7 +102,7 @@ def _attempt_payload_with_withdrawals(spec, state, withdrawals):
 
     Returns True if accepted, False if rejected.
     """
-    test_state = state.copy()
+    test_state = copy(state)
     committed_bid = test_state.latest_execution_payload_bid
 
     # Build payload matching the committed bid in every field
@@ -116,14 +117,14 @@ def _attempt_payload_with_withdrawals(spec, state, withdrawals):
     )
 
     # Cache state root for beacon_block_root computation
-    header = test_state.latest_block_header.copy()
-    header.state_root = test_state.hash_tree_root()
+    header = copy(test_state.latest_block_header)
+    header.state_root = hash_tree_root(test_state)
 
     envelope = spec.ExecutionPayloadEnvelope(
         payload=payload,
         execution_requests=spec.ExecutionRequests(),
         builder_index=committed_bid.builder_index,
-        beacon_block_root=header.hash_tree_root(),
+        beacon_block_root=hash_tree_root(header),
         parent_beacon_block_root=test_state.latest_block_header.parent_root,
     )
 
@@ -476,7 +477,7 @@ def test_invalid_payload_attestation_too_old_slot(spec, state):
 
     ptc = spec.get_ptc(state, state.slot - 2)
 
-    parent_header = state.latest_block_header.copy()
+    parent_header = copy(state.latest_block_header)
     if parent_header.state_root == spec.Root():
         parent_header.state_root = spec.hash_tree_root(state)
     beacon_block_root = spec.hash_tree_root(parent_header)
@@ -751,7 +752,7 @@ def test_invalid_payload_attestation_invalid_signature(spec, state):
     parent_slot = state.latest_block_header.slot
     ptc = spec.get_ptc(state, parent_slot)
 
-    parent_header = state.latest_block_header.copy()
+    parent_header = copy(state.latest_block_header)
     if parent_header.state_root == spec.Root():
         parent_header.state_root = spec.hash_tree_root(state)
     beacon_block_root = spec.hash_tree_root(parent_header)

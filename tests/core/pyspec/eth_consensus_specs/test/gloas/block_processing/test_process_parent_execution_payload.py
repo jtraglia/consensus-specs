@@ -16,6 +16,7 @@ from eth_consensus_specs.test.helpers.execution_requests import (
 )
 from eth_consensus_specs.test.helpers.keys import pubkeys
 from eth_consensus_specs.test.helpers.withdrawals import set_parent_block_full
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def _commit_parent_requests(spec, state, requests, value=None, builder_index=None):
@@ -57,7 +58,7 @@ def _commit_full_parent_with_payment(spec, state, value, builder_index, fee_reci
         spec, state, spec.ExecutionRequests(), value=value, builder_index=builder_index
     )
 
-    parent_bid = state.latest_execution_payload_bid.copy()
+    parent_bid = copy(state.latest_execution_payload_bid)
     state.execution_payload_availability[parent_bid.slot % spec.SLOTS_PER_HISTORICAL_ROOT] = 0b0
     return parent_bid
 
@@ -119,7 +120,7 @@ def test_process_parent_execution_payload__full_parent(spec, state):
     set_parent_block_full(spec, state)
     block = build_empty_block_for_next_slot(spec, state)
 
-    parent_bid = state.latest_execution_payload_bid.copy()
+    parent_bid = copy(state.latest_execution_payload_bid)
     parent_slot_index = parent_bid.slot % spec.SLOTS_PER_HISTORICAL_ROOT
     state.execution_payload_availability[parent_slot_index] = 0b0
 
@@ -183,7 +184,7 @@ def test_process_parent_execution_payload__full_parent_settles_builder_payment(s
     _commit_parent_requests(
         spec, state, spec.ExecutionRequests(), value=value, builder_index=builder_index
     )
-    parent_bid = state.latest_execution_payload_bid.copy()
+    parent_bid = copy(state.latest_execution_payload_bid)
     payment_idx = spec.SLOTS_PER_EPOCH + parent_bid.slot % spec.SLOTS_PER_EPOCH
 
     block = build_empty_block_for_next_slot(spec, state)
@@ -217,7 +218,7 @@ def test_process_parent_execution_payload__full_parent_self_build_zero_value(spe
         value=spec.Gwei(0),
         builder_index=spec.BUILDER_INDEX_SELF_BUILD,
     )
-    parent_bid = state.latest_execution_payload_bid.copy()
+    parent_bid = copy(state.latest_execution_payload_bid)
     parent_slot_index = parent_bid.slot % spec.SLOTS_PER_HISTORICAL_ROOT
     state.execution_payload_availability[parent_slot_index] = 0b0
 
@@ -283,7 +284,7 @@ def test_process_parent_execution_payload__full_parent_with_execution_requests(s
     pre_pending_deposits_len = len(state.pending_deposits)
     pre_pending_partial_withdrawals_len = len(state.pending_partial_withdrawals)
     pre_pending_consolidations_len = len(state.pending_consolidations)
-    pre_validators = [v.copy() for v in state.validators]
+    pre_validators = [copy(v) for v in state.validators]
 
     spec.process_slots(state, block.slot)
     yield from run_parent_execution_payload_processing(spec, state, block)
@@ -436,7 +437,7 @@ def test_process_parent_execution_payload__older_than_previous_epoch(spec, state
     assert state.builder_pending_payments[previous_epoch_idx] == spec.BuilderPendingPayment()
 
     pre_pending_withdrawals_len = len(state.builder_pending_withdrawals)
-    pre_payments = state.builder_pending_payments.copy()
+    pre_payments = copy(state.builder_pending_payments)
 
     yield from run_parent_execution_payload_processing(spec, state, block)
 
@@ -584,7 +585,7 @@ def test_deposit_requests_greater_than_electra_max(spec, state):
 def test_max_withdrawal_requests(spec, state):
     requests = spec.ExecutionRequests(
         withdrawals=spec.ProgressiveList[spec.WithdrawalRequest](
-            [spec.WithdrawalRequest()] * spec.MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD
+            [spec.WithdrawalRequest()] * int(spec.MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD)
         ),
     )
     _commit_parent_requests(spec, state, requests)
@@ -618,7 +619,7 @@ def test_invalid_too_many_withdrawal_requests(spec, state):
 def test_max_consolidation_requests(spec, state):
     requests = spec.ExecutionRequests(
         consolidations=spec.ProgressiveList[spec.ConsolidationRequest](
-            [spec.ConsolidationRequest()] * spec.MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD
+            [spec.ConsolidationRequest()] * int(spec.MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD)
         ),
     )
     _commit_parent_requests(spec, state, requests)
@@ -652,7 +653,7 @@ def test_invalid_too_many_consolidation_requests(spec, state):
 def test_max_builder_deposit_requests(spec, state):
     requests = spec.ExecutionRequests(
         builder_deposits=spec.ProgressiveList[spec.BuilderDepositRequest](
-            [spec.BuilderDepositRequest()] * spec.MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD
+            [spec.BuilderDepositRequest()] * int(spec.MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD)
         ),
     )
     _commit_parent_requests(spec, state, requests)
@@ -686,7 +687,7 @@ def test_invalid_too_many_builder_deposit_requests(spec, state):
 def test_max_builder_exit_requests(spec, state):
     requests = spec.ExecutionRequests(
         builder_exits=spec.ProgressiveList[spec.BuilderExitRequest](
-            [spec.BuilderExitRequest()] * spec.MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD
+            [spec.BuilderExitRequest()] * int(spec.MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD)
         ),
     )
     _commit_parent_requests(spec, state, requests)

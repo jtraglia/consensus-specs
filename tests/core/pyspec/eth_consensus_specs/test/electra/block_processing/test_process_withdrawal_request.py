@@ -19,6 +19,7 @@ from eth_consensus_specs.test.helpers.withdrawals import (
 #
 # Run processing
 #
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def run_withdrawal_request_processing(spec, state, withdrawal_request, valid=True, success=True):
@@ -38,7 +39,7 @@ def run_withdrawal_request_processing(spec, state, withdrawal_request, valid=Tru
         yield "post", None
         return
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     spec.process_withdrawal_request(state, withdrawal_request)
 
@@ -50,7 +51,7 @@ def run_withdrawal_request_processing(spec, state, withdrawal_request, valid=Tru
     else:
         validator_index = get_validator_index_by_pubkey(state, withdrawal_request.validator_pubkey)
         pre_exit_epoch = pre_state.validators[validator_index].exit_epoch
-        pre_pending_partial_withdrawals = pre_state.pending_partial_withdrawals.copy()
+        pre_pending_partial_withdrawals = copy(pre_state.pending_partial_withdrawals)
         pre_balance = pre_state.balances[validator_index]
         pre_effective_balance = pre_state.validators[validator_index].effective_balance
         assert state.balances[validator_index] == pre_balance
@@ -174,9 +175,9 @@ def test_basic_withdrawal_request_with_full_partial_withdrawal_queue(spec, state
     partial_withdrawal = spec.PendingPartialWithdrawal(
         validator_index=1, amount=1, withdrawable_epoch=current_epoch
     )
-    state.pending_partial_withdrawals = [
-        partial_withdrawal
-    ] * spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT
+    state.pending_partial_withdrawals = [partial_withdrawal] * int(
+        spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT
+    )
 
     # Exit should still be processed
     yield from run_withdrawal_request_processing(
@@ -600,9 +601,9 @@ def test_partial_withdrawal_queue_full(spec, state):
     partial_withdrawal = spec.PendingPartialWithdrawal(
         validator_index=1, amount=1, withdrawable_epoch=current_epoch
     )
-    state.pending_partial_withdrawals = [
-        partial_withdrawal
-    ] * spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT
+    state.pending_partial_withdrawals = [partial_withdrawal] * int(
+        spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT
+    )
     yield from run_withdrawal_request_processing(spec, state, withdrawal_request, success=False)
 
 

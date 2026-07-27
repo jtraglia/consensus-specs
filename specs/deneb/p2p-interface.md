@@ -258,7 +258,7 @@ def verify_blob_sidecar_inclusion_proof(blob_sidecar: BlobSidecar) -> bool:
         get_generalized_index(BeaconBlockBody, "blob_kzg_commitments", blob_sidecar.index)
     )
     return is_valid_merkle_branch(
-        leaf=blob_sidecar.kzg_commitment.hash_tree_root(),
+        leaf=hash_tree_root(blob_sidecar.kzg_commitment),
         branch=blob_sidecar.kzg_commitment_inclusion_proof,
         depth=KZG_COMMITMENT_INCLUSION_PROOF_DEPTH,
         index=gindex,

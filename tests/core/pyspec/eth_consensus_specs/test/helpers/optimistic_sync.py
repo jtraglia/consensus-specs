@@ -6,6 +6,7 @@ from eth_utils import encode_hex
 from eth_consensus_specs.test.helpers.fork_choice import (
     add_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 from eth_consensus_specs.utils.ssz.ssz_typing import Bytes32
 
 
@@ -57,15 +58,15 @@ class MegaStore:
 
 
 def get_optimistic_store(spec, anchor_state, anchor_block):
-    assert anchor_block.state_root == anchor_state.hash_tree_root()
+    assert anchor_block.state_root == hash_tree_root(anchor_state)
 
     opt_store = spec.OptimisticStore(
         optimistic_roots=set(),
-        head_block_root=anchor_block.hash_tree_root(),
+        head_block_root=hash_tree_root(anchor_block),
     )
-    anchor_block_root = anchor_block.hash_tree_root()
-    opt_store.blocks[anchor_block_root] = anchor_block.copy()
-    opt_store.block_states[anchor_block_root] = anchor_state.copy()
+    anchor_block_root = hash_tree_root(anchor_block)
+    opt_store.blocks[anchor_block_root] = copy(anchor_block)
+    opt_store.block_states[anchor_block_root] = copy(anchor_state)
 
     return opt_store
 
@@ -96,7 +97,7 @@ def add_optimistic_block(
     from ``verify_and_notify_new_payload`` method response.
     """
     block = signed_block.message
-    block_root = block.hash_tree_root()
+    block_root = hash_tree_root(block)
     el_block_hash = block.body.execution_payload.block_hash
 
     if payload_status is None:
@@ -123,7 +124,7 @@ def add_optimistic_block(
         assert payload_status.latest_valid_hash is not None
         current_block = block
         while el_block_hash != payload_status.latest_valid_hash and el_block_hash != spec.Bytes32():
-            current_block_root = current_block.hash_tree_root()
+            current_block_root = hash_tree_root(current_block)
             assert current_block_root in mega_store.block_payload_statuses
             mega_store.block_payload_statuses[
                 current_block_root
@@ -149,11 +150,11 @@ def add_optimistic_block(
     )
     if is_optimistic_candidate:
         mega_store.opt_store.optimistic_roots.add(block_root)
-        mega_store.opt_store.blocks[block_root] = signed_block.message.copy()
+        mega_store.opt_store.blocks[block_root] = copy(signed_block.message)
         if not is_invalidated(mega_store, block_root):
-            mega_store.opt_store.block_states[block_root] = mega_store.fc_store.block_states[
-                block_root
-            ].copy()
+            mega_store.opt_store.block_states[block_root] = copy(
+                mega_store.fc_store.block_states[block_root]
+            )
 
     # Clean up the invalidated blocks
     clean_up_store(mega_store)

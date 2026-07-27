@@ -19,6 +19,7 @@ from eth_consensus_specs.test.helpers.withdrawals import (
     set_eth1_withdrawal_credential_with_balance,
     set_parent_block_full,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def _get_last_slot_of_current_epoch(spec, state):
@@ -199,7 +200,7 @@ def _run_epoch_boundary_full_parent(spec, state, gap_epochs):
     set_parent_block_full(spec, state)
 
     # Snapshot pre-state for integrity checks
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     consolidation_validator_index = 0
     deposit_validator_index = 2
@@ -297,7 +298,7 @@ def _run_epoch_boundary_empty_parent(spec, state, gap_epochs):
     set_parent_block_full(spec, state)
 
     # Snapshot pre-state for integrity checks
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     consolidation_validator_index = 0
     deposit_validator_index = 2
@@ -448,7 +449,7 @@ def test_switch_to_compounding_across_epoch_boundary(spec, state):
     """
     set_parent_block_full(spec, state)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     validator_index = 0
     consolidation_request = _setup_switch_to_compounding_validator(
@@ -567,7 +568,7 @@ def test_epoch_boundary_full_parent_all_requests_gap_5_epochs(spec, state):
 
     set_parent_block_full(spec, state)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     consolidation_validator_index = 0
     exit_validator_indices = [4, 5, 6]

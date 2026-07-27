@@ -134,7 +134,7 @@ def create_genesis_state(spec, validator_balances, activation_threshold):
         latest_block_header=spec.BeaconBlockHeader(
             body_root=spec.hash_tree_root(spec.BeaconBlockBody())
         ),
-        randao_mixes=[eth1_block_hash] * spec.EPOCHS_PER_HISTORICAL_VECTOR,
+        randao_mixes=[eth1_block_hash] * int(spec.EPOCHS_PER_HISTORICAL_VECTOR),
     )
 
     # We "hack" in the initial validators,

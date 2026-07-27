@@ -22,6 +22,7 @@ from eth_consensus_specs.test.helpers.keys import builder_privkeys, privkeys
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def _build_invalid_envelope(spec, state, block_root, signed_block, **overrides):
@@ -447,7 +448,7 @@ def test_on_execution_payload_envelope_invalid_full_child(spec, state):
 
     # Build a child that points its bid at parent.bid.block_hash so it claims
     # the parent is FULL
-    child_state = block_state.copy()
+    child_state = copy(block_state)
     child = build_empty_block_for_next_slot(spec, child_state)
     child.body.signed_execution_payload_bid.message.parent_block_hash = (
         signed_block.message.body.signed_execution_payload_bid.message.block_hash

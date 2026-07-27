@@ -30,6 +30,7 @@ from eth_consensus_specs.test.helpers.state import (
     get_balance,
     next_epoch_via_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def run_attester_slashing_processing(spec, state, attester_slashing, valid=True):
@@ -170,7 +171,7 @@ def test_proposer_index_slashed(spec, state):
 @spec_state_test
 def test_attestation_from_future(spec, state):
     # Transition state to future to enable generation of a "future" attestation
-    future_state = state.copy()
+    future_state = copy(state)
     next_epoch_via_block(spec, future_state)
     # Generate slashing using the future state
     attester_slashing = get_valid_attester_slashing(

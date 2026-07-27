@@ -7,6 +7,7 @@ from eth_consensus_specs.test.helpers.builder_deposit_requests import (
 from eth_consensus_specs.test.helpers.deposits import prepare_builder_deposit_request
 from eth_consensus_specs.test.helpers.keys import builder_pubkey_to_privkey, privkeys, pubkeys
 from eth_consensus_specs.utils import bls
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def run_builder_deposit_processing(
@@ -24,7 +25,7 @@ def run_builder_deposit_processing(
         valid: If True, expect the deposit to be applied (new builder or top-up).
                If False, expect no changes (invalid signature, wrong credentials, etc).
     """
-    pre_state = state.copy()
+    pre_state = copy(state)
     pre_builder_count = len(state.builders)
 
     yield from run_builder_deposit_request_processing(spec, state, builder_deposit_request)
@@ -91,7 +92,7 @@ def test_process_builder_deposit_request__new_builder_non_builder_withdrawal_pre
     builder_deposit_request = prepare_builder_deposit_request(
         spec, state, amount, withdrawal_credentials=withdrawal_credentials, signed=True
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_builder_deposit_request_processing(spec, state, builder_deposit_request)
 
@@ -144,7 +145,7 @@ def test_process_builder_deposit_request__new_builder_extra_gwei(spec, state):
     builder_deposit_request = prepare_process_builder_deposit_request(
         spec, state, amount=amount, signed=True
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_builder_deposit_request_processing(spec, state, builder_deposit_request)
 
@@ -175,7 +176,7 @@ def test_process_builder_deposit_request__new_builder_max_minus_one(spec, state)
     builder_deposit_request = prepare_process_builder_deposit_request(
         spec, state, amount=amount, signed=True
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_builder_deposit_request_processing(spec, state, builder_deposit_request)
 
@@ -206,7 +207,7 @@ def test_process_builder_deposit_request__new_builder_empty_registry(spec, state
     builder_deposit_request = prepare_process_builder_deposit_request(
         spec, state, amount=amount, signed=True, builders=[]
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_builder_deposit_request_processing(spec, state, builder_deposit_request)
 
@@ -238,7 +239,7 @@ def test_process_builder_deposit_request__new_builder_pubkey_is_validator(spec, 
     builder_deposit_request = prepare_builder_deposit_request(
         spec, state, amount, pubkey=validator_pubkey, privkey=privkeys[0], signed=True
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_builder_deposit_request_processing(spec, state, builder_deposit_request)
 
@@ -279,7 +280,7 @@ def test_process_builder_deposit_request__top_up(spec, state):
     builder_deposit_request = prepare_builder_deposit_request(
         spec, state, amount, pubkey=builder_pubkey, signed=True
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_builder_deposit_request_processing(spec, state, builder_deposit_request)
 
@@ -336,7 +337,7 @@ def test_process_builder_deposit_request__top_up_single_builder(spec, state):
         signed=True,
         builders=[first_builder],
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_builder_deposit_request_processing(spec, state, builder_deposit_request)
 
@@ -373,7 +374,7 @@ def test_process_builder_deposit_request__top_up_last_index(spec, state):
     builder_deposit_request = prepare_builder_deposit_request(
         spec, state, amount, pubkey=pubkey, signed=True
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_builder_deposit_request_processing(spec, state, builder_deposit_request)
 
@@ -414,7 +415,7 @@ def test_process_builder_deposit_request__top_up_ignores_request_fields(spec, st
         withdrawal_credentials=withdrawal_credentials,
         signed=True,
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_builder_deposit_request_processing(spec, state, builder_deposit_request)
 
@@ -446,7 +447,7 @@ def test_process_builder_deposit_request__top_up_non_builder_withdrawal_prefix(s
         withdrawal_credentials=withdrawal_credentials,
         signed=True,
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_builder_deposit_request_processing(spec, state, builder_deposit_request)
 
@@ -547,7 +548,7 @@ def test_process_builder_deposit_request__reuses_exited_builder_slot(spec, state
         advance_epochs=1,
         builder_modifications={0: {"withdrawable_epoch": "current_epoch-1", "balance": 0}},
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_builder_deposit_request_processing(spec, state, builder_deposit_request)
 
@@ -592,7 +593,7 @@ def test_process_builder_deposit_request__reuses_first_of_multiple_exited_slots(
             1: {"withdrawable_epoch": "current_epoch-1", "balance": 0},
         },
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_builder_deposit_request_processing(spec, state, builder_deposit_request)
 
@@ -631,7 +632,7 @@ def test_process_builder_deposit_request__reuses_slot_at_current_epoch(spec, sta
         advance_epochs=1,
         builder_modifications={0: {"withdrawable_epoch": "current_epoch", "balance": 0}},
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_builder_deposit_request_processing(spec, state, builder_deposit_request)
 
@@ -671,7 +672,7 @@ def test_process_builder_deposit_request__no_reuse_future_epoch(spec, state):
         advance_epochs=1,
         builder_modifications={0: {"withdrawable_epoch": "current_epoch+1", "balance": 0}},
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_builder_deposit_request_processing(spec, state, builder_deposit_request)
 
@@ -712,7 +713,7 @@ def test_process_builder_deposit_request__no_reuse_nonzero_balance(spec, state):
         advance_epochs=1,
         builder_modifications={0: {"withdrawable_epoch": "current_epoch-1", "balance": 1}},
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_builder_deposit_request_processing(spec, state, builder_deposit_request)
 
@@ -757,7 +758,7 @@ def test_process_builder_deposit_request__exited_builder_top_up_zero_balance(spe
         advance_epochs=1,
         builder_modifications={0: {"withdrawable_epoch": "current_epoch-1", "balance": 0}},
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
     expected_withdrawable_epoch = (
         spec.get_current_epoch(state) + spec.config.MIN_BUILDER_WITHDRAWABILITY_DELAY
     )
@@ -810,7 +811,7 @@ def test_process_builder_deposit_request__exited_builder_top_up_nonzero_balance(
         advance_epochs=1,
         builder_modifications={0: {"withdrawable_epoch": "current_epoch-1", "balance": balance}},
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
     # Sanity check: the builder is exited but still holds a balance
     assert pre_state.builders[0].withdrawable_epoch != spec.FAR_FUTURE_EPOCH
     assert pre_state.builders[0].balance > 0

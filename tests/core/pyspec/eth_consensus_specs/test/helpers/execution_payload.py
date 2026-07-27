@@ -14,7 +14,7 @@ from eth_consensus_specs.test.helpers.forks import (
 )
 from eth_consensus_specs.test.helpers.keys import builder_privkeys, privkeys
 from eth_consensus_specs.test.helpers.withdrawals import get_expected_withdrawals
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def get_execution_payload_header(spec, execution_payload):
@@ -265,10 +265,10 @@ def compute_el_block_hash(spec, payload, pre_state, execution_requests=None):
     requests_hash = None
 
     if is_post_deneb(spec):
-        previous_block_header = pre_state.latest_block_header.copy()
+        previous_block_header = copy(pre_state.latest_block_header)
         if previous_block_header.state_root == spec.Root():
-            previous_block_header.state_root = pre_state.hash_tree_root()
-        parent_beacon_block_root = previous_block_header.hash_tree_root()
+            previous_block_header.state_root = hash_tree_root(pre_state)
+        parent_beacon_block_root = hash_tree_root(previous_block_header)
     if is_post_electra(spec):
         if execution_requests is None:
             requests_list = []
@@ -467,13 +467,13 @@ def build_state_with_complete_transition(spec, state):
 
 
 def build_state_with_execution_payload_header(spec, state, execution_payload_header):
-    pre_state = state.copy()
+    pre_state = copy(state)
     pre_state.latest_execution_payload_header = execution_payload_header
     return pre_state
 
 
 def build_state_with_execution_payload_bid(spec, state, execution_payload_bid):
-    pre_state = state.copy()
+    pre_state = copy(state)
     pre_state.latest_execution_payload_bid = execution_payload_bid
     return pre_state
 

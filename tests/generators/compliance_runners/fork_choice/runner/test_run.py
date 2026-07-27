@@ -13,6 +13,7 @@ from eth_consensus_specs.test.helpers.fork_choice import get_viable_for_head_che
 from eth_consensus_specs.test.helpers.forks import is_post_gloas
 from eth_consensus_specs.test.helpers.specs import spec_targets
 from eth_consensus_specs.utils import bls
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from tests.generators.compliance_runners.fork_choice.instantiators.helpers import (
     payload_attestation_to_messages,
 )
@@ -98,7 +99,7 @@ def run_test(test_info):
                     with contextlib.suppress(AssertionError):
                         spec.on_attester_slashing(store, block_att_slashing)
                 if is_post_gloas(spec):
-                    state = store.block_states[signed_block.message.hash_tree_root()]
+                    state = store.block_states[hash_tree_root(signed_block.message)]
                     for payload_attestation in signed_block.message.body.payload_attestations:
                         for ptc_message in payload_attestation_to_messages(
                             spec, state, payload_attestation

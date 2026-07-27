@@ -21,6 +21,7 @@ from eth_consensus_specs.test.helpers.sync_committee import (
     compute_aggregate_sync_committee_signature,
     compute_committee_indices,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def sample_blob_schedule(initial_epoch=5, interval=5):
@@ -171,7 +172,7 @@ def check_merkle_branch_equal(spec, new_spec, data, upgraded, gindex):
 
 def check_lc_header_equal(spec, new_spec, data, upgraded):
     assert upgraded.beacon.slot == data.beacon.slot
-    assert upgraded.beacon.hash_tree_root() == data.beacon.hash_tree_root()
+    assert hash_tree_root(upgraded.beacon) == hash_tree_root(data.beacon)
     if is_post_capella(new_spec):
         if is_post_capella(spec):
             assert new_spec.get_lc_execution_root(upgraded) == spec.get_lc_execution_root(data)

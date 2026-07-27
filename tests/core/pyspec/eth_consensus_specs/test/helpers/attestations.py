@@ -15,6 +15,7 @@ from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
 from eth_consensus_specs.utils import bls
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 from eth_consensus_specs.utils.ssz.ssz_typing import Bitlist
 
 
@@ -321,7 +322,7 @@ def next_slots_with_attestations(
     """
     participation_fn: (slot, committee_index, committee_indices_set) -> participants_indices_set
     """
-    post_state = state.copy()
+    post_state = copy(state)
     signed_blocks = []
     for _ in range(slot_count):
         signed_block = state_transition_with_full_block(
@@ -511,15 +512,15 @@ def cached_prepare_state_with_attestations(spec, state):
     # If the pre-state is not already known in the LRU, then take it,
     # prepare it with attestations, and put it in the LRU.
     # The input state is likely already cached, so the hash-tree-root does not affect speed.
-    key = (spec.fork, state.hash_tree_root())
+    key = (spec.fork, hash_tree_root(state))
     if key not in _prep_state_cache_dict:
         prepare_state_with_attestations(spec, state)
-        _prep_state_cache_dict[key] = (
-            state.get_backing()
-        )  # cache the tree structure, not the view wrapping it.
+        _prep_state_cache_dict[key] = spec.copy(state)
 
-    # Put the LRU cache result into the state view, as if we transitioned the original view
-    state.set_backing(_prep_state_cache_dict[key])
+    # Adopt the cached contents into the caller's state, as if we had
+    # transitioned it. The fields are already valid, so they are moved across
+    # without going back through validation.
+    state.__dict__.update(spec.copy(_prep_state_cache_dict[key]).__dict__)
 
 
 def get_max_attestations(spec):

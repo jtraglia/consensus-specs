@@ -52,6 +52,7 @@ from eth_consensus_specs.test.helpers.voluntary_exits import (
 from eth_consensus_specs.test.helpers.withdrawals import (
     prepare_withdrawal_request,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 class OperationType(Enum):
@@ -105,7 +106,7 @@ def _state_transition_and_sign_block_at_slot(spec, state, sync_aggregate=None, o
     assert state.latest_block_header.slot < block.slot
     assert state.slot == block.slot
     spec.process_block(state, block)
-    block.state_root = state.hash_tree_root()
+    block.state_root = hash_tree_root(state)
     return sign_block(spec, state, block)
 
 
@@ -167,7 +168,7 @@ def state_transition_across_slots_with_ignoring_proposers(
             next_slot(spec, state)
             continue
 
-        future_state = state.copy()
+        future_state = copy(state)
         next_slot(spec, future_state)
         proposer_index = spec.get_beacon_proposer_index(future_state)
         if proposer_index not in ignoring_proposers:
@@ -267,7 +268,7 @@ def transition_across_forks(
     spec, state, to_slot, phases=None, with_block=False, sync_aggregate=None
 ):
     assert to_slot > state.slot
-    state = state.copy()
+    state = copy(state)
     block = None
     to_epoch = spec.compute_epoch_at_slot(to_slot)
     while state.slot < to_slot:
@@ -350,7 +351,7 @@ def run_transition_with_operation(
     selected_validator_index = None
     if is_slashing_operation:
         # avoid slashing the next proposer
-        future_state = state.copy()
+        future_state = copy(state)
         next_slot(spec, future_state)
         proposer_index = spec.get_beacon_proposer_index(future_state)
         selected_validator_index = (proposer_index + 1) % len(state.validators)
@@ -365,7 +366,7 @@ def run_transition_with_operation(
                 # NOTE: attestation format changes between Deneb and Electra
                 # so attester slashing must be made with the `post_spec`
                 target_spec = post_spec
-                target_state = post_spec.upgrade_to_electra(state.copy())
+                target_state = post_spec.upgrade_to_electra(copy(state))
                 target_state.fork = state.fork
             else:
                 target_spec = spec

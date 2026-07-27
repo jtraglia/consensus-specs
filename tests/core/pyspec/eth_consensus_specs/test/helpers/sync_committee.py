@@ -9,6 +9,7 @@ from eth_consensus_specs.test.helpers.block import (
 from eth_consensus_specs.test.helpers.block_processing import run_block_processing_to
 from eth_consensus_specs.test.helpers.keys import privkeys
 from eth_consensus_specs.utils import bls
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def compute_sync_committee_signature(spec, state, slot, privkey, block_root=None, domain_type=None):
@@ -133,7 +134,7 @@ def run_sync_committee_processing(
     Processes everything up to the sync committee work, then runs the sync committee work in isolation, and
     produces a pre-state and post-state (None if exception) specifically for sync-committee processing changes.
     """
-    pre_state = state.copy()
+    pre_state = copy(state)
     # process up to the sync committee work
     call = run_block_processing_to(spec, state, block, "process_sync_aggregate")
     yield "pre", state

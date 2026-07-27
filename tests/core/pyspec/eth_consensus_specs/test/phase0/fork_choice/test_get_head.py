@@ -42,6 +42,7 @@ from eth_consensus_specs.test.helpers.state import (
     next_slots,
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 @with_altair_and_later
@@ -121,7 +122,7 @@ def test_chain_no_attestations(spec, state):
 @spec_state_test
 def test_split_tie_breaker_no_attestations(spec, state):
     test_steps = []
-    genesis_state = state.copy()
+    genesis_state = copy(state)
 
     # Initialization
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
@@ -132,12 +133,12 @@ def test_split_tie_breaker_no_attestations(spec, state):
     output_head_check(spec, store, test_steps)
 
     # Create block at slot 1
-    block_1_state = genesis_state.copy()
+    block_1_state = copy(genesis_state)
     block_1 = build_empty_block_for_next_slot(spec, block_1_state)
     signed_block_1 = state_transition_and_sign_block(spec, block_1_state, block_1)
 
     # Create additional block at slot 1
-    block_2_state = genesis_state.copy()
+    block_2_state = copy(genesis_state)
     block_2 = build_empty_block_for_next_slot(spec, block_2_state)
     block_2.body.graffiti = b"\x42" * 32
     signed_block_2 = state_transition_and_sign_block(spec, block_2_state, block_2)
@@ -160,7 +161,7 @@ def test_split_tie_breaker_no_attestations(spec, state):
 @spec_state_test
 def test_shorter_chain_but_heavier_weight(spec, state):
     test_steps = []
-    genesis_state = state.copy()
+    genesis_state = copy(state)
 
     # Initialization
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
@@ -171,14 +172,14 @@ def test_shorter_chain_but_heavier_weight(spec, state):
     output_head_check(spec, store, test_steps)
 
     # build longer tree
-    long_state = genesis_state.copy()
+    long_state = copy(genesis_state)
     for _ in range(3):
         long_block = build_empty_block_for_next_slot(spec, long_state)
         signed_long_block = state_transition_and_sign_block(spec, long_state, long_block)
         yield from tick_and_add_block(spec, store, signed_long_block, test_steps)
 
     # build short tree
-    short_state = genesis_state.copy()
+    short_state = copy(genesis_state)
     short_block = build_empty_block_for_next_slot(spec, short_state)
     short_block.body.graffiti = b"\x42" * 32
     signed_short_block = state_transition_and_sign_block(spec, short_state, short_block)
@@ -237,7 +238,7 @@ def test_filtered_block_tree(spec, state):
     #
 
     # build a chain without attestations off of previous justified block
-    non_viable_state = store.block_states[store.justified_checkpoint.root].copy()
+    non_viable_state = copy(store.block_states[store.justified_checkpoint.root])
 
     # ensure that next wave of votes are for future epoch
     next_epoch(spec, non_viable_state)
@@ -284,7 +285,7 @@ def test_filtered_block_tree(spec, state):
 @spec_state_test
 def test_proposer_boost_correct_head(spec, state):
     test_steps = []
-    genesis_state = state.copy()
+    genesis_state = copy(state)
 
     # Initialization
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
@@ -295,20 +296,20 @@ def test_proposer_boost_correct_head(spec, state):
     output_head_check(spec, store, test_steps)
 
     # Build block that serves as head ONLY on timely arrival, and ONLY in that slot
-    state_1 = genesis_state.copy()
+    state_1 = copy(genesis_state)
     next_slots(spec, state_1, 3)
     block_1 = build_empty_block_for_next_slot(spec, state_1)
     signed_block_1 = state_transition_and_sign_block(spec, state_1, block_1)
 
     # Build block that serves as current head, and remains the head after block_1.slot
-    state_2 = genesis_state.copy()
+    state_2 = copy(genesis_state)
     next_slots(spec, state_2, 2)
     block_2 = build_empty_block_for_next_slot(spec, state_2)
-    signed_block_2 = state_transition_and_sign_block(spec, state_2.copy(), block_2)
+    signed_block_2 = state_transition_and_sign_block(spec, copy(state_2), block_2)
     rng = random.Random(1001)
     while spec.hash_tree_root(block_1) >= spec.hash_tree_root(block_2):
         block_2.body.graffiti = spec.Bytes32(f"{rng.getrandbits(8 * 32):064x}")
-        signed_block_2 = state_transition_and_sign_block(spec, state_2.copy(), block_2)
+        signed_block_2 = state_transition_and_sign_block(spec, copy(state_2), block_2)
     assert spec.hash_tree_root(block_1) < spec.hash_tree_root(block_2)
 
     # Tick to block_1 slot time
@@ -340,7 +341,7 @@ def test_proposer_boost_correct_head(spec, state):
 @spec_state_test
 def test_discard_equivocations_on_attester_slashing(spec, state):
     test_steps = []
-    genesis_state = state.copy()
+    genesis_state = copy(state)
 
     # Initialization
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
@@ -351,13 +352,13 @@ def test_discard_equivocations_on_attester_slashing(spec, state):
     output_head_check(spec, store, test_steps)
 
     # Build block that serves as head before discarding equivocations
-    state_1 = genesis_state.copy()
+    state_1 = copy(genesis_state)
     next_slots(spec, state_1, 2)
     block_1 = build_empty_block_for_next_slot(spec, state_1)
     signed_block_1 = state_transition_and_sign_block(spec, state_1, block_1)
 
     # Build equivocating attestations to feed to store
-    state_eqv = state_1.copy()
+    state_eqv = copy(state_1)
     block_eqv = apply_empty_block(spec, state_eqv, state_eqv.slot + 1)
     attestation_eqv = get_valid_attestation(spec, state_eqv, slot=block_eqv.slot, signed=True)
 
@@ -372,14 +373,14 @@ def test_discard_equivocations_on_attester_slashing(spec, state):
     )
 
     # Build block that serves as head after discarding equivocations
-    state_2 = genesis_state.copy()
+    state_2 = copy(genesis_state)
     next_slots(spec, state_2, 3)
     block_2 = build_empty_block_for_next_slot(spec, state_2)
-    signed_block_2 = state_transition_and_sign_block(spec, state_2.copy(), block_2)
+    signed_block_2 = state_transition_and_sign_block(spec, copy(state_2), block_2)
     rng = random.Random(1001)
     while spec.hash_tree_root(block_1) >= spec.hash_tree_root(block_2):
         block_2.body.graffiti = spec.Bytes32(f"{rng.getrandbits(8 * 32):064x}")
-        signed_block_2 = state_transition_and_sign_block(spec, state_2.copy(), block_2)
+        signed_block_2 = state_transition_and_sign_block(spec, copy(state_2), block_2)
     assert spec.hash_tree_root(block_1) < spec.hash_tree_root(block_2)
 
     # Tick to (block_eqv.slot + 2) slot time
@@ -441,9 +442,9 @@ def test_discard_equivocations_slashed_validator_censoring(spec, state):
         state.validators[val_index].slashed = True
 
     # Store this state as the anchor state
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     # Generate an anchor block with correct state root
-    anchor_block = spec.BeaconBlock(state_root=anchor_state.hash_tree_root())
+    anchor_block = spec.BeaconBlock(state_root=hash_tree_root(anchor_state))
     if is_post_gloas(spec):
         anchor_block.body.signed_execution_payload_bid.message = (
             anchor_state.latest_execution_payload_bid
@@ -463,11 +464,11 @@ def test_discard_equivocations_slashed_validator_censoring(spec, state):
     next_slots(spec, state, eqv_slot - state.slot - 1)
     assert state.slot == eqv_slot - 1
 
-    state_1 = state.copy()
+    state_1 = copy(state)
     block_1 = build_empty_block_for_next_slot(spec, state_1)
     signed_block_1 = state_transition_and_sign_block(spec, state_1, block_1)
 
-    state_2 = state.copy()
+    state_2 = copy(state)
     block_2 = build_empty_block_for_next_slot(spec, state_2)
     block_2.body.graffiti = block_2.body.graffiti = b"\x42" * 32
     signed_block_2 = state_transition_and_sign_block(spec, state_2, block_2)
@@ -480,13 +481,13 @@ def test_discard_equivocations_slashed_validator_censoring(spec, state):
 
     # Find out which block will win in tie breaking
     if spec.hash_tree_root(block_1) < spec.hash_tree_root(block_2):
-        block_low_root = block_1.hash_tree_root()
+        block_low_root = hash_tree_root(block_1)
         block_low_root_post_state = state_1
-        block_high_root = block_2.hash_tree_root()
+        block_high_root = hash_tree_root(block_2)
     else:
-        block_low_root = block_2.hash_tree_root()
+        block_low_root = hash_tree_root(block_2)
         block_low_root_post_state = state_2
-        block_high_root = block_1.hash_tree_root()
+        block_high_root = hash_tree_root(block_1)
     assert block_low_root < block_high_root
 
     # Tick to next slot so proposer boost does not apply
@@ -552,7 +553,7 @@ def test_voting_source_within_two_epoch(spec, state):
     assert store.finalized_checkpoint.epoch == 2
 
     # Copy the state to use later
-    fork_state = state.copy()
+    fork_state = copy(state)
 
     # Fill epoch 4
     state, store, _ = yield from apply_next_epoch_with_attestations(
@@ -583,7 +584,7 @@ def test_voting_source_within_two_epoch(spec, state):
 
     # Check that the last block from the fork is the head
     # LMD votes for the competing branch are overwritten so this fork should win
-    last_fork_block_root = last_fork_block.hash_tree_root()
+    last_fork_block_root = hash_tree_root(last_fork_block)
     # assert store.voting_source[last_fork_block_root].epoch != store.justified_checkpoint.epoch
     assert (
         store.unrealized_justifications[last_fork_block_root].epoch
@@ -638,7 +639,7 @@ def test_voting_source_beyond_two_epoch(spec, state):
     assert store.finalized_checkpoint.epoch == 2
 
     # Copy the state to use later
-    fork_state = state.copy()
+    fork_state = copy(state)
 
     # Fill epoch 4 and 5
     for _ in range(2):
@@ -673,7 +674,7 @@ def test_voting_source_beyond_two_epoch(spec, state):
     assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 5
     assert store.finalized_checkpoint.epoch == 4
 
-    last_fork_block_root = last_fork_block.hash_tree_root()
+    last_fork_block_root = hash_tree_root(last_fork_block)
     last_fork_block_state = store.block_states[last_fork_block_root]
     assert last_fork_block_state.current_justified_checkpoint.epoch == 3
 
@@ -737,7 +738,7 @@ def test_incorrect_finalized(spec, state):
     fork_block = store.blocks[fork_block_root]
     assert spec.compute_epoch_at_slot(fork_block.slot) == 4
     # Copy the state to use later
-    fork_state = store.block_states[fork_block_root].copy()
+    fork_state = copy(store.block_states[fork_block_root])
     assert spec.compute_epoch_at_slot(fork_state.slot) == 4
     assert fork_state.current_justified_checkpoint.epoch == 3
     assert fork_state.finalized_checkpoint.epoch == 2
@@ -780,10 +781,10 @@ def test_incorrect_finalized(spec, state):
     assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 6
     assert store.finalized_checkpoint.epoch == 5
     # Store the expected head
-    head_root = signed_head_block.message.hash_tree_root()
+    head_root = hash_tree_root(signed_head_block.message)
 
     # Check that the head is unchanged
-    last_fork_block_root = last_fork_block.hash_tree_root()
+    last_fork_block_root = hash_tree_root(last_fork_block)
     assert store.voting_source[last_fork_block_root].epoch == store.justified_checkpoint.epoch
     assert store.finalized_checkpoint.epoch != spec.GENESIS_EPOCH
     finalized_slot = spec.compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)

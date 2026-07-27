@@ -20,6 +20,7 @@ from eth_consensus_specs.test.helpers.execution_payload import (
 )
 from eth_consensus_specs.test.helpers.forks import is_post_eip8025
 from eth_consensus_specs.test.helpers.state import next_slot
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def run_execution_payload_processing(
@@ -298,9 +299,8 @@ def run_non_empty_transactions_test(spec, state):
 
     yield from run_execution_payload_processing(spec, state, execution_payload)
 
-    assert (
-        state.latest_execution_payload_header.transactions_root
-        == execution_payload.transactions.hash_tree_root()
+    assert state.latest_execution_payload_header.transactions_root == hash_tree_root(
+        execution_payload.transactions
     )
 
 
@@ -328,9 +328,8 @@ def run_zero_length_transaction_test(spec, state):
 
     yield from run_execution_payload_processing(spec, state, execution_payload)
 
-    assert (
-        state.latest_execution_payload_header.transactions_root
-        == execution_payload.transactions.hash_tree_root()
+    assert state.latest_execution_payload_header.transactions_root == hash_tree_root(
+        execution_payload.transactions
     )
 
 

@@ -5,23 +5,43 @@ from eth_consensus_specs.debug.random_value import get_random_ssz_object, Random
 from eth_consensus_specs.test.exceptions import SkippedTest
 from eth_consensus_specs.utils.ssz.ssz_impl import deserialize, serialize
 from eth_consensus_specs.utils.ssz.ssz_typing import (
-    Bitlist,
-    Bitvector,
     Byte,
-    ByteList,
     Container,
-    List,
     ProgressiveBitlist,
     ProgressiveList,
+    SSZType,
     Uint8,
     Uint16,
     Uint32,
     Uint64,
-    Vector,
-    View,
 )
 
-from .ssz_test_case import invalid_test_case, valid_test_case
+from .ssz_test_case import (
+    bitlist_of,
+    bitvector_of,
+    bytelist_of,
+    invalid_test_case,
+    list_of,
+    valid_test_case,
+    vector_of,
+)
+
+Bitlist1280 = bitlist_of(1280)
+Bitlist1281 = bitlist_of(1281)
+Bitlist256 = bitlist_of(256)
+Bitlist257 = bitlist_of(257)
+Bitlist5 = bitlist_of(5)
+Bitlist6 = bitlist_of(6)
+Bitvector1 = bitvector_of(1)
+Bitvector1280 = bitvector_of(1280)
+Bitvector1281 = bitvector_of(1281)
+Bitvector2 = bitvector_of(2)
+Bitvector256 = bitvector_of(256)
+Bitvector257 = bitvector_of(257)
+Bitvector8 = bitvector_of(8)
+ByteList256 = bytelist_of(256)
+Uint16List1024 = list_of(Uint16, 1024)
+Uint16List128 = list_of(Uint16, 128)
 
 
 class SingleFieldTestStruct(Container):
@@ -39,20 +59,26 @@ class FixedTestStruct(Container):
     C: Uint32
 
 
+FixedTestStructVector4 = vector_of(FixedTestStruct, 4)
+
+
 class VarTestStruct(Container):
     A: Uint16
-    B: List[Uint16, 1024]
+    B: Uint16List1024
     C: Uint8
+
+
+VarTestStructVector2 = vector_of(VarTestStruct, 2)
 
 
 class ComplexTestStruct(Container):
     A: Uint16
-    B: List[Uint16, 128]
+    B: Uint16List128
     C: Uint8
-    D: ByteList[256]
+    D: ByteList256
     E: VarTestStruct
-    F: Vector[FixedTestStruct, 4]
-    G: Vector[VarTestStruct, 2]
+    F: FixedTestStructVector4
+    G: VarTestStructVector2
 
 
 class ProgressiveTestStruct(Container):
@@ -63,35 +89,37 @@ class ProgressiveTestStruct(Container):
 
 
 class BitsStruct(Container):
-    A: Bitlist[5]
-    B: Bitvector[2]
-    C: Bitvector[1]
-    D: Bitlist[6]
-    E: Bitvector[8]
+    A: Bitlist5
+    B: Bitvector2
+    C: Bitvector1
+    D: Bitlist6
+    E: Bitvector8
 
 
 class ProgressiveBitsStruct(Container):
-    A: Bitvector[256]
-    B: Bitlist[256]
+    A: Bitvector256
+    B: Bitlist256
     C: ProgressiveBitlist
-    D: Bitvector[257]
-    E: Bitlist[257]
+    D: Bitvector257
+    E: Bitlist257
     F: ProgressiveBitlist
-    G: Bitvector[1280]
-    H: Bitlist[1280]
+    G: Bitvector1280
+    H: Bitlist1280
     I: ProgressiveBitlist
-    J: Bitvector[1281]
-    K: Bitlist[1281]
+    J: Bitvector1281
+    K: Bitlist1281
     L: ProgressiveBitlist
 
 
-def container_case_fn(rng: Random, mode: RandomizationMode, typ: type[View], chaos: bool = False):
+def container_case_fn(
+    rng: Random, mode: RandomizationMode, typ: type[SSZType], chaos: bool = False
+):
     return get_random_ssz_object(
         rng, typ, max_bytes_length=2000, max_list_length=1500, mode=mode, chaos=chaos
     )
 
 
-PRESET_CONTAINERS: dict[str, tuple[type[View], Sequence[int]]] = {
+PRESET_CONTAINERS: dict[str, tuple[type[SSZType], Sequence[int]]] = {
     "SingleFieldTestStruct": (SingleFieldTestStruct, []),
     "SmallTestStruct": (SmallTestStruct, []),
     "FixedTestStruct": (FixedTestStruct, []),
@@ -103,7 +131,7 @@ PRESET_CONTAINERS: dict[str, tuple[type[View], Sequence[int]]] = {
 }
 
 
-def valid_container_cases(rng: Random, name: str, typ: type[View], offsets: Sequence[int]):
+def valid_container_cases(rng: Random, name: str, typ: type[SSZType], offsets: Sequence[int]):
     for mode in [RandomizationMode.mode_zero, RandomizationMode.mode_max]:
         yield (
             f"{name}_{mode.to_name()}",
@@ -159,7 +187,7 @@ def mod_offset(b: bytes, offset_index: int, change: Callable[[int], int]):
     )
 
 
-def invalid_container_cases(rng: Random, name: str, typ: type[View], offsets: Sequence[int]):
+def invalid_container_cases(rng: Random, name: str, typ: type[SSZType], offsets: Sequence[int]):
     # using mode_max_count, so that the extra byte cannot be picked up as normal list content
     yield (
         f"{name}_extra_byte",

@@ -13,6 +13,7 @@ from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
     transition_to,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def run_on_attestation(spec, state, store, attestation, valid=True):
@@ -132,11 +133,11 @@ def test_on_attestation_inconsistent_target_and_head(spec, state):
     )
 
     # Create chain 1 as empty chain between genesis and start of 1st epoch
-    target_state_1 = state.copy()
+    target_state_1 = copy(state)
     next_epoch(spec, target_state_1)
 
     # Create chain 2 with different block in chain from chain 1 from chain 1 from chain 1 from chain 1
-    target_state_2 = state.copy()
+    target_state_2 = copy(state)
     diff_block = build_empty_block_for_next_slot(spec, target_state_2)
     signed_diff_block = state_transition_and_sign_block(spec, target_state_2, diff_block)
     spec.on_block(store, signed_diff_block)
@@ -182,7 +183,7 @@ def test_on_attestation_target_block_not_in_store(spec, state):
     # do not add target block to store
 
     attestation = get_valid_attestation(spec, state, slot=target_block.slot, signed=True)
-    assert attestation.data.target.root == target_block.hash_tree_root()
+    assert attestation.data.target.root == hash_tree_root(target_block)
 
     run_on_attestation(spec, state, store, attestation, valid=False)
 
@@ -207,7 +208,7 @@ def test_on_attestation_target_checkpoint_not_in_store(spec, state):
     # target checkpoint state is not yet in store
 
     attestation = get_valid_attestation(spec, state, slot=target_block.slot, signed=True)
-    assert attestation.data.target.root == target_block.hash_tree_root()
+    assert attestation.data.target.root == hash_tree_root(target_block)
 
     run_on_attestation(spec, state, store, attestation)
 
@@ -234,7 +235,7 @@ def test_on_attestation_target_checkpoint_not_in_store_diff_slot(spec, state):
     attestation_slot = target_block.slot + 1
     transition_to(spec, state, attestation_slot)
     attestation = get_valid_attestation(spec, state, slot=attestation_slot, signed=True)
-    assert attestation.data.target.root == target_block.hash_tree_root()
+    assert attestation.data.target.root == hash_tree_root(target_block)
 
     run_on_attestation(spec, state, store, attestation)
 
@@ -262,8 +263,8 @@ def test_on_attestation_beacon_block_not_in_store(spec, state):
     # do not add head block to store
 
     attestation = get_valid_attestation(spec, state, slot=head_block.slot, signed=True)
-    assert attestation.data.target.root == target_block.hash_tree_root()
-    assert attestation.data.beacon_block_root == head_block.hash_tree_root()
+    assert attestation.data.target.root == hash_tree_root(target_block)
+    assert attestation.data.beacon_block_root == hash_tree_root(head_block)
 
     run_on_attestation(spec, state, store, attestation, valid=False)
 
@@ -302,7 +303,7 @@ def test_on_attestation_future_block(spec, state):
 
     # attestation for slot immediately prior to the block being attested to
     attestation = get_valid_attestation(spec, state, slot=block.slot - 1, signed=False)
-    attestation.data.beacon_block_root = block.hash_tree_root()
+    attestation.data.beacon_block_root = hash_tree_root(block)
     sign_attestation(spec, state, attestation)
 
     run_on_attestation(spec, state, store, attestation, valid=False)

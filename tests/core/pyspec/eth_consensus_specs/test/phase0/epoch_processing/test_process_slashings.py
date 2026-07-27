@@ -13,6 +13,7 @@ from eth_consensus_specs.test.helpers.forks import (
 from eth_consensus_specs.test.helpers.random import randomize_state
 from eth_consensus_specs.test.helpers.state import has_active_balance_differential, next_epoch
 from eth_consensus_specs.test.helpers.voluntary_exits import get_unslashed_exited_validators
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def run_process_slashings(spec, state):
@@ -108,7 +109,7 @@ def test_low_penalty(spec, state):
     slashed_indices = list(range(slashed_count))
     slash_validators(spec, state, slashed_indices, [out_epoch] * slashed_count)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_process_slashings(spec, state)
 
@@ -217,7 +218,7 @@ def test_slashings_with_random_state(spec, state):
     rng = Random(9998)
     randomize_state(spec, state, rng)
 
-    pre_balances = state.balances.copy()
+    pre_balances = copy(state.balances)
 
     target_validators = get_unslashed_exited_validators(spec, state)
     assert len(target_validators) != 0

@@ -33,6 +33,7 @@ from eth_consensus_specs.test.helpers.gossip import (
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 @with_phases([PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU])
@@ -264,7 +265,7 @@ def test_gossip_beacon_block__ignore_slot_not_greater_than_finalized(spec, state
     # Set finalized checkpoint to epoch 1 (slot 8 in minimal preset)
     store.finalized_checkpoint = spec.Checkpoint(
         epoch=spec.Epoch(1),
-        root=anchor_block.hash_tree_root(),
+        root=hash_tree_root(anchor_block),
     )
     finalized_slot = spec.compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
 
@@ -278,7 +279,7 @@ def test_gossip_beacon_block__ignore_slot_not_greater_than_finalized(spec, state
     )
 
     # Process state to the finalized slot to get correct proposer
-    temp_state = state.copy()
+    temp_state = copy(state)
     spec.process_slots(temp_state, finalized_slot)
     proposer_index = spec.get_beacon_proposer_index(temp_state)
 
@@ -286,8 +287,8 @@ def test_gossip_beacon_block__ignore_slot_not_greater_than_finalized(spec, state
     block = spec.BeaconBlock(
         slot=finalized_slot,
         proposer_index=proposer_index,
-        parent_root=anchor_block.hash_tree_root(),
-        state_root=temp_state.hash_tree_root(),
+        parent_root=hash_tree_root(anchor_block),
+        state_root=hash_tree_root(temp_state),
     )
     signed_block = sign_block(spec, temp_state, block, proposer_index=proposer_index)
 
@@ -418,7 +419,7 @@ def test_gossip_beacon_block__reject_parent_failed_validation(spec, state):
     yield get_filename(signed_block), signed_block
 
     # Add block to store.blocks but NOT to store.block_states (simulating failed validation)
-    store.blocks[signed_block.message.hash_tree_root()] = signed_block.message
+    store.blocks[hash_tree_root(signed_block.message)] = signed_block.message
 
     yield (
         "blocks",
@@ -431,7 +432,7 @@ def test_gossip_beacon_block__reject_parent_failed_validation(spec, state):
 
     # Get the correct proposer for the child block's slot
     child_slot = signed_block.message.slot + 1
-    temp_state = state.copy()
+    temp_state = copy(state)
     spec.process_slots(temp_state, child_slot)
     proposer_index = spec.get_beacon_proposer_index(temp_state)
 
@@ -439,8 +440,8 @@ def test_gossip_beacon_block__reject_parent_failed_validation(spec, state):
     child_block = spec.BeaconBlock(
         slot=child_slot,
         proposer_index=proposer_index,
-        parent_root=signed_block.message.hash_tree_root(),
-        state_root=temp_state.hash_tree_root(),
+        parent_root=hash_tree_root(signed_block.message),
+        state_root=hash_tree_root(temp_state),
     )
     if is_post_bellatrix(spec):
         child_block.body.execution_payload = spec.ExecutionPayload()
@@ -504,8 +505,8 @@ def test_gossip_beacon_block__reject_slot_not_higher_than_parent(spec, state):
     yield get_filename(signed_parent), signed_parent
 
     # Add parent to store
-    store.blocks[signed_parent.message.hash_tree_root()] = signed_parent.message
-    store.block_states[signed_parent.message.hash_tree_root()] = state.copy()
+    store.blocks[hash_tree_root(signed_parent.message)] = signed_parent.message
+    store.block_states[hash_tree_root(signed_parent.message)] = copy(state)
 
     yield (
         "blocks",
@@ -523,8 +524,8 @@ def test_gossip_beacon_block__reject_slot_not_higher_than_parent(spec, state):
     block = spec.BeaconBlock(
         slot=signed_parent.message.slot,  # Same slot as parent - invalid!
         proposer_index=proposer_index,
-        parent_root=signed_parent.message.hash_tree_root(),
-        state_root=state.hash_tree_root(),
+        parent_root=hash_tree_root(signed_parent.message),
+        state_root=hash_tree_root(state),
     )
     if is_post_bellatrix(spec):
         block.body.execution_payload = build_empty_execution_payload(spec, state)
@@ -584,8 +585,8 @@ def test_gossip_beacon_block__reject_finalized_checkpoint_not_ancestor(spec, sta
     yield get_filename(signed_block), signed_block
 
     # Add block to store
-    store.blocks[signed_block.message.hash_tree_root()] = signed_block.message
-    store.block_states[signed_block.message.hash_tree_root()] = state.copy()
+    store.blocks[hash_tree_root(signed_block.message)] = signed_block.message
+    store.block_states[hash_tree_root(signed_block.message)] = copy(state)
 
     yield (
         "blocks",
@@ -607,7 +608,7 @@ def test_gossip_beacon_block__reject_finalized_checkpoint_not_ancestor(spec, sta
 
     # Get the correct proposer for the child block's slot
     child_slot = signed_block.message.slot + 1
-    temp_state = state.copy()
+    temp_state = copy(state)
     spec.process_slots(temp_state, child_slot)
     proposer_index = spec.get_beacon_proposer_index(temp_state)
 
@@ -615,8 +616,8 @@ def test_gossip_beacon_block__reject_finalized_checkpoint_not_ancestor(spec, sta
     child_block = spec.BeaconBlock(
         slot=child_slot,
         proposer_index=proposer_index,
-        parent_root=signed_block.message.hash_tree_root(),
-        state_root=temp_state.hash_tree_root(),
+        parent_root=hash_tree_root(signed_block.message),
+        state_root=hash_tree_root(temp_state),
     )
     if is_post_bellatrix(spec):
         child_block.body.execution_payload = build_empty_execution_payload(spec, temp_state)

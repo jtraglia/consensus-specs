@@ -29,6 +29,7 @@ from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
     transition_to,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def build_signed_block_and_sidecars(spec, state, blob_count=1):
@@ -993,13 +994,13 @@ def test_gossip_partial_data_column_sidecar__reject_parent_failed_validation(spe
     signed_anchor = wrap_genesis_block(spec, anchor_block)
     yield get_filename(signed_anchor), signed_anchor
 
-    parent_state = state.copy()
+    parent_state = copy(state)
     parent_block = build_empty_block_for_next_slot(spec, parent_state)
     signed_parent = state_transition_and_sign_block(spec, parent_state, parent_block)
 
     yield get_filename(signed_parent), signed_parent
 
-    store.blocks[signed_parent.message.hash_tree_root()] = signed_parent.message
+    store.blocks[hash_tree_root(signed_parent.message)] = signed_parent.message
 
     yield (
         "blocks",
@@ -1010,7 +1011,7 @@ def test_gossip_partial_data_column_sidecar__reject_parent_failed_validation(spe
         ],
     )
 
-    _, sidecars = build_signed_block_and_sidecars(spec, parent_state.copy(), blob_count=1)
+    _, sidecars = build_signed_block_and_sidecars(spec, copy(parent_state), blob_count=1)
     sidecar = sidecars[0]
     partial = make_partial_sidecar(spec, sidecar, blob_indices=[], include_header=True)
     block_root = block_root_of(spec, sidecar)
@@ -1066,14 +1067,14 @@ def test_gossip_partial_data_column_sidecar__reject_slot_not_higher_than_parent(
     signed_anchor = wrap_genesis_block(spec, anchor_block)
     yield get_filename(signed_anchor), signed_anchor
 
-    parent_state = state.copy()
+    parent_state = copy(state)
     parent_block = build_empty_block_for_next_slot(spec, parent_state)
     signed_parent = state_transition_and_sign_block(spec, parent_state, parent_block)
 
     yield get_filename(signed_parent), signed_parent
-    parent_root = signed_parent.message.hash_tree_root()
+    parent_root = hash_tree_root(signed_parent.message)
     store.blocks[parent_root] = signed_parent.message
-    store.block_states[parent_root] = parent_state.copy()
+    store.block_states[parent_root] = copy(parent_state)
     yield (
         "blocks",
         "meta",
@@ -1083,7 +1084,7 @@ def test_gossip_partial_data_column_sidecar__reject_slot_not_higher_than_parent(
         ],
     )
 
-    _, sidecars = build_signed_block_and_sidecars(spec, parent_state.copy(), blob_count=1)
+    _, sidecars = build_signed_block_and_sidecars(spec, copy(parent_state), blob_count=1)
     sidecar = sidecars[0]
     partial = make_partial_sidecar(spec, sidecar, blob_indices=[], include_header=True)
     partial.header[0].signed_block_header.message.slot = signed_parent.message.slot

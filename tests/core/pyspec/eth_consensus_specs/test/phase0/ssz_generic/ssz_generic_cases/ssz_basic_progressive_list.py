@@ -1,10 +1,13 @@
 from random import Random
 
-from eth_consensus_specs.debug.random_value import get_random_ssz_object, RandomizationMode
+from eth_consensus_specs.debug.random_value import (
+    BasicType,
+    get_random_ssz_object,
+    RandomizationMode,
+)
 from eth_consensus_specs.test.exceptions import SkippedTest
 from eth_consensus_specs.utils.ssz.ssz_impl import serialize
 from eth_consensus_specs.utils.ssz.ssz_typing import (
-    BasicView,
     Boolean,
     ProgressiveList,
     Uint8,
@@ -21,7 +24,7 @@ from .ssz_uints import uint_case_fn
 
 
 def progressive_list_case_fn(
-    rng: Random, mode: RandomizationMode, elem_type: type[BasicView], length: int
+    rng: Random, mode: RandomizationMode, elem_type: type[BasicType], length: int
 ):
     return get_random_ssz_object(
         rng,
@@ -33,7 +36,7 @@ def progressive_list_case_fn(
     )
 
 
-BASIC_TYPES: dict[str, type[BasicView]] = {
+BASIC_TYPES: dict[str, type[BasicType]] = {
     "bool": Boolean,
     "uint8": Uint8,
     "uint16": Uint16,
@@ -84,7 +87,7 @@ def invalid_cases():
                                 rng,
                             ),
                         )
-                if typ.type_byte_length() > 1:
+                if typ.get_byte_length() > 1:
                     if length > 0:
 
                         def the_test(rng, mode=mode, typ=typ, length=length):

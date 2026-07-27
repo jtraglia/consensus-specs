@@ -14,6 +14,7 @@ from eth_consensus_specs.test.helpers.attestations import (
 from eth_consensus_specs.test.helpers.block import build_empty_block_for_next_slot
 from eth_consensus_specs.test.helpers.forks import is_post_fulu, is_post_gloas
 from eth_consensus_specs.test.helpers.state import next_epoch, state_transition_and_sign_block
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def check_head_against_root(spec, store, root):
@@ -160,7 +161,7 @@ def get_fork_choice_node(spec, root, payload_status=None):
 
 
 def get_anchor_root(spec, state):
-    anchor_block_header = state.latest_block_header.copy()
+    anchor_block_header = copy(state.latest_block_header)
     if anchor_block_header.state_root == spec.Bytes32():
         anchor_block_header.state_root = spec.hash_tree_root(state)
     return spec.hash_tree_root(anchor_block_header)
@@ -257,7 +258,7 @@ def get_genesis_forkchoice_store(spec, genesis_state):
 
 def get_genesis_forkchoice_store_and_block(spec, genesis_state):
     assert genesis_state.slot == spec.GENESIS_SLOT
-    genesis_block = spec.BeaconBlock(state_root=genesis_state.hash_tree_root())
+    genesis_block = spec.BeaconBlock(state_root=hash_tree_root(genesis_state))
     if is_post_gloas(spec):
         # Match the genesis block body bid to what ``genesis.py`` set on the
         # state's committed bid; this keeps ``genesis_block`` consistent with
@@ -270,20 +271,20 @@ def get_genesis_forkchoice_store_and_block(spec, genesis_state):
 
 
 def get_block_file_name(signed_block):
-    return f"block_{encode_hex(signed_block.message.hash_tree_root())}"
+    return f"block_{encode_hex(hash_tree_root(signed_block.message))}"
 
 
 def get_attestation_file_name(attestation):
-    return f"attestation_{encode_hex(attestation.hash_tree_root())}"
+    return f"attestation_{encode_hex(hash_tree_root(attestation))}"
 
 
 def get_attester_slashing_file_name(attester_slashing):
-    return f"attester_slashing_{encode_hex(attester_slashing.hash_tree_root())}"
+    return f"attester_slashing_{encode_hex(hash_tree_root(attester_slashing))}"
 
 
 def get_blobs_file_name(blobs=None, blobs_root=None):
     if blobs:
-        return f"blobs_{encode_hex(blobs.hash_tree_root())}"
+        return f"blobs_{encode_hex(hash_tree_root(blobs))}"
     else:
         return f"blobs_{encode_hex(blobs_root)}"
 
@@ -299,11 +300,11 @@ def get_sidecar_file_name(sidecar: DataColumnSidecar) -> str:
     """
     Returns the file name for a single sidecar.
     """
-    return f"column_{encode_hex(sidecar.hash_tree_root())}"
+    return f"column_{encode_hex(hash_tree_root(sidecar))}"
 
 
 def get_payload_attestation_message_file_name(ptc_message):
-    return f"payload_attestation_message_{encode_hex(ptc_message.hash_tree_root())}"
+    return f"payload_attestation_message_{encode_hex(hash_tree_root(ptc_message))}"
 
 
 def on_tick_and_append_step(spec, store, time, test_steps):
@@ -319,7 +320,7 @@ def run_on_block(spec, store, signed_block, valid=True):
         return
 
     spec.on_block(store, signed_block)
-    root = signed_block.message.hash_tree_root()
+    root = hash_tree_root(signed_block.message)
     assert store.blocks[root] == signed_block.message
 
 
@@ -344,7 +345,7 @@ def add_block(
 
         if blob_data.is_pre_fulu():
             blobs = spec.List[spec.Blob, spec.MAX_BLOB_COMMITMENTS_PER_BLOCK](blob_data.blobs)
-            blobs_root = blobs.hash_tree_root()
+            blobs_root = hash_tree_root(blobs)
             yield get_blobs_file_name(blobs_root=blobs_root), blobs
 
         if blob_data.is_post_fulu():
@@ -404,7 +405,7 @@ def add_block(
 
     if is_post_gloas(spec):
         # An on_block step implies receiving block's payload attestations (post GLOAS)
-        state = store.block_states[signed_block.message.hash_tree_root()]
+        state = store.block_states[hash_tree_root(signed_block.message)]
         for payload_attestation in signed_block.message.body.payload_attestations:
             slot = payload_attestation.data.slot
             ptc = spec.get_ptc(state, slot)
@@ -420,13 +421,13 @@ def add_block(
                     spec, store, ptc_message, is_from_block=True, valid=True
                 )
 
-    block_root = signed_block.message.hash_tree_root()
+    block_root = hash_tree_root(signed_block.message)
     assert store.blocks[block_root] == signed_block.message
-    assert store.block_states[block_root].hash_tree_root() == signed_block.message.state_root
+    assert hash_tree_root(store.block_states[block_root]) == signed_block.message.state_root
     if not is_optimistic:
         output_store_checks(spec, store, test_steps)
 
-    return store.block_states[signed_block.message.hash_tree_root()]
+    return store.block_states[hash_tree_root(signed_block.message)]
 
 
 def run_on_execution_payload_envelope(spec, store, signed_envelope, valid=True):
@@ -443,7 +444,7 @@ def run_on_execution_payload_envelope(spec, store, signed_envelope, valid=True):
 
 
 def get_execution_payload_envelope_file_name(signed_envelope):
-    return f"execution_payload_envelope_{encode_hex(signed_envelope.hash_tree_root())}"
+    return f"execution_payload_envelope_{encode_hex(hash_tree_root(signed_envelope))}"
 
 
 def add_execution_payload(spec, store, signed_envelope, test_steps, valid=True):
@@ -623,11 +624,11 @@ def apply_next_epoch_with_attestations(
     for signed_block in new_signed_blocks:
         block = signed_block.message
         yield from tick_and_add_block(spec, store, signed_block, test_steps)
-        block_root = block.hash_tree_root()
+        block_root = hash_tree_root(block)
         assert store.blocks[block_root] == block
         last_signed_block = signed_block
 
-    assert store.block_states[block_root].hash_tree_root() == post_state.hash_tree_root()
+    assert hash_tree_root(store.block_states[block_root]) == hash_tree_root(post_state)
 
     return post_state, store, last_signed_block
 
@@ -641,11 +642,11 @@ def apply_next_slots_with_attestations(
     for signed_block in new_signed_blocks:
         block = signed_block.message
         yield from tick_and_add_block(spec, store, signed_block, test_steps)
-        block_root = block.hash_tree_root()
+        block_root = hash_tree_root(block)
         assert store.blocks[block_root] == block
         last_signed_block = signed_block
 
-    assert store.block_states[block_root].hash_tree_root() == post_state.hash_tree_root()
+    assert hash_tree_root(store.block_states[block_root]) == hash_tree_root(post_state)
 
     return post_state, store, last_signed_block
 
@@ -654,13 +655,13 @@ def is_ready_to_justify(spec, state):
     """
     Check if the given ``state`` will trigger justification updates at epoch boundary.
     """
-    temp_state = state.copy()
+    temp_state = copy(state)
     spec.process_justification_and_finalization(temp_state)
     return temp_state.current_justified_checkpoint.epoch > state.current_justified_checkpoint.epoch
 
 
 def find_next_justifying_slot(spec, state, fill_cur_epoch, fill_prev_epoch, participation_fn=None):
-    temp_state = state.copy()
+    temp_state = copy(state)
 
     signed_blocks = []
     justifying_slot = None
@@ -720,7 +721,7 @@ def add_signed_empty_block(spec, store, state, test_steps):
     signed_block = state_transition_and_sign_block(spec, state, block)
     yield from tick_and_add_block(spec, store, signed_block, test_steps)
 
-    root = signed_block.message.hash_tree_root()
+    root = hash_tree_root(signed_block.message)
     return root, store.block_states[root], signed_block
 
 

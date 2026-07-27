@@ -43,7 +43,8 @@ from eth_consensus_specs.test.helpers.keys import (
 from eth_consensus_specs.test.helpers.state import (
     next_slot,
 )
-from eth_consensus_specs.utils.ssz.ssz_typing import View
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
+from eth_consensus_specs.utils.ssz.ssz_typing import SSZType
 
 from .debug_helpers import print_epoch, print_head
 
@@ -76,7 +77,7 @@ class BranchTip:
 
     def copy(self):
         return BranchTip(
-            self.beacon_state.copy(),
+            copy(self.beacon_state),
             self.attestations.copy(),
             self.participants.copy(),
             self.eventually_justified_checkpoint,
@@ -199,7 +200,7 @@ def messages_to_payload_attestations(spec, state, messages):
     # Group messages by data
     groups = {}
     for m in messages:
-        key = m.data.hash_tree_root()
+        key = hash_tree_root(m.data)
         if key not in groups:
             groups[key] = (m.data, [])
         groups[key][1].append(m.validator_index)
@@ -318,7 +319,7 @@ def produce_block(
             block.body.payload_attestations.append(pa)
 
     # Run state transition and sign off on a block
-    post_state = state.copy()
+    post_state = copy(state)
 
     valid = True
     try:
@@ -326,7 +327,7 @@ def produce_block(
     except AssertionError:
         valid = False
 
-    block.state_root = post_state.hash_tree_root()
+    block.state_root = hash_tree_root(post_state)
     signed_block = sign_block(spec, post_state, block)
 
     # Filter out operations only if the block is valid
@@ -427,7 +428,7 @@ def advance_branch_to_next_epoch(spec, branch_tip, enable_attesting=True):
 
     signed_blocks = []
     attestations = branch_tip.attestations.copy()
-    state = branch_tip.beacon_state.copy()
+    state = copy(branch_tip.beacon_state)
     current_epoch = spec.get_current_epoch(state)
     target_slot = spec.compute_start_slot_at_epoch(current_epoch + 1)
 
@@ -467,7 +468,7 @@ def advance_state_to_anchor_epoch(spec, state, anchor_epoch, debug) -> ([], Bran
     signed_blocks = []
 
     genesis_tip = BranchTip(
-        state.copy(), [], [*range(len(state.validators))], state.current_justified_checkpoint
+        copy(state), [], [*range(len(state.validators))], state.current_justified_checkpoint
     )
 
     # Advance the state to the anchor_epoch
@@ -574,7 +575,7 @@ def filter_out_duplicate_messages(fn):
                 yield data
             else:
                 (key, value) = data
-                if value is not None and isinstance(value, bytes | View):
+                if value is not None and isinstance(value, bytes | SSZType):
                     # skip already processed ssz parts
                     if key not in processed_keys:
                         processed_keys.add(key)
@@ -613,7 +614,7 @@ def _add_block(spec, store, signed_block, test_steps):
 
         if is_post_gloas(spec):
             # An on_block step implies receiving block's payload attestations (post GLOAS)
-            st = store.block_states[signed_block.message.hash_tree_root()]
+            st = store.block_states[hash_tree_root(signed_block.message)]
             for payload_attestation in signed_block.message.body.payload_attestations:
                 for ptc_message in payload_attestation_to_messages(spec, st, payload_attestation):
                     run_on_payload_attestation_message(
@@ -680,7 +681,7 @@ def yield_fork_choice_test_events(spec, test_data: FCTestData, test_events: list
             else:
                 yield from add_block(spec, store, signed_block, test_steps, valid=valid)
 
-                block_root = signed_block.message.hash_tree_root()
+                block_root = hash_tree_root(signed_block.message)
                 if valid:
                     assert store.blocks[block_root] == signed_block.message
                 else:

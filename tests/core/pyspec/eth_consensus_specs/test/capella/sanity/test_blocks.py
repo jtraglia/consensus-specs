@@ -45,6 +45,7 @@ from eth_consensus_specs.test.helpers.withdrawals import (
 #
 # `is_execution_enabled` has been removed from Capella
 #
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 @with_all_phases_from_to(CAPELLA, GLOAS)
@@ -341,7 +342,7 @@ def _perform_valid_withdrawal(spec, state):
     if is_post_gloas(spec):
         state.latest_block_hash = state.latest_execution_payload_bid.block_hash
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     # Block 1
     block = build_empty_block_for_next_slot(spec, state)

@@ -30,6 +30,7 @@ from eth_consensus_specs.test.helpers.state import (
     next_epoch,
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 @with_all_phases_from_to(BELLATRIX, GLOAS)
@@ -60,7 +61,7 @@ def test_from_syncing_to_invalid(spec, state):
     )
     assert spec.get_head(mega_store.fc_store).root == mega_store.opt_store.head_block_root
 
-    state_0 = state.copy()
+    state_0 = copy(state)
 
     # Create VALID chain `a`
     signed_blocks_a = []
@@ -80,11 +81,11 @@ def test_from_syncing_to_invalid(spec, state):
             spec, mega_store, signed_block, test_steps, status=PayloadStatusV1Status.VALID
         )
         assert spec.get_head(mega_store.fc_store).root == mega_store.opt_store.head_block_root
-        signed_blocks_a.append(signed_block.copy())
+        signed_blocks_a.append(copy(signed_block))
 
     # Create SYNCING chain `b`
     signed_blocks_b = []
-    state = state_0.copy()
+    state = copy(state_0)
     for i in range(3):
         block = build_empty_block_for_next_slot(spec, state)
         block.body.execution_payload.parent_hash = (
@@ -99,7 +100,7 @@ def test_from_syncing_to_invalid(spec, state):
         signed_block = state_transition_with_full_block(
             spec, state, fill_cur_epoch=True, fill_prev_epoch=True, block=block
         )
-        signed_blocks_b.append(signed_block.copy())
+        signed_blocks_b.append(copy(signed_block))
         yield from add_optimistic_block(
             spec, mega_store, signed_block, test_steps, status=PayloadStatusV1Status.SYNCING
         )
@@ -128,6 +129,6 @@ def test_from_syncing_to_invalid(spec, state):
     yield from add_optimistic_block(
         spec, mega_store, signed_block, test_steps, payload_status=payload_status
     )
-    assert mega_store.opt_store.head_block_root == signed_blocks_a[-1].message.hash_tree_root()
+    assert mega_store.opt_store.head_block_root == hash_tree_root(signed_blocks_a[-1].message)
 
     yield "steps", test_steps

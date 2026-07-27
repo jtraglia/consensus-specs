@@ -1,8 +1,11 @@
 from random import Random
 
-from eth_consensus_specs.debug.random_value import get_random_ssz_object, RandomizationMode
+from eth_consensus_specs.debug.random_value import (
+    BasicType,
+    get_random_ssz_object,
+    RandomizationMode,
+)
 from eth_consensus_specs.utils.ssz.ssz_typing import (
-    BasicView,
     Uint8,
     Uint16,
     Uint32,
@@ -14,9 +17,9 @@ from eth_consensus_specs.utils.ssz.ssz_typing import (
 from .ssz_test_case import invalid_test_case, valid_test_case
 
 
-def uint_case_fn(rng: Random, mode: RandomizationMode, typ: type[BasicView]):
+def uint_case_fn(rng: Random, mode: RandomizationMode, typ: type[BasicType]):
     return get_random_ssz_object(
-        rng, typ, max_bytes_length=typ.type_byte_length(), max_list_length=1, mode=mode, chaos=False
+        rng, typ, max_bytes_length=typ.get_byte_length(), max_list_length=1, mode=mode, chaos=False
     )
 
 
@@ -27,7 +30,7 @@ def valid_cases():
     rng = Random(1234)
     for uint_type in UINT_TYPES:
         mode = RandomizationMode.mode_random
-        byte_len = uint_type.type_byte_length()
+        byte_len = uint_type.get_byte_length()
         yield (
             f"uint_{byte_len * 8}_last_byte_empty",
             valid_test_case(
@@ -56,7 +59,7 @@ def valid_cases():
 
 def invalid_cases():
     for uint_type in UINT_TYPES:
-        byte_len = uint_type.type_byte_length()
+        byte_len = uint_type.get_byte_length()
         yield (
             f"uint_{byte_len * 8}_one_too_high",
             invalid_test_case(
@@ -65,7 +68,7 @@ def invalid_cases():
             ),
         )
     for uint_type in [Uint8, Uint16, Uint32, Uint64, Uint128, Uint256]:
-        byte_len = uint_type.type_byte_length()
+        byte_len = uint_type.get_byte_length()
         yield (
             f"uint_{byte_len * 8}_one_byte_longer",
             invalid_test_case(
@@ -76,7 +79,7 @@ def invalid_cases():
             ),
         )
     for uint_type in [Uint8, Uint16, Uint32, Uint64, Uint128, Uint256]:
-        byte_len = uint_type.type_byte_length()
+        byte_len = uint_type.get_byte_length()
         yield (
             f"uint_{byte_len * 8}_one_byte_shorter",
             invalid_test_case(

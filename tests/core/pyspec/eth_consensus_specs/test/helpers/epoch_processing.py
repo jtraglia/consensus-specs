@@ -2,6 +2,7 @@ from eth_consensus_specs.test.helpers.forks import (
     is_post_altair,
     is_post_capella,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def get_process_calls(spec):
@@ -101,6 +102,6 @@ def run_epoch_processing_with(spec, state, process_name: str):
     yield "pre", state
     getattr(spec, process_name)(state)
     yield "post", state
-    continue_state = state.copy()
+    continue_state = copy(state)
     run_epoch_processing_from(spec, continue_state, process_name)
     yield "post_epoch", continue_state

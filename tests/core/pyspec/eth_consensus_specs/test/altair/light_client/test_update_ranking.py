@@ -14,6 +14,7 @@ from eth_consensus_specs.test.helpers.light_client import (
 from eth_consensus_specs.test.helpers.state import (
     next_slots,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def create_test_update(
@@ -59,11 +60,11 @@ def test_update_ranking(spec, state):
     sig_attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
-    sig_attested_state = state.copy()
+    sig_attested_state = copy(state)
     att_attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
-    att_attested_state = state.copy()
+    att_attested_state = copy(state)
     fin_finalized_block = att_attested_block
     _, _, state = next_slots_with_attestations(
         spec, state, 2 * spec.SLOTS_PER_EPOCH - 1, fill_cur_epoch=True, fill_prev_epoch=True
@@ -71,12 +72,12 @@ def test_update_ranking(spec, state):
     fin_attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
-    fin_attested_state = state.copy()
+    fin_attested_state = copy(state)
     lat_finalized_block = fin_finalized_block
     lat_attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
-    lat_attested_state = state.copy()
+    lat_attested_state = copy(state)
     sig = (sig_attested_state, sig_attested_block, sig_finalized_block)
     att = (att_attested_state, att_attested_block, att_finalized_block)
     fin = (fin_attested_state, fin_attested_block, fin_finalized_block)
