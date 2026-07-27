@@ -21,6 +21,7 @@ from ssz import (
     BaseByteList as ByteList,
     BaseBytes as ByteVector,
     Boolean,
+    Byte,
     CompatibleUnion,
     Container,
     List,
@@ -36,9 +37,6 @@ from ssz import (
     Uint256,
     Vector,
 )
-
-# The SSZ specification's name for an 8-bit unsigned integer element.
-Byte = Uint8
 
 
 class Bytes1(ByteVector):

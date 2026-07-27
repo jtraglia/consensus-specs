@@ -350,7 +350,7 @@ class ProposerSlashings(ProgressiveList[ProposerSlashing]):
 
 ```python
 # [Modified in Gloas:EIP7688]
-class Transaction(ProgressiveList[Uint8]):
+class Transaction(ProgressiveList[Byte]):
     """
     An opaque execution-layer transaction, either a typed transaction
     envelope or a legacy RLP-encoded transaction.
@@ -411,7 +411,7 @@ class Withdrawals(ProgressiveList[Withdrawal]):
 ### New `BlockAccessList`
 
 ```python
-class BlockAccessList(ProgressiveList[Uint8]):
+class BlockAccessList(ProgressiveList[Byte]):
     """
     The serialized block access list of an execution payload.
     """
