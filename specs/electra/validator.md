@@ -189,9 +189,7 @@ def get_eth1_vote(state: BeaconState, eth1_chain: Sequence[Eth1Block]) -> Eth1Da
     # Default vote on latest eth1 block data in the period range unless eth1 chain is not live
     # Non-substantive casting for linter
     state_eth1_data: Eth1Data = state.eth1_data
-    default_vote = (
-        votes_to_consider[len(votes_to_consider) - 1] if any(votes_to_consider) else state_eth1_data
-    )
+    default_vote = votes_to_consider[-1] if any(votes_to_consider) else state_eth1_data
 
     return max(
         valid_votes,

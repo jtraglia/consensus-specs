@@ -1636,11 +1636,11 @@ def process_ptc_window(state: BeaconState) -> None:
     Update the cached PTC window.
     """
     # Shift all epochs forward by one
-    state.ptc_window[: len(state.ptc_window) - SLOTS_PER_EPOCH] = state.ptc_window[SLOTS_PER_EPOCH:]
+    state.ptc_window[:-SLOTS_PER_EPOCH] = state.ptc_window[SLOTS_PER_EPOCH:]
     # Fill in the last epoch
     next_epoch = Epoch(get_current_epoch(state) + MIN_SEED_LOOKAHEAD + 1)
     start_slot = compute_start_slot_at_epoch(next_epoch)
-    state.ptc_window[len(state.ptc_window) - SLOTS_PER_EPOCH :] = [
+    state.ptc_window[-SLOTS_PER_EPOCH:] = [
         compute_ptc(state, Slot(slot)) for slot in range(start_slot, start_slot + SLOTS_PER_EPOCH)
     ]
 ```

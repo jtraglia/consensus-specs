@@ -194,12 +194,10 @@ def get_lc_execution_root(header: LightClientHeader) -> Root:
         return Root()
 
     # [Modified in Gloas:EIP7732]
-    inner = header.execution_branch[
-        : len(header.execution_branch) - floorlog2(EXECUTION_PAYLOAD_GINDEX)
-    ]
+    inner = header.execution_branch[: -floorlog2(EXECUTION_PAYLOAD_GINDEX)]
     return compute_merkle_branch_root(
         leaf=Bytes32(header.execution_block_hash),
-        branch=inner[len(inner) - floorlog2(BLOCK_HASH_GINDEX) :],
+        branch=inner[-floorlog2(BLOCK_HASH_GINDEX) :],
         depth=floorlog2(BLOCK_HASH_GINDEX),
         index=get_subtree_index(BLOCK_HASH_GINDEX),
     )
