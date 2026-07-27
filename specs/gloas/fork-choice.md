@@ -28,6 +28,7 @@
   - [Modified `get_checkpoint_block`](#modified-get_checkpoint_block)
   - [Modified `get_supported_node`](#modified-get_supported_node)
   - [New `is_previous_slot_payload_decision`](#new-is_previous_slot_payload_decision)
+  - [New `should_build_on_full_at_slot`](#new-should_build_on_full_at_slot)
   - [New `should_build_on_full`](#new-should_build_on_full)
   - [New `should_extend_payload`](#new-should_extend_payload)
   - [New `get_payload_status_tiebreaker`](#new-get_payload_status_tiebreaker)
@@ -413,17 +414,17 @@ def is_previous_slot_payload_decision(store: Store, node: ForkChoiceNode) -> boo
     return is_previous_slot and is_payload_decision
 ```
 
-### New `should_build_on_full`
+### New `should_build_on_full_at_slot`
 
-*Note*: This function is called by the proposer to decide whether to build on
-top of the *empty* or *full* parent node. For a node from an earlier slot, it
+*Note*: This function decides whether a block proposed at `slot` builds on top
+of the *empty* or *full* parent node. For a node from an earlier slot, it
 follows the node's payload status. For a *full* node from the previous slot, it
 considers the PTC view on both payload timeliness and data availability.
 
 ```python
-def should_build_on_full(store: Store, head: ForkChoiceNode) -> bool:
+def should_build_on_full_at_slot(store: Store, head: ForkChoiceNode, slot: Slot) -> bool:
     assert head.payload_status != PAYLOAD_STATUS_PENDING
-    if store.blocks[head.root].slot + 1 != get_current_slot(store):
+    if store.blocks[head.root].slot + 1 != slot:
         return head.payload_status == PAYLOAD_STATUS_FULL
     if head.payload_status == PAYLOAD_STATUS_EMPTY:
         return False
@@ -432,6 +433,16 @@ def should_build_on_full(store: Store, head: ForkChoiceNode) -> bool:
     if payload_data_availability(store, head.root, available=False):
         return False
     return True
+```
+
+### New `should_build_on_full`
+
+*Note*: This function is called by the proposer to decide whether to build on
+top of the *empty* or *full* parent node for the current slot.
+
+```python
+def should_build_on_full(store: Store, head: ForkChoiceNode) -> bool:
+    return should_build_on_full_at_slot(store, head, get_current_slot(store))
 ```
 
 ### New `should_extend_payload`
