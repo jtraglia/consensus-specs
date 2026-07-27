@@ -83,7 +83,7 @@ class SyncSubcommitteeBits(Bitvector):
     in subcommittee order.
     """
 
-    LENGTH = int(SYNC_COMMITTEE_SIZE) // int(SYNC_COMMITTEE_SUBNET_COUNT)
+    LENGTH = SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT
 ```
 
 ## Constants

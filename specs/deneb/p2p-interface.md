@@ -83,7 +83,7 @@ class BeaconBlockRoots(List[Root]):
     Beacon block roots requested in a ``BeaconBlocksByRoot`` request.
     """
 
-    LIMIT = int(MAX_REQUEST_BLOCKS_DENEB)
+    LIMIT = MAX_REQUEST_BLOCKS_DENEB
 ```
 
 #### Modified `SignedBeaconBlocks`
@@ -96,7 +96,7 @@ class SignedBeaconBlocks(List[SignedBeaconBlock]):
     ``BeaconBlocksByRoot`` response.
     """
 
-    LIMIT = int(MAX_REQUEST_BLOCKS_DENEB)
+    LIMIT = MAX_REQUEST_BLOCKS_DENEB
 ```
 
 #### New `BlobIdentifiers`
@@ -108,7 +108,7 @@ class BlobIdentifiers(List[BlobIdentifier]):
     ``BlobSidecarsByRoot`` request.
     """
 
-    LIMIT = int(compute_max_request_blob_sidecars())
+    LIMIT = compute_max_request_blob_sidecars()
 ```
 
 #### New `BlobSidecars`
@@ -120,7 +120,7 @@ class BlobSidecars(List[BlobSidecar]):
     ``BlobSidecarsByRoot`` response.
     """
 
-    LIMIT = int(compute_max_request_blob_sidecars())
+    LIMIT = compute_max_request_blob_sidecars()
 ```
 
 #### New `KZGCommitmentInclusionProof`
@@ -132,7 +132,7 @@ class KZGCommitmentInclusionProof(Vector[Bytes32]):
     ``BeaconBlockBody``.
     """
 
-    LENGTH = int(KZG_COMMITMENT_INCLUSION_PROOF_DEPTH)
+    LENGTH = KZG_COMMITMENT_INCLUSION_PROOF_DEPTH
 ```
 
 ### Containers

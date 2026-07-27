@@ -91,7 +91,7 @@ class SignedInclusionLists(List[SignedInclusionList]):
     response.
     """
 
-    LIMIT = int(MAX_REQUEST_INCLUSION_LIST)
+    LIMIT = MAX_REQUEST_INCLUSION_LIST
 ```
 
 ### The gossip domain: gossipsub

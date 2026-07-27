@@ -63,7 +63,7 @@ class ProofByRootIdentifiers(List[ProofByRootIdentifier]):
     ``ExecutionProofsByRoot`` request.
     """
 
-    LIMIT = int(MAX_REQUEST_BLOCKS_DENEB)
+    LIMIT = MAX_REQUEST_BLOCKS_DENEB
 ```
 
 ### New `ProofTypes`
@@ -74,7 +74,7 @@ class ProofTypes(List[ProofType]):
     The proof types requested for a single beacon block.
     """
 
-    LIMIT = int(MAX_EXECUTION_PROOFS_PER_PAYLOAD)
+    LIMIT = MAX_EXECUTION_PROOFS_PER_PAYLOAD
 ```
 
 ### New `SignedExecutionProofs`
@@ -86,7 +86,7 @@ class SignedExecutionProofs(List[SignedExecutionProof]):
     ``ExecutionProofsByRoot`` response.
     """
 
-    LIMIT = int(compute_max_request_execution_proofs())
+    LIMIT = compute_max_request_execution_proofs()
 ```
 
 ## Containers

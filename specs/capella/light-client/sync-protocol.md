@@ -42,7 +42,7 @@ class ExecutionBranch(Vector[Bytes32]):
     A Merkle branch proving ``execution_payload`` within ``BeaconBlockBody``.
     """
 
-    LENGTH = int(floorlog2(EXECUTION_PAYLOAD_GINDEX))
+    LENGTH = floorlog2(EXECUTION_PAYLOAD_GINDEX)
 ```
 
 ## Constants

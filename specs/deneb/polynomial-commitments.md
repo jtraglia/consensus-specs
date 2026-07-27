@@ -73,7 +73,7 @@ class Blob(ByteVector):
     committed to with a KZG commitment.
     """
 
-    LENGTH = int(BYTES_PER_FIELD_ELEMENT) * int(FIELD_ELEMENTS_PER_BLOB)
+    LENGTH = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB
 ```
 
 ### `G1Point`

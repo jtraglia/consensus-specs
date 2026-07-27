@@ -47,7 +47,7 @@ class CurrentSyncCommitteeBranch(Vector[Bytes32]):
     A Merkle branch proving ``current_sync_committee`` within ``BeaconState``.
     """
 
-    LENGTH = int(floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS))
+    LENGTH = floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS)
 ```
 
 ### Modified `ExecutionBranch`
@@ -60,7 +60,7 @@ class ExecutionBranch(Vector[Bytes32]):
     ``BeaconBlockBody``.
     """
 
-    LENGTH = int(floorlog2(EXECUTION_BLOCK_HASH_GINDEX_GLOAS))
+    LENGTH = floorlog2(EXECUTION_BLOCK_HASH_GINDEX_GLOAS)
 ```
 
 ### Modified `FinalityBranch`
@@ -73,7 +73,7 @@ class FinalityBranch(Vector[Bytes32]):
     ``BeaconState``.
     """
 
-    LENGTH = int(floorlog2(FINALIZED_ROOT_GINDEX_GLOAS))
+    LENGTH = floorlog2(FINALIZED_ROOT_GINDEX_GLOAS)
 ```
 
 ### Modified `NextSyncCommitteeBranch`
@@ -85,7 +85,7 @@ class NextSyncCommitteeBranch(Vector[Bytes32]):
     A Merkle branch proving ``next_sync_committee`` within ``BeaconState``.
     """
 
-    LENGTH = int(floorlog2(NEXT_SYNC_COMMITTEE_GINDEX_GLOAS))
+    LENGTH = floorlog2(NEXT_SYNC_COMMITTEE_GINDEX_GLOAS)
 ```
 
 ## Constants

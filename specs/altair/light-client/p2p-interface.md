@@ -40,7 +40,7 @@ class LightClientUpdates(List[LightClientUpdate]):
     Light client updates returned in a ``LightClientUpdatesByRange`` response.
     """
 
-    LIMIT = int(MAX_REQUEST_LIGHT_CLIENT_UPDATES)
+    LIMIT = MAX_REQUEST_LIGHT_CLIENT_UPDATES
 ```
 
 ### Configuration

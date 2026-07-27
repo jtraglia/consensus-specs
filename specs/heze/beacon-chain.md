@@ -50,7 +50,7 @@ class InclusionListBits(Bitvector):
     committee order.
     """
 
-    LENGTH = int(INCLUSION_LIST_COMMITTEE_SIZE)
+    LENGTH = INCLUSION_LIST_COMMITTEE_SIZE
 ```
 
 ### New `InclusionListCommittee`
@@ -61,7 +61,7 @@ class InclusionListCommittee(Vector[ValidatorIndex]):
     The inclusion list committee of a slot, with possible duplicates.
     """
 
-    LENGTH = int(INCLUSION_LIST_COMMITTEE_SIZE)
+    LENGTH = INCLUSION_LIST_COMMITTEE_SIZE
 ```
 
 ## Constants

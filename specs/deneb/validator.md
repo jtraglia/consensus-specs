@@ -50,7 +50,7 @@ class Blobs(List[Blob]):
     The blobs of a single beacon block.
     """
 
-    LIMIT = int(MAX_BLOB_COMMITMENTS_PER_BLOCK)
+    LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
 ```
 
 ### `KZGProofs`
@@ -62,7 +62,7 @@ class KZGProofs(List[KZGProof]):
     commitments.
     """
 
-    LIMIT = int(MAX_BLOB_COMMITMENTS_PER_BLOCK)
+    LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
 ```
 
 ## Helpers

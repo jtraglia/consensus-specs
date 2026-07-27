@@ -53,7 +53,7 @@ class CellsBitlist(Bitlist):
     A bitfield over the cells of a column, one bit per blob.
     """
 
-    LIMIT = int(MAX_BLOB_COMMITMENTS_PER_BLOCK)
+    LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
 ```
 
 ### New `OptionalPartialDataColumnHeader`

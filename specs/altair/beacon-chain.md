@@ -77,7 +77,7 @@ class EpochParticipation(List[ParticipationFlags]):
     ``state.validators``, one entry per validator.
     """
 
-    LIMIT = int(VALIDATOR_REGISTRY_LIMIT)
+    LIMIT = VALIDATOR_REGISTRY_LIMIT
 ```
 
 ### New `InactivityScores`
@@ -90,7 +90,7 @@ class InactivityScores(List[Uint64]):
     entry per validator.
     """
 
-    LIMIT = int(VALIDATOR_REGISTRY_LIMIT)
+    LIMIT = VALIDATOR_REGISTRY_LIMIT
 ```
 
 ### New `ParticipationFlags`
@@ -111,7 +111,7 @@ class SyncCommitteeBits(Bitvector):
     committee order.
     """
 
-    LENGTH = int(SYNC_COMMITTEE_SIZE)
+    LENGTH = SYNC_COMMITTEE_SIZE
 ```
 
 ### New `SyncCommitteePubkeys`
@@ -123,7 +123,7 @@ class SyncCommitteePubkeys(Vector[BLSPubkey]):
     repeat when a validator is selected more than once.
     """
 
-    LENGTH = int(SYNC_COMMITTEE_SIZE)
+    LENGTH = SYNC_COMMITTEE_SIZE
 ```
 
 ## Constants

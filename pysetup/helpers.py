@@ -170,7 +170,7 @@ def objects_to_spec(
             # through the element type's own constructor.
             out = (
                 f"class {type_name}({base}[{element}]):\n"
-                f"    {attribute} = int({bound})\n\n\n"
+                f"    {attribute} = {bound}\n\n\n"
                 f"{name} = {type_name}(data=[{element}(v) for v in {vardef.value}])"
             )
         else:

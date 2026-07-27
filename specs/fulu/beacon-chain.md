@@ -56,7 +56,7 @@ class ProposerIndices(Vector[ValidatorIndex]):
     The proposer indices for every slot of a single epoch.
     """
 
-    LENGTH = int(SLOTS_PER_EPOCH)
+    LENGTH = SLOTS_PER_EPOCH
 ```
 
 ### New `ProposerLookahead`
@@ -68,7 +68,7 @@ class ProposerLookahead(Vector[ValidatorIndex]):
     ``MIN_SEED_LOOKAHEAD`` epochs.
     """
 
-    LENGTH = (int(MIN_SEED_LOOKAHEAD) + 1) * int(SLOTS_PER_EPOCH)
+    LENGTH = (MIN_SEED_LOOKAHEAD + Uint64(1)) * SLOTS_PER_EPOCH
 ```
 
 ## Configuration

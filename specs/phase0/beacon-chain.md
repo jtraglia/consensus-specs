@@ -201,7 +201,7 @@ class AggregationBits(Bitlist):
     committee order.
     """
 
-    LIMIT = int(MAX_VALIDATORS_PER_COMMITTEE)
+    LIMIT = MAX_VALIDATORS_PER_COMMITTEE
 ```
 
 ### `Attestations`
@@ -212,7 +212,7 @@ class Attestations(List[Attestation]):
     The attestations included in a beacon block.
     """
 
-    LIMIT = int(MAX_ATTESTATIONS)
+    LIMIT = MAX_ATTESTATIONS
 ```
 
 ### `AttesterSlashings`
@@ -223,7 +223,7 @@ class AttesterSlashings(List[AttesterSlashing]):
     The attester slashings included in a beacon block.
     """
 
-    LIMIT = int(MAX_ATTESTER_SLASHINGS)
+    LIMIT = MAX_ATTESTER_SLASHINGS
 ```
 
 ### `AttestingIndices`
@@ -235,7 +235,7 @@ class AttestingIndices(List[ValidatorIndex]):
     without duplicates.
     """
 
-    LIMIT = int(MAX_VALIDATORS_PER_COMMITTEE)
+    LIMIT = MAX_VALIDATORS_PER_COMMITTEE
 ```
 
 ### `Balances`
@@ -247,7 +247,7 @@ class Balances(List[Gwei]):
     ``state.validators``, one entry per validator.
     """
 
-    LIMIT = int(VALIDATOR_REGISTRY_LIMIT)
+    LIMIT = VALIDATOR_REGISTRY_LIMIT
 ```
 
 ### `BlockRoots`
@@ -259,7 +259,7 @@ class BlockRoots(Vector[Root]):
     ``SLOTS_PER_HISTORICAL_ROOT``.
     """
 
-    LENGTH = int(SLOTS_PER_HISTORICAL_ROOT)
+    LENGTH = SLOTS_PER_HISTORICAL_ROOT
 ```
 
 ### `BLSPubkey`
@@ -298,7 +298,7 @@ class DepositDataList(List[DepositData]):
     the contract's deposit root.
     """
 
-    LIMIT = 2 ** int(DEPOSIT_CONTRACT_TREE_DEPTH)
+    LIMIT = Uint64(2) ** DEPOSIT_CONTRACT_TREE_DEPTH
 ```
 
 ### `DepositProof`
@@ -310,7 +310,7 @@ class DepositProof(Vector[Bytes32]):
     beyond the tree depth accounts for the deposit count mix-in.
     """
 
-    LENGTH = int(DEPOSIT_CONTRACT_TREE_DEPTH) + 1
+    LENGTH = DEPOSIT_CONTRACT_TREE_DEPTH + Uint64(1)
 ```
 
 ### `Deposits`
@@ -321,7 +321,7 @@ class Deposits(List[Deposit]):
     The deposits included in a beacon block.
     """
 
-    LIMIT = int(MAX_DEPOSITS)
+    LIMIT = MAX_DEPOSITS
 ```
 
 ### `Domain`
@@ -362,7 +362,7 @@ class Eth1DataVotes(List[Eth1Data]):
     period.
     """
 
-    LIMIT = int(EPOCHS_PER_ETH1_VOTING_PERIOD) * int(SLOTS_PER_EPOCH)
+    LIMIT = EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH
 ```
 
 ### `ForkDigest`
@@ -404,7 +404,7 @@ class HistoricalRoots(List[Root]):
     ``SLOTS_PER_HISTORICAL_ROOT`` slots as an append-only history of the chain.
     """
 
-    LIMIT = int(HISTORICAL_ROOTS_LIMIT)
+    LIMIT = HISTORICAL_ROOTS_LIMIT
 ```
 
 ### `JustificationBits`
@@ -416,7 +416,7 @@ class JustificationBits(Bitvector):
     used to decide finality under Casper FFG.
     """
 
-    LENGTH = int(JUSTIFICATION_BITS_LENGTH)
+    LENGTH = JUSTIFICATION_BITS_LENGTH
 ```
 
 ### `PendingAttestations`
@@ -428,7 +428,7 @@ class PendingAttestations(List[PendingAttestation]):
     they are processed at the epoch boundary.
     """
 
-    LIMIT = int(MAX_ATTESTATIONS) * int(SLOTS_PER_EPOCH)
+    LIMIT = MAX_ATTESTATIONS * SLOTS_PER_EPOCH
 ```
 
 ### `ProposerSlashings`
@@ -439,7 +439,7 @@ class ProposerSlashings(List[ProposerSlashing]):
     The proposer slashings included in a beacon block.
     """
 
-    LIMIT = int(MAX_PROPOSER_SLASHINGS)
+    LIMIT = MAX_PROPOSER_SLASHINGS
 ```
 
 ### `RandaoMixes`
@@ -451,7 +451,7 @@ class RandaoMixes(Vector[Bytes32]):
     ``EPOCHS_PER_HISTORICAL_VECTOR``.
     """
 
-    LENGTH = int(EPOCHS_PER_HISTORICAL_VECTOR)
+    LENGTH = EPOCHS_PER_HISTORICAL_VECTOR
 ```
 
 ### `Root`
@@ -472,7 +472,7 @@ class Slashings(Vector[Gwei]):
     ``EPOCHS_PER_SLASHINGS_VECTOR`` and used to scale slashing penalties.
     """
 
-    LENGTH = int(EPOCHS_PER_SLASHINGS_VECTOR)
+    LENGTH = EPOCHS_PER_SLASHINGS_VECTOR
 ```
 
 ### `Slot`
@@ -494,7 +494,7 @@ class StateRoots(Vector[Root]):
     ``SLOTS_PER_HISTORICAL_ROOT``.
     """
 
-    LENGTH = int(SLOTS_PER_HISTORICAL_ROOT)
+    LENGTH = SLOTS_PER_HISTORICAL_ROOT
 ```
 
 ### `ValidatorIndex`
@@ -515,7 +515,7 @@ class Validators(List[Validator]):
     removed.
     """
 
-    LIMIT = int(VALIDATOR_REGISTRY_LIMIT)
+    LIMIT = VALIDATOR_REGISTRY_LIMIT
 ```
 
 ### `Version`
@@ -536,7 +536,7 @@ class VoluntaryExits(List[SignedVoluntaryExit]):
     The signed voluntary exits included in a beacon block.
     """
 
-    LIMIT = int(MAX_VOLUNTARY_EXITS)
+    LIMIT = MAX_VOLUNTARY_EXITS
 ```
 
 ## Constants

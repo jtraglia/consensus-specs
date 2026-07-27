@@ -81,7 +81,7 @@ class BLSToExecutionChanges(List[SignedBLSToExecutionChange]):
     block.
     """
 
-    LIMIT = int(MAX_BLS_TO_EXECUTION_CHANGES)
+    LIMIT = MAX_BLS_TO_EXECUTION_CHANGES
 ```
 
 ### New `HistoricalSummaries`
@@ -94,7 +94,7 @@ class HistoricalSummaries(List[HistoricalSummary]):
     ``historical_roots``.
     """
 
-    LIMIT = int(HISTORICAL_ROOTS_LIMIT)
+    LIMIT = HISTORICAL_ROOTS_LIMIT
 ```
 
 ### New `WithdrawalIndex`
@@ -114,7 +114,7 @@ class Withdrawals(List[Withdrawal]):
     The withdrawals included in an execution payload.
     """
 
-    LIMIT = int(MAX_WITHDRAWALS_PER_PAYLOAD)
+    LIMIT = MAX_WITHDRAWALS_PER_PAYLOAD
 ```
 
 ## Constants

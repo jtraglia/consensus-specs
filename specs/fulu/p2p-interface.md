@@ -83,7 +83,7 @@ class DataColumnIndices(List[ColumnIndex]):
     request.
     """
 
-    LIMIT = int(NUMBER_OF_COLUMNS)
+    LIMIT = NUMBER_OF_COLUMNS
 ```
 
 ### Containers
@@ -97,7 +97,7 @@ class DataColumnsByRootIdentifiers(List[DataColumnsByRootIdentifier]):
     ``DataColumnSidecarsByRoot`` request.
     """
 
-    LIMIT = int(MAX_REQUEST_BLOCKS_DENEB)
+    LIMIT = MAX_REQUEST_BLOCKS_DENEB
 ```
 
 #### New `DataColumnSidecars`
@@ -109,7 +109,7 @@ class DataColumnSidecars(List[DataColumnSidecar]):
     ``DataColumnSidecarsByRoot`` response.
     """
 
-    LIMIT = int(compute_max_request_data_column_sidecars())
+    LIMIT = compute_max_request_data_column_sidecars()
 ```
 
 #### New `DataColumnsByRootIdentifier`

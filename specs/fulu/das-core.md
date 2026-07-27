@@ -65,7 +65,7 @@ class DataColumn(List[Cell]):
     A column of the extended blob data matrix, holding one cell per blob.
     """
 
-    LIMIT = int(MAX_BLOB_COMMITMENTS_PER_BLOCK)
+    LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
 ```
 
 ### `KZGCommitmentsInclusionProof`
@@ -77,7 +77,7 @@ class KZGCommitmentsInclusionProof(Vector[Bytes32]):
     ``BeaconBlockBody``.
     """
 
-    LENGTH = int(KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH)
+    LENGTH = KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH
 ```
 
 ### `RowIndex`

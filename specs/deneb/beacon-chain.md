@@ -78,7 +78,7 @@ class BlobKZGCommitments(List[KZGCommitment]):
     The KZG commitments to the blobs of a beacon block.
     """
 
-    LIMIT = int(MAX_BLOB_COMMITMENTS_PER_BLOCK)
+    LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
 ```
 
 ### New `VersionedHash`

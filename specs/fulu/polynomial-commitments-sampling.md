@@ -83,7 +83,7 @@ class Cell(ByteVector):
     The unit of blob data that can be verified with its own KZG proof.
     """
 
-    LENGTH = int(BYTES_PER_FIELD_ELEMENT) * int(FIELD_ELEMENTS_PER_CELL)
+    LENGTH = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL
 ```
 
 ### `CellIndex`
@@ -103,7 +103,7 @@ class Cells(Vector[Cell]):
     The cells of a single extended blob.
     """
 
-    LENGTH = int(CELLS_PER_EXT_BLOB)
+    LENGTH = CELLS_PER_EXT_BLOB
 ```
 
 ### `CommitmentIndex`
@@ -123,7 +123,7 @@ class Proofs(Vector[KZGProof]):
     One KZG proof per cell of a single extended blob.
     """
 
-    LENGTH = int(CELLS_PER_EXT_BLOB)
+    LENGTH = CELLS_PER_EXT_BLOB
 ```
 
 ## Cryptographic types

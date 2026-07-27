@@ -229,7 +229,7 @@ class Attnets(Bitvector):
     The attestation subnets a node is subscribed to, one bit per subnet.
     """
 
-    LENGTH = int(ATTESTATION_SUBNET_COUNT)
+    LENGTH = ATTESTATION_SUBNET_COUNT
 ```
 
 #### `BeaconBlockRoots`
@@ -240,7 +240,7 @@ class BeaconBlockRoots(List[Root]):
     Beacon block roots requested in a ``BeaconBlocksByRoot`` request.
     """
 
-    LIMIT = int(MAX_REQUEST_BLOCKS)
+    LIMIT = MAX_REQUEST_BLOCKS
 ```
 
 #### `ErrorMessage`
@@ -273,7 +273,7 @@ class SignedBeaconBlocks(List[SignedBeaconBlock]):
     ``BeaconBlocksByRoot`` response.
     """
 
-    LIMIT = int(MAX_REQUEST_BLOCKS)
+    LIMIT = MAX_REQUEST_BLOCKS
 ```
 
 #### `SubnetID`

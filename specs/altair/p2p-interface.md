@@ -129,7 +129,7 @@ class Syncnets(Bitvector):
     The sync committee subnets a node is subscribed to, one bit per subnet.
     """
 
-    LENGTH = int(SYNC_COMMITTEE_SUBNET_COUNT)
+    LENGTH = SYNC_COMMITTEE_SUBNET_COUNT
 ```
 
 ### MetaData

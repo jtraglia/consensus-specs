@@ -54,7 +54,7 @@ docs = [
 
 # There is no PyPI release of eth-ssz-specs yet, so pin the git revision.
 [tool.uv.sources]
-eth-ssz-specs = { git = "https://github.com/leanEthereum/ssz-specs", rev = "4a7e58f54351003753d5a7142d019749141bb679" }
+eth-ssz-specs = { git = "https://github.com/leanEthereum/ssz-specs", rev = "5ad1c357b9c4c8eb087a14f31eff27c187ac6c63" }
 
 [tool.setuptools]
 include-package-data = false

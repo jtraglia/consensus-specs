@@ -46,6 +46,10 @@ SCALAR_BASE_CLASSES = (
     "Uint256",
 )
 
+# Calls a collection's bound may contain. Anything else is a spec helper, which
+# the generated specification defines after its types.
+BOUND_SAFE_CALLS = frozenset({"floorlog2", *SCALAR_BASE_CLASSES})
+
 
 class MarkdownToSpec:
     def __init__(
@@ -220,14 +224,11 @@ class MarkdownToSpec:
             # `LENGTH`, or `ACTIVE_FIELDS`. Types whose bound comes from a
             # helper function only appear in networking schemas. They cannot be
             # compiled, since helpers are defined after types in the generated
-            # specification. The builtin int and the math helpers ceillog2 and
-            # floorlog2 are excluded, as they are available before types.
+            # specification. Everything available before types is allowed:
+            # scalar constructors, the builtin int, and the math helpers.
             if any(
                 isinstance(node, ast.Call)
-                and not (
-                    isinstance(node.func, ast.Name)
-                    and node.func.id in ("int", "ceillog2", "floorlog2")
-                )
+                and not (isinstance(node.func, ast.Name) and node.func.id in BOUND_SAFE_CALLS)
                 for statement in cls.body
                 if isinstance(statement, ast.Assign)
                 for node in ast.walk(statement)

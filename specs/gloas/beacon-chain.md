@@ -453,7 +453,7 @@ class BuilderPendingPayments(Vector[BuilderPendingPayment]):
     epochs of slots.
     """
 
-    LENGTH = 2 * int(SLOTS_PER_EPOCH)
+    LENGTH = Uint64(2) * SLOTS_PER_EPOCH
 ```
 
 ### New `BuilderPendingWithdrawals`
@@ -484,7 +484,7 @@ class ExecutionPayloadAvailability(Bitvector):
     modulo ``SLOTS_PER_HISTORICAL_ROOT``.
     """
 
-    LENGTH = int(SLOTS_PER_HISTORICAL_ROOT)
+    LENGTH = SLOTS_PER_HISTORICAL_ROOT
 ```
 
 ### New `PayloadAttestations`
@@ -504,7 +504,7 @@ class PTC(Vector[ValidatorIndex]):
     The payload timeliness committee of a slot, with possible duplicates.
     """
 
-    LENGTH = int(PTC_SIZE)
+    LENGTH = PTC_SIZE
 ```
 
 ### New `PTCAttestingIndices`
@@ -516,7 +516,7 @@ class PTCAttestingIndices(List[ValidatorIndex]):
     sorted and without duplicates.
     """
 
-    LIMIT = int(PTC_SIZE)
+    LIMIT = PTC_SIZE
 ```
 
 ### New `PTCBits`
@@ -528,7 +528,7 @@ class PTCBits(Bitvector):
     member in committee order.
     """
 
-    LENGTH = int(PTC_SIZE)
+    LENGTH = PTC_SIZE
 ```
 
 ### New `PTCWindow`
@@ -540,7 +540,7 @@ class PTCWindow(Vector[PTC]):
     current, and lookahead epochs.
     """
 
-    LENGTH = (2 + int(MIN_SEED_LOOKAHEAD)) * int(SLOTS_PER_EPOCH)
+    LENGTH = (Uint64(2) + MIN_SEED_LOOKAHEAD) * SLOTS_PER_EPOCH
 ```
 
 ## Constants

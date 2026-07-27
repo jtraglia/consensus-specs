@@ -74,7 +74,7 @@ class ExtraData(ByteList):
     Arbitrary extra data included in an execution payload.
     """
 
-    LIMIT = int(MAX_EXTRA_DATA_BYTES)
+    LIMIT = MAX_EXTRA_DATA_BYTES
 ```
 
 ### New `LogsBloom`
@@ -85,7 +85,7 @@ class LogsBloom(ByteVector):
     A Bloom filter aggregating the logs emitted by an execution payload.
     """
 
-    LENGTH = int(BYTES_PER_LOGS_BLOOM)
+    LENGTH = BYTES_PER_LOGS_BLOOM
 ```
 
 ### New `Transaction`
@@ -103,7 +103,7 @@ class Transaction(ByteList):
     envelope or a legacy RLP-encoded transaction.
     """
 
-    LIMIT = int(MAX_BYTES_PER_TRANSACTION)
+    LIMIT = MAX_BYTES_PER_TRANSACTION
 ```
 
 ### New `Transactions`
@@ -114,7 +114,7 @@ class Transactions(List[Transaction]):
     The transactions included in an execution payload.
     """
 
-    LIMIT = int(MAX_TRANSACTIONS_PER_PAYLOAD)
+    LIMIT = MAX_TRANSACTIONS_PER_PAYLOAD
 ```
 
 ## Constants

@@ -111,7 +111,7 @@ class ExecutionPayloadEnvelopeRoots(List[Root]):
     ``ExecutionPayloadEnvelopesByRoot`` request.
     """
 
-    LIMIT = int(MAX_REQUEST_PAYLOADS)
+    LIMIT = MAX_REQUEST_PAYLOADS
 ```
 
 #### New `SignedExecutionPayloadEnvelopes`
@@ -124,7 +124,7 @@ class SignedExecutionPayloadEnvelopes(List[SignedExecutionPayloadEnvelope]):
     ``ExecutionPayloadEnvelopesByRoot`` response.
     """
 
-    LIMIT = int(MAX_REQUEST_PAYLOADS)
+    LIMIT = MAX_REQUEST_PAYLOADS
 ```
 
 ### Containers

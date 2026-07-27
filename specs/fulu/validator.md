@@ -62,7 +62,7 @@ class CellKZGProofs(List[KZGProof]):
     The KZG cell proofs for every blob in a block, one proof per cell.
     """
 
-    LIMIT = int(FIELD_ELEMENTS_PER_EXT_BLOB) * int(MAX_BLOB_COMMITMENTS_PER_BLOCK)
+    LIMIT = Uint64(FIELD_ELEMENTS_PER_EXT_BLOB) * MAX_BLOB_COMMITMENTS_PER_BLOCK
 ```
 
 ## Helpers

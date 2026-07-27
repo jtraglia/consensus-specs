@@ -150,7 +150,7 @@ class AggregationBits(Bitlist):
     concatenated in committee order.
     """
 
-    LIMIT = int(MAX_VALIDATORS_PER_COMMITTEE) * int(MAX_COMMITTEES_PER_SLOT)
+    LIMIT = MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
 ```
 
 ### Modified `Attestations`
@@ -162,7 +162,7 @@ class Attestations(List[Attestation]):
     The attestations included in a beacon block.
     """
 
-    LIMIT = int(MAX_ATTESTATIONS_ELECTRA)
+    LIMIT = MAX_ATTESTATIONS_ELECTRA
 ```
 
 ### Modified `AttesterSlashings`
@@ -174,7 +174,7 @@ class AttesterSlashings(List[AttesterSlashing]):
     The attester slashings included in a beacon block.
     """
 
-    LIMIT = int(MAX_ATTESTER_SLASHINGS_ELECTRA)
+    LIMIT = MAX_ATTESTER_SLASHINGS_ELECTRA
 ```
 
 ### Modified `AttestingIndices`
@@ -187,7 +187,7 @@ class AttestingIndices(List[ValidatorIndex]):
     without duplicates.
     """
 
-    LIMIT = int(MAX_VALIDATORS_PER_COMMITTEE) * int(MAX_COMMITTEES_PER_SLOT)
+    LIMIT = MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
 ```
 
 ### New `CommitteeBits`
@@ -198,7 +198,7 @@ class CommitteeBits(Bitvector):
     Bits marking which committees of a slot participate in an attestation.
     """
 
-    LENGTH = int(MAX_COMMITTEES_PER_SLOT)
+    LENGTH = MAX_COMMITTEES_PER_SLOT
 ```
 
 ### New `ConsolidationRequests`
@@ -209,7 +209,7 @@ class ConsolidationRequests(List[ConsolidationRequest]):
     The consolidation requests pertaining to a single execution payload.
     """
 
-    LIMIT = int(MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD)
+    LIMIT = MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD
 ```
 
 ### New `DepositRequests`
@@ -220,7 +220,7 @@ class DepositRequests(List[DepositRequest]):
     The deposit requests pertaining to a single execution payload.
     """
 
-    LIMIT = int(MAX_DEPOSIT_REQUESTS_PER_PAYLOAD)
+    LIMIT = MAX_DEPOSIT_REQUESTS_PER_PAYLOAD
 ```
 
 ### New `PendingConsolidations`
@@ -231,7 +231,7 @@ class PendingConsolidations(List[PendingConsolidation]):
     The queue of consolidations awaiting processing at epoch boundaries.
     """
 
-    LIMIT = int(PENDING_CONSOLIDATIONS_LIMIT)
+    LIMIT = PENDING_CONSOLIDATIONS_LIMIT
 ```
 
 ### New `PendingDeposits`
@@ -242,7 +242,7 @@ class PendingDeposits(List[PendingDeposit]):
     The queue of deposits awaiting processing at epoch boundaries.
     """
 
-    LIMIT = int(PENDING_DEPOSITS_LIMIT)
+    LIMIT = PENDING_DEPOSITS_LIMIT
 ```
 
 ### New `PendingPartialWithdrawals`
@@ -253,7 +253,7 @@ class PendingPartialWithdrawals(List[PendingPartialWithdrawal]):
     The queue of partial withdrawals awaiting processing at epoch boundaries.
     """
 
-    LIMIT = int(PENDING_PARTIAL_WITHDRAWALS_LIMIT)
+    LIMIT = PENDING_PARTIAL_WITHDRAWALS_LIMIT
 ```
 
 ### New `WithdrawalRequests`
@@ -264,7 +264,7 @@ class WithdrawalRequests(List[WithdrawalRequest]):
     The withdrawal requests pertaining to a single execution payload.
     """
 
-    LIMIT = int(MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD)
+    LIMIT = MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD
 ```
 
 ## Constants
