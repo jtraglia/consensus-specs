@@ -31,7 +31,7 @@ from typing import (
 
 from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root, copy, uint_to_bytes
 from eth_consensus_specs.utils.ssz.ssz_typing import (
-    View, Boolean, Byte, Container, List, Vector, Uint8, Uint32, Uint64, Uint256,
+    SSZType, Boolean, Byte, Container, List, Vector, Uint8, Uint32, Uint64, Uint256,
     Bytes1, Bytes4, Bytes32, Bytes48, Bytes96, Bitlist)
 from eth_consensus_specs.utils.ssz.ssz_typing import Bitvector  # noqa: F401
 from eth_consensus_specs.utils import bls
@@ -41,7 +41,7 @@ from eth_consensus_specs.utils.hash_function import hash
     @classmethod
     def preparations(cls) -> str:
         return """
-SSZObject = TypeVar('SSZObject', bound=View)
+SSZObject = TypeVar('SSZObject', bound=SSZType)
 """
 
     @classmethod
@@ -75,33 +75,33 @@ compute_shuffled_permutation = cache_this(
 
 _get_total_active_balance = get_total_active_balance
 get_total_active_balance = cache_this(
-    lambda state: (state.validators.hash_tree_root(), compute_epoch_at_slot(state.slot)),
+    lambda state: (hash_tree_root(state.validators), compute_epoch_at_slot(state.slot)),
     _get_total_active_balance, lru_size=10)
 
 _get_base_reward = get_base_reward
 get_base_reward = cache_this(
-    lambda state, index: (state.validators.hash_tree_root(), state.slot, index),
+    lambda state, index: (hash_tree_root(state.validators), state.slot, index),
     _get_base_reward, lru_size=2048)
 
 _get_committee_count_per_slot = get_committee_count_per_slot
 get_committee_count_per_slot = cache_this(
-    lambda state, epoch: (state.validators.hash_tree_root(), epoch),
-    _get_committee_count_per_slot, lru_size=SLOTS_PER_EPOCH * 3)
+    lambda state, epoch: (hash_tree_root(state.validators), epoch),
+    _get_committee_count_per_slot, lru_size=int(SLOTS_PER_EPOCH) * 3)
 
 _get_active_validator_indices = get_active_validator_indices
 get_active_validator_indices = cache_this(
-    lambda state, epoch: (state.validators.hash_tree_root(), epoch),
+    lambda state, epoch: (hash_tree_root(state.validators), epoch),
     _get_active_validator_indices, lru_size=3)
 
 _get_beacon_committee = get_beacon_committee
 get_beacon_committee = cache_this(
-    lambda state, slot, index: (state.validators.hash_tree_root(), state.randao_mixes.hash_tree_root(), slot, index),
-    _get_beacon_committee, lru_size=SLOTS_PER_EPOCH * MAX_COMMITTEES_PER_SLOT * 3)
+    lambda state, slot, index: (hash_tree_root(state.validators), hash_tree_root(state.randao_mixes), slot, index),
+    _get_beacon_committee, lru_size=int(SLOTS_PER_EPOCH * MAX_COMMITTEES_PER_SLOT) * 3)
 
 _get_attesting_indices = get_attesting_indices
 get_attesting_indices = cache_this(
     lambda state, attestation: (
-        state.randao_mixes.hash_tree_root(),
-        state.validators.hash_tree_root(), attestation.hash_tree_root()
+        hash_tree_root(state.randao_mixes),
+        hash_tree_root(state.validators), hash_tree_root(attestation)
     ),
-    _get_attesting_indices, lru_size=SLOTS_PER_EPOCH * MAX_COMMITTEES_PER_SLOT * 3)'''
+    _get_attesting_indices, lru_size=int(SLOTS_PER_EPOCH * MAX_COMMITTEES_PER_SLOT) * 3)'''

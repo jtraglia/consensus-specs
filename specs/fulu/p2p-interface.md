@@ -77,11 +77,13 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 #### New `DataColumnIndices`
 
 ```python
-class DataColumnIndices(List[ColumnIndex, NUMBER_OF_COLUMNS]):
+class DataColumnIndices(List[ColumnIndex]):
     """
     The indices of the columns requested in a ``DataColumnSidecarsByRange``
     request.
     """
+
+    LIMIT = int(NUMBER_OF_COLUMNS)
 ```
 
 ### Containers
@@ -89,21 +91,25 @@ class DataColumnIndices(List[ColumnIndex, NUMBER_OF_COLUMNS]):
 #### New `DataColumnsByRootIdentifiers`
 
 ```python
-class DataColumnsByRootIdentifiers(List[DataColumnsByRootIdentifier, MAX_REQUEST_BLOCKS_DENEB]):
+class DataColumnsByRootIdentifiers(List[DataColumnsByRootIdentifier]):
     """
     The identifiers of the data column sidecars requested in a
     ``DataColumnSidecarsByRoot`` request.
     """
+
+    LIMIT = int(MAX_REQUEST_BLOCKS_DENEB)
 ```
 
 #### New `DataColumnSidecars`
 
 ```python
-class DataColumnSidecars(List[DataColumnSidecar, compute_max_request_data_column_sidecars()]):
+class DataColumnSidecars(List[DataColumnSidecar]):
     """
     Data column sidecars returned in a ``DataColumnSidecarsByRange`` or
     ``DataColumnSidecarsByRoot`` response.
     """
+
+    LIMIT = int(compute_max_request_data_column_sidecars())
 ```
 
 #### New `DataColumnsByRootIdentifier`

@@ -57,30 +57,36 @@ and imports proof types from [proof-engine.md](./proof-engine.md).
 ### New `ProofByRootIdentifiers`
 
 ```python
-class ProofByRootIdentifiers(List[ProofByRootIdentifier, MAX_REQUEST_BLOCKS_DENEB]):
+class ProofByRootIdentifiers(List[ProofByRootIdentifier]):
     """
     The identifiers of the execution proofs requested in an
     ``ExecutionProofsByRoot`` request.
     """
+
+    LIMIT = int(MAX_REQUEST_BLOCKS_DENEB)
 ```
 
 ### New `ProofTypes`
 
 ```python
-class ProofTypes(List[ProofType, MAX_EXECUTION_PROOFS_PER_PAYLOAD]):
+class ProofTypes(List[ProofType]):
     """
     The proof types requested for a single beacon block.
     """
+
+    LIMIT = int(MAX_EXECUTION_PROOFS_PER_PAYLOAD)
 ```
 
 ### New `SignedExecutionProofs`
 
 ```python
-class SignedExecutionProofs(List[SignedExecutionProof, compute_max_request_execution_proofs()]):
+class SignedExecutionProofs(List[SignedExecutionProof]):
     """
     Signed execution proofs returned in an ``ExecutionProofsByRange`` or
     ``ExecutionProofsByRoot`` response.
     """
+
+    LIMIT = int(compute_max_request_execution_proofs())
 ```
 
 ## Containers

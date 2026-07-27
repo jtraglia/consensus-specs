@@ -224,28 +224,34 @@ We define the following Python custom types for type hinting and readability:
 #### `Attnets`
 
 ```python
-class Attnets(Bitvector[ATTESTATION_SUBNET_COUNT]):
+class Attnets(Bitvector):
     """
     The attestation subnets a node is subscribed to, one bit per subnet.
     """
+
+    LENGTH = int(ATTESTATION_SUBNET_COUNT)
 ```
 
 #### `BeaconBlockRoots`
 
 ```python
-class BeaconBlockRoots(List[Root, MAX_REQUEST_BLOCKS]):
+class BeaconBlockRoots(List[Root]):
     """
     Beacon block roots requested in a ``BeaconBlocksByRoot`` request.
     """
+
+    LIMIT = int(MAX_REQUEST_BLOCKS)
 ```
 
 #### `ErrorMessage`
 
 ```python
-class ErrorMessage(List[Byte, 256]):
+class ErrorMessage(List[Byte]):
     """
     The error message of an unsuccessful response chunk.
     """
+
+    LIMIT = 256
 ```
 
 #### `NodeID`
@@ -261,11 +267,13 @@ class NodeID(Uint256):
 #### `SignedBeaconBlocks`
 
 ```python
-class SignedBeaconBlocks(List[SignedBeaconBlock, MAX_REQUEST_BLOCKS]):
+class SignedBeaconBlocks(List[SignedBeaconBlock]):
     """
     Signed beacon blocks returned in a ``BeaconBlocksByRange`` or
     ``BeaconBlocksByRoot`` response.
     """
+
+    LIMIT = int(MAX_REQUEST_BLOCKS)
 ```
 
 #### `SubnetID`

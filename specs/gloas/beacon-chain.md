@@ -350,7 +350,7 @@ class ProposerSlashings(ProgressiveList[ProposerSlashing]):
 
 ```python
 # [Modified in Gloas:EIP7688]
-class Transaction(ProgressiveByteList):
+class Transaction(ProgressiveList[Uint8]):
     """
     An opaque execution-layer transaction, either a typed transaction
     envelope or a legacy RLP-encoded transaction.
@@ -411,7 +411,7 @@ class Withdrawals(ProgressiveList[Withdrawal]):
 ### New `BlockAccessList`
 
 ```python
-class BlockAccessList(ProgressiveByteList):
+class BlockAccessList(ProgressiveList[Uint8]):
     """
     The serialized block access list of an execution payload.
     """
@@ -447,11 +447,13 @@ class BuilderIndex(Uint64):
 ### New `BuilderPendingPayments`
 
 ```python
-class BuilderPendingPayments(Vector[BuilderPendingPayment, 2 * SLOTS_PER_EPOCH]):
+class BuilderPendingPayments(Vector[BuilderPendingPayment]):
     """
     A rolling window of pending builder payments, indexed by slot modulo two
     epochs of slots.
     """
+
+    LENGTH = 2 * int(SLOTS_PER_EPOCH)
 ```
 
 ### New `BuilderPendingWithdrawals`
@@ -476,11 +478,13 @@ class Builders(ProgressiveList[Builder]):
 ### New `ExecutionPayloadAvailability`
 
 ```python
-class ExecutionPayloadAvailability(Bitvector[SLOTS_PER_HISTORICAL_ROOT]):
+class ExecutionPayloadAvailability(Bitvector):
     """
     Bits tracking payload availability for recent slots, indexed by slot
     modulo ``SLOTS_PER_HISTORICAL_ROOT``.
     """
+
+    LENGTH = int(SLOTS_PER_HISTORICAL_ROOT)
 ```
 
 ### New `PayloadAttestations`
@@ -495,40 +499,48 @@ class PayloadAttestations(ProgressiveList[PayloadAttestation]):
 ### New `PTC`
 
 ```python
-class PTC(Vector[ValidatorIndex, PTC_SIZE]):
+class PTC(Vector[ValidatorIndex]):
     """
     The payload timeliness committee of a slot, with possible duplicates.
     """
+
+    LENGTH = int(PTC_SIZE)
 ```
 
 ### New `PTCAttestingIndices`
 
 ```python
-class PTCAttestingIndices(List[ValidatorIndex, PTC_SIZE]):
+class PTCAttestingIndices(List[ValidatorIndex]):
     """
     The indices of the PTC members participating in a payload attestation,
     sorted and without duplicates.
     """
+
+    LIMIT = int(PTC_SIZE)
 ```
 
 ### New `PTCBits`
 
 ```python
-class PTCBits(Bitvector[PTC_SIZE]):
+class PTCBits(Bitvector):
     """
     The participation bits of the payload timeliness committee, one bit per
     member in committee order.
     """
+
+    LENGTH = int(PTC_SIZE)
 ```
 
 ### New `PTCWindow`
 
 ```python
-class PTCWindow(Vector[PTC, (2 + MIN_SEED_LOOKAHEAD) * SLOTS_PER_EPOCH]):
+class PTCWindow(Vector[PTC]):
     """
     A rolling window of payload timeliness committees for the previous,
     current, and lookahead epochs.
     """
+
+    LENGTH = (2 + int(MIN_SEED_LOOKAHEAD)) * int(SLOTS_PER_EPOCH)
 ```
 
 ## Constants
@@ -687,7 +699,9 @@ class PayloadAttestationData(Container):
 #### `PayloadAttestation`
 
 ```python
-class PayloadAttestation(ProgressiveContainer(active_fields=[1] * 3)):
+class PayloadAttestation(ProgressiveContainer):
+    ACTIVE_FIELDS = (1,) * 3
+
     aggregation_bits: PTCBits
     data: PayloadAttestationData
     signature: BLSSignature
@@ -705,7 +719,9 @@ class PayloadAttestationMessage(Container):
 #### `IndexedPayloadAttestation`
 
 ```python
-class IndexedPayloadAttestation(ProgressiveContainer(active_fields=[1] * 3)):
+class IndexedPayloadAttestation(ProgressiveContainer):
+    ACTIVE_FIELDS = (1,) * 3
+
     attesting_indices: PTCAttestingIndices
     data: PayloadAttestationData
     signature: BLSSignature
@@ -714,7 +730,9 @@ class IndexedPayloadAttestation(ProgressiveContainer(active_fields=[1] * 3)):
 #### `ExecutionPayloadBid`
 
 ```python
-class ExecutionPayloadBid(ProgressiveContainer(active_fields=[1] * 12)):
+class ExecutionPayloadBid(ProgressiveContainer):
+    ACTIVE_FIELDS = (1,) * 12
+
     parent_block_hash: Hash32
     parent_block_root: Root
     block_hash: Hash32
@@ -740,7 +758,9 @@ class SignedExecutionPayloadBid(Container):
 #### `ExecutionPayloadEnvelope`
 
 ```python
-class ExecutionPayloadEnvelope(ProgressiveContainer(active_fields=[1] * 5)):
+class ExecutionPayloadEnvelope(ProgressiveContainer):
+    ACTIVE_FIELDS = (1,) * 5
+
     payload: ExecutionPayload
     execution_requests: ExecutionRequests
     builder_index: BuilderIndex
@@ -762,7 +782,9 @@ class SignedExecutionPayloadEnvelope(Container):
 
 ```python
 # [Modified in Gloas:EIP7688]
-class Attestation(ProgressiveContainer(active_fields=[1] * 4)):
+class Attestation(ProgressiveContainer):
+    ACTIVE_FIELDS = (1,) * 4
+
     aggregation_bits: AggregationBits
     data: AttestationData
     signature: BLSSignature
@@ -773,7 +795,9 @@ class Attestation(ProgressiveContainer(active_fields=[1] * 4)):
 
 ```python
 # [Modified in Gloas:EIP7688]
-class IndexedAttestation(ProgressiveContainer(active_fields=[1] * 3)):
+class IndexedAttestation(ProgressiveContainer):
+    ACTIVE_FIELDS = (1,) * 3
+
     attesting_indices: AttestingIndices
     data: AttestationData
     signature: BLSSignature
@@ -786,7 +810,9 @@ class IndexedAttestation(ProgressiveContainer(active_fields=[1] * 3)):
 
 ```python
 # [Modified in Gloas:EIP7688]
-class BeaconBlockBody(ProgressiveContainer(active_fields=[1] * 13)):
+class BeaconBlockBody(ProgressiveContainer):
+    ACTIVE_FIELDS = (1,) * 13
+
     randao_reveal: BLSSignature
     eth1_data: Eth1Data
     graffiti: Bytes32
@@ -821,7 +847,9 @@ class BeaconBlockBody(ProgressiveContainer(active_fields=[1] * 13)):
 
 ```python
 # [Modified in Gloas:EIP7688]
-class BeaconState(ProgressiveContainer(active_fields=[1] * 46)):
+class BeaconState(ProgressiveContainer):
+    ACTIVE_FIELDS = (1,) * 46
+
     genesis_time: Uint64
     genesis_validators_root: Root
     slot: Slot
@@ -893,7 +921,9 @@ class BeaconState(ProgressiveContainer(active_fields=[1] * 46)):
 
 ```python
 # [Modified in Gloas:EIP7688]
-class ExecutionPayload(ProgressiveContainer(active_fields=[1] * 19)):
+class ExecutionPayload(ProgressiveContainer):
+    ACTIVE_FIELDS = (1,) * 19
+
     parent_hash: Hash32
     fee_recipient: ExecutionAddress
     state_root: Bytes32
@@ -923,7 +953,9 @@ class ExecutionPayload(ProgressiveContainer(active_fields=[1] * 19)):
 
 ```python
 # [Modified in Gloas:EIP7688]
-class ExecutionRequests(ProgressiveContainer(active_fields=[1] * 5)):
+class ExecutionRequests(ProgressiveContainer):
+    ACTIVE_FIELDS = (1,) * 5
+
     deposits: DepositRequests
     withdrawals: WithdrawalRequests
     consolidations: ConsolidationRequests

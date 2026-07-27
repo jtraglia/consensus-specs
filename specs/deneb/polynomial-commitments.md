@@ -67,11 +67,13 @@ cryptographic normalization before invoking any internal functions.
 ### `Blob`
 
 ```python
-class Blob(ByteVector[BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB]):
+class Blob(ByteVector):
     """
     A blob of ``FIELD_ELEMENTS_PER_BLOB`` field elements, the unit of data
     committed to with a KZG commitment.
     """
+
+    LENGTH = int(BYTES_PER_FIELD_ELEMENT) * int(FIELD_ELEMENTS_PER_BLOB)
 ```
 
 ### `G1Point`

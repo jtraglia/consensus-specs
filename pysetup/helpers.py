@@ -1,7 +1,6 @@
 import re
 import textwrap
 from functools import reduce
-from typing import TypeVar
 
 from .constants import CONSTANT_DEP_SUNDRY_CONSTANTS_FUNCTIONS
 from .md_doc_paths import PREVIOUS_FORK_OF
@@ -10,6 +9,11 @@ from .typing import (
     ProtocolDefinition,
     SpecObject,
     VariableDefinition,
+)
+
+# A collection type written inline, as `Vector[G1Point, FIELD_ELEMENTS_PER_BLOB]`.
+SUBSCRIPTED_COLLECTION = re.compile(
+    r"^(List|Vector|ByteList|ByteVector|Bitlist|Bitvector)\[(\w+),\s*(.+)\]$"
 )
 
 
@@ -154,6 +158,21 @@ def objects_to_spec(
                 out = f"{name} = {vardef.value}"
             else:
                 out = f"{name}: {vardef.type_hint} = {vardef.value}"
+        elif (collection := SUBSCRIPTED_COLLECTION.match(vardef.type_name)) is not None:
+            # A constant whose type is a collection needs that collection
+            # declared as a class. It is emitted right here, so that it lands
+            # after the constants its bound depends on and before its own use.
+            base, element, bound = collection.groups()
+            attribute = "LIMIT" if base in ("List", "ByteList", "Bitlist") else "LENGTH"
+            type_name = f"{name}_TYPE"
+            # Elements are given as hex strings. A collection validates its
+            # elements by type rather than coercing them, so each one is built
+            # through the element type's own constructor.
+            out = (
+                f"class {type_name}({base}[{element}]):\n"
+                f"    {attribute} = int({bound})\n\n\n"
+                f"{name} = {type_name}(data=[{element}(v) for v in {vardef.value}])"
+            )
         else:
             out = f"{name} = {vardef.type_name}({vardef.value})"
         if vardef.comment is not None:
@@ -262,10 +281,7 @@ def combine_protocols(
     return old_protocols
 
 
-T = TypeVar("T")
-
-
-def combine_dicts(old_dict: dict[str, T], new_dict: dict[str, T]) -> dict[str, T]:
+def combine_dicts[T](old_dict: dict[str, T], new_dict: dict[str, T]) -> dict[str, T]:
     return {**old_dict, **new_dict}
 
 

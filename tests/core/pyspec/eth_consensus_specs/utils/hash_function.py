@@ -1,6 +1,6 @@
 from hashlib import sha256
 
-from remerkleable.byte_arrays import Bytes32
+from eth_consensus_specs.utils.ssz.ssz_typing import Bytes32
 
 ZERO_BYTES32 = b"\x00" * 32
 

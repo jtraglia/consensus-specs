@@ -58,9 +58,9 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 
 *[New in Deneb:EIP4844]*
 
-| Name                                   | Value                                                                                                                                     | Description                                                                 |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `KZG_COMMITMENT_INCLUSION_PROOF_DEPTH` | `Uint64(floorlog2(get_generalized_index(BeaconBlockBody, 'blob_kzg_commitments')) + 1 + ceillog2(MAX_BLOB_COMMITMENTS_PER_BLOCK))` (= 17) | <!-- predefined --> Merkle proof depth for `blob_kzg_commitments` list item |
+| Name                                   | Value                                                                                                                                             | Description                                                                 |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `KZG_COMMITMENT_INCLUSION_PROOF_DEPTH` | `Uint64(floorlog2(get_generalized_index(BeaconBlockBody, 'blob_kzg_commitments')) + Uint64(1) + ceillog2(MAX_BLOB_COMMITMENTS_PER_BLOCK))` (= 17) | <!-- predefined --> Merkle proof depth for `blob_kzg_commitments` list item |
 
 ### Configuration
 
@@ -78,51 +78,61 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 
 ```python
 # [Modified in Deneb:EIP4844]
-class BeaconBlockRoots(List[Root, MAX_REQUEST_BLOCKS_DENEB]):
+class BeaconBlockRoots(List[Root]):
     """
     Beacon block roots requested in a ``BeaconBlocksByRoot`` request.
     """
+
+    LIMIT = int(MAX_REQUEST_BLOCKS_DENEB)
 ```
 
 #### Modified `SignedBeaconBlocks`
 
 ```python
 # [Modified in Deneb:EIP4844]
-class SignedBeaconBlocks(List[SignedBeaconBlock, MAX_REQUEST_BLOCKS_DENEB]):
+class SignedBeaconBlocks(List[SignedBeaconBlock]):
     """
     Signed beacon blocks returned in a ``BeaconBlocksByRange`` or
     ``BeaconBlocksByRoot`` response.
     """
+
+    LIMIT = int(MAX_REQUEST_BLOCKS_DENEB)
 ```
 
 #### New `BlobIdentifiers`
 
 ```python
-class BlobIdentifiers(List[BlobIdentifier, compute_max_request_blob_sidecars()]):
+class BlobIdentifiers(List[BlobIdentifier]):
     """
     The identifiers of the blob sidecars requested in a
     ``BlobSidecarsByRoot`` request.
     """
+
+    LIMIT = int(compute_max_request_blob_sidecars())
 ```
 
 #### New `BlobSidecars`
 
 ```python
-class BlobSidecars(List[BlobSidecar, compute_max_request_blob_sidecars()]):
+class BlobSidecars(List[BlobSidecar]):
     """
     Blob sidecars returned in a ``BlobSidecarsByRange`` or
     ``BlobSidecarsByRoot`` response.
     """
+
+    LIMIT = int(compute_max_request_blob_sidecars())
 ```
 
 #### New `KZGCommitmentInclusionProof`
 
 ```python
-class KZGCommitmentInclusionProof(Vector[Bytes32, KZG_COMMITMENT_INCLUSION_PROOF_DEPTH]):
+class KZGCommitmentInclusionProof(Vector[Bytes32]):
     """
     A Merkle branch proving a blob's KZG commitment within
     ``BeaconBlockBody``.
     """
+
+    LENGTH = int(KZG_COMMITMENT_INCLUSION_PROOF_DEPTH)
 ```
 
 ### Containers

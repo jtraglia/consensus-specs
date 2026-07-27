@@ -195,59 +195,71 @@ We define the following Python custom types for type hinting and readability:
 ### `AggregationBits`
 
 ```python
-class AggregationBits(Bitlist[MAX_VALIDATORS_PER_COMMITTEE]):
+class AggregationBits(Bitlist):
     """
     The participation bits of a single committee, one bit per member in
     committee order.
     """
+
+    LIMIT = int(MAX_VALIDATORS_PER_COMMITTEE)
 ```
 
 ### `Attestations`
 
 ```python
-class Attestations(List[Attestation, MAX_ATTESTATIONS]):
+class Attestations(List[Attestation]):
     """
     The attestations included in a beacon block.
     """
+
+    LIMIT = int(MAX_ATTESTATIONS)
 ```
 
 ### `AttesterSlashings`
 
 ```python
-class AttesterSlashings(List[AttesterSlashing, MAX_ATTESTER_SLASHINGS]):
+class AttesterSlashings(List[AttesterSlashing]):
     """
     The attester slashings included in a beacon block.
     """
+
+    LIMIT = int(MAX_ATTESTER_SLASHINGS)
 ```
 
 ### `AttestingIndices`
 
 ```python
-class AttestingIndices(List[ValidatorIndex, MAX_VALIDATORS_PER_COMMITTEE]):
+class AttestingIndices(List[ValidatorIndex]):
     """
     The indices of the validators participating in an attestation, sorted and
     without duplicates.
     """
+
+    LIMIT = int(MAX_VALIDATORS_PER_COMMITTEE)
 ```
 
 ### `Balances`
 
 ```python
-class Balances(List[Gwei, VALIDATOR_REGISTRY_LIMIT]):
+class Balances(List[Gwei]):
     """
     The balances of all validators, in Gwei. The list is aligned with
     ``state.validators``, one entry per validator.
     """
+
+    LIMIT = int(VALIDATOR_REGISTRY_LIMIT)
 ```
 
 ### `BlockRoots`
 
 ```python
-class BlockRoots(Vector[Root, SLOTS_PER_HISTORICAL_ROOT]):
+class BlockRoots(Vector[Root]):
     """
     A rolling window of recent block roots, indexed by slot modulo
     ``SLOTS_PER_HISTORICAL_ROOT``.
     """
+
+    LENGTH = int(SLOTS_PER_HISTORICAL_ROOT)
 ```
 
 ### `BLSPubkey`
@@ -280,30 +292,36 @@ class CommitteeIndex(Uint64):
 ### `DepositDataList`
 
 ```python
-class DepositDataList(List[DepositData, 2**DEPOSIT_CONTRACT_TREE_DEPTH]):
+class DepositDataList(List[DepositData]):
     """
     All deposits made to the deposit contract, whose hash tree root matches
     the contract's deposit root.
     """
+
+    LIMIT = 2 ** int(DEPOSIT_CONTRACT_TREE_DEPTH)
 ```
 
 ### `DepositProof`
 
 ```python
-class DepositProof(Vector[Bytes32, DEPOSIT_CONTRACT_TREE_DEPTH + 1]):
+class DepositProof(Vector[Bytes32]):
     """
     A Merkle proof of a deposit in the deposit contract's tree. The node
     beyond the tree depth accounts for the deposit count mix-in.
     """
+
+    LENGTH = int(DEPOSIT_CONTRACT_TREE_DEPTH) + 1
 ```
 
 ### `Deposits`
 
 ```python
-class Deposits(List[Deposit, MAX_DEPOSITS]):
+class Deposits(List[Deposit]):
     """
     The deposits included in a beacon block.
     """
+
+    LIMIT = int(MAX_DEPOSITS)
 ```
 
 ### `Domain`
@@ -338,11 +356,13 @@ class Epoch(Uint64):
 ### `Eth1DataVotes`
 
 ```python
-class Eth1DataVotes(List[Eth1Data, EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH]):
+class Eth1DataVotes(List[Eth1Data]):
     """
     The ``Eth1Data`` votes cast by block proposers during the current voting
     period.
     """
+
+    LIMIT = int(EPOCHS_PER_ETH1_VOTING_PERIOD) * int(SLOTS_PER_EPOCH)
 ```
 
 ### `ForkDigest`
@@ -378,50 +398,60 @@ class Hash32(Bytes32):
 ### `HistoricalRoots`
 
 ```python
-class HistoricalRoots(List[Root, HISTORICAL_ROOTS_LIMIT]):
+class HistoricalRoots(List[Root]):
     """
     Roots of ``HistoricalBatch`` objects, appended every
     ``SLOTS_PER_HISTORICAL_ROOT`` slots as an append-only history of the chain.
     """
+
+    LIMIT = int(HISTORICAL_ROOTS_LIMIT)
 ```
 
 ### `JustificationBits`
 
 ```python
-class JustificationBits(Bitvector[JUSTIFICATION_BITS_LENGTH]):
+class JustificationBits(Bitvector):
     """
     Justification status of the last ``JUSTIFICATION_BITS_LENGTH`` epochs,
     used to decide finality under Casper FFG.
     """
+
+    LENGTH = int(JUSTIFICATION_BITS_LENGTH)
 ```
 
 ### `PendingAttestations`
 
 ```python
-class PendingAttestations(List[PendingAttestation, MAX_ATTESTATIONS * SLOTS_PER_EPOCH]):
+class PendingAttestations(List[PendingAttestation]):
     """
     Attestations included in blocks during an epoch, held in the state until
     they are processed at the epoch boundary.
     """
+
+    LIMIT = int(MAX_ATTESTATIONS) * int(SLOTS_PER_EPOCH)
 ```
 
 ### `ProposerSlashings`
 
 ```python
-class ProposerSlashings(List[ProposerSlashing, MAX_PROPOSER_SLASHINGS]):
+class ProposerSlashings(List[ProposerSlashing]):
     """
     The proposer slashings included in a beacon block.
     """
+
+    LIMIT = int(MAX_PROPOSER_SLASHINGS)
 ```
 
 ### `RandaoMixes`
 
 ```python
-class RandaoMixes(Vector[Bytes32, EPOCHS_PER_HISTORICAL_VECTOR]):
+class RandaoMixes(Vector[Bytes32]):
     """
     A rolling window of accumulated RANDAO mixes, indexed by epoch modulo
     ``EPOCHS_PER_HISTORICAL_VECTOR``.
     """
+
+    LENGTH = int(EPOCHS_PER_HISTORICAL_VECTOR)
 ```
 
 ### `Root`
@@ -436,11 +466,13 @@ class Root(Bytes32):
 ### `Slashings`
 
 ```python
-class Slashings(Vector[Gwei, EPOCHS_PER_SLASHINGS_VECTOR]):
+class Slashings(Vector[Gwei]):
     """
     Per-epoch sums of slashed effective balances, indexed by epoch modulo
     ``EPOCHS_PER_SLASHINGS_VECTOR`` and used to scale slashing penalties.
     """
+
+    LENGTH = int(EPOCHS_PER_SLASHINGS_VECTOR)
 ```
 
 ### `Slot`
@@ -456,11 +488,13 @@ class Slot(Uint64):
 ### `StateRoots`
 
 ```python
-class StateRoots(Vector[Root, SLOTS_PER_HISTORICAL_ROOT]):
+class StateRoots(Vector[Root]):
     """
     A rolling window of recent state roots, indexed by slot modulo
     ``SLOTS_PER_HISTORICAL_ROOT``.
     """
+
+    LENGTH = int(SLOTS_PER_HISTORICAL_ROOT)
 ```
 
 ### `ValidatorIndex`
@@ -475,11 +509,13 @@ class ValidatorIndex(Uint64):
 ### `Validators`
 
 ```python
-class Validators(List[Validator, VALIDATOR_REGISTRY_LIMIT]):
+class Validators(List[Validator]):
     """
     The validator registry. Validators are appended on deposit and are never
     removed.
     """
+
+    LIMIT = int(VALIDATOR_REGISTRY_LIMIT)
 ```
 
 ### `Version`
@@ -495,10 +531,12 @@ class Version(Bytes4):
 ### `VoluntaryExits`
 
 ```python
-class VoluntaryExits(List[SignedVoluntaryExit, MAX_VOLUNTARY_EXITS]):
+class VoluntaryExits(List[SignedVoluntaryExit]):
     """
     The signed voluntary exits included in a beacon block.
     """
+
+    LIMIT = int(MAX_VOLUNTARY_EXITS)
 ```
 
 ## Constants

@@ -75,22 +75,26 @@ We define the following Python custom types for type hinting and readability:
 ### New `BLSToExecutionChanges`
 
 ```python
-class BLSToExecutionChanges(List[SignedBLSToExecutionChange, MAX_BLS_TO_EXECUTION_CHANGES]):
+class BLSToExecutionChanges(List[SignedBLSToExecutionChange]):
     """
     The signed BLS-to-execution credential changes included in a beacon
     block.
     """
+
+    LIMIT = int(MAX_BLS_TO_EXECUTION_CHANGES)
 ```
 
 ### New `HistoricalSummaries`
 
 ```python
-class HistoricalSummaries(List[HistoricalSummary, HISTORICAL_ROOTS_LIMIT]):
+class HistoricalSummaries(List[HistoricalSummary]):
     """
     ``HistoricalSummary`` objects appended every
     ``SLOTS_PER_HISTORICAL_ROOT`` slots, continuing the frozen
     ``historical_roots``.
     """
+
+    LIMIT = int(HISTORICAL_ROOTS_LIMIT)
 ```
 
 ### New `WithdrawalIndex`
@@ -105,10 +109,12 @@ class WithdrawalIndex(Uint64):
 ### New `Withdrawals`
 
 ```python
-class Withdrawals(List[Withdrawal, MAX_WITHDRAWALS_PER_PAYLOAD]):
+class Withdrawals(List[Withdrawal]):
     """
     The withdrawals included in an execution payload.
     """
+
+    LIMIT = int(MAX_WITHDRAWALS_PER_PAYLOAD)
 ```
 
 ## Constants

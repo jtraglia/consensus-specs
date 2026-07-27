@@ -9,10 +9,10 @@ authors = [{ name = "ethereum" }]
 description = "Ethereum consensus layer specifications package"
 license = "CC0-1.0"
 readme = { file = "README.md", content-type = "text/markdown" }
-requires-python = ">=3.11, <3.15"
+requires-python = ">=3.12, <3.15"
 urls = { homepage = "https://github.com/ethereum/consensus-specs" }
 dependencies = [
-  "eth-remerkleable==0.1.31",
+  "eth-ssz-specs",
   "eth-utils==6.0.0",
   "frozendict==2.4.7",
   "lru-dict==1.4.1",
@@ -51,6 +51,10 @@ docs = [
   "mdx-truly-sane-lists==1.3",
   "zensical==0.0.51",
 ]
+
+# There is no PyPI release of eth-ssz-specs yet, so pin the git revision.
+[tool.uv.sources]
+eth-ssz-specs = { git = "https://github.com/leanEthereum/ssz-specs", rev = "7232c4547593ae52f56b8861cf6c0f0e484d0b39" }
 
 [tool.setuptools]
 include-package-data = false

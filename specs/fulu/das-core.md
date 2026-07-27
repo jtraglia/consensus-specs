@@ -60,20 +60,24 @@ class CustodyIndex(Uint64):
 ### `DataColumn`
 
 ```python
-class DataColumn(List[Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK]):
+class DataColumn(List[Cell]):
     """
     A column of the extended blob data matrix, holding one cell per blob.
     """
+
+    LIMIT = int(MAX_BLOB_COMMITMENTS_PER_BLOCK)
 ```
 
 ### `KZGCommitmentsInclusionProof`
 
 ```python
-class KZGCommitmentsInclusionProof(Vector[Bytes32, KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH]):
+class KZGCommitmentsInclusionProof(Vector[Bytes32]):
     """
     A Merkle branch proving a block's blob KZG commitments within
     ``BeaconBlockBody``.
     """
+
+    LENGTH = int(KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH)
 ```
 
 ### `RowIndex`

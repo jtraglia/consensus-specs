@@ -71,22 +71,26 @@ Altair is the first beacon-chain upgrade. Its main features are:
 ### New `EpochParticipation`
 
 ```python
-class EpochParticipation(List[ParticipationFlags, VALIDATOR_REGISTRY_LIMIT]):
+class EpochParticipation(List[ParticipationFlags]):
     """
     Participation flags tracked over an epoch. The list is aligned with
     ``state.validators``, one entry per validator.
     """
+
+    LIMIT = int(VALIDATOR_REGISTRY_LIMIT)
 ```
 
 ### New `InactivityScores`
 
 ```python
-class InactivityScores(List[Uint64, VALIDATOR_REGISTRY_LIMIT]):
+class InactivityScores(List[Uint64]):
     """
     Inactivity scores, which grow during inactivity leaks and determine the
     associated penalties. The list is aligned with ``state.validators``, one
     entry per validator.
     """
+
+    LIMIT = int(VALIDATOR_REGISTRY_LIMIT)
 ```
 
 ### New `ParticipationFlags`
@@ -101,21 +105,25 @@ class ParticipationFlags(Uint8):
 ### New `SyncCommitteeBits`
 
 ```python
-class SyncCommitteeBits(Bitvector[SYNC_COMMITTEE_SIZE]):
+class SyncCommitteeBits(Bitvector):
     """
     The participation bits of the sync committee, one bit per member in
     committee order.
     """
+
+    LENGTH = int(SYNC_COMMITTEE_SIZE)
 ```
 
 ### New `SyncCommitteePubkeys`
 
 ```python
-class SyncCommitteePubkeys(Vector[BLSPubkey, SYNC_COMMITTEE_SIZE]):
+class SyncCommitteePubkeys(Vector[BLSPubkey]):
     """
     The public keys of the sync committee members, in committee order. Keys
     repeat when a validator is selected more than once.
     """
+
+    LENGTH = int(SYNC_COMMITTEE_SIZE)
 ```
 
 ## Constants

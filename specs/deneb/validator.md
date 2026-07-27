@@ -45,20 +45,24 @@ specifications before continuing and use them as a reference throughout.
 ### `Blobs`
 
 ```python
-class Blobs(List[Blob, MAX_BLOB_COMMITMENTS_PER_BLOCK]):
+class Blobs(List[Blob]):
     """
     The blobs of a single beacon block.
     """
+
+    LIMIT = int(MAX_BLOB_COMMITMENTS_PER_BLOCK)
 ```
 
 ### `KZGProofs`
 
 ```python
-class KZGProofs(List[KZGProof, MAX_BLOB_COMMITMENTS_PER_BLOCK]):
+class KZGProofs(List[KZGProof]):
     """
     One KZG proof per blob, used to verify the blobs against their
     commitments.
     """
+
+    LIMIT = int(MAX_BLOB_COMMITMENTS_PER_BLOCK)
 ```
 
 ## Helpers

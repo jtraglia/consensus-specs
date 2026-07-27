@@ -69,19 +69,23 @@ class ExecutionAddress(Bytes20):
 ### New `ExtraData`
 
 ```python
-class ExtraData(ByteList[MAX_EXTRA_DATA_BYTES]):
+class ExtraData(ByteList):
     """
     Arbitrary extra data included in an execution payload.
     """
+
+    LIMIT = int(MAX_EXTRA_DATA_BYTES)
 ```
 
 ### New `LogsBloom`
 
 ```python
-class LogsBloom(ByteVector[BYTES_PER_LOGS_BLOOM]):
+class LogsBloom(ByteVector):
     """
     A Bloom filter aggregating the logs emitted by an execution payload.
     """
+
+    LENGTH = int(BYTES_PER_LOGS_BLOOM)
 ```
 
 ### New `Transaction`
@@ -93,20 +97,24 @@ envelope\](https://eips.ethereum.org/EIPS/eip-2
 718#opaque-byte-array-rather-than-an-rlp-array) or a legacy transaction.
 
 ```python
-class Transaction(ByteList[MAX_BYTES_PER_TRANSACTION]):
+class Transaction(ByteList):
     """
     An opaque execution-layer transaction, either a typed transaction
     envelope or a legacy RLP-encoded transaction.
     """
+
+    LIMIT = int(MAX_BYTES_PER_TRANSACTION)
 ```
 
 ### New `Transactions`
 
 ```python
-class Transactions(List[Transaction, MAX_TRANSACTIONS_PER_PAYLOAD]):
+class Transactions(List[Transaction]):
     """
     The transactions included in an execution payload.
     """
+
+    LIMIT = int(MAX_TRANSACTIONS_PER_PAYLOAD)
 ```
 
 ## Constants

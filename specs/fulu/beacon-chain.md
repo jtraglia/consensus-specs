@@ -51,20 +51,24 @@ Fulu is a consensus-layer upgrade containing a number of features. Including:
 ### New `ProposerIndices`
 
 ```python
-class ProposerIndices(Vector[ValidatorIndex, SLOTS_PER_EPOCH]):
+class ProposerIndices(Vector[ValidatorIndex]):
     """
     The proposer indices for every slot of a single epoch.
     """
+
+    LENGTH = int(SLOTS_PER_EPOCH)
 ```
 
 ### New `ProposerLookahead`
 
 ```python
-class ProposerLookahead(Vector[ValidatorIndex, (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH]):
+class ProposerLookahead(Vector[ValidatorIndex]):
     """
     The precomputed proposer indices for the current and next
     ``MIN_SEED_LOOKAHEAD`` epochs.
     """
+
+    LENGTH = (int(MIN_SEED_LOOKAHEAD) + 1) * int(SLOTS_PER_EPOCH)
 ```
 
 ## Configuration
