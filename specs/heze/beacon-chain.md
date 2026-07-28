@@ -44,7 +44,7 @@ from the latest published version of the EIPs.
 ### New `InclusionListBits`
 
 ```python
-class InclusionListBits(Bitvector):
+class InclusionListBits(BitVector):
     """
     A bitfield over the inclusion list committee, one bit per member in
     committee order.

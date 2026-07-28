@@ -13,7 +13,7 @@ from .typing import (
 
 # A collection type written inline, as `Vector[G1Point, FIELD_ELEMENTS_PER_BLOB]`.
 SUBSCRIPTED_COLLECTION = re.compile(
-    r"^(List|Vector|ByteList|ByteVector|Bitlist|Bitvector)\[(\w+),\s*(.+)\]$"
+    r"^(List|Vector|ByteList|ByteVector|BitList|BitVector)\[(\w+),\s*(.+)\]$"
 )
 
 
@@ -28,7 +28,7 @@ def collect_prev_forks(fork: str) -> list[str]:
 
 def requires_mypy_type_ignore(value: str) -> bool:
     return (
-        value.startswith(("Bitlist", "ByteVector"))
+        value.startswith(("BitList", "ByteVector"))
         or (value.startswith("List") and not re.match(r"^List\[\w+,\s*\w+\]$", value))
         or (value.startswith("Vector") and any(k in value for k in ["ceillog2", "floorlog2"]))
     )
@@ -163,7 +163,7 @@ def objects_to_spec(
             # declared as a class. It is emitted right here, so that it lands
             # after the constants its bound depends on and before its own use.
             base, element, bound = collection.groups()
-            attribute = "LIMIT" if base in ("List", "ByteList", "Bitlist") else "LENGTH"
+            attribute = "LIMIT" if base in ("List", "ByteList", "BitList") else "LENGTH"
             type_name = f"{name}_TYPE"
             # Elements are given as hex strings. A collection validates its
             # elements by type rather than coercing them, so each one is built

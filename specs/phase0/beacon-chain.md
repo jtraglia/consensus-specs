@@ -195,7 +195,7 @@ We define the following Python custom types for type hinting and readability:
 ### `AggregationBits`
 
 ```python
-class AggregationBits(Bitlist):
+class AggregationBits(BitList):
     """
     The participation bits of a single committee, one bit per member in
     committee order.
@@ -410,7 +410,7 @@ class HistoricalRoots(List[Root]):
 ### `JustificationBits`
 
 ```python
-class JustificationBits(Bitvector):
+class JustificationBits(BitVector):
     """
     Justification status of the last ``JUSTIFICATION_BITS_LENGTH`` epochs,
     used to decide finality under Casper FFG.

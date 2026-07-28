@@ -105,7 +105,7 @@ class ParticipationFlags(Uint8):
 ### New `SyncCommitteeBits`
 
 ```python
-class SyncCommitteeBits(Bitvector):
+class SyncCommitteeBits(BitVector):
     """
     The participation bits of the sync committee, one bit per member in
     committee order.

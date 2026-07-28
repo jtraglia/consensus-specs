@@ -2,30 +2,28 @@
 """
 The SSZ type system used by the executable specifications.
 
-Every type here comes from ``eth-ssz-specs`` (the ``ssz`` package). This module
-only does two things on top of it:
+Every type here comes from ``eth-ssz-specs`` (the ``ssz`` package), under the
+library's own names.
 
-1. Re-exports the fixed-length byte array as ``ByteVector``, the other name the
-   SSZ specification gives it alongside ``BytesN``.
-2. Declares the fixed-width byte arrays the consensus specs need. The library
-   ships no application-specific byte-array classes, so each application
-   declares the widths it uses.
+The one thing this module adds is the fixed-width byte arrays the consensus
+specs need. The library ships no application-specific byte-array classes, so
+each application declares the widths it uses.
 """
 
 from ssz.uint import BaseUint as Uint
 
 from ssz import (
     active_fields,
-    Bitlist,
-    Bitvector,
+    BitList,
+    BitVector,
     Boolean,
     Byte,
     ByteList,
-    Bytes as ByteVector,
+    ByteVector,
     CompatibleUnion,
     Container,
     List,
-    ProgressiveBitlist,
+    ProgressiveBitList,
     ProgressiveContainer,
     ProgressiveList,
     SSZType,

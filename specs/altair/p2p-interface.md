@@ -124,7 +124,7 @@ def get_sync_subcommittee_pubkeys(
 #### New `Syncnets`
 
 ```python
-class Syncnets(Bitvector):
+class Syncnets(BitVector):
     """
     The sync committee subnets a node is subscribed to, one bit per subnet.
     """
@@ -149,7 +149,7 @@ Where
 
 - `seq_number` and `attnets` have the same meaning defined in the Phase 0
   document.
-- `syncnets` is a `Bitvector` representing the node's sync committee subnet
+- `syncnets` is a `BitVector` representing the node's sync committee subnet
   subscriptions. This field should mirror the data in the node's ENR as outlined
   in the [validator guide](./validator.md#sync-committee-subnet-stability).
 
@@ -561,7 +561,7 @@ topic.
 
 | Key        | Value                                        |
 | ---------- | -------------------------------------------- |
-| `syncnets` | SSZ `Bitvector[SYNC_COMMITTEE_SUBNET_COUNT]` |
+| `syncnets` | SSZ `BitVector[SYNC_COMMITTEE_SUBNET_COUNT]` |
 
 See the [validator document](./validator.md#sync-committee-subnet-stability) for
 further details on how the new bits are used.

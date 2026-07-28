@@ -77,7 +77,7 @@ and use as a reference throughout.
 ### `SyncSubcommitteeBits`
 
 ```python
-class SyncSubcommitteeBits(Bitvector):
+class SyncSubcommitteeBits(BitVector):
     """
     The participation bits of a single sync subcommittee, one bit per member
     in subcommittee order.
@@ -273,7 +273,7 @@ select the best contribution seen across all aggregators for each
 subnet/subcommittee. A contribution with more valid signatures is better than a
 contribution with fewer signatures.
 
-Recall `block.body.sync_aggregate.sync_committee_bits` is a `Bitvector` where
+Recall `block.body.sync_aggregate.sync_committee_bits` is a `BitVector` where
 the `i`th bit is `True` if the corresponding validator in the sync committee has
 produced a valid signature, and that
 `block.body.sync_aggregate.sync_committee_signature` is the aggregate BLS
@@ -493,8 +493,8 @@ the `subnet_id` used to derive the topic name.
 ###### Aggregation bits
 
 Let `contribution.aggregation_bits` be a
-`Bitvector[SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT]`, where the
-`index`th bit is set in the `Bitvector` for each corresponding validator
+`BitVector[SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT]`, where the
+`index`th bit is set in the `BitVector` for each corresponding validator
 included in this aggregate from the corresponding subcommittee. An aggregator
 finds the index in the sync committee (as determined by a reverse pubkey lookup
 on `state.current_sync_committee.pubkeys`) for a given validator referenced by
@@ -504,7 +504,7 @@ index within the subcommittee is set in `contribution.aggregation_bits`.
 
 For example, if a validator with index `2044` is pseudo-randomly sampled to sync
 committee index `135`. This sync committee index maps to `subcommittee_index`
-`1` with position `7` in the `Bitvector` for the contribution.
+`1` with position `7` in the `BitVector` for the contribution.
 
 *Note*: A validator **could be included multiple times** in a given subcommittee
 such that multiple bits are set for a single `SyncCommitteeMessage`.

@@ -144,7 +144,7 @@ Electra is a consensus-layer upgrade containing a number of features. Including:
 
 ```python
 # [Modified in Electra:EIP7549]
-class AggregationBits(Bitlist):
+class AggregationBits(BitList):
     """
     The participation bits of all committees participating in an attestation,
     concatenated in committee order.
@@ -193,7 +193,7 @@ class AttestingIndices(List[ValidatorIndex]):
 ### New `CommitteeBits`
 
 ```python
-class CommitteeBits(Bitvector):
+class CommitteeBits(BitVector):
     """
     Bits marking which committees of a slot participate in an attestation.
     """
@@ -724,7 +724,7 @@ def is_eligible_for_partial_withdrawals(validator: Validator, balance: Gwei) -> 
 #### New `get_committee_indices`
 
 ```python
-def get_committee_indices(committee_bits: Bitvector) -> Sequence[CommitteeIndex]:
+def get_committee_indices(committee_bits: BitVector) -> Sequence[CommitteeIndex]:
     return [CommitteeIndex(index) for index, bit in enumerate(committee_bits) if bit]
 ```
 

@@ -183,7 +183,7 @@ from the latest published version of the EIPs.
 
 ```python
 # [Modified in Gloas:EIP7688]
-class AggregationBits(ProgressiveBitlist):
+class AggregationBits(ProgressiveBitList):
     """
     The participation bits of all committees participating in an attestation,
     concatenated in committee order.
@@ -478,7 +478,7 @@ class Builders(ProgressiveList[Builder]):
 ### New `ExecutionPayloadAvailability`
 
 ```python
-class ExecutionPayloadAvailability(Bitvector):
+class ExecutionPayloadAvailability(BitVector):
     """
     Bits tracking payload availability for recent slots, indexed by slot
     modulo ``SLOTS_PER_HISTORICAL_ROOT``.
@@ -522,7 +522,7 @@ class PTCAttestingIndices(List[ValidatorIndex]):
 ### New `PTCBits`
 
 ```python
-class PTCBits(Bitvector):
+class PTCBits(BitVector):
     """
     The participation bits of the payload timeliness committee, one bit per
     member in committee order.

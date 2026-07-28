@@ -48,7 +48,7 @@ particular, this document builds on the
 ### New `CellsBitlist`
 
 ```python
-class CellsBitlist(Bitlist):
+class CellsBitlist(BitList):
     """
     A bitfield over the cells of a column, one bit per blob.
     """
