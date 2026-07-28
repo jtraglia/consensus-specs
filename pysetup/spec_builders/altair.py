@@ -12,10 +12,7 @@ class AltairSpecBuilder(BaseSpecBuilder):
 from typing import NewType, Union as PyUnion
 
 from eth_consensus_specs.phase0 import {preset_name} as phase0
-from eth_consensus_specs.utils.ssz.merkle_proofs import (
-    compute_merkle_proof as ssz_compute_merkle_proof,
-    get_generalized_index,
-)
+from eth_consensus_specs.utils.ssz.ssz_impl import build_proof, get_generalized_index
 """
 
     @classmethod
@@ -30,7 +27,9 @@ GeneralizedIndex = int
         return """
 def compute_merkle_proof(object: SSZObject,
                          index: GeneralizedIndex) -> list[Bytes32]:
-    return [Bytes32(node) for node in ssz_compute_merkle_proof(object, index)]"""
+    # A branch of Root does not fit a Vector[Bytes32]: the two are siblings,
+    # and a collection coerces an element only from an ancestor of its own type.
+    return [Bytes32(node) for node in build_proof(object, index)]"""
 
     @classmethod
     def hardcoded_ssz_dep_constants(cls) -> dict[str, str]:

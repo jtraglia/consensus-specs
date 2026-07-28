@@ -1,7 +1,24 @@
 from ssz.merkleization import hash_tree_root as ssz_hash_tree_root
+from ssz.proofs import build_proof
 from ssz.ssz_base import SSZModel
 
 from eth_consensus_specs.utils.ssz.ssz_typing import Bytes32, SSZType, Uint
+from ssz import get_generalized_index
+
+# The generated specifications reach the library through this module. Importing
+# `ssz` directly from one of them resolves against the repository's own
+# top-level `ssz` directory instead of the installed package.
+__all__ = [
+    "build_proof",
+    "copy",
+    "deserialize",
+    "get_generalized_index",
+    "hash_tree_root",
+    "serialize",
+    "ssz_deserialize",
+    "ssz_serialize",
+    "uint_to_bytes",
+]
 
 
 def ssz_serialize(obj: SSZType) -> bytes:
