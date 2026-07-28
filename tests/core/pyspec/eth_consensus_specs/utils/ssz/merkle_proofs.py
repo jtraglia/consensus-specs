@@ -15,9 +15,9 @@ from collections.abc import Sequence
 from hashlib import sha256
 from typing import Any
 
-from ssz.bitfields import BaseBitlist, BaseBitvector, ProgressiveBitlist
+from ssz.bitfields import Bitlist, Bitvector, ProgressiveBitlist
 from ssz.boolean import Boolean
-from ssz.byte_arrays import BaseByteList, BaseBytes
+from ssz.byte_arrays import ByteList, Bytes
 from ssz.collections import List, ProgressiveList, Vector
 from ssz.container import Container, ProgressiveContainer
 from ssz.merkleization import (
@@ -37,7 +37,7 @@ type SSZVariableName = str
 
 # Shapes whose root mixes in a trailing word, so the data lives in the left
 # subtree and the mixed-in value in the right one.
-_MIXED_IN = (BaseByteList, BaseBitlist, List, ProgressiveList, ProgressiveBitlist)
+_MIXED_IN = (ByteList, Bitlist, List, ProgressiveList, ProgressiveBitlist)
 
 # Shapes whose data subtree is a progressive spine rather than a padded
 # binary tree, so a position is not reachable by a fixed-depth descent.
@@ -64,9 +64,9 @@ def get_elem_type(
     """Type of the element reached by one step of a path."""
     if issubclass(typ, (Container, ProgressiveContainer)):
         return typ.model_fields[str(index_or_variable_name)].annotation
-    if issubclass(typ, (BaseBytes, BaseByteList)):
+    if issubclass(typ, (Bytes, ByteList)):
         return Uint8
-    if issubclass(typ, (BaseBitvector, BaseBitlist, ProgressiveBitlist)):
+    if issubclass(typ, (Bitvector, Bitlist, ProgressiveBitlist)):
         return Boolean
     return typ.ELEMENT_TYPE
 
@@ -75,13 +75,13 @@ def chunk_count(typ: type[SSZType]) -> int:
     """Number of chunks the top-level elements of this type occupy."""
     if is_basic_type(typ):
         return 1
-    if issubclass(typ, BaseBitvector):
+    if issubclass(typ, Bitvector):
         return math.ceil(typ.LENGTH / BITS_PER_CHUNK)
-    if issubclass(typ, BaseBitlist):
+    if issubclass(typ, Bitlist):
         return math.ceil(typ.LIMIT / BITS_PER_CHUNK)
-    if issubclass(typ, BaseBytes):
+    if issubclass(typ, Bytes):
         return math.ceil(typ.LENGTH / BYTES_PER_CHUNK)
-    if issubclass(typ, BaseByteList):
+    if issubclass(typ, ByteList):
         return math.ceil(typ.LIMIT / BYTES_PER_CHUNK)
     if issubclass(typ, Vector):
         return math.ceil(typ.LENGTH * item_length(typ.ELEMENT_TYPE) / BYTES_PER_CHUNK)
@@ -106,7 +106,7 @@ def _chunk_position(typ: type[SSZType], index_or_variable_name: int | SSZVariabl
         return active_positions[field_index]
     if issubclass(typ, Container):
         return list(typ.model_fields).index(str(index_or_variable_name))
-    if issubclass(typ, (BaseBitvector, BaseBitlist, ProgressiveBitlist)):
+    if issubclass(typ, (Bitvector, Bitlist, ProgressiveBitlist)):
         return int(index_or_variable_name) // BITS_PER_CHUNK
     element_type = get_elem_type(typ, index_or_variable_name)
     return int(index_or_variable_name) * item_length(element_type) // BYTES_PER_CHUNK
@@ -272,19 +272,19 @@ def _element_nodes(value: Any) -> list[_Node]:
 
 def _build_tree(value: Any) -> _Node:
     """Materialize the full Merkle tree of an SSZ value."""
-    if isinstance(value, (BaseUint, Boolean, BaseBytes)):
+    if isinstance(value, (BaseUint, Boolean, Bytes)):
         return _merkleize_tree(_pack_bytes_nodes(value.encode_bytes()))
 
-    if isinstance(value, BaseByteList):
+    if isinstance(value, ByteList):
         limit = math.ceil(type(value).LIMIT / BYTES_PER_CHUNK)
         data = _merkleize_tree(_pack_bytes_nodes(value.encode_bytes()), limit=limit)
         return _Node(data, _length_leaf(len(value.data)))
 
-    if isinstance(value, BaseBitvector):
+    if isinstance(value, Bitvector):
         limit = math.ceil(type(value).LENGTH / BITS_PER_CHUNK)
         return _merkleize_tree(_pack_bits_nodes(value.data), limit=limit)
 
-    if isinstance(value, BaseBitlist):
+    if isinstance(value, Bitlist):
         limit = math.ceil(type(value).LIMIT / BITS_PER_CHUNK)
         data = _merkleize_tree(_pack_bits_nodes(value.data), limit=limit)
         return _Node(data, _length_leaf(len(value.data)))
