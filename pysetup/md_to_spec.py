@@ -48,7 +48,7 @@ SCALAR_BASE_CLASSES = (
 
 # Calls a collection's bound may contain. Anything else is a spec helper, which
 # the generated specification defines after its types.
-BOUND_SAFE_CALLS = frozenset({"floorlog2", *SCALAR_BASE_CLASSES})
+BOUND_SAFE_CALLS = frozenset({"active_fields", "floorlog2", *SCALAR_BASE_CLASSES})
 
 
 class MarkdownToSpec:

@@ -700,7 +700,7 @@ class PayloadAttestationData(Container):
 
 ```python
 class PayloadAttestation(ProgressiveContainer):
-    ACTIVE_FIELDS = (1,) * 3
+    ACTIVE_FIELDS = active_fields(width=3)
 
     aggregation_bits: PTCBits
     data: PayloadAttestationData
@@ -720,7 +720,7 @@ class PayloadAttestationMessage(Container):
 
 ```python
 class IndexedPayloadAttestation(ProgressiveContainer):
-    ACTIVE_FIELDS = (1,) * 3
+    ACTIVE_FIELDS = active_fields(width=3)
 
     attesting_indices: PTCAttestingIndices
     data: PayloadAttestationData
@@ -731,7 +731,7 @@ class IndexedPayloadAttestation(ProgressiveContainer):
 
 ```python
 class ExecutionPayloadBid(ProgressiveContainer):
-    ACTIVE_FIELDS = (1,) * 12
+    ACTIVE_FIELDS = active_fields(width=12)
 
     parent_block_hash: Hash32
     parent_block_root: Root
@@ -759,7 +759,7 @@ class SignedExecutionPayloadBid(Container):
 
 ```python
 class ExecutionPayloadEnvelope(ProgressiveContainer):
-    ACTIVE_FIELDS = (1,) * 5
+    ACTIVE_FIELDS = active_fields(width=5)
 
     payload: ExecutionPayload
     execution_requests: ExecutionRequests
@@ -783,7 +783,7 @@ class SignedExecutionPayloadEnvelope(Container):
 ```python
 # [Modified in Gloas:EIP7688]
 class Attestation(ProgressiveContainer):
-    ACTIVE_FIELDS = (1,) * 4
+    ACTIVE_FIELDS = active_fields(width=4)
 
     aggregation_bits: AggregationBits
     data: AttestationData
@@ -796,7 +796,7 @@ class Attestation(ProgressiveContainer):
 ```python
 # [Modified in Gloas:EIP7688]
 class IndexedAttestation(ProgressiveContainer):
-    ACTIVE_FIELDS = (1,) * 3
+    ACTIVE_FIELDS = active_fields(width=3)
 
     attesting_indices: AttestingIndices
     data: AttestationData
@@ -811,7 +811,7 @@ class IndexedAttestation(ProgressiveContainer):
 ```python
 # [Modified in Gloas:EIP7688]
 class BeaconBlockBody(ProgressiveContainer):
-    ACTIVE_FIELDS = (1,) * 13
+    ACTIVE_FIELDS = active_fields(width=13)
 
     randao_reveal: BLSSignature
     eth1_data: Eth1Data
@@ -848,7 +848,7 @@ class BeaconBlockBody(ProgressiveContainer):
 ```python
 # [Modified in Gloas:EIP7688]
 class BeaconState(ProgressiveContainer):
-    ACTIVE_FIELDS = (1,) * 46
+    ACTIVE_FIELDS = active_fields(width=46)
 
     genesis_time: Uint64
     genesis_validators_root: Root
@@ -922,7 +922,7 @@ class BeaconState(ProgressiveContainer):
 ```python
 # [Modified in Gloas:EIP7688]
 class ExecutionPayload(ProgressiveContainer):
-    ACTIVE_FIELDS = (1,) * 19
+    ACTIVE_FIELDS = active_fields(width=19)
 
     parent_hash: Hash32
     fee_recipient: ExecutionAddress
@@ -954,7 +954,7 @@ class ExecutionPayload(ProgressiveContainer):
 ```python
 # [Modified in Gloas:EIP7688]
 class ExecutionRequests(ProgressiveContainer):
-    ACTIVE_FIELDS = (1,) * 5
+    ACTIVE_FIELDS = active_fields(width=5)
 
     deposits: DepositRequests
     withdrawals: WithdrawalRequests

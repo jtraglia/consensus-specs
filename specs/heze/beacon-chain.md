@@ -108,7 +108,7 @@ class SignedInclusionList(Container):
 
 ```python
 class ExecutionPayloadBid(ProgressiveContainer):
-    ACTIVE_FIELDS = (1,) * 13
+    ACTIVE_FIELDS = active_fields(width=13)
 
     parent_block_hash: Hash32
     parent_block_root: Root
@@ -139,7 +139,7 @@ class SignedExecutionPayloadBid(Container):
 
 ```python
 class BeaconState(ProgressiveContainer):
-    ACTIVE_FIELDS = (1,) * 46
+    ACTIVE_FIELDS = active_fields(width=46)
 
     genesis_time: Uint64
     genesis_validators_root: Root

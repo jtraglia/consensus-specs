@@ -15,6 +15,7 @@ only does two things on top of it:
 from ssz.uint import BaseUint as Uint
 
 from ssz import (
+    active_fields,
     Bitlist,
     Bitvector,
     Boolean,
