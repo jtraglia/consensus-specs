@@ -12,7 +12,7 @@ readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.12, <3.15"
 urls = { homepage = "https://github.com/ethereum/consensus-specs" }
 dependencies = [
-  "eth-ssz-specs",
+  "eth-ssz-specs==0.0.1.dev1",
   "eth-utils==6.0.0",
   "frozendict==2.4.7",
   "lru-dict==1.4.1",
@@ -52,9 +52,6 @@ docs = [
   "zensical==0.0.51",
 ]
 
-# There is no PyPI release of eth-ssz-specs yet, so pin the git revision.
-[tool.uv.sources]
-eth-ssz-specs = { git = "https://github.com/leanEthereum/ssz-specs", rev = "a18d9c0320cb701ec8f92e15ed5bd2341edd37ac" }
 
 [tool.setuptools]
 include-package-data = false
