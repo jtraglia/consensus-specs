@@ -32,7 +32,7 @@ from typing import (
 from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root, copy, uint_to_bytes
 from eth_consensus_specs.utils.ssz.ssz_typing import (
     SSZType, Boolean, Byte, Container, List, Vector, Uint8, Uint32, Uint64, Uint256,
-    Bytes1, Bytes4, Bytes32, Bytes48, Bytes96, BitList)
+    Bytes1, Bytes4, Bytes20, Bytes32, Bytes48, Bytes96, BitList)
 from eth_consensus_specs.utils.ssz.ssz_typing import BitVector  # noqa: F401
 from eth_consensus_specs.utils import bls
 from eth_consensus_specs.utils.hash_function import hash
@@ -96,7 +96,7 @@ get_active_validator_indices = cache_this(
 _get_beacon_committee = get_beacon_committee
 get_beacon_committee = cache_this(
     lambda state, slot, index: (hash_tree_root(state.validators), hash_tree_root(state.randao_mixes), slot, index),
-    _get_beacon_committee, lru_size=int(SLOTS_PER_EPOCH * MAX_COMMITTEES_PER_SLOT) * 3)
+    _get_beacon_committee, lru_size=int(SLOTS_PER_EPOCH) * int(MAX_COMMITTEES_PER_SLOT) * 3)
 
 _get_attesting_indices = get_attesting_indices
 get_attesting_indices = cache_this(
@@ -104,4 +104,4 @@ get_attesting_indices = cache_this(
         hash_tree_root(state.randao_mixes),
         hash_tree_root(state.validators), hash_tree_root(attestation)
     ),
-    _get_attesting_indices, lru_size=int(SLOTS_PER_EPOCH * MAX_COMMITTEES_PER_SLOT) * 3)'''
+    _get_attesting_indices, lru_size=int(SLOTS_PER_EPOCH) * int(MAX_COMMITTEES_PER_SLOT) * 3)'''

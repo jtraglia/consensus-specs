@@ -45,9 +45,9 @@ class LightClientUpdates(List[LightClientUpdate]):
 
 ### Configuration
 
-| Name                               | Value          | Description                                                         |
-| ---------------------------------- | -------------- | ------------------------------------------------------------------- |
-| `MAX_REQUEST_LIGHT_CLIENT_UPDATES` | `2**7` (= 128) | Maximum number of `LightClientUpdate` instances in a single request |
+| Name                               | Value                  | Description                                                         |
+| ---------------------------------- | ---------------------- | ------------------------------------------------------------------- |
+| `MAX_REQUEST_LIGHT_CLIENT_UPDATES` | `Uint64(2**7)` (= 128) | Maximum number of `LightClientUpdate` instances in a single request |
 
 ### The gossip domain: gossipsub
 

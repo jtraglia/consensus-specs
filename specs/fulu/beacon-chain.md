@@ -68,7 +68,7 @@ class ProposerLookahead(Vector[ValidatorIndex]):
     ``MIN_SEED_LOOKAHEAD`` epochs.
     """
 
-    LENGTH = (MIN_SEED_LOOKAHEAD + Uint64(1)) * SLOTS_PER_EPOCH
+    LENGTH = (Uint64(MIN_SEED_LOOKAHEAD) + Uint64(1)) * Uint64(SLOTS_PER_EPOCH)
 ```
 
 ## Configuration

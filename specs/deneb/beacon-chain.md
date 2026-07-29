@@ -4,12 +4,16 @@
 
 - [Introduction](#introduction)
 - [Types](#types)
+  - [New `Blob`](#new-blob)
   - [New `BlobIndex`](#new-blobindex)
   - [New `BlobKZGCommitments`](#new-blobkzgcommitments)
+  - [New `KZGCommitment`](#new-kzgcommitment)
+  - [New `KZGProof`](#new-kzgproof)
   - [New `VersionedHash`](#new-versionedhash)
 - [Constants](#constants)
   - [Blob](#blob)
 - [Preset](#preset)
+  - [Blob](#blob-1)
   - [Execution](#execution)
 - [Configuration](#configuration)
   - [Execution](#execution-1)
@@ -61,6 +65,18 @@ Deneb is a consensus-layer upgrade containing a number of features. Including:
 
 ## Types
 
+### New `Blob`
+
+```python
+class Blob(ByteVector):
+    """
+    A blob of ``FIELD_ELEMENTS_PER_BLOB`` field elements, the unit of data
+    committed to with a KZG commitment.
+    """
+
+    LENGTH = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB
+```
+
 ### New `BlobIndex`
 
 ```python
@@ -81,6 +97,24 @@ class BlobKZGCommitments(List[KZGCommitment]):
     LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
 ```
 
+### New `KZGCommitment`
+
+```python
+class KZGCommitment(Bytes48):
+    """
+    A KZG commitment to a blob, a compressed ``G1`` point.
+    """
+```
+
+### New `KZGProof`
+
+```python
+class KZGProof(Bytes48):
+    """
+    A KZG proof of a polynomial evaluation, a compressed ``G1`` point.
+    """
+```
+
 ### New `VersionedHash`
 
 ```python
@@ -95,11 +129,18 @@ class VersionedHash(Bytes32):
 
 ### Blob
 
-| Name                         | Value            |
-| ---------------------------- | ---------------- |
-| `VERSIONED_HASH_VERSION_KZG` | `Bytes1('0x01')` |
+| Name                         | Value            | Description                                     |
+| ---------------------------- | ---------------- | ----------------------------------------------- |
+| `VERSIONED_HASH_VERSION_KZG` | `Bytes1('0x01')` | Version byte of a blob's versioned hash         |
+| `BYTES_PER_FIELD_ELEMENT`    | `Uint64(32)`     | Bytes used to encode a BLS scalar field element |
 
 ## Preset
+
+### Blob
+
+| Name                      | Value          | Description                        |
+| ------------------------- | -------------- | ---------------------------------- |
+| `FIELD_ELEMENTS_PER_BLOB` | `Uint64(4096)` | Number of field elements in a blob |
 
 ### Execution
 
