@@ -229,7 +229,7 @@ def notify_ptc_messages(
     Extracts a list of ``PayloadAttestationMessage`` from ``payload_attestations`` and updates the store with them
     These Payload attestations are assumed to be in the beacon block hence signature verification is not needed
     """
-    if state.slot == 0:
+    if state.slot == Slot(0):
         return
     for payload_attestation in payload_attestations:
         indexed_payload_attestation = get_indexed_payload_attestation(state, payload_attestation)
@@ -416,7 +416,7 @@ has not yet received the attestations that resolve its payload as *empty* or
 
 ```python
 def is_previous_slot_payload_decision(store: Store, node: ForkChoiceNode) -> bool:
-    is_previous_slot = store.blocks[node.root].slot + 1 == get_current_slot(store)
+    is_previous_slot = store.blocks[node.root].slot + Slot(1) == get_current_slot(store)
     is_payload_decision = node.payload_status in [PAYLOAD_STATUS_EMPTY, PAYLOAD_STATUS_FULL]
     return is_previous_slot and is_payload_decision
 ```
@@ -431,7 +431,7 @@ considers the PTC view on both payload timeliness and data availability.
 ```python
 def should_build_on_full(store: Store, head: ForkChoiceNode) -> bool:
     assert head.payload_status != PAYLOAD_STATUS_PENDING
-    if store.blocks[head.root].slot + 1 != get_current_slot(store):
+    if store.blocks[head.root].slot + Slot(1) != get_current_slot(store):
         return head.payload_status == PAYLOAD_STATUS_FULL
     if head.payload_status == PAYLOAD_STATUS_EMPTY:
         return False
@@ -452,7 +452,7 @@ on the beacon block `root` and chooses *empty*.
 
 ```python
 def should_extend_payload(store: Store, root: Root) -> bool:
-    assert store.blocks[root].slot + 1 == get_current_slot(store)
+    assert store.blocks[root].slot + Slot(1) == get_current_slot(store)
     if not is_payload_verified(store, root):
         return False
     proposer_root = store.proposer_boost_root
@@ -495,7 +495,7 @@ def should_apply_proposer_boost(store: Store) -> bool:
     slot = block.slot
 
     # Apply proposer boost if `parent` is not from the previous slot
-    if parent.slot + 1 < slot:
+    if parent.slot + Slot(1) < slot:
         return True
 
     # Apply proposer boost if `parent` is not weak
@@ -510,7 +510,7 @@ def should_apply_proposer_boost(store: Store) -> bool:
         if (
             store.block_timeliness[root][PTC_TIMELINESS_INDEX]
             and block.proposer_index == parent.proposer_index
-            and block.slot + 1 == slot
+            and block.slot + Slot(1) == slot
             and root != parent_root
         )
     ]
@@ -809,8 +809,8 @@ def get_proposer_head(store: Store, head_node: ForkChoiceNode, slot: Slot) -> Fo
     proposing_on_time = is_proposing_on_time(store)
 
     # Only re-org a single slot at most.
-    parent_slot_ok = parent_block.slot + 1 == head_block.slot
-    current_time_ok = head_block.slot + 1 == slot
+    parent_slot_ok = parent_block.slot + Slot(1) == head_block.slot
+    current_time_ok = head_block.slot + Slot(1) == slot
     single_slot_reorg = parent_slot_ok and current_time_ok
 
     # Check that the head has few enough votes to be overpowered by our proposer boost.

@@ -57,10 +57,13 @@ def test_initialize_beacon_state_from_eth1(spec):
 
     assert state.genesis_time == eth1_timestamp + spec.config.GENESIS_DELAY
     assert len(state.validators) == int(deposit_count)
-    assert state.eth1_data.deposit_root == deposit_root
-    assert state.eth1_data.deposit_count == deposit_count
-    assert state.eth1_data.block_hash == eth1_block_hash
-    assert spec.get_total_active_balance(state) == deposit_count * spec.MAX_EFFECTIVE_BALANCE
+    assert state.eth1_data.deposit_root == spec.Root(deposit_root)
+    assert state.eth1_data.deposit_count == spec.Uint64(deposit_count)
+    assert state.eth1_data.block_hash == spec.Hash32(eth1_block_hash)
+    assert (
+        spec.get_total_active_balance(state)
+        == spec.Gwei(deposit_count) * spec.MAX_EFFECTIVE_BALANCE
+    )
 
     # yield state
     yield "state", state
@@ -87,7 +90,7 @@ def test_initialize_beacon_state_some_small_balances(spec):
         signed=True,
     )
     # For deposits above, and for another deposit_count, add a balance of EFFECTIVE_BALANCE_INCREMENT
-    small_deposit_count = main_deposit_count * 2
+    small_deposit_count = int(main_deposit_count) * 2
     small_deposits, deposit_root, _ = prepare_full_genesis_deposits(
         spec,
         spec.MIN_DEPOSIT_AMOUNT,
@@ -107,14 +110,17 @@ def test_initialize_beacon_state_some_small_balances(spec):
     state = spec.initialize_beacon_state_from_eth1(eth1_block_hash, eth1_timestamp, deposits)
 
     assert state.genesis_time == eth1_timestamp + spec.config.GENESIS_DELAY
-    assert len(state.validators) == small_deposit_count
-    assert state.eth1_data.deposit_root == deposit_root
-    assert state.eth1_data.deposit_count == len(deposits)
-    assert state.eth1_data.block_hash == eth1_block_hash
+    assert len(state.validators) == int(small_deposit_count)
+    assert state.eth1_data.deposit_root == spec.Root(deposit_root)
+    assert state.eth1_data.deposit_count == spec.Uint64(len(deposits))
+    assert state.eth1_data.block_hash == spec.Hash32(eth1_block_hash)
     # only main deposits participate to the active balance
     # NOTE: they are pre-ELECTRA deposits with BLS_WITHDRAWAL_PREFIX,
     # so `MAX_EFFECTIVE_BALANCE` is used
-    assert spec.get_total_active_balance(state) == main_deposit_count * spec.MAX_EFFECTIVE_BALANCE
+    assert (
+        spec.get_total_active_balance(state)
+        == spec.Gwei(main_deposit_count) * spec.MAX_EFFECTIVE_BALANCE
+    )
 
     # yield state
     yield "state", state

@@ -260,7 +260,7 @@ def get_current_store_epoch(store: Store) -> Epoch:
 #### `compute_slots_since_epoch_start`
 
 ```python
-def compute_slots_since_epoch_start(slot: Slot) -> int:
+def compute_slots_since_epoch_start(slot: Slot) -> Slot:
     return slot - compute_start_slot_at_epoch(compute_epoch_at_slot(slot))
 ```
 
@@ -287,7 +287,7 @@ def is_ancestor(store: Store, node: ForkChoiceNode, ancestor: ForkChoiceNode) ->
 ```python
 def calculate_committee_fraction(state: BeaconState, committee_percent: Uint64) -> Gwei:
     committee_weight = get_total_active_balance(state) // SLOTS_PER_EPOCH
-    return Gwei((committee_weight * committee_percent) // 100)
+    return (committee_weight * Gwei(committee_percent)) // Gwei(100)
 ```
 
 #### `get_checkpoint_block`
@@ -342,7 +342,7 @@ def get_attestation_score(store: Store, node: ForkChoiceNode, state: BeaconState
 ```python
 def compute_proposer_score(state: BeaconState) -> Gwei:
     committee_weight = get_total_active_balance(state) // SLOTS_PER_EPOCH
-    return (committee_weight * PROPOSER_SCORE_BOOST) // 100
+    return (committee_weight * Gwei(PROPOSER_SCORE_BOOST)) // Gwei(100)
 ```
 
 #### `get_proposer_score`
@@ -708,8 +708,8 @@ def get_proposer_head(store: Store, head_node: ForkChoiceNode, slot: Slot) -> Fo
     proposing_on_time = is_proposing_on_time(store)
 
     # Only re-org a single slot at most.
-    parent_slot_ok = parent_block.slot + 1 == head_block.slot
-    current_time_ok = head_block.slot + 1 == slot
+    parent_slot_ok = parent_block.slot + Slot(1) == head_block.slot
+    current_time_ok = head_block.slot + Slot(1) == slot
     single_slot_reorg = parent_slot_ok and current_time_ok
 
     # Check that the head has few enough votes to be overpowered by our proposer boost.
@@ -784,7 +784,7 @@ def on_tick_per_slot(store: Store, time: Uint64) -> None:
         store.proposer_boost_root = Root()
 
     # If a new epoch, pull-up justification and finalization from previous epoch
-    if current_slot > previous_slot and compute_slots_since_epoch_start(current_slot) == Uint64(0):
+    if current_slot > previous_slot and compute_slots_since_epoch_start(current_slot) == Slot(0):
         update_checkpoints(
             store, store.unrealized_justified_checkpoint, store.unrealized_finalized_checkpoint
         )

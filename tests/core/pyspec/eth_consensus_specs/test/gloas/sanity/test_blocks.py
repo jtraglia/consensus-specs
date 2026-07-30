@@ -704,7 +704,7 @@ def test_max_payload_attestations(spec, state):
     payload_attestations = []
     for _ in range(spec.MAX_PAYLOAD_ATTESTATIONS):
         payload_attestations.extend(get_random_payload_attestations(spec, state, rng))
-    assert len(payload_attestations) == spec.MAX_PAYLOAD_ATTESTATIONS
+    assert len(payload_attestations) == int(spec.MAX_PAYLOAD_ATTESTATIONS)
 
     yield "pre", state
 
@@ -726,7 +726,7 @@ def test_invalid_too_many_payload_attestations(spec, state):
     payload_attestations = []
     for _ in range(spec.MAX_PAYLOAD_ATTESTATIONS + spec.Uint64(1)):
         payload_attestations.extend(get_random_payload_attestations(spec, state, rng))
-    assert len(payload_attestations) > spec.MAX_PAYLOAD_ATTESTATIONS
+    assert len(payload_attestations) > int(spec.MAX_PAYLOAD_ATTESTATIONS)
 
     yield "pre", state
 

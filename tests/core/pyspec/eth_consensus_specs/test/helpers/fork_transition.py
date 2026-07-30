@@ -257,12 +257,12 @@ def do_fork_generate(
 
 
 def transition_until_fork(spec, state, fork_epoch):
-    to_slot = spec.Slot(fork_epoch) * int(spec.SLOTS_PER_EPOCH) - spec.Slot(1)
+    to_slot = spec.Slot(fork_epoch) * spec.SLOTS_PER_EPOCH - spec.Slot(1)
     transition_to(spec, state, to_slot)
 
 
 def _transition_until_fork_minus_one(spec, state, fork_epoch):
-    to_slot = spec.Slot(fork_epoch) * int(spec.SLOTS_PER_EPOCH) - spec.Slot(2)
+    to_slot = spec.Slot(fork_epoch) * spec.SLOTS_PER_EPOCH - spec.Slot(2)
     transition_to(spec, state, to_slot)
 
 

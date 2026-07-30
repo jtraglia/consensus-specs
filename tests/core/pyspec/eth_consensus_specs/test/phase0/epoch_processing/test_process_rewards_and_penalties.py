@@ -37,10 +37,13 @@ def run_process_rewards_and_penalties(spec, state):
 
 def _get_unslashed_attesting_indices(spec, state, attestations):
     if is_post_altair(spec):
-        return spec.get_unslashed_participating_indices(
-            state, spec.TIMELY_TARGET_FLAG_INDEX, spec.get_previous_epoch(state)
-        )
-    return spec.get_unslashed_attesting_indices(state, attestations)
+        return {
+            int(i)
+            for i in spec.get_unslashed_participating_indices(
+                state, spec.TIMELY_TARGET_FLAG_INDEX, spec.get_previous_epoch(state)
+            )
+        }
+    return {int(i) for i in spec.get_unslashed_attesting_indices(state, attestations)}
 
 
 def validate_resulting_balances(spec, pre_state, post_state, attestations):
@@ -486,8 +489,7 @@ def test_attestations_some_slashed(spec, state):
 
     attesting_indices = _get_unslashed_attesting_indices(spec, state, attestations)
     assert len(attesting_indices) > 0
-    assert (
-        len(attesting_indices_before_slashings) - len(attesting_indices)
-        == spec.config.MIN_PER_EPOCH_CHURN_LIMIT
+    assert len(attesting_indices_before_slashings) - len(attesting_indices) == int(
+        spec.config.MIN_PER_EPOCH_CHURN_LIMIT
     )
     validate_resulting_balances(spec, pre_state, state, attestations)

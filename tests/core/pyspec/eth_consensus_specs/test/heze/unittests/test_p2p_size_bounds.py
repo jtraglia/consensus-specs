@@ -15,4 +15,4 @@ from eth_consensus_specs.test.helpers.p2p_size_bounds import (
 def test_max_signed_inclusion_list_size(spec):
     encoded = build_max_size_signed_inclusion_list(spec).encode_bytes()
     assert len(encoded) == get_max_signed_inclusion_list_size(spec)
-    assert len(encoded) <= spec.config.MAX_PAYLOAD_SIZE
+    assert len(encoded) <= int(spec.config.MAX_PAYLOAD_SIZE)

@@ -29,7 +29,7 @@ def run_on_tick(spec, store, time, new_justified_checkpoint=False):
 @spec_state_test
 def test_basic(spec, state):
     store = get_genesis_forkchoice_store(spec, state)
-    run_on_tick(spec, store, store.time + 1)
+    run_on_tick(spec, store, store.time + spec.Uint64(1))
 
 
 """
@@ -62,7 +62,7 @@ def test_update_justified_single_on_store_finalized_chain(spec, state):
     run_on_tick(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         new_justified_checkpoint=True
     )
 """
@@ -114,5 +114,6 @@ def test_update_justified_single_not_on_store_finalized_chain(spec, state):
     run_on_tick(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
     )

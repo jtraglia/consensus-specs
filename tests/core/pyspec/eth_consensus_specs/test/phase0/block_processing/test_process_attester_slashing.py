@@ -104,7 +104,8 @@ def run_attester_slashing_processing(spec, state, attester_slashing, valid=True)
         expected_balance = (
             pre_proposer_balance
             + total_proposer_rewards
-            - pre_slashing_effectives[proposer_index] // get_min_slashing_penalty_quotient(spec)
+            - pre_slashing_effectives[proposer_index]
+            // spec.Gwei(get_min_slashing_penalty_quotient(spec))
         )
 
         assert get_balance(state, proposer_index) == expected_balance

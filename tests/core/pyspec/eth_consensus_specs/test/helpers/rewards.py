@@ -55,14 +55,13 @@ def has_enough_for_leak_penalty(spec, state, index):
     """
 
     if is_post_altair(spec):
-        return state.validators[index].effective_balance * state.inactivity_scores[
-            index
-        ] > spec.config.INACTIVITY_SCORE_BIAS * get_inactivity_penalty_quotient(spec)
+        return state.validators[index].effective_balance * state.inactivity_scores[index] > int(
+            spec.config.INACTIVITY_SCORE_BIAS
+        ) * int(get_inactivity_penalty_quotient(spec))
     else:
-        return (
-            state.validators[index].effective_balance * spec.get_finality_delay(state)
-            > spec.INACTIVITY_PENALTY_QUOTIENT
-        )
+        return state.validators[index].effective_balance * spec.Gwei(
+            spec.get_finality_delay(state)
+        ) > spec.Gwei(spec.INACTIVITY_PENALTY_QUOTIENT)
 
 
 def run_deltas(spec, state):
@@ -214,7 +213,9 @@ def run_get_inclusion_delay_deltas(spec, state):
     eligible_attestations = spec.get_matching_source_attestations(
         state, spec.get_previous_epoch(state)
     )
-    attesting_indices = spec.get_unslashed_attesting_indices(state, eligible_attestations)
+    attesting_indices = {
+        int(i) for i in spec.get_unslashed_attesting_indices(state, eligible_attestations)
+    }
 
     rewarded_indices = set()
     rewarded_proposer_indices = set()
@@ -227,10 +228,14 @@ def run_get_inclusion_delay_deltas(spec, state):
 
             # Track proposer of earliest included attestation for the validator defined by index
             earliest_attestation = min(
-                [a for a in eligible_attestations if index in spec.get_attesting_indices(state, a)],
+                [
+                    a
+                    for a in eligible_attestations
+                    if index in {int(i) for i in spec.get_attesting_indices(state, a)}
+                ],
                 key=lambda a: a.inclusion_delay,
             )
-            rewarded_proposer_indices.add(earliest_attestation.proposer_index)
+            rewarded_proposer_indices.add(int(earliest_attestation.proposer_index))
 
     # Ensure all expected proposers have been rewarded
     # Track reward indices
@@ -266,13 +271,16 @@ def run_get_inactivity_penalty_deltas(spec, state):
         matching_attestations = spec.get_matching_target_attestations(
             state, spec.get_previous_epoch(state)
         )
-        matching_attesting_indices = spec.get_unslashed_attesting_indices(
-            state, matching_attestations
-        )
+        matching_attesting_indices = {
+            int(i) for i in spec.get_unslashed_attesting_indices(state, matching_attestations)
+        }
     else:
-        matching_attesting_indices = spec.get_unslashed_participating_indices(
-            state, spec.TIMELY_TARGET_FLAG_INDEX, spec.get_previous_epoch(state)
-        )
+        matching_attesting_indices = {
+            int(i)
+            for i in spec.get_unslashed_participating_indices(
+                state, spec.TIMELY_TARGET_FLAG_INDEX, spec.get_previous_epoch(state)
+            )
+        }
 
     eligible_indices = {int(i) for i in spec.get_eligible_validator_indices(state)}
     for index in range(len(state.validators)):
@@ -286,10 +294,9 @@ def run_get_inactivity_penalty_deltas(spec, state):
             base_reward = spec.get_base_reward(state, index)
             if not is_post_altair(spec):
                 cancel_base_rewards_per_epoch = spec.BASE_REWARDS_PER_EPOCH
-                base_penalty = (
-                    cancel_base_rewards_per_epoch * base_reward
-                    - spec.get_proposer_reward(state, index)
-                )
+                base_penalty = spec.Gwei(
+                    cancel_base_rewards_per_epoch
+                ) * base_reward - spec.get_proposer_reward(state, index)
 
             if not has_enough_for_reward(spec, state, index):
                 assert penalties[index] == spec.Gwei(0)
@@ -473,7 +480,7 @@ def run_test_some_very_low_effective_balances_that_did_not_attest(spec, state):
             data=state.previous_epoch_attestations[1:]
         )
         # Set removed indices effective balance to very low amount
-        indices = spec.get_unslashed_attesting_indices(state, [attestation])
+        indices = {int(i) for i in spec.get_unslashed_attesting_indices(state, [attestation])}
         for i, index in enumerate(indices):
             state.validators[index].effective_balance = i
     else:
@@ -530,7 +537,9 @@ def run_test_proposer_not_in_attestations(spec, state):
     # Get an attestation where the proposer is not in the committee
     non_proposer_attestations = []
     for a in state.previous_epoch_attestations:
-        if a.proposer_index not in spec.get_unslashed_attesting_indices(state, [a]):
+        if int(a.proposer_index) not in {
+            int(i) for i in spec.get_unslashed_attesting_indices(state, [a])
+        }:
             non_proposer_attestations.append(a)
 
     assert any(non_proposer_attestations)

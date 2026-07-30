@@ -205,8 +205,8 @@ def get_data_column_sidecars(
             # [Modified in Gloas:EIP7732]
             DataColumnSidecar(
                 index=column_index,
-                column=column_cells,
-                kzg_proofs=column_proofs,
+                column=DataColumn(data=column_cells),
+                kzg_proofs=KZGProofs(data=column_proofs),
                 slot=slot,
                 beacon_block_root=beacon_block_root,
             )

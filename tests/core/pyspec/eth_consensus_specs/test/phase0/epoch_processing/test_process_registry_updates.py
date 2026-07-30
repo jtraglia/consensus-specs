@@ -275,6 +275,7 @@ def test_ejection_past_churn_limit_scaled(spec, state):
 
 
 def run_test_activation_queue_activation_and_ejection(spec, state, num_per_status):
+    num_per_status = int(num_per_status)
     # move past first two irregular epochs wrt finality
     next_epoch(spec, state)
     next_epoch(spec, state)
@@ -282,7 +283,7 @@ def run_test_activation_queue_activation_and_ejection(spec, state, num_per_statu
     # ready for entrance into activation queue
     activation_queue_start_index = 0
     activation_queue_indices = list(
-        range(int(activation_queue_start_index), int(activation_queue_start_index) + num_per_status)
+        range(activation_queue_start_index, activation_queue_start_index + num_per_status)
     )
     for validator_index in activation_queue_indices:
         mock_deposit(spec, state, validator_index)
@@ -339,7 +340,7 @@ def run_test_activation_queue_activation_and_ejection(spec, state, num_per_statu
         validator = state.validators[validator_index]
         assert validator.exit_epoch != spec.FAR_FUTURE_EPOCH
         assert spec.is_active_validator(validator, spec.get_current_epoch(state))
-        queue_offset = i // churn_limit
+        queue_offset = spec.Epoch(i // int(churn_limit))
         assert not spec.is_active_validator(
             validator,
             spec.compute_activation_exit_epoch(spec.get_current_epoch(state)) + queue_offset,

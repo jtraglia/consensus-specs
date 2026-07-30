@@ -254,7 +254,7 @@ def build_random_block_from_state_for_next_slot(spec, state, rng=None, deposits=
     )
     block.body.attestations = spec.Attestations(data=get_random_attestations(spec, state, rng))
     if deposits:
-        block.body.deposits = deposits
+        block.body.deposits = spec.Deposits(data=deposits)
 
     # cannot include to be slashed indices as exits
     slashed_indices = {

@@ -66,7 +66,7 @@ def _generate_filter_block_tree(
     # Run constraint checks before starting to generate blocks
     for epoch in range(anchor_epoch + 1, max(block_epochs) + 1):
         current_blocks = [i for i, e in enumerate(block_epochs) if e == epoch]
-        assert len(current_blocks) <= spec.SLOTS_PER_EPOCH, (
+        assert len(current_blocks) <= int(spec.SLOTS_PER_EPOCH), (
             "Number of blocks does not fit into an epoch=" + str(epoch)
         )
 
@@ -299,10 +299,9 @@ def _debug_run_sanity_checks(
                 run_on_payload_attestation_message(spec, store, ptc_message, valid=True)
 
     for signed_block in signed_blocks:
-        block_time = (
-            anchor_state.genesis_time
-            + signed_block.message.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
-        )
+        block_time = anchor_state.genesis_time + spec.Uint64(
+            signed_block.message.slot
+        ) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
         if block_time > store.time:
             spec.on_tick(store, block_time)
         debug_add_block(signed_block)

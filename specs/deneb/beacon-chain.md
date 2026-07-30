@@ -472,10 +472,10 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     else:
         epoch_participation = state.previous_epoch_participation
 
-    proposer_reward_numerator = 0
+    proposer_reward_numerator = Gwei(0)
     for index in get_attesting_indices(state, attestation):
         for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
-            if flag_index in participation_flag_indices and not has_flag(
+            if Uint64(flag_index) in participation_flag_indices and not has_flag(
                 epoch_participation[index], flag_index
             ):
                 epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
@@ -512,7 +512,7 @@ def process_execution_payload(
     assert payload.timestamp == compute_time_at_slot(state, state.slot)
     # [New in Deneb:EIP4844]
     # Verify commitments are under limit
-    assert len(body.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK
+    assert Uint64(len(body.blob_kzg_commitments)) <= MAX_BLOBS_PER_BLOCK
 
     # [New in Deneb:EIP4844]
     # Compute list of versioned hashes

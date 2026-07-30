@@ -58,7 +58,8 @@ def test_simple_attempted_reorg_without_enough_ffg_votes(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -67,7 +68,8 @@ def test_simple_attempted_reorg_without_enough_ffg_votes(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -174,7 +176,8 @@ def test_simple_attempted_reorg_without_enough_ffg_votes(spec, state):
     # to next block
     next_epoch(spec, state)
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(5)
@@ -196,7 +199,8 @@ def _run_delayed_justification(spec, state, attempted_reorg, is_justifying_previ
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -205,7 +209,8 @@ def _run_delayed_justification(spec, state, attempted_reorg, is_justifying_previ
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -281,7 +286,8 @@ def _run_delayed_justification(spec, state, attempted_reorg, is_justifying_previ
         get_valid_attestations_at_slot(temp_state, spec, signed_block_y.message.slot)
     )
     current_time = (
-        temp_state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(temp_state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     yield from add_attestations(spec, store, attestations_for_y, test_steps)
@@ -301,7 +307,8 @@ def _run_delayed_justification(spec, state, attempted_reorg, is_justifying_previ
         state = copy(state_b)
         next_epoch(spec, state)
         current_time = (
-            state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+            spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+            + store.genesis_time
         )
         on_tick_and_append_step(spec, store, current_time, test_steps)
 
@@ -353,7 +360,8 @@ def _run_include_votes_of_another_empty_chain(
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -362,7 +370,8 @@ def _run_include_votes_of_another_empty_chain(
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -506,7 +515,8 @@ def _run_include_votes_of_another_empty_chain(
     # to next epoch
     next_epoch(spec, state)
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(5)
@@ -552,7 +562,8 @@ def _run_include_votes_of_another_empty_chain(
     # to next epoch
     next_epoch(spec, state)
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(6)

@@ -95,11 +95,11 @@ def upgrade_to_electra(pre: deneb.BeaconState) -> BeaconState:
         # [New in Electra:EIP7251]
         earliest_consolidation_epoch=compute_activation_exit_epoch(get_current_epoch(pre)),
         # [New in Electra:EIP7251]
-        pending_deposits=[],
+        pending_deposits=PendingDeposits(),
         # [New in Electra:EIP7251]
-        pending_partial_withdrawals=[],
+        pending_partial_withdrawals=PendingPartialWithdrawals(),
         # [New in Electra:EIP7251]
-        pending_consolidations=[],
+        pending_consolidations=PendingConsolidations(),
     )
 
     post.exit_balance_to_consume = get_activation_exit_churn_limit(post)
@@ -120,7 +120,7 @@ def upgrade_to_electra(pre: deneb.BeaconState) -> BeaconState:
         balance = post.balances[index]
         post.balances[index] = 0
         validator = post.validators[index]
-        validator.effective_balance = 0
+        validator.effective_balance = Gwei(0)
         validator.activation_eligibility_epoch = FAR_FUTURE_EPOCH
         # Use bls.G2_POINT_AT_INFINITY as a signature field placeholder
         # and GENESIS_SLOT to distinguish from a pending deposit request

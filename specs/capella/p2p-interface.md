@@ -219,7 +219,7 @@ def validate_bls_to_execution_change_gossip(
 
     # [IGNORE] The current epoch is at or after the Capella fork epoch
     # (where current_epoch is defined by the current wall-clock time)
-    time_since_genesis_ms = current_time_ms - state.genesis_time * 1000
+    time_since_genesis_ms = current_time_ms - state.genesis_time * Uint64(1000)
     current_slot = Slot(time_since_genesis_ms // SLOT_DURATION_MS)
     current_epoch = compute_epoch_at_slot(current_slot)
     if current_epoch < CAPELLA_FORK_EPOCH:

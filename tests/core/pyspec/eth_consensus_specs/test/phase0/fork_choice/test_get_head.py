@@ -224,7 +224,8 @@ def test_filtered_block_tree(spec, state):
 
     # tick time forward and add blocks and attestations to store
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     for signed_block in signed_blocks:
@@ -318,7 +319,9 @@ def test_proposer_boost_correct_head(spec, state):
     assert spec.hash_tree_root(block_1) < spec.hash_tree_root(block_2)
 
     # Tick to block_1 slot time
-    time = store.genesis_time + block_1.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+    time = store.genesis_time + spec.Uint64(
+        block_1.slot
+    ) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
     on_tick_and_append_step(spec, store, time, test_steps)
 
     # Process block_2
@@ -472,7 +475,8 @@ def test_discard_equivocations_slashed_validator_censoring(spec, state):
 
     # Now generate the store checks
     current_time = (
-        anchor_state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(anchor_state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -551,7 +555,8 @@ def test_voting_source_within_two_epoch(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -560,7 +565,8 @@ def test_voting_source_within_two_epoch(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -651,7 +657,8 @@ def test_voting_source_beyond_two_epoch(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -660,7 +667,8 @@ def test_voting_source_beyond_two_epoch(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -765,12 +773,15 @@ def test_incorrect_finalized(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield 'anchor_state', state
     yield 'anchor_block', anchor_block
-    current_time = state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    current_time = (
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
     next_epoch(spec, state)
-    on_tick_and_append_step(spec, store, store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000), test_steps)
+    on_tick_and_append_step(spec, store, store.genesis_time + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000), test_steps)
 
     # Fill epoch 1 to 4
     for _ in range(4):

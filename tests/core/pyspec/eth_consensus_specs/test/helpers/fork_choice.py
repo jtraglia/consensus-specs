@@ -182,10 +182,9 @@ def tick_and_add_block(
     if merge_block:
         assert spec.is_merge_transition_block(pre_state, signed_block.message.body)
 
-    block_time = (
-        pre_state.genesis_time
-        + signed_block.message.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
-    )
+    block_time = pre_state.genesis_time + spec.Uint64(
+        signed_block.message.slot
+    ) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
     while store.time < block_time:
         time = (
             pre_state.genesis_time

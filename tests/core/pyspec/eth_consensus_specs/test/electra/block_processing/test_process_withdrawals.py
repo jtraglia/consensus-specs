@@ -176,9 +176,9 @@ def test_pending_withdrawals_at_max(spec, state):
         pending_withdrawal = prepare_pending_withdrawal(spec, state, i)
         pending_withdrawal_requests.append(pending_withdrawal)
 
-    assert len(
-        state.pending_partial_withdrawals
-    ) == spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP + spec.Uint64(1)
+    assert len(state.pending_partial_withdrawals) == int(
+        spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP + spec
+    ).Uint64(1)
 
     execution_payload = build_empty_execution_payload(spec, state)
 
@@ -232,9 +232,9 @@ def test_full_pending_withdrawals_but_first_skipped_exiting_validator(spec, stat
         prepare_pending_withdrawal(spec, state, index)
 
     # Ensure that there's one more than the limit, the first will be skipped
-    assert len(
-        state.pending_partial_withdrawals
-    ) == spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP + spec.Uint64(1)
+    assert len(state.pending_partial_withdrawals) == int(
+        spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP + spec
+    ).Uint64(1)
 
     # For the first pending withdrawal, set the validator as exiting
     spec.initiate_validator_exit(state, 0)
@@ -289,9 +289,9 @@ def test_full_pending_withdrawals_but_first_skipped_low_effective_balance(spec, 
         prepare_pending_withdrawal(spec, state, index)
 
     # Ensure that there's one more than the limit, the first will be skipped
-    assert len(
-        state.pending_partial_withdrawals
-    ) == spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP + spec.Uint64(1)
+    assert len(state.pending_partial_withdrawals) == int(
+        spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP + spec
+    ).Uint64(1)
 
     # For the first pending withdrawal, set the validator to insufficient effective balance
     state.validators[0].effective_balance = (
@@ -345,9 +345,9 @@ def test_full_pending_withdrawals_but_first_skipped_no_excess_balance(spec, stat
         prepare_pending_withdrawal(spec, state, index)
 
     # Ensure that there's one more than the limit, the first will be skipped
-    assert len(
-        state.pending_partial_withdrawals
-    ) == spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP + spec.Uint64(1)
+    assert len(state.pending_partial_withdrawals) == int(
+        spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP + spec
+    ).Uint64(1)
 
     # For the first pending withdrawal, set the validator to have no excess balance
     state.balances[0] = spec.MIN_ACTIVATION_BALANCE

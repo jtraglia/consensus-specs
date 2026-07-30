@@ -1016,7 +1016,7 @@ def is_valid_indexed_attestation(
 
 ```python
 def is_builder_index(validator_index: ValidatorIndex) -> bool:
-    return (validator_index & BUILDER_INDEX_FLAG) != 0
+    return (validator_index & ValidatorIndex(BUILDER_INDEX_FLAG)) != ValidatorIndex(0)
 ```
 
 #### New `is_active_builder`
@@ -1049,12 +1049,12 @@ def is_attestation_same_slot(state: BeaconState, data: AttestationData) -> bool:
     """
     Check if the attestation is for the block proposed at the attestation slot.
     """
-    if data.slot == 0:
+    if data.slot == Slot(0):
         return True
 
     blockroot = data.beacon_block_root
     slot_blockroot = get_block_root_at_slot(state, data.slot)
-    prev_blockroot = get_block_root_at_slot(state, Slot(data.slot - 1))
+    prev_blockroot = get_block_root_at_slot(state, data.slot - Slot(1))
 
     return blockroot == slot_blockroot and blockroot != prev_blockroot
 ```
@@ -1110,14 +1110,14 @@ def is_pending_validator(pending_deposits: Sequence[PendingDeposit], pubkey: BLS
 
 ```python
 def convert_builder_index_to_validator_index(builder_index: BuilderIndex) -> ValidatorIndex:
-    return ValidatorIndex(builder_index | BUILDER_INDEX_FLAG)
+    return ValidatorIndex(builder_index) | ValidatorIndex(BUILDER_INDEX_FLAG)
 ```
 
 #### New `convert_validator_index_to_builder_index`
 
 ```python
 def convert_validator_index_to_builder_index(validator_index: ValidatorIndex) -> BuilderIndex:
-    return BuilderIndex(validator_index & ~BUILDER_INDEX_FLAG)
+    return BuilderIndex(int(validator_index) & ~int(BUILDER_INDEX_FLAG))
 ```
 
 #### New `get_pending_balance_to_withdraw_for_builder`
@@ -1315,7 +1315,7 @@ def get_attestation_participation_flag_indices(
 
     # [New in Gloas:EIP7732]
     if is_attestation_same_slot(state, data):
-        assert data.index == 0
+        assert data.index == CommitteeIndex(0)
         payload_matches = True
     else:
         slot_index = parent_slot % SLOTS_PER_HISTORICAL_ROOT
@@ -1351,10 +1351,10 @@ def get_ptc(state: BeaconState, slot: Slot) -> PTC:
     epoch = compute_epoch_at_slot(slot)
     state_epoch = get_current_epoch(state)
     if epoch < state_epoch:
-        assert epoch + 1 == state_epoch
+        assert epoch + Epoch(1) == state_epoch
         return state.ptc_window[slot % SLOTS_PER_EPOCH]
     assert epoch <= state_epoch + MIN_SEED_LOOKAHEAD
-    offset = (epoch - state_epoch + 1) * SLOTS_PER_EPOCH
+    offset = Slot(epoch - state_epoch + Epoch(1)) * SLOTS_PER_EPOCH
     return state.ptc_window[offset + slot % SLOTS_PER_EPOCH]
 ```
 
@@ -1490,7 +1490,7 @@ def initiate_builder_exit(state: BeaconState, builder_index: BuilderIndex) -> No
 def settle_builder_payment(state: BeaconState, payment_index: Uint64) -> None:
     assert payment_index < len(state.builder_pending_payments)
     payment = state.builder_pending_payments[payment_index]
-    if payment.withdrawal.amount > 0:
+    if payment.withdrawal.amount > Gwei(0):
         state.builder_pending_withdrawals.append(payment.withdrawal)
     state.builder_pending_payments[payment_index] = BuilderPendingPayment()
 ```
@@ -1573,7 +1573,7 @@ def process_pending_deposits(state: BeaconState) -> None:
     # [Modified in Gloas:EIP8061]
     # Deposits still consume the activation-only churn budget in Gloas.
     available_for_processing = state.deposit_balance_to_consume + get_activation_churn_limit(state)
-    processed_amount = 0
+    processed_amount = Gwei(0)
     next_deposit_index = 0
     deposits_to_postpone = []
     is_churn_limit_reached = False
@@ -1605,9 +1605,7 @@ def process_pending_deposits(state: BeaconState) -> None:
             deposits_to_postpone.append(deposit)
         else:
             # Check if deposit fits in the churn, otherwise, do no more deposit processing in this epoch.
-            is_churn_limit_reached = processed_amount + deposit.amount > Gwei(
-                available_for_processing
-            )
+            is_churn_limit_reached = processed_amount + deposit.amount > available_for_processing
             if is_churn_limit_reached:
                 break
 
@@ -1654,11 +1652,11 @@ def process_ptc_window(state: BeaconState) -> None:
     Update the cached PTC window.
     """
     # Shift all epochs forward by one
-    state.ptc_window[:-SLOTS_PER_EPOCH] = state.ptc_window[SLOTS_PER_EPOCH:]
+    state.ptc_window[: -int(SLOTS_PER_EPOCH)] = state.ptc_window[int(SLOTS_PER_EPOCH) :]
     # Fill in the last epoch
-    next_epoch = Epoch(get_current_epoch(state) + MIN_SEED_LOOKAHEAD + 1)
+    next_epoch = get_current_epoch(state) + MIN_SEED_LOOKAHEAD + Epoch(1)
     start_slot = compute_start_slot_at_epoch(next_epoch)
-    state.ptc_window[-SLOTS_PER_EPOCH:] = [
+    state.ptc_window[-int(SLOTS_PER_EPOCH) :] = [
         compute_ptc(state, Slot(slot)) for slot in range(start_slot, start_slot + SLOTS_PER_EPOCH)
     ]
 ```
@@ -1725,7 +1723,7 @@ def apply_parent_execution_payload(
     elif parent_epoch == get_previous_epoch(state):
         payment_index = parent_slot % SLOTS_PER_EPOCH
         settle_builder_payment(state, payment_index)
-    elif parent_bid.value > 0:
+    elif parent_bid.value > Gwei(0):
         # Parent is older than the previous epoch, its payment entry has been
         # evicted from builder_pending_payments. Append the withdrawal directly.
         state.builder_pending_withdrawals.append(
@@ -1823,7 +1821,7 @@ def get_builders_sweep_withdrawals(
             break
 
         builder = state.builders[builder_index]
-        if builder.withdrawable_epoch <= epoch and builder.balance > 0:
+        if builder.withdrawable_epoch <= epoch and builder.balance > Gwei(0):
             withdrawals.append(
                 Withdrawal(
                     index=withdrawal_index,
@@ -2068,13 +2066,13 @@ def process_execution_payload_bid(
     assert state.slot > GENESIS_SLOT
     # Verify that the bid is for the right parent block
     assert bid.parent_block_hash == state.latest_block_hash
-    assert bid.parent_block_root == get_block_root_at_slot(state, Slot(state.slot - 1))
+    assert bid.parent_block_root == get_block_root_at_slot(state, state.slot - Slot(1))
     assert bid.prev_randao == get_randao_mix(state, get_current_epoch(state))
 
     # Record the pending payment if there is some payment
-    if amount > 0:
+    if amount > Gwei(0):
         pending_payment = BuilderPendingPayment(
-            weight=0,
+            weight=Gwei(0),
             withdrawal=BuilderPendingWithdrawal(
                 fee_recipient=bid.fee_recipient,
                 amount=amount,
@@ -2119,12 +2117,12 @@ def process_operations(
             fn(state, operation, *args)
 
     # [New in Gloas:EIP7688]
-    assert len(body.proposer_slashings) <= MAX_PROPOSER_SLASHINGS
-    assert len(body.attester_slashings) <= MAX_ATTESTER_SLASHINGS_ELECTRA
-    assert len(body.attestations) <= MAX_ATTESTATIONS_ELECTRA
-    assert len(body.voluntary_exits) <= MAX_VOLUNTARY_EXITS
-    assert len(body.bls_to_execution_changes) <= MAX_BLS_TO_EXECUTION_CHANGES
-    assert len(body.payload_attestations) <= MAX_PAYLOAD_ATTESTATIONS
+    assert Uint64(len(body.proposer_slashings)) <= MAX_PROPOSER_SLASHINGS
+    assert Uint64(len(body.attester_slashings)) <= MAX_ATTESTER_SLASHINGS_ELECTRA
+    assert Uint64(len(body.attestations)) <= MAX_ATTESTATIONS_ELECTRA
+    assert Uint64(len(body.voluntary_exits)) <= MAX_VOLUNTARY_EXITS
+    assert Uint64(len(body.bls_to_execution_changes)) <= MAX_BLS_TO_EXECUTION_CHANGES
+    assert Uint64(len(body.payload_attestations)) <= MAX_PAYLOAD_ATTESTATIONS
 
     # [Modified in Gloas:EIP7732]
     for_ops(body.proposer_slashings, process_proposer_slashing)
@@ -2169,7 +2167,7 @@ def is_valid_builder_deposit_signature(request: BuilderDepositRequest) -> bool:
 ```python
 def get_index_for_new_builder(state: BeaconState) -> BuilderIndex:
     for index, builder in enumerate(state.builders):
-        if builder.withdrawable_epoch <= get_current_epoch(state) and builder.balance == 0:
+        if builder.withdrawable_epoch <= get_current_epoch(state) and builder.balance == Gwei(0):
             return BuilderIndex(index)
     return BuilderIndex(len(state.builders))
 ```
@@ -2230,7 +2228,7 @@ def process_builder_deposit_request(state: BeaconState, request: BuilderDepositR
         builder = state.builders[builder_index]
 
         # If exited and swept, reset the withdrawable epoch
-        if builder.withdrawable_epoch != FAR_FUTURE_EPOCH and builder.balance == 0:
+        if builder.withdrawable_epoch != FAR_FUTURE_EPOCH and builder.balance == Gwei(0):
             epoch = get_current_epoch(state)
             builder.withdrawable_epoch = epoch + MIN_BUILDER_WITHDRAWABILITY_DELAY
 
@@ -2255,7 +2253,7 @@ def process_builder_exit_request(state: BeaconState, request: BuilderExitRequest
         return
     if builder.execution_address != request.source_address:
         return
-    if get_pending_balance_to_withdraw_for_builder(state, builder_index) != 0:
+    if get_pending_balance_to_withdraw_for_builder(state, builder_index) != Gwei(0):
         return
 
     initiate_builder_exit(state, builder_index)
@@ -2283,11 +2281,11 @@ def process_attestation(
     assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot
 
     # [Modified in Gloas:EIP7732]
-    assert data.index < 2
+    assert data.index < CommitteeIndex(2)
     committee_indices = get_committee_indices(attestation.committee_bits)
     committee_offset = 0
     for committee_index in committee_indices:
-        assert committee_index < get_committee_count_per_slot(state, data.target.epoch)
+        assert Uint64(committee_index) < get_committee_count_per_slot(state, data.target.epoch)
         committee = get_beacon_committee(state, data.slot, committee_index)
         committee_attesters = {
             attester_index
@@ -2319,7 +2317,7 @@ def process_attestation(
         epoch_participation = state.previous_epoch_participation
         payment = state.builder_pending_payments[data.slot % SLOTS_PER_EPOCH]
 
-    proposer_reward_numerator = 0
+    proposer_reward_numerator = Gwei(0)
     for index in get_attesting_indices(state, attestation):
         # [New in Gloas:EIP7732]
         # For same-slot attestations, check if we are setting any new flags.
@@ -2327,7 +2325,7 @@ def process_attestation(
         will_set_new_flag = False
 
         for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
-            if flag_index in participation_flag_indices and not has_flag(
+            if Uint64(flag_index) in participation_flag_indices and not has_flag(
                 epoch_participation[index], flag_index
             ):
                 epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
@@ -2341,7 +2339,7 @@ def process_attestation(
         if (
             will_set_new_flag
             and is_attestation_same_slot(state, data)
-            and payment.withdrawal.amount > 0
+            and payment.withdrawal.amount > Gwei(0)
         ):
             payment.weight += state.validators[index].effective_balance
 
@@ -2373,7 +2371,7 @@ def process_payload_attestation(
     # Check that the attestation is for the parent beacon block
     assert data.beacon_block_root == state.latest_block_header.parent_root
     # Check that the attestation is for the previous slot
-    assert data.slot + 1 == state.slot
+    assert data.slot + Slot(1) == state.slot
     # Verify signature
     indexed_payload_attestation = get_indexed_payload_attestation(state, payload_attestation)
     assert is_valid_indexed_payload_attestation(state, indexed_payload_attestation)

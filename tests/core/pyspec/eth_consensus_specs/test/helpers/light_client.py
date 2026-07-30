@@ -93,7 +93,7 @@ def get_sync_aggregate(spec, state, num_participants=None, signature_slot=None, 
     # By default, use full participation
     if num_participants is None:
         num_participants = committee_size
-    assert committee_size >= num_participants >= 0
+    assert int(committee_size) >= int(num_participants) >= 0
 
     # Compute sync aggregate
     sync_committee_bits = [True] * num_participants + [False] * (committee_size - num_participants)

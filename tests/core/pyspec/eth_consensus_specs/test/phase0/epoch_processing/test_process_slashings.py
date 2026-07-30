@@ -138,7 +138,7 @@ def test_minimal_penalty(spec, state):
     slash_validators(spec, state, [0], [out_epoch])
 
     total_balance = spec.get_total_active_balance(state)
-    total_penalties = sum(state.slashings)
+    total_penalties = sum(state.slashings, spec.Gwei(0))
 
     assert total_balance // 3 > total_penalties
 
@@ -202,7 +202,7 @@ def test_scaled_penalties(spec, state):
     spec.process_slashings(state)
     yield "post", state
 
-    total_penalties = sum(state.slashings)
+    total_penalties = sum(state.slashings, spec.Gwei(0))
 
     for i in slashed_indices:
         v = state.validators[i]

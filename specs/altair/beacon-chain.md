@@ -502,11 +502,11 @@ def get_inactivity_penalty_deltas(state: BeaconState) -> Tuple[Sequence[Gwei], S
     )
     for index in get_eligible_validator_indices(state):
         if index not in matching_target_indices:
-            penalty_numerator = (
-                state.validators[index].effective_balance * state.inactivity_scores[index]
+            penalty_numerator = state.validators[index].effective_balance * Gwei(
+                state.inactivity_scores[index]
             )
-            penalty_denominator = INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR
-            penalties[index] += Gwei(penalty_numerator // penalty_denominator)
+            penalty_denominator = Gwei(INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR)
+            penalties[index] += penalty_numerator // penalty_denominator
     return rewards, penalties
 ```
 
@@ -592,10 +592,10 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     else:
         epoch_participation = state.previous_epoch_participation
 
-    proposer_reward_numerator = 0
+    proposer_reward_numerator = Gwei(0)
     for index in get_attesting_indices(state, attestation):
         for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
-            if flag_index in participation_flag_indices and not has_flag(
+            if Uint64(flag_index) in participation_flag_indices and not has_flag(
                 epoch_participation[index], flag_index
             ):
                 epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
@@ -683,8 +683,8 @@ def process_sync_aggregate(state: BeaconState, sync_aggregate: SyncAggregate) ->
         // Gwei(SLOTS_PER_EPOCH)
     )
     participant_reward = max_participant_rewards // Gwei(SYNC_COMMITTEE_SIZE)
-    proposer_reward = Gwei(
-        participant_reward * PROPOSER_WEIGHT // (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
+    proposer_reward = (
+        participant_reward * Gwei(PROPOSER_WEIGHT) // Gwei(WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
     )
 
     # Apply participant and proposer rewards
@@ -815,7 +815,7 @@ def process_slashings(state: BeaconState) -> None:
     for index, validator in enumerate(state.validators):
         if (
             validator.slashed
-            and epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch
+            and epoch + EPOCHS_PER_SLASHINGS_VECTOR // Epoch(2) == validator.withdrawable_epoch
         ):
             increment = EFFECTIVE_BALANCE_INCREMENT  # Factored out from penalty numerator to avoid Uint64 overflow
             penalty_numerator = (

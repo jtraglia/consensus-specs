@@ -218,7 +218,7 @@ def get_effective_sweep_threshold(validator: Validator, sweep_threshold: Gwei) -
     """
     Get effective sweep threshold for ``validator``.
     """
-    if sweep_threshold != 0:
+    if sweep_threshold != Gwei(0):
         return sweep_threshold
     else:
         return get_max_effective_balance(validator)
@@ -371,7 +371,7 @@ def process_set_sweep_threshold_request(
         return
     if request.threshold < state.balances[index]:
         return
-    if request.threshold % EFFECTIVE_BALANCE_INCREMENT != 0:
+    if request.threshold % EFFECTIVE_BALANCE_INCREMENT != Gwei(0):
         return
     if request.threshold < MIN_SWEEP_THRESHOLD:
         return
@@ -427,7 +427,7 @@ def apply_parent_execution_payload(
     elif parent_epoch == get_previous_epoch(state):
         payment_index = parent_slot % SLOTS_PER_EPOCH
         settle_builder_payment(state, payment_index)
-    elif parent_bid.value > 0:
+    elif parent_bid.value > Gwei(0):
         # Parent is older than the previous epoch, its payment entry has been
         # evicted from builder_pending_payments. Append the withdrawal directly.
         state.builder_pending_withdrawals.append(

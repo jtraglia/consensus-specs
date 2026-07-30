@@ -16,6 +16,7 @@ def run_process_just_and_fin(spec, state):
 def add_mock_attestations(
     spec, state, epoch, source, target, sufficient_support=False, messed_up_target=False
 ):
+    epoch = spec.Epoch(epoch)
     # we must be at the end of the epoch
     assert (state.slot + spec.Slot(1)) % spec.SLOTS_PER_EPOCH == spec.Slot(0)
 
@@ -45,8 +46,8 @@ def add_mock_attestations(
 
     start_slot = spec.compute_start_slot_at_epoch(epoch)
     committees_per_slot = spec.get_committee_count_per_slot(state, epoch)
-    for slot in range(start_slot, start_slot + spec.SLOTS_PER_EPOCH):
-        for index in range(committees_per_slot):
+    for slot in range(int(start_slot), int(start_slot + spec.SLOTS_PER_EPOCH)):
+        for index in range(int(committees_per_slot)):
             # Check if we already have had sufficient balance. (and undone if we don't want it).
             # If so, do not create more attestations. (we do not have empty pending attestations normally anyway)
             if remaining_balance < 0:

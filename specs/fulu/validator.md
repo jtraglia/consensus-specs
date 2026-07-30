@@ -251,9 +251,9 @@ def get_data_column_sidecars(
         sidecars.append(
             DataColumnSidecar(
                 index=column_index,
-                column=column_cells,
+                column=DataColumn(data=column_cells),
                 kzg_commitments=kzg_commitments,
-                kzg_proofs=column_proofs,
+                kzg_proofs=KZGProofs(data=column_proofs),
                 signed_block_header=signed_block_header,
                 kzg_commitments_inclusion_proof=kzg_commitments_inclusion_proof,
             )
@@ -275,7 +275,7 @@ def get_data_column_sidecars_from_block(
     blob_kzg_commitments = signed_block.message.body.blob_kzg_commitments
     signed_block_header = compute_signed_block_header(signed_block)
     kzg_commitments_inclusion_proof = KZGCommitmentsInclusionProof(
-        compute_merkle_proof(
+        data=compute_merkle_proof(
             signed_block.message.body,
             get_generalized_index(BeaconBlockBody, "blob_kzg_commitments"),
         )

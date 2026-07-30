@@ -676,7 +676,7 @@ def test_incorrect_exceed_pending_consolidations_limit(spec, state):
     set_compounding_withdrawal_credential_with_balance(spec, state, target_index)
 
     # Check the return condition
-    assert len(state.pending_consolidations) == spec.PENDING_CONSOLIDATIONS_LIMIT
+    assert len(state.pending_consolidations) == int(spec.PENDING_CONSOLIDATIONS_LIMIT)
 
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 

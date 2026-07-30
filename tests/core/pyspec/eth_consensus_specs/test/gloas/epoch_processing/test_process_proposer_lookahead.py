@@ -46,6 +46,6 @@ def test_proposer_lookahead_full_with_many_slashed_validators(spec, state):
 
     last_epoch_start = len(state.proposer_lookahead) - spec.SLOTS_PER_EPOCH
     last_epoch_proposers = list(state.proposer_lookahead[last_epoch_start:])
-    assert len(last_epoch_proposers) == spec.SLOTS_PER_EPOCH
+    assert len(last_epoch_proposers) == int(spec.SLOTS_PER_EPOCH)
     for validator_index in last_epoch_proposers:
         assert not state.validators[validator_index].slashed

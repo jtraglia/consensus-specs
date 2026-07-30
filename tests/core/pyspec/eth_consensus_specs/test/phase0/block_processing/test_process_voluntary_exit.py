@@ -151,7 +151,7 @@ def test_default_exit_epoch_subsequent_exit(spec, state):
 
     # Exit one validator prior to this new one
     exited_index = spec.get_active_validator_indices(state, current_epoch)[-1]
-    state.validators[exited_index].exit_epoch = current_epoch - 1
+    state.validators[exited_index].exit_epoch = current_epoch - spec.Epoch(1)
 
     yield from run_voluntary_exit_processing(spec, state, signed_voluntary_exit)
 
@@ -171,7 +171,7 @@ def test_invalid_validator_exit_in_future(spec, state):
     privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
 
     voluntary_exit = spec.VoluntaryExit(
-        epoch=current_epoch + 1,
+        epoch=current_epoch + spec.Epoch(1),
         validator_index=validator_index,
     )
     signed_voluntary_exit = sign_voluntary_exit(spec, state, voluntary_exit, privkey)
@@ -228,7 +228,7 @@ def test_invalid_validator_already_exited(spec, state):
     privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
 
     # but validator already has exited
-    state.validators[validator_index].exit_epoch = current_epoch + 2
+    state.validators[validator_index].exit_epoch = current_epoch + spec.Epoch(2)
 
     signed_voluntary_exit = sign_voluntary_exit(
         spec,

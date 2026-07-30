@@ -482,7 +482,7 @@ can carry according to the following functions:
 def max_compressed_len(n: Uint64) -> Uint64:
     # Worst-case compressed length for a given payload of size n when using snappy:
     # https://github.com/google/snappy/blob/32ded457c0b1fe78ceb8397632c416568d6714a0/snappy.cc#L218C1-L218C47
-    return Uint64(32 + n + n / 6)
+    return Uint64(32) + n + n // Uint64(6)
 ```
 
 #### `max_message_size`
@@ -490,7 +490,7 @@ def max_compressed_len(n: Uint64) -> Uint64:
 ```python
 def max_message_size() -> Uint64:
     # Allow 1024 bytes for framing and encoding overhead but at least 1MiB in case MAX_PAYLOAD_SIZE is small.
-    return max(max_compressed_len(MAX_PAYLOAD_SIZE) + 1024, 1024 * 1024)
+    return max(max_compressed_len(MAX_PAYLOAD_SIZE) + Uint64(1024), Uint64(1024 * 1024))
 ```
 
 ### The gossip domain: gossipsub

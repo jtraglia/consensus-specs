@@ -260,7 +260,7 @@ class FCRTest:
             execution_requests = self.spec.ExecutionRequests()
             if deposit_requests is not None:
                 if not is_post_gloas(self.spec):
-                    assert len(deposit_requests) <= self.spec.MAX_DEPOSIT_REQUESTS_PER_PAYLOAD
+                    assert len(deposit_requests) <= int(self.spec.MAX_DEPOSIT_REQUESTS_PER_PAYLOAD)
                 for d in deposit_requests:
                     execution_requests.deposits.append(d)
 
@@ -310,7 +310,7 @@ class FCRTest:
 
         # Beacon operations
         if exits is not None:
-            assert len(exits) <= self.spec.MAX_VOLUNTARY_EXITS
+            assert len(exits) <= int(self.spec.MAX_VOLUNTARY_EXITS)
             for e in exits:
                 block.body.voluntary_exits.append(e)
 

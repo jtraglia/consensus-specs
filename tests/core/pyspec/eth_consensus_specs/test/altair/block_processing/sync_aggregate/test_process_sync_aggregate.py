@@ -400,8 +400,8 @@ def test_invalid_signature_previous_committee(spec, state):
     current_epoch = spec.get_current_epoch(state)
     old_sync_committee = state.next_sync_committee
 
-    epoch_in_future_sync_committee_period = current_epoch + spec.Epoch(2) * int(
-        spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+    epoch_in_future_sync_committee_period = (
+        current_epoch + spec.Epoch(2) * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
     )
     slot_in_future_sync_committee_period = (
         epoch_in_future_sync_committee_period * spec.SLOTS_PER_EPOCH
@@ -442,8 +442,8 @@ def test_valid_signature_future_committee(spec, state):
     old_current_sync_committee = state.current_sync_committee
     old_next_sync_committee = state.next_sync_committee
 
-    epoch_in_future_sync_committee_period = current_epoch + spec.Epoch(2) * int(
-        spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+    epoch_in_future_sync_committee_period = (
+        current_epoch + spec.Epoch(2) * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
     )
     slot_in_future_sync_committee_period = (
         epoch_in_future_sync_committee_period * spec.SLOTS_PER_EPOCH
@@ -585,7 +585,7 @@ def _exit_validator_from_committee_and_transition_state(
 @always_bls
 def test_sync_committee_with_participating_exited_member(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * int(spec.SLOTS_PER_EPOCH)
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     # move forward via some blocks
     for _ in range(3):
@@ -624,7 +624,7 @@ def test_sync_committee_with_participating_exited_member(spec, state):
 @always_bls
 def test_sync_committee_with_nonparticipating_exited_member(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * int(spec.SLOTS_PER_EPOCH)
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     # move forward via some blocks
     for _ in range(3):
@@ -667,7 +667,7 @@ def test_sync_committee_with_nonparticipating_exited_member(spec, state):
 @always_bls
 def test_sync_committee_with_participating_withdrawable_member(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * int(spec.SLOTS_PER_EPOCH)
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     # move forward via some blocks
     for _ in range(3):
@@ -706,7 +706,7 @@ def test_sync_committee_with_participating_withdrawable_member(spec, state):
 @always_bls
 def test_sync_committee_with_nonparticipating_withdrawable_member(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * int(spec.SLOTS_PER_EPOCH)
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     # move forward via some blocks
     for _ in range(3):

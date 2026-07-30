@@ -227,7 +227,7 @@ not satisfy the inclusion list constraints.
 
 ```python
 def should_extend_payload(store: Store, root: Root) -> bool:
-    assert store.blocks[root].slot + 1 == get_current_slot(store)
+    assert store.blocks[root].slot + Slot(1) == get_current_slot(store)
     if not is_payload_verified(store, root):
         return False
     # [New in Heze:EIP7805]

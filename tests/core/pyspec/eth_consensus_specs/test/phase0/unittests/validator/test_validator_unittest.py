@@ -120,7 +120,7 @@ def test_is_proposer(spec, state):
     proposer_index = spec.get_beacon_proposer_index(state)
     assert spec.is_proposer(state, proposer_index)
 
-    proposer_index = proposer_index + 1 % len(state.validators)
+    proposer_index = spec.ValidatorIndex((int(proposer_index) + 1) % len(state.validators))
     assert not spec.is_proposer(state, proposer_index)
 
 
@@ -155,7 +155,7 @@ def test_get_epoch_signature(spec, state):
 @spec_state_test
 def test_is_candidate_block(spec, state):
     distance_duration = spec.config.SECONDS_PER_ETH1_BLOCK * spec.config.ETH1_FOLLOW_DISTANCE
-    period_start = distance_duration * 2 + 1000
+    period_start = int(distance_duration) * 2 + 1000
     run_is_candidate_block(
         spec,
         spec.Eth1Block(timestamp=period_start - distance_duration),

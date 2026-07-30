@@ -126,7 +126,7 @@ def process_execution_payload(
     # [Modified in Fulu:EIP7892]
     # Verify commitments are under limit
     assert (
-        len(body.blob_kzg_commitments)
+        Uint64(len(body.blob_kzg_commitments))
         <= get_blob_parameters(get_current_epoch(state)).max_blobs_per_block
     )
 
@@ -419,7 +419,7 @@ def process_pending_deposits(state: BeaconState) -> None:
     available_for_processing = state.deposit_balance_to_consume + get_activation_exit_churn_limit(
         state
     )
-    processed_amount = 0
+    processed_amount = Gwei(0)
     next_deposit_index = 0
     deposits_to_postpone = []
     is_churn_limit_reached = False
@@ -451,9 +451,7 @@ def process_pending_deposits(state: BeaconState) -> None:
             deposits_to_postpone.append(deposit)
         else:
             # Check if deposit fits in the churn, otherwise, do no more deposit processing in this epoch.
-            is_churn_limit_reached = processed_amount + deposit.amount > Gwei(
-                available_for_processing
-            )
+            is_churn_limit_reached = processed_amount + deposit.amount > available_for_processing
             if is_churn_limit_reached:
                 break
 

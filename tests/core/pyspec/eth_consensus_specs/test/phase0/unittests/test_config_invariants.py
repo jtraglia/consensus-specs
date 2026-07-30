@@ -24,7 +24,9 @@ def test_validators(spec, state):
 
     # Note: can be less if you assume stricters bounds on validator set based on total ETH supply
     maximum_validators_per_committee = (
-        spec.VALIDATOR_REGISTRY_LIMIT // spec.SLOTS_PER_EPOCH // spec.MAX_COMMITTEES_PER_SLOT
+        int(spec.VALIDATOR_REGISTRY_LIMIT)
+        // int(spec.SLOTS_PER_EPOCH)
+        // int(spec.MAX_COMMITTEES_PER_SLOT)
     )
     check_bound(spec.MAX_VALIDATORS_PER_COMMITTEE, 1, maximum_validators_per_committee)
     check_bound(spec.config.MIN_PER_EPOCH_CHURN_LIMIT, 1, spec.VALIDATOR_REGISTRY_LIMIT)

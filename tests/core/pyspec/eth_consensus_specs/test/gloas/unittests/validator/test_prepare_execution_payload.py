@@ -63,10 +63,9 @@ def _add_block_to_store(spec, state, execution_requests=None):
             )
 
     signed_block = state_transition_and_sign_block(spec, state, block)
-    block_time = (
-        store.genesis_time
-        + signed_block.message.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
-    )
+    block_time = store.genesis_time + spec.Uint64(
+        signed_block.message.slot
+    ) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
     spec.on_tick(store, block_time)
     run_on_block(spec, store, signed_block)
     block_root = hash_tree_root(signed_block.message)
@@ -89,9 +88,9 @@ def _advance_to_proposal_slot(spec, state, store):
     proposal_state = copy(state)
     spec.process_slots(proposal_state, proposal_state.slot + spec.Slot(1))
 
-    proposal_time = (
-        store.genesis_time + proposal_state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
-    )
+    proposal_time = store.genesis_time + spec.Uint64(
+        proposal_state.slot
+    ) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
     spec.on_tick(store, proposal_time)
 
     return proposal_state

@@ -329,7 +329,7 @@ def is_fully_withdrawable_validator(validator: Validator, balance: Gwei, epoch: 
     return (
         has_eth1_withdrawal_credential(validator)
         and validator.withdrawable_epoch <= epoch
-        and balance > 0
+        and balance > Gwei(0)
     )
 ```
 
@@ -533,7 +533,7 @@ def update_next_withdrawal_validator_index(
         next_index = state.next_withdrawal_validator_index + ValidatorIndex(
             MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP
         )
-        next_validator_index = ValidatorIndex(next_index % len(state.validators))
+        next_validator_index = ValidatorIndex(int(next_index) % len(state.validators))
         state.next_withdrawal_validator_index = next_validator_index
 ```
 
@@ -630,7 +630,7 @@ def process_bls_to_execution_change(
 ) -> None:
     address_change = signed_address_change.message
 
-    assert address_change.validator_index < len(state.validators)
+    assert address_change.validator_index < ValidatorIndex(len(state.validators))
 
     validator = state.validators[address_change.validator_index]
 

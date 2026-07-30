@@ -674,7 +674,7 @@ def is_fully_withdrawable_validator(validator: Validator, balance: Gwei, epoch: 
         # [Modified in Electra:EIP7251]
         has_execution_withdrawal_credential(validator)
         and validator.withdrawable_epoch <= epoch
-        and balance > 0
+        and balance > Gwei(0)
     )
 ```
 
@@ -990,7 +990,7 @@ def slash_validator(
     )
     state.slashings[epoch % EPOCHS_PER_SLASHINGS_VECTOR] += validator.effective_balance
     # [Modified in Electra:EIP7251]
-    slashing_penalty = validator.effective_balance // MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA
+    slashing_penalty = validator.effective_balance // Gwei(MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA)
     decrease_balance(state, slashed_index, slashing_penalty)
 
     # Apply proposer and whistleblower rewards
@@ -1089,7 +1089,7 @@ def process_slashings(state: BeaconState) -> None:
     for index, validator in enumerate(state.validators):
         if (
             validator.slashed
-            and epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch
+            and epoch + EPOCHS_PER_SLASHINGS_VECTOR // Epoch(2) == validator.withdrawable_epoch
         ):
             effective_balance_increments = validator.effective_balance // increment
             # [Modified in Electra:EIP7251]
@@ -1135,7 +1135,7 @@ def process_pending_deposits(state: BeaconState) -> None:
     available_for_processing = state.deposit_balance_to_consume + get_activation_exit_churn_limit(
         state
     )
-    processed_amount = 0
+    processed_amount = Gwei(0)
     next_deposit_index = 0
     deposits_to_postpone = []
     is_churn_limit_reached = False
@@ -1177,9 +1177,7 @@ def process_pending_deposits(state: BeaconState) -> None:
             deposits_to_postpone.append(deposit)
         else:
             # Check if deposit fits in the churn, otherwise, do no more deposit processing in this epoch.
-            is_churn_limit_reached = processed_amount + deposit.amount > Gwei(
-                available_for_processing
-            )
+            is_churn_limit_reached = processed_amount + deposit.amount > available_for_processing
             if is_churn_limit_reached:
                 break
 
@@ -1568,7 +1566,7 @@ def process_execution_payload(
     assert payload.timestamp == compute_time_at_slot(state, state.slot)
     # [Modified in Electra:EIP7691]
     # Verify commitments are under limit
-    assert len(body.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK_ELECTRA
+    assert Uint64(len(body.blob_kzg_commitments)) <= MAX_BLOBS_PER_BLOCK_ELECTRA
 
     # Compute list of versioned hashes
     versioned_hashes = [
@@ -1623,7 +1621,7 @@ def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
         state.eth1_data.deposit_count, state.deposit_requests_start_index
     )
     if state.eth1_deposit_index < eth1_deposit_index_limit:
-        assert len(body.deposits) == min(
+        assert Uint64(len(body.deposits)) == min(
             MAX_DEPOSITS, eth1_deposit_index_limit - state.eth1_deposit_index
         )
     else:
@@ -1663,11 +1661,11 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot
 
     # [Modified in Electra:EIP7549]
-    assert data.index == 0
+    assert data.index == CommitteeIndex(0)
     committee_indices = get_committee_indices(attestation.committee_bits)
     committee_offset = 0
     for committee_index in committee_indices:
-        assert committee_index < get_committee_count_per_slot(state, data.target.epoch)
+        assert Uint64(committee_index) < get_committee_count_per_slot(state, data.target.epoch)
         committee = get_beacon_committee(state, data.slot, committee_index)
         committee_attesters = {
             attester_index
@@ -1694,10 +1692,10 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     else:
         epoch_participation = state.previous_epoch_participation
 
-    proposer_reward_numerator = 0
+    proposer_reward_numerator = Gwei(0)
     for index in get_attesting_indices(state, attestation):
         for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
-            if flag_index in participation_flag_indices and not has_flag(
+            if Uint64(flag_index) in participation_flag_indices and not has_flag(
                 epoch_participation[index], flag_index
             ):
                 epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
@@ -1824,7 +1822,7 @@ def process_deposit(state: BeaconState, deposit: Deposit) -> None:
         leaf=hash_tree_root(deposit.data),
         branch=deposit.proof,
         # Add 1 for the List length mix-in
-        depth=DEPOSIT_CONTRACT_TREE_DEPTH + 1,
+        depth=DEPOSIT_CONTRACT_TREE_DEPTH + Uint64(1),
         index=state.eth1_deposit_index,
         root=state.eth1_data.deposit_root,
     )
@@ -1863,7 +1861,7 @@ def process_voluntary_exit(state: BeaconState, signed_voluntary_exit: SignedVolu
     assert get_current_epoch(state) >= validator.activation_epoch + SHARD_COMMITTEE_PERIOD
     # [New in Electra:EIP7251]
     # Only exit validator if it has no pending withdrawals in the queue
-    assert get_pending_balance_to_withdraw(state, voluntary_exit.validator_index) == 0
+    assert get_pending_balance_to_withdraw(state, voluntary_exit.validator_index) == Gwei(0)
     # Verify signature
     domain = compute_domain(
         DOMAIN_VOLUNTARY_EXIT, CAPELLA_FORK_VERSION, state.genesis_validators_root
@@ -1919,7 +1917,7 @@ def process_withdrawal_request(state: BeaconState, withdrawal_request: Withdrawa
 
     if is_full_exit_request:
         # Only exit validator if it has no pending withdrawals in the queue
-        if pending_balance_to_withdraw == 0:
+        if pending_balance_to_withdraw == Gwei(0):
             initiate_validator_exit(state, index)
         return
 

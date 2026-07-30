@@ -529,7 +529,7 @@ def test_switch_to_compounding_across_epoch_boundary(spec, state):
     expected_ptc_window_len = (spec.Epoch(2) + spec.MIN_SEED_LOOKAHEAD) * int(spec.SLOTS_PER_EPOCH)
     assert len(state.ptc_window) == expected_ptc_window_len
     for ptc_slice in state.ptc_window:
-        assert len(ptc_slice) == spec.PTC_SIZE
+        assert len(ptc_slice) == int(spec.PTC_SIZE)
         for member_index in ptc_slice:
             assert member_index < len(state.validators)
 
@@ -538,8 +538,8 @@ def test_switch_to_compounding_across_epoch_boundary(spec, state):
     # recomputed using a post-switch effective balance.
     assert spec.hash_tree_root(state.current_sync_committee) == pre_current_sync_root
     assert spec.hash_tree_root(state.next_sync_committee) == pre_next_sync_root
-    assert len(state.current_sync_committee.pubkeys) == spec.SYNC_COMMITTEE_SIZE
-    assert len(state.next_sync_committee.pubkeys) == spec.SYNC_COMMITTEE_SIZE
+    assert len(state.current_sync_committee.pubkeys) == int(spec.SYNC_COMMITTEE_SIZE)
+    assert len(state.next_sync_committee.pubkeys) == int(spec.SYNC_COMMITTEE_SIZE)
 
     _assert_registry_integrity(spec, state, pre_state)
 

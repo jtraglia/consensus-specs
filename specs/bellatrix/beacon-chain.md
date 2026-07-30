@@ -292,12 +292,14 @@ def get_inactivity_penalty_deltas(state: BeaconState) -> Tuple[Sequence[Gwei], S
     )
     for index in get_eligible_validator_indices(state):
         if index not in matching_target_indices:
-            penalty_numerator = (
-                state.validators[index].effective_balance * state.inactivity_scores[index]
+            penalty_numerator = state.validators[index].effective_balance * Gwei(
+                state.inactivity_scores[index]
             )
             # [Modified in Bellatrix]
-            penalty_denominator = INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_BELLATRIX
-            penalties[index] += Gwei(penalty_numerator // penalty_denominator)
+            penalty_denominator = Gwei(
+                INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_BELLATRIX
+            )
+            penalties[index] += penalty_numerator // penalty_denominator
     return rewards, penalties
 ```
 
@@ -488,7 +490,7 @@ def process_slashings(state: BeaconState) -> None:
     for index, validator in enumerate(state.validators):
         if (
             validator.slashed
-            and epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch
+            and epoch + EPOCHS_PER_SLASHINGS_VECTOR // Epoch(2) == validator.withdrawable_epoch
         ):
             increment = EFFECTIVE_BALANCE_INCREMENT  # Factored out from penalty numerator to avoid Uint64 overflow
             penalty_numerator = (

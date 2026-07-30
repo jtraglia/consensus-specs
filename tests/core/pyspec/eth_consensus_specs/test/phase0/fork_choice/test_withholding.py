@@ -40,7 +40,8 @@ def test_withholding_attack(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -49,7 +50,8 @@ def test_withholding_attack(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -159,7 +161,8 @@ def test_withholding_attack_unviable_honest_chain(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -168,7 +171,8 @@ def test_withholding_attack_unviable_honest_chain(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 

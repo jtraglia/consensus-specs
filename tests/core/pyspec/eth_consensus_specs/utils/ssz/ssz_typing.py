@@ -37,33 +37,52 @@ from ssz import (
 )
 
 
-class Bytes1(ByteVector):
+class BytesN(ByteVector):
+    """
+    Base for the specs' fixed-width byte arrays.
+
+    The library hashes a byte array by class as well as by content, while it
+    compares two byte arrays by content alone. That splits the hash/equality
+    contract as soon as a fork declares its own name for a width: a ``Root`` and
+    the ``Bytes32`` a hash tree root comes back as are equal, yet land in
+    different buckets, so a store keyed by one silently misses the other.
+
+    Hashing by content alone restores the contract across every width declared
+    here and every spec type built on one.
+    """
+
+    def __hash__(self) -> int:
+        """Hash by content, so equal byte arrays of any width hash alike."""
+        return hash((BytesN, bytes(self)))
+
+
+class Bytes1(BytesN):
     LENGTH = 1
 
 
-class Bytes4(ByteVector):
+class Bytes4(BytesN):
     LENGTH = 4
 
 
-class Bytes8(ByteVector):
+class Bytes8(BytesN):
     LENGTH = 8
 
 
-class Bytes20(ByteVector):
+class Bytes20(BytesN):
     LENGTH = 20
 
 
-class Bytes31(ByteVector):
+class Bytes31(BytesN):
     LENGTH = 31
 
 
-class Bytes32(ByteVector):
+class Bytes32(BytesN):
     LENGTH = 32
 
 
-class Bytes48(ByteVector):
+class Bytes48(BytesN):
     LENGTH = 48
 
 
-class Bytes96(ByteVector):
+class Bytes96(BytesN):
     LENGTH = 96

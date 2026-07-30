@@ -32,12 +32,12 @@ def set_validator_fully_withdrawable(spec, state, index, withdrawable_epoch=None
     # set exit epoch as well to avoid interactions with other epoch process, e.g. forced ejections
     validator.exit_epoch = min(validator.exit_epoch, withdrawable_epoch)
 
-    if validator.withdrawal_credentials[0:1] == spec.BLS_WITHDRAWAL_PREFIX:
+    if spec.Bytes1(validator.withdrawal_credentials[0:1]) == spec.BLS_WITHDRAWAL_PREFIX:
         validator.withdrawal_credentials = (
             spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX + validator.withdrawal_credentials[1:]
         )
 
-    if state.balances[index] == 0:
+    if state.balances[index] == spec.Gwei(0):
         state.balances[index] = 10000000000
 
     assert spec.is_fully_withdrawable_validator(
@@ -85,7 +85,7 @@ def set_validator_partially_withdrawable(spec, state, index, excess_balance=1000
 
 
 def sample_withdrawal_indices(spec, state, rng, num_full_withdrawals, num_partial_withdrawals):
-    bound = min(len(state.validators), spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
+    bound = min(len(state.validators), int(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP))
     assert num_full_withdrawals + num_partial_withdrawals <= bound
 
     # Get proposers in lookahead (if post-fulu)
@@ -240,7 +240,7 @@ def run_withdrawals_processing(
     If ``valid == False``, run expecting ``AssertionError``
     """
     expected_withdrawals = get_expected_withdrawals(spec, state)
-    assert len(expected_withdrawals) <= spec.MAX_WITHDRAWALS_PER_PAYLOAD
+    assert len(expected_withdrawals) <= int(spec.MAX_WITHDRAWALS_PER_PAYLOAD)
     if num_expected_withdrawals is not None:
         assert len(expected_withdrawals) == num_expected_withdrawals
 
@@ -750,7 +750,7 @@ def assert_process_withdrawals(
 
     # INVARIANT: next_withdrawal_validator_index advancement per spec
     num_validators = len(pre_state.validators)
-    if len(expected_withdrawals) == spec.MAX_WITHDRAWALS_PER_PAYLOAD:
+    if len(expected_withdrawals) == int(spec.MAX_WITHDRAWALS_PER_PAYLOAD):
         # Full payload: next validator is after last withdrawal's validator index
         last_validator_index = expected_withdrawals[-1].validator_index
         expected_next = (last_validator_index + 1) % num_validators
@@ -937,7 +937,7 @@ def _verify_withdrawals_next_withdrawal_index(spec, pre_state, post_state, expec
     )
     if len(expected_withdrawals) == 0:
         assert post_state.next_withdrawal_index == pre_state.next_withdrawal_index
-    elif len(expected_withdrawals) <= spec.MAX_WITHDRAWALS_PER_PAYLOAD:
+    elif len(expected_withdrawals) <= int(spec.MAX_WITHDRAWALS_PER_PAYLOAD):
         latest_withdrawal = expected_withdrawals[-1]
         assert post_state.next_withdrawal_index == latest_withdrawal.index + 1
 
@@ -951,7 +951,7 @@ def _verify_withdrawals_next_withdrawal_index(spec, pre_state, post_state, expec
         )
 
     # Verify post_state.next_withdrawal_validator_index
-    if len(expected_withdrawals) == spec.MAX_WITHDRAWALS_PER_PAYLOAD:
+    if len(expected_withdrawals) == int(spec.MAX_WITHDRAWALS_PER_PAYLOAD):
         # Next sweep starts after the latest withdrawal's validator index
         next_validator_index = (
             expected_withdrawals[-1].validator_index + spec.ValidatorIndex(1)

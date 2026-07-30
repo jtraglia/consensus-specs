@@ -66,7 +66,8 @@ def test_basic(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -101,7 +102,8 @@ def test_on_block_checkpoints(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -111,7 +113,8 @@ def test_on_block_checkpoints(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -126,7 +129,8 @@ def test_on_block_checkpoints(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -151,7 +155,8 @@ def test_on_block_future_block(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -174,7 +179,8 @@ def test_on_block_bad_parent_root(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -210,7 +216,8 @@ def test_on_block_before_finalized(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -249,7 +256,8 @@ def test_on_block_finalized_skip_slots(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -314,7 +322,8 @@ def test_on_block_finalized_skip_slots_not_in_skip_chain(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -387,7 +396,10 @@ def test_new_finalized_slot_is_not_justified_checkpoint_ancestor(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield 'anchor_state', state
     yield 'anchor_block', anchor_block
-    current_time = state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    current_time = (
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
@@ -474,7 +486,8 @@ def test_new_finalized_slot_is_justified_checkpoint_ancestor(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -559,7 +572,7 @@ def test_proposer_boost(spec, state):
     late_block_cutoff = (late_block_cutoff_ms + 999) // 1000
     time = (
         store.genesis_time
-        + block.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + spec.Uint64(block.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
         + late_block_cutoff
         - 1
     )
@@ -573,7 +586,7 @@ def test_proposer_boost(spec, state):
     # Ensure that boost is removed after slot is over
     time = (
         store.genesis_time
-        + block.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + spec.Uint64(block.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
         + spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
     )
     on_tick_and_append_step(spec, store, time, test_steps)
@@ -586,7 +599,9 @@ def test_proposer_boost(spec, state):
     signed_block = state_transition_and_sign_block(spec, state, block)
 
     # Process block on timely arrival at start of boost interval
-    time = store.genesis_time + block.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+    time = store.genesis_time + spec.Uint64(
+        block.slot
+    ) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
     on_tick_and_append_step(spec, store, time, test_steps)
     yield from add_block(spec, store, signed_block, test_steps)
     assert store.proposer_boost_root == spec.hash_tree_root(block)
@@ -596,7 +611,7 @@ def test_proposer_boost(spec, state):
     # Ensure that boost is removed after slot is over
     time = (
         store.genesis_time
-        + block.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + spec.Uint64(block.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
         + spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
     )
     on_tick_and_append_step(spec, store, time, test_steps)
@@ -638,7 +653,7 @@ def test_proposer_boost_root_same_slot_untimely_block(spec, state):
     late_block_cutoff = (late_block_cutoff_ms + 999) // 1000
     time = (
         store.genesis_time
-        + block.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + spec.Uint64(block.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
         + late_block_cutoff
     )
 
@@ -682,7 +697,7 @@ def test_proposer_boost_is_first_block(spec, state):
     late_block_cutoff = (late_block_cutoff_ms + 999) // 1000
     time = (
         store.genesis_time
-        + block_a.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + spec.Uint64(block_a.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
         + late_block_cutoff
         - 1
     )
@@ -732,7 +747,8 @@ def test_justification_withholding(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -834,7 +850,8 @@ def test_justification_withholding_reverse_order(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -937,7 +954,8 @@ def test_justification_update_beginning_of_epoch(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -946,7 +964,8 @@ def test_justification_update_beginning_of_epoch(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -1000,7 +1019,8 @@ def test_justification_update_end_of_epoch(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -1009,7 +1029,8 @@ def test_justification_update_end_of_epoch(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -1064,7 +1085,8 @@ def test_incompatible_justification_update_start_of_epoch(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -1073,7 +1095,8 @@ def test_incompatible_justification_update_start_of_epoch(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -1169,7 +1192,8 @@ def test_incompatible_justification_update_end_of_epoch(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -1178,7 +1202,8 @@ def test_incompatible_justification_update_end_of_epoch(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -1274,7 +1299,8 @@ def test_justified_update_not_realized_finality(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -1283,7 +1309,8 @@ def test_justified_update_not_realized_finality(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -1373,7 +1400,8 @@ def test_justified_update_monotonic(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -1382,7 +1410,8 @@ def test_justified_update_monotonic(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -1471,7 +1500,8 @@ def test_justified_update_always_if_better(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -1480,7 +1510,8 @@ def test_justified_update_always_if_better(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -1561,7 +1592,8 @@ def test_pull_up_past_epoch_block(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -1570,7 +1602,8 @@ def test_pull_up_past_epoch_block(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -1601,7 +1634,8 @@ def test_pull_up_past_epoch_block(spec, state):
     # Tick store to the next epoch
     next_epoch(spec, state)
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(5)
@@ -1636,7 +1670,8 @@ def test_not_pull_up_current_epoch_block(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -1645,7 +1680,8 @@ def test_not_pull_up_current_epoch_block(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -1666,7 +1702,8 @@ def test_not_pull_up_current_epoch_block(spec, state):
     # Skip to the next epoch
     next_epoch(spec, state)
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert spec.compute_epoch_at_slot(state.slot) == spec.Epoch(5)
@@ -1705,7 +1742,8 @@ def test_pull_up_on_tick(spec, state):
     yield "anchor_state", state
     yield "anchor_block", anchor_block
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -1714,7 +1752,8 @@ def test_pull_up_on_tick(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
+        store.genesis_time
+        + spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -1735,7 +1774,8 @@ def test_pull_up_on_tick(spec, state):
     # Skip to the next epoch
     next_epoch(spec, state)
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert spec.compute_epoch_at_slot(state.slot) == spec.Epoch(5)
@@ -1762,7 +1802,8 @@ def test_pull_up_on_tick(spec, state):
     # Now tick the store to the next epoch and check that pull-up tip updates were applied
     next_epoch(spec, state)
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert spec.compute_epoch_at_slot(state.slot) == spec.Epoch(6)

@@ -120,7 +120,7 @@ def test_success_mixed_fully_and_partial_withdrawable(spec, state):
 @with_presets([MAINNET], reason="too few validators with minimal config")
 @spec_state_test
 def test_success_all_fully_withdrawable_in_one_sweep(spec, state):
-    assert len(state.validators) <= spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP
+    assert len(state.validators) <= int(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
 
     withdrawal_count = len(state.validators)
     fully_withdrawable_indices, partial_withdrawals_indices = prepare_expected_withdrawals(
@@ -143,7 +143,7 @@ def test_success_all_fully_withdrawable_in_one_sweep(spec, state):
 @with_presets([MINIMAL], reason="too many validators with mainnet config")
 @spec_state_test
 def test_success_all_fully_withdrawable(spec, state):
-    assert len(state.validators) > spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP
+    assert len(state.validators) > int(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
 
     withdrawal_count = spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP
     fully_withdrawable_indices, partial_withdrawals_indices = prepare_expected_withdrawals(
@@ -166,7 +166,7 @@ def test_success_all_fully_withdrawable(spec, state):
 @with_presets([MAINNET], reason="too few validators with minimal config")
 @spec_state_test
 def test_success_all_partially_withdrawable_in_one_sweep(spec, state):
-    assert len(state.validators) <= spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP
+    assert len(state.validators) <= int(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
 
     withdrawal_count = len(state.validators)
     fully_withdrawable_indices, partial_withdrawals_indices = prepare_expected_withdrawals(
@@ -189,7 +189,7 @@ def test_success_all_partially_withdrawable_in_one_sweep(spec, state):
 @with_presets([MINIMAL], reason="too many validators with mainnet config")
 @spec_state_test
 def test_success_all_partially_withdrawable(spec, state):
-    assert len(state.validators) > spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP
+    assert len(state.validators) > int(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
 
     withdrawal_count = spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP
     fully_withdrawable_indices, partial_withdrawals_indices = prepare_expected_withdrawals(
@@ -863,7 +863,7 @@ def test_success_two_partial_withdrawable(spec, state):
 @spec_state_test
 def test_success_max_partial_withdrawable(spec, state):
     # Sanity check that this test works for this state
-    assert len(state.validators) >= spec.MAX_WITHDRAWALS_PER_PAYLOAD
+    assert len(state.validators) >= int(spec.MAX_WITHDRAWALS_PER_PAYLOAD)
 
     for i in range(spec.MAX_WITHDRAWALS_PER_PAYLOAD):
         set_validator_partially_withdrawable(spec, state, i)
@@ -880,7 +880,7 @@ def test_success_max_partial_withdrawable(spec, state):
 @spec_state_test
 def test_success_max_plus_one_withdrawable(spec, state):
     # Sanity check that this test works for this state
-    assert len(state.validators) >= spec.MAX_WITHDRAWALS_PER_PAYLOAD + spec.Uint64(1)
+    assert len(state.validators) >= int(spec.MAX_WITHDRAWALS_PER_PAYLOAD + spec).Uint64(1)
 
     # More than MAX_WITHDRAWALS_PER_PAYLOAD partially withdrawable
     for i in range(spec.MAX_WITHDRAWALS_PER_PAYLOAD + spec.Uint64(1)):

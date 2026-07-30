@@ -31,30 +31,50 @@ def run_test_effective_balance_hysteresis(spec, state, with_compounding_credenti
     )
     min = spec.config.EJECTION_BALANCE
     inc = spec.EFFECTIVE_BALANCE_INCREMENT
-    div = spec.HYSTERESIS_QUOTIENT
+    div = spec.Gwei(spec.HYSTERESIS_QUOTIENT)
     hys_inc = inc // div
-    down = spec.HYSTERESIS_DOWNWARD_MULTIPLIER
-    up = spec.HYSTERESIS_UPWARD_MULTIPLIER
+    down = spec.Gwei(spec.HYSTERESIS_DOWNWARD_MULTIPLIER)
+    up = spec.Gwei(spec.HYSTERESIS_UPWARD_MULTIPLIER)
     cases = [
         (max, max, max, "as-is"),
-        (max, max - 1, max, "round up"),
-        (max, max + 1, max, "round down"),
+        (max, max - spec.Gwei(1), max, "round up"),
+        (max, max + spec.Gwei(1), max, "round down"),
         (max, max - down * hys_inc, max, "lower balance, but not low enough"),
-        (max, max - down * hys_inc - 1, max - inc, "lower balance, step down"),
-        (max, max + (up * hys_inc) + 1, max, "already at max, as is"),
+        (max, max - down * hys_inc - spec.Gwei(1), max - inc, "lower balance, step down"),
+        (max, max + (up * hys_inc) + spec.Gwei(1), max, "already at max, as is"),
         (max, max - inc, max - inc, "exactly 1 step lower"),
-        (max, max - inc - 1, max - (2 * inc), "past 1 step lower, double step"),
-        (max, max - inc + 1, max - inc, "close to 1 step lower"),
+        (
+            max,
+            max - inc - spec.Gwei(1),
+            max - (spec.Gwei(2) * inc),
+            "past 1 step lower, double step",
+        ),
+        (max, max - inc + spec.Gwei(1), max - inc, "close to 1 step lower"),
         (min, min + (hys_inc * up), min, "bigger balance, but not high enough"),
-        (min, min + (hys_inc * up) + 1, min + inc, "bigger balance, high enough, but small step"),
         (
             min,
-            min + (hys_inc * div * 2) - 1,
+            min + (hys_inc * up) + spec.Gwei(1),
+            min + inc,
+            "bigger balance, high enough, but small step",
+        ),
+        (
+            min,
+            min + (hys_inc * div * spec.Gwei(2)) - spec.Gwei(1),
             min + inc,
             "bigger balance, high enough, close to double step",
         ),
-        (min, min + (hys_inc * div * 2), min + (2 * inc), "exact two step balance increment"),
-        (min, min + (hys_inc * div * 2) + 1, min + (2 * inc), "over two steps, round down"),
+        (
+            min,
+            min + (hys_inc * div * spec.Gwei(2)),
+            min + (spec.Gwei(2) * inc),
+            "exact two step balance increment",
+        ),
+        (
+            min,
+            min + (hys_inc * div * spec.Gwei(2)) + spec.Gwei(1),
+            min + (spec.Gwei(2) * inc),
+            "over two steps, round down",
+        ),
     ]
 
     if with_compounding_credentials:
@@ -63,22 +83,37 @@ def run_test_effective_balance_hysteresis(spec, state, with_compounding_credenti
             (min, min + (hys_inc * up), min, "bigger balance, but not high enough"),
             (
                 min,
-                min + (hys_inc * up) + 1,
+                min + (hys_inc * up) + spec.Gwei(1),
                 min + inc,
                 "bigger balance, high enough, but small step",
             ),
             (
                 min,
-                min + (hys_inc * div * 2) - 1,
+                min + (hys_inc * div * spec.Gwei(2)) - spec.Gwei(1),
                 min + inc,
                 "bigger balance, high enough, close to double step",
             ),
-            (min, min + (hys_inc * div * 2), min + (2 * inc), "exact two step balance increment"),
-            (min, min + (hys_inc * div * 2) + 1, min + (2 * inc), "over two steps, round down"),
-            (min, min * 2 + 1, min * 2, "top up or consolidation doubling the balance"),
             (
                 min,
-                min * 2 - 1,
+                min + (hys_inc * div * spec.Gwei(2)),
+                min + (spec.Gwei(2) * inc),
+                "exact two step balance increment",
+            ),
+            (
+                min,
+                min + (hys_inc * div * spec.Gwei(2)) + spec.Gwei(1),
+                min + (spec.Gwei(2) * inc),
+                "over two steps, round down",
+            ),
+            (
+                min,
+                min * spec.Gwei(2) + spec.Gwei(1),
+                min * spec.Gwei(2),
+                "top up or consolidation doubling the balance",
+            ),
+            (
+                min,
+                min * spec.Gwei(2) - spec.Gwei(1),
                 min * spec.Gwei(2) - spec.EFFECTIVE_BALANCE_INCREMENT,
                 "top up or consolidation almost doubling the balance",
             ),
