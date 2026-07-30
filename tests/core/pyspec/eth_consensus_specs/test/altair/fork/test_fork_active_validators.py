@@ -48,14 +48,15 @@ def _template_test_at_fork_deactivate_validators_wo_block(
             validator.exit_epoch = fork_epoch
             exited_validators.append(validator_index)
 
-        while spec.get_current_epoch(state) < fork_epoch - 1:
+        while spec.get_current_epoch(state) < fork_epoch - spec.Epoch(1):
             spec.process_slots(
                 state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH)
             )
             assert state.slot % spec.SLOTS_PER_EPOCH == spec.Slot(0)
 
         spec.process_slots(
-            state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
+            state,
+            state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - spec.Slot(1),
         )
         assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
@@ -107,14 +108,15 @@ def _template_test_at_fork_deactivate_validators(
             validator.exit_epoch = fork_epoch
             exited_validators.append(validator_index)
 
-        while spec.get_current_epoch(state) < fork_epoch - 1:
+        while spec.get_current_epoch(state) < fork_epoch - spec.Epoch(1):
             spec.process_slots(
                 state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH)
             )
             assert state.slot % spec.SLOTS_PER_EPOCH == spec.Slot(0)
 
         spec.process_slots(
-            state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
+            state,
+            state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - spec.Slot(1),
         )
         assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
@@ -161,7 +163,7 @@ def _template_test_after_fork_new_validator_active_pre_electra(
 
         # As `prepare_state_and_deposit` changes the state, we need to create the block after calling it.
         deposit_block = build_empty_block_for_next_slot(spec, state)
-        deposit_block.body.deposits = [deposit]
+        deposit_block.body.deposits = spec.Deposits(data=[deposit])
 
         _ = state_transition_and_sign_block(spec, state, deposit_block)
 
@@ -192,9 +194,9 @@ def _template_test_after_fork_new_validator_active_pre_electra(
             next_epoch(spec, state)
 
         fork_epoch = state.validators[new_validator_index].activation_epoch
-        assert spec.get_current_epoch(state) < fork_epoch - 1
+        assert spec.get_current_epoch(state) < fork_epoch - spec.Epoch(1)
 
-        while spec.get_current_epoch(state) < fork_epoch - 1:
+        while spec.get_current_epoch(state) < fork_epoch - spec.Epoch(1):
             next_epoch(spec, state)
 
         new_validator = state.validators[new_validator_index]
@@ -204,7 +206,8 @@ def _template_test_after_fork_new_validator_active_pre_electra(
         )
 
         spec.process_slots(
-            state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
+            state,
+            state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - spec.Slot(1),
         )
         assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
@@ -292,9 +295,9 @@ def _template_test_after_fork_new_validator_active_post_electra(
             next_epoch(spec, state)
 
         fork_epoch = state.validators[new_validator_index].activation_epoch
-        assert spec.get_current_epoch(state) < fork_epoch - 1
+        assert spec.get_current_epoch(state) < fork_epoch - spec.Epoch(1)
 
-        while spec.get_current_epoch(state) < fork_epoch - 1:
+        while spec.get_current_epoch(state) < fork_epoch - spec.Epoch(1):
             next_epoch(spec, state)
 
         new_validator = state.validators[new_validator_index]
@@ -304,7 +307,8 @@ def _template_test_after_fork_new_validator_active_post_electra(
         )
 
         spec.process_slots(
-            state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
+            state,
+            state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - spec.Slot(1),
         )
         assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 

@@ -576,9 +576,11 @@ def run_test_duplicate_attestations_at_later_slots(spec, state):
 
     assert any(later_attestations)
 
-    state.previous_epoch_attestations = sorted(
-        state.previous_epoch_attestations + later_attestations,
-        key=lambda a: a.data.slot + a.inclusion_delay,
+    state.previous_epoch_attestations = spec.PendingAttestations(
+        data=sorted(
+            list(state.previous_epoch_attestations) + later_attestations,
+            key=lambda a: a.data.slot + a.inclusion_delay,
+        )
     )
 
     yield from run_deltas(spec, state)

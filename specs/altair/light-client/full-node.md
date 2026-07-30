@@ -65,7 +65,7 @@ def create_light_client_bootstrap(
     assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
 
     assert state.slot == state.latest_block_header.slot
-    header = state.latest_block_header.copy()
+    header = copy(state.latest_block_header)
     header.state_root = hash_tree_root(state)
     assert hash_tree_root(header) == hash_tree_root(block.message)
 
@@ -120,13 +120,13 @@ def create_light_client_update(
     )
 
     assert state.slot == state.latest_block_header.slot
-    header = state.latest_block_header.copy()
+    header = copy(state.latest_block_header)
     header.state_root = hash_tree_root(state)
     assert hash_tree_root(header) == hash_tree_root(block.message)
     update_signature_period = compute_sync_committee_period_at_slot(block.message.slot)
 
     assert attested_state.slot == attested_state.latest_block_header.slot
-    attested_header = attested_state.latest_block_header.copy()
+    attested_header = copy(attested_state.latest_block_header)
     attested_header.state_root = hash_tree_root(attested_state)
     assert (
         hash_tree_root(attested_header)

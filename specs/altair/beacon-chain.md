@@ -310,7 +310,7 @@ def get_index_for_new_validator(state: BeaconState) -> ValidatorIndex:
 
 ```python
 def set_or_append_list(list: List, index: ValidatorIndex, value: Any) -> None:
-    if index == len(list):
+    if index == ValidatorIndex(len(list)):
         list.append(value)
     else:
         list[index] = value
@@ -536,15 +536,17 @@ def slash_validator(
     )
     state.slashings[epoch % EPOCHS_PER_SLASHINGS_VECTOR] += validator.effective_balance
     decrease_balance(
-        state, slashed_index, validator.effective_balance // MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR
+        state,
+        slashed_index,
+        validator.effective_balance // Gwei(MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR),
     )
 
     # Apply proposer and whistleblower rewards
     proposer_index = get_beacon_proposer_index(state)
     if whistleblower_index is None:
         whistleblower_index = proposer_index
-    whistleblower_reward = Gwei(validator.effective_balance // WHISTLEBLOWER_REWARD_QUOTIENT)
-    proposer_reward = Gwei(whistleblower_reward * PROPOSER_WEIGHT // WEIGHT_DENOMINATOR)
+    whistleblower_reward = validator.effective_balance // Gwei(WHISTLEBLOWER_REWARD_QUOTIENT)
+    proposer_reward = whistleblower_reward * Gwei(PROPOSER_WEIGHT) // Gwei(WEIGHT_DENOMINATOR)
     increase_balance(state, proposer_index, proposer_reward)
     increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
 ```
@@ -599,13 +601,13 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
                 epoch_participation[index], flag_index
             ):
                 epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
-                proposer_reward_numerator += get_base_reward(state, index) * weight
+                proposer_reward_numerator += get_base_reward(state, index) * Gwei(weight)
 
     # Reward proposer
-    proposer_reward_denominator = (
+    proposer_reward_denominator = Gwei(
         (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR // PROPOSER_WEIGHT
     )
-    proposer_reward = Gwei(proposer_reward_numerator // proposer_reward_denominator)
+    proposer_reward = proposer_reward_numerator // proposer_reward_denominator
     increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
 ```
 
@@ -768,7 +770,7 @@ def process_inactivity_updates(state: BeaconState) -> None:
         if index in get_unslashed_participating_indices(
             state, TIMELY_TARGET_FLAG_INDEX, get_previous_epoch(state)
         ):
-            state.inactivity_scores[index] -= min(1, state.inactivity_scores[index])
+            state.inactivity_scores[index] -= min(Uint64(1), state.inactivity_scores[index])
         else:
             state.inactivity_scores[index] += INACTIVITY_SCORE_BIAS
         # Decrease the inactivity score of all eligible validators during a leak-free epoch

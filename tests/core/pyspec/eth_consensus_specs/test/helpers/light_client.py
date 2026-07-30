@@ -104,7 +104,7 @@ def get_sync_aggregate(spec, state, num_participants=None, signature_slot=None, 
         committee_indices[:num_participants],
     )
     sync_aggregate = signature_spec.SyncAggregate(
-        sync_committee_bits=sync_committee_bits,
+        sync_committee_bits=spec.SyncCommitteeBits(data=sync_committee_bits),
         sync_committee_signature=sync_committee_signature,
     )
     return sync_aggregate, signature_slot

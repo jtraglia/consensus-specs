@@ -57,7 +57,7 @@ def test_gossip_beacon_block__valid_with_blob_kzg_commitments(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         block_payload_statuses={},
     )
     assert result == "valid"
@@ -105,7 +105,7 @@ def test_gossip_beacon_block__reject_too_many_kzg_commitments(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         block_payload_statuses={},
     )
     assert result == "reject"

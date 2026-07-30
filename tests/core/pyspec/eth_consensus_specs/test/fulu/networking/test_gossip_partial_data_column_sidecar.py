@@ -129,7 +129,7 @@ def test_gossip_partial_data_column_sidecar__valid_header_only(spec, state):
         store=store,
         state=state,
         sidecar=partial,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -195,7 +195,7 @@ def test_gossip_partial_data_column_sidecar__valid_header_and_cells(spec, state)
         store=store,
         state=state,
         sidecar=partial,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -258,7 +258,7 @@ def test_gossip_partial_data_column_sidecar__valid_cells_only_with_cached_header
         store=store,
         state=state,
         sidecar=header_msg,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -279,7 +279,7 @@ def test_gossip_partial_data_column_sidecar__valid_cells_only_with_cached_header
         store=store,
         state=state,
         sidecar=cells_msg,
-        current_time_ms=block_time_ms + 600,
+        current_time_ms=block_time_ms + spec.Uint64(600),
         group_id=group_id,
         column_index=column_index,
     )
@@ -332,7 +332,7 @@ def test_gossip_partial_data_column_sidecar__reject_semantically_empty(spec, sta
         store=store,
         state=state,
         sidecar=partial,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -391,7 +391,7 @@ def test_gossip_partial_data_column_sidecar__reject_cell_count_mismatch(spec, st
         store=store,
         state=state,
         sidecar=partial,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -450,7 +450,7 @@ def test_gossip_partial_data_column_sidecar__reject_proof_count_mismatch(spec, s
         store=store,
         state=state,
         sidecar=partial,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -518,7 +518,7 @@ def test_gossip_partial_data_column_sidecar__reject_prior_header_differs(spec, s
         store=store,
         state=state,
         sidecar=good,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -539,7 +539,7 @@ def test_gossip_partial_data_column_sidecar__reject_prior_header_differs(spec, s
         store=store,
         state=state,
         sidecar=diverging,
-        current_time_ms=block_time_ms + 600,
+        current_time_ms=block_time_ms + spec.Uint64(600),
         group_id=group_id,
         column_index=column_index,
     )
@@ -593,7 +593,7 @@ def test_gossip_partial_data_column_sidecar__reject_block_root_mismatch(spec, st
         store=store,
         state=state,
         sidecar=partial,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -651,7 +651,7 @@ def test_gossip_partial_data_column_sidecar__reject_empty_commitments(spec, stat
         store=store,
         state=state,
         sidecar=partial,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -779,7 +779,7 @@ def test_gossip_partial_data_column_sidecar__ignore_not_later_than_finalized_slo
         store=store,
         state=state,
         sidecar=partial,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -839,7 +839,7 @@ def test_gossip_partial_data_column_sidecar__reject_proposer_index_out_of_range(
         store=store,
         state=state,
         sidecar=partial,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -898,7 +898,7 @@ def test_gossip_partial_data_column_sidecar__reject_invalid_proposer_signature(s
         store=store,
         state=state,
         sidecar=partial,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -957,7 +957,7 @@ def test_gossip_partial_data_column_sidecar__ignore_parent_not_seen(spec, state)
         store=store,
         state=state,
         sidecar=partial,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -1030,7 +1030,7 @@ def test_gossip_partial_data_column_sidecar__reject_parent_failed_validation(spe
         store=store,
         state=state,
         sidecar=partial,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -1107,7 +1107,7 @@ def test_gossip_partial_data_column_sidecar__reject_slot_not_higher_than_parent(
         store=store,
         state=state,
         sidecar=partial,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -1171,7 +1171,7 @@ def test_gossip_partial_data_column_sidecar__reject_non_ancestor_finalized_check
         store=store,
         state=state,
         sidecar=partial,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -1231,7 +1231,7 @@ def test_gossip_partial_data_column_sidecar__reject_invalid_inclusion_proof(spec
         store=store,
         state=state,
         sidecar=partial,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -1293,7 +1293,7 @@ def test_gossip_partial_data_column_sidecar__reject_wrong_proposer_index(spec, s
         store=store,
         state=state,
         sidecar=partial,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -1350,7 +1350,7 @@ def test_gossip_partial_data_column_sidecar__ignore_cells_without_cached_header(
         store=store,
         state=state,
         sidecar=partial,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -1523,7 +1523,7 @@ def test_gossip_partial_data_column_sidecar__ignore_cells_with_cached_header_not
         store=store,
         state=state,
         sidecar=cells_msg,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -1596,7 +1596,7 @@ def test_gossip_partial_data_column_sidecar__reject_bitmap_length_mismatch(spec,
         store=store,
         state=state,
         sidecar=header_msg,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )
@@ -1617,7 +1617,7 @@ def test_gossip_partial_data_column_sidecar__reject_bitmap_length_mismatch(spec,
         store=store,
         state=state,
         sidecar=cells_msg,
-        current_time_ms=block_time_ms + 600,
+        current_time_ms=block_time_ms + spec.Uint64(600),
         group_id=group_id,
         column_index=column_index,
     )
@@ -1675,7 +1675,7 @@ def test_gossip_partial_data_column_sidecar__reject_invalid_kzg_proofs(spec, sta
         store=store,
         state=state,
         sidecar=partial,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         group_id=group_id,
         column_index=column_index,
     )

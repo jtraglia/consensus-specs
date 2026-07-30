@@ -29,7 +29,7 @@ def run_sync_committees_progress_test(spec, state):
     next_period = current_period + spec.Epoch(1)
     next_period_start_epoch = next_period * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
     next_period_start_slot = spec.Slot(next_period_start_epoch) * spec.SLOTS_PER_EPOCH
-    end_slot_of_current_period = next_period_start_slot - 1
+    end_slot_of_current_period = next_period_start_slot - spec.Slot(1)
     transition_to(spec, state, end_slot_of_current_period)
 
     # Ensure assignments have not changed:

@@ -259,7 +259,7 @@ def slash_some_validators_for_inactivity_scores_test(spec, state, rng=None):
     proposer_index = spec.get_beacon_proposer_index(future_state)
     # Slash ~1/4 of validators
     for validator_index in range(len(state.validators)):
-        if rng.choice(range(4)) == 0 and validator_index != proposer_index:
+        if rng.choice(range(4)) == 0 and validator_index != int(proposer_index):
             spec.slash_validator(state, validator_index)
 
 

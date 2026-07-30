@@ -206,7 +206,7 @@ def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
     assert store.finalized_checkpoint.root == finalized_checkpoint_block
 
     # Check the block is valid and compute the post-state
-    state = pre_state.copy()
+    state = copy(pre_state)
     block_root = hash_tree_root(block)
     state_transition(state, signed_block, validate_result=True)
 

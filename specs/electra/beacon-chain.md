@@ -1699,13 +1699,13 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
                 epoch_participation[index], flag_index
             ):
                 epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
-                proposer_reward_numerator += get_base_reward(state, index) * weight
+                proposer_reward_numerator += get_base_reward(state, index) * Gwei(weight)
 
     # Reward proposer
-    proposer_reward_denominator = (
+    proposer_reward_denominator = Gwei(
         (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR // PROPOSER_WEIGHT
     )
-    proposer_reward = Gwei(proposer_reward_numerator // proposer_reward_denominator)
+    proposer_reward = proposer_reward_numerator // proposer_reward_denominator
     increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
 ```
 

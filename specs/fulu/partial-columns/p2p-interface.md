@@ -317,7 +317,7 @@ def validate_partial_data_column_sidecar_gossip(
 
         # [REJECT] The header is proposed by the expected proposer_index
         # (if shuffling is not available, IGNORE instead and MAY be queued for later)
-        parent_state = store.block_states[block_header.parent_root].copy()
+        parent_state = copy(store.block_states[block_header.parent_root])
         process_slots(parent_state, block_header.slot)
         expected_proposer = get_beacon_proposer_index(parent_state)
         if block_header.proposer_index != expected_proposer:

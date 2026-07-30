@@ -186,12 +186,9 @@ def tick_and_add_block(
         signed_block.message.slot
     ) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
     while store.time < block_time:
-        time = (
-            pre_state.genesis_time
-            + (spec.get_current_slot(store) + spec.Slot(1))
-            * int(spec.config.SLOT_DURATION_MS)
-            // 1000
-        )
+        time = pre_state.genesis_time + spec.Uint64(
+            spec.get_current_slot(store) + spec.Slot(1)
+        ) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
         on_tick_and_append_step(spec, store, time, test_steps)
 
     post_state = yield from add_block(

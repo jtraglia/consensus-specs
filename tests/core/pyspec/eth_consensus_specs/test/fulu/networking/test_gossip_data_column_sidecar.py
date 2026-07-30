@@ -104,7 +104,7 @@ def test_gossip_data_column_sidecar__valid(spec, state):
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "valid"
@@ -155,7 +155,7 @@ def test_gossip_data_column_sidecar__reject_index_out_of_range(spec, state):
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -213,7 +213,7 @@ def test_gossip_data_column_sidecar__reject_too_many_commitments(spec, state):
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -267,7 +267,7 @@ def test_gossip_data_column_sidecar__reject_wrong_subnet(spec, state):
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=wrong_subnet,
     )
     assert result == "reject"
@@ -437,7 +437,7 @@ def test_gossip_data_column_sidecar__ignore_not_later_than_finalized_slot(spec, 
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "ignore"
@@ -489,7 +489,7 @@ def test_gossip_data_column_sidecar__reject_proposer_index_out_of_range(spec, st
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -542,7 +542,7 @@ def test_gossip_data_column_sidecar__reject_invalid_proposer_signature(spec, sta
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -597,7 +597,7 @@ def test_gossip_data_column_sidecar__ignore_parent_not_seen(spec, state):
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "ignore"
@@ -669,7 +669,7 @@ def test_gossip_data_column_sidecar__reject_parent_failed_validation(spec, state
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -741,7 +741,7 @@ def test_gossip_data_column_sidecar__reject_slot_not_higher_than_parent(spec, st
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -799,7 +799,7 @@ def test_gossip_data_column_sidecar__reject_non_ancestor_finalized_checkpoint(sp
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -852,7 +852,7 @@ def test_gossip_data_column_sidecar__reject_invalid_inclusion_proof(spec, state)
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -907,7 +907,7 @@ def test_gossip_data_column_sidecar__reject_invalid_kzg_proofs(spec, state):
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -964,7 +964,7 @@ def test_gossip_data_column_sidecar__ignore_already_seen_tuple(spec, state):
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "valid"
@@ -984,7 +984,7 @@ def test_gossip_data_column_sidecar__ignore_already_seen_tuple(spec, state):
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 600,
+        current_time_ms=block_time_ms + spec.Uint64(600),
         subnet_id=subnet_id,
     )
     assert result == "ignore"
@@ -1037,7 +1037,7 @@ def test_gossip_data_column_sidecar__reject_wrong_proposer_index(spec, state):
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"

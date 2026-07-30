@@ -115,7 +115,7 @@ def get_sync_subcommittee_pubkeys(
 
     # Return pubkeys for the subcommittee index
     sync_subcommittee_size = SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT
-    i = subcommittee_index * sync_subcommittee_size
+    i = Uint64(subcommittee_index) * sync_subcommittee_size
     return sync_committee.pubkeys[i : i + sync_subcommittee_size]
 ```
 

@@ -317,7 +317,7 @@ def _run_transition_test_with_attestations(
         participation_fn=participation_fn,
     )
     blocks.extend([pre_tag(block) for block in blocks_in_epoch])
-    assert spec.get_current_epoch(state) == fork_epoch - 1
+    assert spec.get_current_epoch(state) == spec.Epoch(fork_epoch) - spec.Epoch(1)
     assert (state.slot + spec.Slot(1)) % spec.SLOTS_PER_EPOCH == spec.Slot(0)
 
     # irregular state transition to handle fork:

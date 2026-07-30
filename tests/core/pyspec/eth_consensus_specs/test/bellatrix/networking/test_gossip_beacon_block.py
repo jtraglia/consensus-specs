@@ -64,7 +64,7 @@ def test_gossip_beacon_block__valid_execution_enabled(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         block_payload_statuses={},
     )
     assert result == "valid"
@@ -111,7 +111,7 @@ def test_gossip_beacon_block__valid_execution_disabled(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         block_payload_statuses={},
     )
     assert result == "valid"
@@ -161,7 +161,7 @@ def test_gossip_beacon_block__reject_incorrect_execution_payload_timestamp(spec,
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         block_payload_statuses={},
     )
     assert result == "reject"
@@ -248,7 +248,7 @@ def test_gossip_beacon_block__reject_parent_consensus_failed_execution_not_verif
         store=store,
         state=state,
         signed_beacon_block=signed_child,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         block_payload_statuses=get_spec_block_payload_statuses(
             spec,
             {hash_tree_root(signed_block.message): PAYLOAD_STATUS_NOT_VALIDATED},
@@ -339,7 +339,7 @@ def test_gossip_beacon_block__ignore_parent_consensus_failed_execution_known(spe
         store=store,
         state=state,
         signed_beacon_block=signed_child,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         block_payload_statuses=get_spec_block_payload_statuses(spec, block_payload_statuses),
     )
     assert result == "ignore"
@@ -429,7 +429,7 @@ def test_gossip_beacon_block__ignore_parent_execution_verified_invalid(spec, sta
         store=store,
         state=state,
         signed_beacon_block=signed_child,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         block_payload_statuses=get_spec_block_payload_statuses(spec, block_payload_statuses),
     )
     assert result == "ignore"
@@ -518,7 +518,7 @@ def test_gossip_beacon_block__valid_parent_execution_verified_valid(spec, state)
         store=store,
         state=state,
         signed_beacon_block=signed_child,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         block_payload_statuses=get_spec_block_payload_statuses(spec, block_payload_statuses),
     )
     assert result == "valid"
@@ -600,7 +600,7 @@ def test_gossip_beacon_block__valid_parent_optimistic(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_child,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         block_payload_statuses=get_spec_block_payload_statuses(spec, block_payload_statuses),
     )
     assert result == "valid"

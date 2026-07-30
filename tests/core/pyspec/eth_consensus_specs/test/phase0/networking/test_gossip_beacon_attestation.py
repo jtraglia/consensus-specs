@@ -97,7 +97,7 @@ def test_gossip_beacon_attestation__valid(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "valid"
@@ -142,9 +142,9 @@ def test_gossip_beacon_attestation__reject_committee_index_out_of_range(spec, st
     committees_per_slot = spec.get_committee_count_per_slot(state, attestation.data.target.epoch)
     if is_post_electra(spec):
         attestation = to_single_attestation(spec, state, attestation)
-        attestation.committee_index = committees_per_slot + 10
+        attestation.committee_index = committees_per_slot + spec.Uint64(10)
     else:
-        attestation.data.index = committees_per_slot + 10
+        attestation.data.index = committees_per_slot + spec.Uint64(10)
 
     yield get_filename(attestation), attestation
 
@@ -159,7 +159,7 @@ def test_gossip_beacon_attestation__reject_committee_index_out_of_range(spec, st
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -207,7 +207,9 @@ def test_gossip_beacon_attestation__reject_wrong_subnet(spec, state):
 
     # Get correct subnet and use a different one
     correct_subnet = get_correct_subnet_for_attestation(spec, state, attestation)
-    wrong_subnet = spec.Uint64((correct_subnet + 1) % spec.config.ATTESTATION_SUBNET_COUNT)
+    wrong_subnet = spec.Uint64(
+        (int(correct_subnet) + 1) % int(spec.config.ATTESTATION_SUBNET_COUNT)
+    )
     block_time_ms = spec.compute_time_at_slot_ms(state, attestation.data.slot)
 
     yield "current_time_ms", "meta", int(block_time_ms)
@@ -218,7 +220,7 @@ def test_gossip_beacon_attestation__reject_wrong_subnet(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=wrong_subnet,
     )
     assert result == "reject"
@@ -562,7 +564,7 @@ def test_gossip_beacon_attestation__reject_epoch_mismatch(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -626,7 +628,7 @@ def test_gossip_beacon_attestation__reject_not_unaggregated(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -688,7 +690,7 @@ def test_gossip_beacon_attestation__reject_aggregation_bits_size_mismatch(spec, 
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -758,7 +760,7 @@ def test_gossip_beacon_attestation__ignore_already_seen(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "valid"
@@ -779,7 +781,7 @@ def test_gossip_beacon_attestation__ignore_already_seen(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 600,
+        current_time_ms=block_time_ms + spec.Uint64(600),
         subnet_id=subnet_id,
     )
     assert result == "ignore"
@@ -847,7 +849,7 @@ def test_gossip_beacon_attestation__ignore_block_not_seen(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "ignore"
@@ -931,7 +933,7 @@ def test_gossip_beacon_attestation__reject_block_failed_validation(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -999,7 +1001,7 @@ def test_gossip_beacon_attestation__reject_invalid_signature(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -1070,7 +1072,7 @@ def test_gossip_beacon_attestation__reject_target_not_ancestor(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -1163,7 +1165,7 @@ def test_gossip_beacon_attestation__ignore_finalized_not_ancestor(spec, state):
         store=store,
         state=state,
         attestation=attestation,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "ignore"

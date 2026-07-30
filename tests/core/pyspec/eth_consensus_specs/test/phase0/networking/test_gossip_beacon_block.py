@@ -68,7 +68,7 @@ def test_gossip_beacon_block__valid_block(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         **kwargs,
     )
     assert result == "valid"
@@ -214,7 +214,7 @@ def test_gossip_beacon_block__ignore_already_seen_proposer_slot(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         **kwargs,
     )
     assert result == "valid"
@@ -229,7 +229,7 @@ def test_gossip_beacon_block__ignore_already_seen_proposer_slot(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + 600,
+        current_time_ms=block_time_ms + spec.Uint64(600),
         **kwargs,
     )
     assert result == "ignore"
@@ -305,7 +305,7 @@ def test_gossip_beacon_block__ignore_slot_not_greater_than_finalized(spec, state
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         **kwargs,
     )
     assert result == "ignore"
@@ -367,7 +367,7 @@ def test_gossip_beacon_block__ignore_parent_not_seen(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         **kwargs,
     )
     assert result == "ignore"
@@ -460,7 +460,7 @@ def test_gossip_beacon_block__reject_parent_failed_validation(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_child,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         **kwargs,
     )
     assert result == "reject"
@@ -544,7 +544,7 @@ def test_gossip_beacon_block__reject_slot_not_higher_than_parent(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         **kwargs,
     )
     assert result == "reject"
@@ -636,7 +636,7 @@ def test_gossip_beacon_block__reject_finalized_checkpoint_not_ancestor(spec, sta
         store=store,
         state=state,
         signed_beacon_block=signed_child,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         **kwargs,
     )
     assert result == "reject"
@@ -692,7 +692,7 @@ def test_gossip_beacon_block__reject_invalid_proposer_signature(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         **kwargs,
     )
     assert result == "reject"
@@ -747,7 +747,7 @@ def test_gossip_beacon_block__reject_invalid_proposer_index(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         **kwargs,
     )
     assert result == "reject"
@@ -788,7 +788,7 @@ def test_gossip_beacon_block__reject_wrong_proposer_index(spec, state):
 
     # Change proposer_index to wrong value
     correct_proposer = block.proposer_index
-    wrong_proposer = (correct_proposer + 1) % len(state.validators)
+    wrong_proposer = spec.ValidatorIndex((int(correct_proposer) + 1) % len(state.validators))
     block.proposer_index = wrong_proposer
 
     # Sign with the wrong proposer's key (matching the claimed proposer_index)
@@ -808,7 +808,7 @@ def test_gossip_beacon_block__reject_wrong_proposer_index(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         **kwargs,
     )
     assert result == "reject"

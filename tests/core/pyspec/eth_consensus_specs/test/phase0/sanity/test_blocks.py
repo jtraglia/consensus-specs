@@ -126,7 +126,9 @@ def test_empty_block_transition(spec, state):
     yield "post", state
 
     assert len(state.eth1_data_votes) == pre_eth1_votes + 1
-    assert spec.get_block_root_at_slot(state, pre_slot) == signed_block.message.parent_root
+    assert (
+        spec.get_block_root_at_slot(state, spec.Slot(pre_slot)) == signed_block.message.parent_root
+    )
     assert spec.get_randao_mix(state, spec.get_current_epoch(state)) != pre_mix
 
 
@@ -155,7 +157,9 @@ def test_empty_block_transition_large_validator_set(spec, state):
     yield "post", state
 
     assert len(state.eth1_data_votes) == pre_eth1_votes + 1
-    assert spec.get_block_root_at_slot(state, pre_slot) == signed_block.message.parent_root
+    assert (
+        spec.get_block_root_at_slot(state, spec.Slot(pre_slot)) == signed_block.message.parent_root
+    )
     assert spec.get_randao_mix(state, spec.get_current_epoch(state)) != pre_mix
 
 
@@ -378,8 +382,8 @@ def test_skipped_slots(spec, state):
 
     assert state.slot == block.slot
     assert spec.get_randao_mix(state, spec.get_current_epoch(state)) != spec.Bytes32()
-    for slot in range(pre_slot, state.slot):
-        assert spec.get_block_root_at_slot(state, slot) == block.parent_root
+    for slot in range(int(pre_slot), int(state.slot)):
+        assert spec.get_block_root_at_slot(state, spec.Slot(slot)) == block.parent_root
 
 
 @with_all_phases
@@ -396,8 +400,8 @@ def test_empty_epoch_transition(spec, state):
     yield "post", state
 
     assert state.slot == block.slot
-    for slot in range(pre_slot, state.slot):
-        assert spec.get_block_root_at_slot(state, slot) == block.parent_root
+    for slot in range(int(pre_slot), int(state.slot)):
+        assert spec.get_block_root_at_slot(state, spec.Slot(slot)) == block.parent_root
 
 
 @with_all_phases
@@ -422,8 +426,8 @@ def test_empty_epoch_transition_large_validator_set(spec, state):
     yield "post", state
 
     assert state.slot == block.slot
-    for slot in range(pre_slot, state.slot):
-        assert spec.get_block_root_at_slot(state, slot) == block.parent_root
+    for slot in range(int(pre_slot), int(state.slot)):
+        assert spec.get_block_root_at_slot(state, spec.Slot(slot)) == block.parent_root
 
 
 @with_all_phases
@@ -626,7 +630,7 @@ def test_attester_slashing(spec, state):
 @with_all_phases
 @spec_state_test
 def test_invalid_duplicate_attester_slashing_same_block(spec, state):
-    if get_max_attester_slashings(spec) < 2:
+    if int(get_max_attester_slashings(spec)) < 2:
         return dump_skipping_message(
             "Skip test if config cannot handle multiple AttesterSlashings per block"
         )
@@ -654,7 +658,7 @@ def test_invalid_duplicate_attester_slashing_same_block(spec, state):
 @with_all_phases
 @spec_state_test
 def test_multiple_attester_slashings_no_overlap(spec, state):
-    if get_max_attester_slashings(spec) < 2:
+    if int(get_max_attester_slashings(spec)) < 2:
         return dump_skipping_message(
             "Skip test if config cannot handle multiple AttesterSlashings per block"
         )
@@ -702,7 +706,7 @@ def test_multiple_attester_slashings_no_overlap(spec, state):
 @with_all_phases
 @spec_state_test
 def test_multiple_attester_slashings_partial_overlap(spec, state):
-    if get_max_attester_slashings(spec) < 2:
+    if int(get_max_attester_slashings(spec)) < 2:
         return dump_skipping_message(
             "Skip test if config cannot handle multiple AttesterSlashings per block"
         )
@@ -759,7 +763,7 @@ def test_proposer_after_inactive_index(spec, state):
     next_epoch_via_block(spec, state)
     while True:
         proposer_index = spec.get_beacon_proposer_index(state)
-        if proposer_index > inactive_index:
+        if int(proposer_index) > int(inactive_index):
             # found a proposer that has a higher index than a disabled validator
             yield "pre", state
             # test if the proposer can be recognized correctly after the inactive validator
@@ -790,7 +794,7 @@ def test_high_proposer_index(spec, state):
     active_count = len(spec.get_active_validator_indices(state, current_epoch))
     while True:
         proposer_index = spec.get_beacon_proposer_index(state)
-        if proposer_index >= active_count:
+        if int(proposer_index) >= int(active_count):
             # found a proposer that has a higher index than the active validator count
             yield "pre", state
             # test if the proposer can be recognized correctly, even while it has a high index.
@@ -844,7 +848,7 @@ def test_deposit_in_block(spec, state):
     assert len(state.validators) == initial_registry_len + 1
     assert len(state.balances) == initial_balances_len + 1
     assert balance == spec.MAX_EFFECTIVE_BALANCE
-    assert state.validators[validator_index].pubkey == pubkeys[validator_index]
+    assert state.validators[validator_index].pubkey == spec.BLSPubkey(pubkeys[validator_index])
 
 
 @with_all_phases_from_to(PHASE0, FULU)
@@ -913,7 +917,10 @@ def test_deposit_top_up(spec, state):
         balance += state.pending_deposits[0].amount
 
     assert balance == (
-        validator_pre_balance + amount + sync_committee_reward - sync_committee_penalty
+        spec.Gwei(validator_pre_balance)
+        + spec.Gwei(amount)
+        + spec.Gwei(sync_committee_reward)
+        - spec.Gwei(sync_committee_penalty)
     )
 
 
@@ -1026,7 +1033,7 @@ def test_voluntary_exit(spec, state):
     validator_index = spec.get_active_validator_indices(state, spec.get_current_epoch(state))[-1]
 
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     signed_exits = prepare_signed_exits(spec, state, [validator_index])
     yield "pre", state
@@ -1054,7 +1061,7 @@ def test_invalid_duplicate_validator_exit_same_block(spec, state):
     validator_index = spec.get_active_validator_indices(state, spec.get_current_epoch(state))[-1]
 
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     # Same index tries to exit twice, but should only be able to do so once.
     signed_exits = prepare_signed_exits(spec, state, [validator_index, validator_index])
@@ -1078,7 +1085,7 @@ def test_multiple_different_validator_exits_same_block(spec, state):
         spec.get_active_validator_indices(state, spec.get_current_epoch(state))[i] for i in range(3)
     ]
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     signed_exits = prepare_signed_exits(spec, state, validator_indices)
     yield "pre", state
@@ -1146,7 +1153,11 @@ def test_balance_driven_status_transitions(spec, state):
 @spec_state_test
 @always_bls
 def test_historical_batch(spec, state):
-    state.slot += spec.SLOTS_PER_HISTORICAL_ROOT - (state.slot % spec.SLOTS_PER_HISTORICAL_ROOT) - 1
+    state.slot += (
+        spec.SLOTS_PER_HISTORICAL_ROOT
+        - (state.slot % spec.SLOTS_PER_HISTORICAL_ROOT)
+        - spec.Slot(1)
+    )
     pre_historical_roots = copy(state.historical_roots)
 
     if is_post_capella(spec):
@@ -1161,10 +1172,9 @@ def test_historical_batch(spec, state):
     yield "post", state
 
     assert state.slot == block.slot
-    assert (
-        spec.get_current_epoch(state) % (spec.SLOTS_PER_HISTORICAL_ROOT // spec.SLOTS_PER_EPOCH)
-        == 0
-    )
+    assert spec.get_current_epoch(state) % spec.Epoch(
+        spec.SLOTS_PER_HISTORICAL_ROOT // spec.SLOTS_PER_EPOCH
+    ) == spec.Epoch(0)
 
     # check history update
     if is_post_capella(spec):
@@ -1179,9 +1189,9 @@ def test_historical_batch(spec, state):
 @with_presets([MINIMAL], reason="suffices to test eth1 data voting without long voting period")
 @spec_state_test
 def test_eth1_data_votes_consensus(spec, state):
-    voting_period_slots = spec.EPOCHS_PER_ETH1_VOTING_PERIOD * spec.SLOTS_PER_EPOCH
+    voting_period_slots = spec.Slot(spec.EPOCHS_PER_ETH1_VOTING_PERIOD) * spec.SLOTS_PER_EPOCH
 
-    offset_block = build_empty_block(spec, state, slot=voting_period_slots - 1)
+    offset_block = build_empty_block(spec, state, slot=voting_period_slots - spec.Slot(1))
     state_transition_and_sign_block(spec, state, offset_block)
     yield "pre", state
 
@@ -1194,12 +1204,14 @@ def test_eth1_data_votes_consensus(spec, state):
     for i in range(voting_period_slots):
         block = build_empty_block_for_next_slot(spec, state)
         # wait for over 50% for A, then start voting B
-        block.body.eth1_data.block_hash = b if i * 2 > voting_period_slots else a
+        block.body.eth1_data.block_hash = (
+            b if spec.Slot(i) * spec.Slot(2) > voting_period_slots else a
+        )
         signed_block = state_transition_and_sign_block(spec, state, block)
         blocks.append(signed_block)
 
-    assert len(state.eth1_data_votes) == voting_period_slots
-    assert state.eth1_data.block_hash == a
+    assert len(state.eth1_data_votes) == int(voting_period_slots)
+    assert state.eth1_data.block_hash == spec.Hash32(a)
 
     # transition to next eth1 voting period
     block = build_empty_block_for_next_slot(spec, state)
@@ -1210,21 +1222,21 @@ def test_eth1_data_votes_consensus(spec, state):
     yield "blocks", blocks
     yield "post", state
 
-    assert state.eth1_data.block_hash == a
-    assert state.slot % voting_period_slots == 0
+    assert state.eth1_data.block_hash == spec.Hash32(a)
+    assert state.slot % voting_period_slots == spec.Slot(0)
     assert len(state.eth1_data_votes) == 1
-    assert state.eth1_data_votes[0].block_hash == c
+    assert state.eth1_data_votes[0].block_hash == spec.Hash32(c)
 
 
 @with_all_phases
 @with_presets([MINIMAL], reason="suffices to test eth1 data voting without long voting period")
 @spec_state_test
 def test_eth1_data_votes_no_consensus(spec, state):
-    voting_period_slots = spec.EPOCHS_PER_ETH1_VOTING_PERIOD * spec.SLOTS_PER_EPOCH
+    voting_period_slots = spec.Slot(spec.EPOCHS_PER_ETH1_VOTING_PERIOD) * spec.SLOTS_PER_EPOCH
 
     pre_eth1_hash = state.eth1_data.block_hash
 
-    offset_block = build_empty_block(spec, state, slot=voting_period_slots - 1)
+    offset_block = build_empty_block(spec, state, slot=voting_period_slots - spec.Slot(1))
     state_transition_and_sign_block(spec, state, offset_block)
     yield "pre", state
 
@@ -1236,11 +1248,13 @@ def test_eth1_data_votes_no_consensus(spec, state):
     for i in range(voting_period_slots):
         block = build_empty_block_for_next_slot(spec, state)
         # wait for precisely 50% for A, then start voting B for other 50%
-        block.body.eth1_data.block_hash = b if i * 2 >= voting_period_slots else a
+        block.body.eth1_data.block_hash = (
+            b if spec.Slot(i) * spec.Slot(2) >= voting_period_slots else a
+        )
         signed_block = state_transition_and_sign_block(spec, state, block)
         blocks.append(signed_block)
 
-    assert len(state.eth1_data_votes) == voting_period_slots
+    assert len(state.eth1_data_votes) == int(voting_period_slots)
     assert state.eth1_data.block_hash == pre_eth1_hash
 
     yield "blocks", blocks

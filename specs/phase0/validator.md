@@ -468,9 +468,10 @@ def voting_period_start_time(state: BeaconState) -> Uint64:
 
 ```python
 def is_candidate_block(block: Eth1Block, period_start: Uint64) -> bool:
-    return (
-        block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= period_start
-        and block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * 2 >= period_start
+    return block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= Uint64(
+        period_start
+    ) and block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * Uint64(2) >= Uint64(
+        period_start
     )
 ```
 
@@ -580,7 +581,7 @@ root for this purpose:
 
 ```python
 def compute_new_state_root(state: BeaconState, block: BeaconBlock) -> Root:
-    temp_state: BeaconState = state.copy()
+    temp_state: BeaconState = copy(state)
     signed_block = SignedBeaconBlock(message=block)
     state_transition(temp_state, signed_block, validate_result=False)
     return hash_tree_root(temp_state)

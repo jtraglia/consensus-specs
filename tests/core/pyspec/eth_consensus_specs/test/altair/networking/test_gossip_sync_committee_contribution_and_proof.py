@@ -74,7 +74,7 @@ def create_valid_signed_contribution_and_proof(
     subcommittee_size = spec.SYNC_COMMITTEE_SIZE // spec.SYNC_COMMITTEE_SUBNET_COUNT
 
     # Build aggregation bits with the aggregator participating
-    aggregation_bits = [False] * subcommittee_size
+    aggregation_bits = [False] * int(subcommittee_size)
     for i, pubkey in enumerate(subcommittee_pubkeys):
         if pubkey == aggregator_pubkey:
             aggregation_bits[i] = True
@@ -90,7 +90,7 @@ def create_valid_signed_contribution_and_proof(
         slot=slot,
         beacon_block_root=block_root,
         subcommittee_index=subcommittee_index,
-        aggregation_bits=aggregation_bits,
+        aggregation_bits=spec.SyncSubcommitteeBits(data=aggregation_bits),
         signature=aggregate_signature,
     )
 
@@ -662,7 +662,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_superset_contribut
         slot=state.slot,
         beacon_block_root=block_root,
         subcommittee_index=subcommittee_index,
-        aggregation_bits=superset_bits,
+        aggregation_bits=spec.SyncSubcommitteeBits(data=superset_bits),
         signature=bls.Aggregate([sig1, sig2]),
     )
     selection_proof = spec.get_sync_committee_selection_proof(
@@ -820,7 +820,7 @@ def test_gossip_sync_committee_contribution_and_proof__valid_non_superset_contri
         slot=state.slot,
         beacon_block_root=block_root,
         subcommittee_index=subcommittee_index,
-        aggregation_bits=superset_bits,
+        aggregation_bits=spec.SyncSubcommitteeBits(data=superset_bits),
         signature=bls.Aggregate([sig1, sig2]),
     )
     superset_cap = spec.ContributionAndProof(

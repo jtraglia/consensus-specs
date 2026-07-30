@@ -24,7 +24,9 @@ def get_full_flags(spec):
 def run_process_participation_flag_updates(spec, state):
     old = copy(state.current_epoch_participation)
     yield from run_epoch_processing_with(spec, state, "process_participation_flag_updates")
-    assert state.current_epoch_participation == [0] * len(state.validators)
+    assert state.current_epoch_participation == spec.EpochParticipation(
+        data=[0] * len(state.validators)
+    )
     assert state.previous_epoch_participation == old
 
 
@@ -83,13 +85,13 @@ def random_flags(spec, state, seed: int, previous=True, current=True):
     count = len(state.validators)
     max_flag_value_excl = 2 ** len(spec.PARTICIPATION_FLAG_WEIGHTS)
     if previous:
-        state.previous_epoch_participation = [
-            rng.randrange(0, max_flag_value_excl) for _ in range(count)
-        ]
+        state.previous_epoch_participation = spec.EpochParticipation(
+            data=[rng.randrange(0, max_flag_value_excl) for _ in range(count)]
+        )
     if current:
-        state.current_epoch_participation = [
-            rng.randrange(0, max_flag_value_excl) for _ in range(count)
-        ]
+        state.current_epoch_participation = spec.EpochParticipation(
+            data=[rng.randrange(0, max_flag_value_excl) for _ in range(count)]
+        )
 
 
 @with_altair_and_later

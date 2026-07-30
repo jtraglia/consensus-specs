@@ -20,7 +20,6 @@ from eth_consensus_specs.test.helpers.keys import privkeys, pubkeys
 from eth_consensus_specs.test.helpers.state import next_epoch
 from eth_consensus_specs.utils import bls
 from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
-from eth_consensus_specs.utils.ssz.ssz_typing import BitList
 
 
 def run_get_signature_test(
@@ -158,25 +157,29 @@ def test_is_candidate_block(spec, state):
     period_start = int(distance_duration) * 2 + 1000
     run_is_candidate_block(
         spec,
-        spec.Eth1Block(timestamp=period_start - distance_duration),
+        spec.Eth1Block(timestamp=spec.Uint64(period_start) - distance_duration),
         period_start,
         success=True,
     )
     run_is_candidate_block(
         spec,
-        spec.Eth1Block(timestamp=period_start - distance_duration + 1),
+        spec.Eth1Block(timestamp=spec.Uint64(period_start) - distance_duration + spec.Uint64(1)),
         period_start,
         success=False,
     )
     run_is_candidate_block(
         spec,
-        spec.Eth1Block(timestamp=period_start - distance_duration * 2),
+        spec.Eth1Block(timestamp=spec.Uint64(period_start) - distance_duration * spec.Uint64(2)),
         period_start,
         success=True,
     )
     run_is_candidate_block(
         spec,
-        spec.Eth1Block(timestamp=period_start - distance_duration * 2 - 1),
+        spec.Eth1Block(
+            timestamp=spec.Uint64(period_start)
+            - distance_duration * spec.Uint64(2)
+            - spec.Uint64(1)
+        ),
         period_start,
         success=False,
     )
@@ -203,7 +206,7 @@ def test_get_eth1_vote_consensus_vote(spec, state):
         next_epoch(spec, state)
 
     period_start = spec.voting_period_start_time(state)
-    votes_length = spec.get_current_epoch(state) % spec.EPOCHS_PER_ETH1_VOTING_PERIOD
+    votes_length = int(spec.get_current_epoch(state) % spec.EPOCHS_PER_ETH1_VOTING_PERIOD)
     assert votes_length >= 3  # We need to have the majority vote
     state.eth1_data_votes = spec.Eth1DataVotes(data=())
 
@@ -242,7 +245,7 @@ def test_get_eth1_vote_tie(spec, state):
         next_epoch(spec, state)
 
     period_start = spec.voting_period_start_time(state)
-    votes_length = spec.get_current_epoch(state) % spec.EPOCHS_PER_ETH1_VOTING_PERIOD
+    votes_length = int(spec.get_current_epoch(state) % spec.EPOCHS_PER_ETH1_VOTING_PERIOD)
     assert votes_length > 0
     assert votes_length % 2 == 0
 
@@ -285,7 +288,7 @@ def test_get_eth1_vote_chain_in_past(spec, state):
         next_epoch(spec, state)
 
     period_start = spec.voting_period_start_time(state)
-    votes_length = spec.get_current_epoch(state) % spec.EPOCHS_PER_ETH1_VOTING_PERIOD
+    votes_length = int(spec.get_current_epoch(state) % spec.EPOCHS_PER_ETH1_VOTING_PERIOD)
     assert votes_length > 0
     assert votes_length % 2 == 0
 
@@ -390,7 +393,8 @@ def test_get_attestation_signature_phase0(spec, state):
 @spec_state_test
 def test_compute_subnet_for_attestation(spec, state):
     for committee_idx in range(spec.MAX_COMMITTEES_PER_SLOT):
-        for slot in range(state.slot, state.slot + spec.SLOTS_PER_EPOCH):
+        for slot_number in range(int(state.slot), int(state.slot + spec.SLOTS_PER_EPOCH)):
+            slot = spec.Slot(slot_number)
             committees_per_slot = spec.get_committee_count_per_slot(
                 state, spec.compute_epoch_at_slot(slot)
             )
@@ -399,12 +403,14 @@ def test_compute_subnet_for_attestation(spec, state):
             )
 
             slots_since_epoch_start = slot % spec.SLOTS_PER_EPOCH
-            committees_since_epoch_start = committees_per_slot * slots_since_epoch_start
+            committees_since_epoch_start = committees_per_slot * spec.Uint64(
+                slots_since_epoch_start
+            )
             expected_subnet_id = (
-                committees_since_epoch_start + committee_idx
+                committees_since_epoch_start + spec.Uint64(committee_idx)
             ) % spec.config.ATTESTATION_SUBNET_COUNT
 
-            assert actual_subnet_id == expected_subnet_id
+            assert actual_subnet_id == spec.SubnetID(expected_subnet_id)
 
 
 # Attestation aggregation
@@ -463,14 +469,14 @@ def test_get_aggregate_signature(spec, state):
         attestation_data.index,
     )
     committee_size = len(beacon_committee)
-    aggregation_bits = BitList[spec.MAX_VALIDATORS_PER_COMMITTEE](*([0] * committee_size))
+    aggregation_bits = spec.AggregationBits(data=[0] * committee_size)
     for i, validator_index in enumerate(beacon_committee):
         bits = copy(aggregation_bits)
         bits[i] = True
         attestations.append(
             spec.Attestation(
                 data=attestation_data,
-                aggregation_bits=bits,
+                aggregation_bits=spec.SyncSubcommitteeBits(data=bits),
                 signature=spec.get_attestation_signature(
                     state, attestation_data, privkeys[validator_index]
                 ),
@@ -494,8 +500,8 @@ def test_get_aggregate_and_proof(spec, state):
     aggregate_and_proof = spec.get_aggregate_and_proof(state, aggregator_index, aggregate, privkey)
     assert aggregate_and_proof.aggregator_index == aggregator_index
     assert aggregate_and_proof.aggregate == aggregate
-    assert aggregate_and_proof.selection_proof == spec.get_slot_signature(
-        state, aggregate.data.slot, privkey
+    assert aggregate_and_proof.selection_proof == spec.BLSSignature(
+        spec.get_slot_signature(state, aggregate.data.slot, privkey)
     )
 
 

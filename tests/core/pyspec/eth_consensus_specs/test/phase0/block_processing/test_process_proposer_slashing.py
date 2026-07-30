@@ -622,7 +622,7 @@ def test_invalid_proposer_is_withdrawn(spec, state):
     # set proposer withdrawable_epoch in past
     current_epoch = spec.get_current_epoch(state)
     proposer_index = proposer_slashing.signed_header_1.message.proposer_index
-    state.validators[proposer_index].withdrawable_epoch = current_epoch - 1
+    state.validators[proposer_index].withdrawable_epoch = current_epoch - spec.Epoch(1)
 
     pre_state = copy(state)
 

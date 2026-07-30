@@ -107,7 +107,7 @@ def test_process_sync_committee_contributions(spec, state):
             slot=block.slot,
             beacon_block_root=target_block_root,
             subcommittee_index=i,
-            aggregation_bits=aggregation_bits,
+            aggregation_bits=spec.SyncSubcommitteeBits(data=aggregation_bits),
             signature=_get_sync_committee_signature(
                 spec, state, previous_slot, target_block_root, i, aggregation_index
             ),

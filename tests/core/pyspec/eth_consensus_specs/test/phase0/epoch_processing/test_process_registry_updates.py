@@ -1,3 +1,5 @@
+from ssz.exceptions import SSZRangeError
+
 from eth_consensus_specs.test.context import (
     scaled_churn_balances_min_churn_limit,
     single_phase,
@@ -128,7 +130,7 @@ def test_activation_queue_sorting(spec, state):
         # the one at churn_limit did not make it, it was out-prioritized
         assert state.validators[churn_limit].activation_epoch == spec.FAR_FUTURE_EPOCH
         # but the one in front of the above did
-        assert state.validators[churn_limit - 1].activation_epoch != spec.FAR_FUTURE_EPOCH
+        assert state.validators[int(churn_limit) - 1].activation_epoch != spec.FAR_FUTURE_EPOCH
 
 
 def run_test_activation_queue_efficiency(spec, state):
@@ -366,7 +368,7 @@ def test_activation_queue_activation_and_ejection__churn_limit(spec, state):
 def test_activation_queue_activation_and_ejection__exceed_churn_limit(spec, state):
     churn_limit = spec.get_validator_churn_limit(state)
     assert churn_limit == spec.config.MIN_PER_EPOCH_CHURN_LIMIT
-    yield from run_test_activation_queue_activation_and_ejection(spec, state, churn_limit + 1)
+    yield from run_test_activation_queue_activation_and_ejection(spec, state, int(churn_limit) + 1)
 
 
 @with_all_phases
@@ -400,7 +402,7 @@ def test_activation_queue_activation_and_ejection__scaled_churn_limit(spec, stat
 def test_activation_queue_activation_and_ejection__exceed_scaled_churn_limit(spec, state):
     churn_limit = spec.get_validator_churn_limit(state)
     assert churn_limit > spec.config.MIN_PER_EPOCH_CHURN_LIMIT
-    yield from run_test_activation_queue_activation_and_ejection(spec, state, churn_limit * 2)
+    yield from run_test_activation_queue_activation_and_ejection(spec, state, int(churn_limit) * 2)
 
 
 @with_all_phases
@@ -428,8 +430,8 @@ def test_invalid_large_withdrawable_epoch(spec, state):
 
     try:
         yield from run_process_registry_updates(spec, state)
-    except ValueError:
+    except SSZRangeError:
         yield "post", None
         return
 
-    raise AssertionError("expected ValueError")
+    raise AssertionError("expected SSZRangeError")

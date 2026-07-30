@@ -59,7 +59,7 @@ def _compute_expected_correlation_penalty(
         return (
             effective_balance
             // spec.EFFECTIVE_BALANCE_INCREMENT
-            * (get_slashing_multiplier(spec) * total_slashed_balance)
+            * (spec.Gwei(get_slashing_multiplier(spec)) * total_slashed_balance)
             // total_balance
             * spec.EFFECTIVE_BALANCE_INCREMENT
         )
@@ -96,7 +96,7 @@ def test_max_penalties(spec, state):
     yield from run_process_slashings(spec, state)
 
     for i in slashed_indices:
-        assert state.balances[i] == 0
+        assert state.balances[i] == spec.Gwei(0)
 
 
 @with_all_phases
@@ -114,7 +114,7 @@ def test_low_penalty(spec, state):
     yield from run_process_slashings(spec, state)
 
     for i in slashed_indices:
-        assert 0 < state.balances[i] < pre_state.balances[i]
+        assert spec.Gwei(0) < state.balances[i] < pre_state.balances[i]
 
 
 @with_all_phases
@@ -140,7 +140,7 @@ def test_minimal_penalty(spec, state):
     total_balance = spec.get_total_active_balance(state)
     total_penalties = sum(state.slashings, spec.Gwei(0))
 
-    assert total_balance // 3 > total_penalties
+    assert total_balance // spec.Gwei(3) > total_penalties
 
     run_epoch_processing_to(spec, state, "process_slashings")
     pre_slash_balances = list(state.balances)
@@ -165,12 +165,12 @@ def test_scaled_penalties(spec, state):
     base = spec.config.EJECTION_BALANCE
     incr = spec.EFFECTIVE_BALANCE_INCREMENT
     # Just add some random slashings. non-zero slashings are at least the minimal effective balance.
-    state.slashings[0] = base + (incr * 12)
-    state.slashings[4] = base + (incr * 3)
-    state.slashings[5] = base + (incr * 6)
-    state.slashings[spec.EPOCHS_PER_SLASHINGS_VECTOR - spec.Epoch(1)] = base + (incr * 7)
+    state.slashings[0] = base + (incr * spec.Gwei(12))
+    state.slashings[4] = base + (incr * spec.Gwei(3))
+    state.slashings[5] = base + (incr * spec.Gwei(6))
+    state.slashings[spec.EPOCHS_PER_SLASHINGS_VECTOR - spec.Epoch(1)] = base + (incr * spec.Gwei(7))
 
-    slashed_count = len(state.validators) // (get_slashing_multiplier(spec) + 1)
+    slashed_count = len(state.validators) // (int(get_slashing_multiplier(spec)) + 1)
 
     assert slashed_count > 10
 
@@ -179,10 +179,10 @@ def test_scaled_penalties(spec, state):
     diff = spec.MAX_EFFECTIVE_BALANCE - base
     increments = diff // incr
     for i in range(10):
-        state.validators[i].effective_balance = base + (incr * (i % increments))
+        state.validators[i].effective_balance = base + (incr * spec.Gwei(i % int(increments)))
         assert state.validators[i].effective_balance <= spec.MAX_EFFECTIVE_BALANCE
         # add/remove some, see if balances different than the effective balances are picked up
-        state.balances[i] = state.validators[i].effective_balance + i - 5
+        state.balances[i] = state.validators[i].effective_balance + spec.Gwei(i) - spec.Gwei(5)
 
     total_balance = spec.get_total_active_balance(state)
 

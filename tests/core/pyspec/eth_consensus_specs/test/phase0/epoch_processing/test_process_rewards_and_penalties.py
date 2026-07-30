@@ -101,12 +101,12 @@ def test_genesis_epoch_full_attestations_no_rewards(spec, state):
     attestations = []
     for slot in range(spec.SLOTS_PER_EPOCH - spec.Slot(1)):
         # create an attestation for each slot
-        if slot < spec.SLOTS_PER_EPOCH:
+        if slot < int(spec.SLOTS_PER_EPOCH):
             attestation = get_valid_attestation(spec, state, signed=True)
             attestations.append(attestation)
         # fill each created slot in state after inclusion delay
-        if slot >= spec.MIN_ATTESTATION_INCLUSION_DELAY:
-            include_att = attestations[slot - spec.MIN_ATTESTATION_INCLUSION_DELAY]
+        if slot >= int(spec.MIN_ATTESTATION_INCLUSION_DELAY):
+            include_att = attestations[slot - int(spec.MIN_ATTESTATION_INCLUSION_DELAY)]
             add_attestations_to_state(spec, state, [include_att], state.slot)
         next_slot(spec, state)
 
@@ -449,7 +449,7 @@ def test_duplicate_participants_different_attestation_3(spec, state):
     inclusion_slot = state.slot + spec.MIN_ATTESTATION_INCLUSION_DELAY
     add_attestations_to_state(spec, single_correct_state, [correct_attestation], inclusion_slot)
     add_attestations_to_state(spec, dup_state, [incorrect_attestation], inclusion_slot)
-    add_attestations_to_state(spec, dup_state, [correct_attestation], inclusion_slot + 1)
+    add_attestations_to_state(spec, dup_state, [correct_attestation], inclusion_slot + spec.Slot(1))
 
     next_epoch(spec, single_correct_state)
     next_epoch(spec, dup_state)

@@ -286,7 +286,7 @@ def is_ancestor(store: Store, node: ForkChoiceNode, ancestor: ForkChoiceNode) ->
 
 ```python
 def calculate_committee_fraction(state: BeaconState, committee_percent: Uint64) -> Gwei:
-    committee_weight = get_total_active_balance(state) // SLOTS_PER_EPOCH
+    committee_weight = get_total_active_balance(state) // Gwei(SLOTS_PER_EPOCH)
     return (committee_weight * Gwei(committee_percent)) // Gwei(100)
 ```
 
@@ -341,7 +341,7 @@ def get_attestation_score(store: Store, node: ForkChoiceNode, state: BeaconState
 
 ```python
 def compute_proposer_score(state: BeaconState) -> Gwei:
-    committee_weight = get_total_active_balance(state) // SLOTS_PER_EPOCH
+    committee_weight = get_total_active_balance(state) // Gwei(SLOTS_PER_EPOCH)
     return (committee_weight * Gwei(PROPOSER_SCORE_BOOST)) // Gwei(100)
 ```
 
@@ -750,7 +750,7 @@ by returning early if any of the early conditions are `False`.
 
 ```python
 def compute_pulled_up_tip(store: Store, block_root: Root) -> None:
-    state = store.block_states[block_root].copy()
+    state = copy(store.block_states[block_root])
     # Pull up the post-state of the block to the next epoch boundary
     process_justification_and_finalization(state)
 
@@ -951,7 +951,7 @@ def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
     assert store.finalized_checkpoint.root == finalized_checkpoint_block
 
     # Check the block is valid and compute the post-state
-    state = pre_state.copy()
+    state = copy(pre_state)
     block_root = hash_tree_root(block)
     state_transition(state, signed_block, validate_result=True)
 

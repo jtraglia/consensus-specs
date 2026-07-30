@@ -816,6 +816,12 @@ def with_config_overrides(config_overrides):
                     )
                 kw["phases"] = phases
 
+            # The copied module re-declares the types this fork defines, and the SSZ
+            # type system compares by exact type. A state built under the original
+            # module has to be rebuilt under the copy before the two can meet.
+            if "state" in kw:
+                kw["state"] = spec.BeaconState.decode_bytes(kw["state"].encode_bytes())
+
             # Run the function
             return fn(*args, spec=spec, **kw)
 
@@ -850,6 +856,12 @@ def _with_config_overrides_emit(config_overrides, emitted_fork=None):
                     if emitted_fork == fork:
                         output_config = output
                 kw["phases"] = phases
+
+            # The copied module re-declares the types this fork defines, and the SSZ
+            # type system compares by exact type. A state built under the original
+            # module has to be rebuilt under the copy before the two can meet.
+            if "state" in kw:
+                kw["state"] = spec.BeaconState.decode_bytes(kw["state"].encode_bytes())
 
             # Emit requested spec (with overrides)
             yield "config", "cfg", output_config

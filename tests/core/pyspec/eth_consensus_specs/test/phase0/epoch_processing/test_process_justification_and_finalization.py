@@ -46,8 +46,10 @@ def add_mock_attestations(
 
     start_slot = spec.compute_start_slot_at_epoch(epoch)
     committees_per_slot = spec.get_committee_count_per_slot(state, epoch)
-    for slot in range(int(start_slot), int(start_slot + spec.SLOTS_PER_EPOCH)):
-        for index in range(int(committees_per_slot)):
+    for slot_number in range(int(start_slot), int(start_slot + spec.SLOTS_PER_EPOCH)):
+        slot = spec.Slot(slot_number)
+        for index_number in range(int(committees_per_slot)):
+            index = spec.CommitteeIndex(index_number)
             # Check if we already have had sufficient balance. (and undone if we don't want it).
             # If so, do not create more attestations. (we do not have empty pending attestations normally anyway)
             if remaining_balance < 0:
@@ -74,7 +76,7 @@ def add_mock_attestations(
             if not is_post_altair(spec):
                 attestations.append(
                     spec.PendingAttestation(
-                        aggregation_bits=aggregation_bits,
+                        aggregation_bits=spec.AggregationBits(data=aggregation_bits),
                         data=spec.AttestationData(
                             slot=slot,
                             beacon_block_root=b"\xff" * 32,  # irrelevant to testing
@@ -349,7 +351,7 @@ def test_balance_threshold_with_exited_validators(spec, state):
 
         validator = state.validators[index]
         validator.exit_epoch = epoch
-        validator.withdrawable_epoch = epoch + 1
+        validator.withdrawable_epoch = spec.Epoch(epoch) + spec.Epoch(1)
         validator.withdrawable_epoch = (
             validator.exit_epoch + spec.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
         )
@@ -373,13 +375,13 @@ def test_balance_threshold_with_exited_validators(spec, state):
         total_active_balance = spec.get_total_active_balance(state)
         current_target_balance = spec.get_attesting_balance(state, current_attestations)
         # Check we will not justify the current checkpoint
-        does_justify = current_target_balance * 3 >= total_active_balance * 2
+        does_justify = current_target_balance * spec.Gwei(3) >= total_active_balance * spec.Gwei(2)
         assert not does_justify
         # Ensure we would have justified the current checkpoint w/ the exited validators
         current_exited_balance = spec.get_total_balance(state, exited_validators)
-        does_justify = (
-            current_target_balance + current_exited_balance
-        ) * 3 >= total_active_balance * 2
+        does_justify = (current_target_balance + current_exited_balance) * spec.Gwei(
+            3
+        ) >= total_active_balance * spec.Gwei(2)
         assert does_justify
     else:
         current_indices = spec.get_unslashed_participating_indices(
@@ -388,13 +390,13 @@ def test_balance_threshold_with_exited_validators(spec, state):
         total_active_balance = spec.get_total_active_balance(state)
         current_target_balance = spec.get_total_balance(state, current_indices)
         # Check we will not justify the current checkpoint
-        does_justify = current_target_balance * 3 >= total_active_balance * 2
+        does_justify = current_target_balance * spec.Gwei(3) >= total_active_balance * spec.Gwei(2)
         assert not does_justify
         # Ensure we would have justified the current checkpoint w/ the exited validators
         current_exited_balance = spec.get_total_balance(state, exited_validators)
-        does_justify = (
-            current_target_balance + current_exited_balance
-        ) * 3 >= total_active_balance * 2
+        does_justify = (current_target_balance + current_exited_balance) * spec.Gwei(
+            3
+        ) >= total_active_balance * spec.Gwei(2)
         assert does_justify
 
     yield from run_process_just_and_fin(spec, state)

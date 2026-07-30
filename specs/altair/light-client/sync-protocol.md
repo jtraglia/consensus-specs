@@ -337,7 +337,7 @@ def get_safety_threshold(store: LightClientStore) -> Uint64:
 
 ```python
 def get_subtree_index(generalized_index: GeneralizedIndex) -> Uint64:
-    return generalized_index % Uint64(2) ** floorlog2(generalized_index)
+    return Uint64(generalized_index) % Uint64(2) ** floorlog2(generalized_index)
 ```
 
 ### `is_valid_normalized_merkle_branch`
@@ -348,7 +348,7 @@ def is_valid_normalized_merkle_branch(
 ) -> bool:
     depth = floorlog2(gindex)
     index = get_subtree_index(gindex)
-    num_extra = len(branch) - depth
+    num_extra = len(branch) - int(depth)
     for i in range(num_extra):
         if branch[i] != Bytes32():
             return False

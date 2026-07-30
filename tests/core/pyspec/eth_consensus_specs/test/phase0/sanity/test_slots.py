@@ -23,10 +23,10 @@ def test_slots_1(spec, state):
 
     slots = 1
     yield "slots", int(slots)
-    spec.process_slots(state, state.slot + slots)
+    spec.process_slots(state, state.slot + spec.Slot(slots))
 
     yield "post", state
-    assert state.slot == pre_slot + 1
+    assert state.slot == pre_slot + spec.Slot(1)
     assert get_state_root(spec, state, pre_slot) == pre_root
 
 
@@ -36,7 +36,7 @@ def test_slots_2(spec, state):
     yield "pre", state
     slots = 2
     yield "slots", int(slots)
-    spec.process_slots(state, state.slot + slots)
+    spec.process_slots(state, state.slot + spec.Slot(slots))
     yield "post", state
 
 
@@ -46,7 +46,7 @@ def test_empty_epoch(spec, state):
     yield "pre", state
     slots = spec.SLOTS_PER_EPOCH
     yield "slots", int(slots)
-    spec.process_slots(state, state.slot + slots)
+    spec.process_slots(state, state.slot + spec.Slot(slots))
     yield "post", state
 
 
@@ -56,7 +56,7 @@ def test_double_empty_epoch(spec, state):
     yield "pre", state
     slots = spec.SLOTS_PER_EPOCH * spec.Slot(2)
     yield "slots", int(slots)
-    spec.process_slots(state, state.slot + slots)
+    spec.process_slots(state, state.slot + spec.Slot(slots))
     yield "post", state
 
 
@@ -68,7 +68,7 @@ def test_over_epoch_boundary(spec, state):
     yield "pre", state
     slots = spec.SLOTS_PER_EPOCH
     yield "slots", int(slots)
-    spec.process_slots(state, state.slot + slots)
+    spec.process_slots(state, state.slot + spec.Slot(slots))
     yield "post", state
 
 
@@ -83,7 +83,7 @@ def test_historical_accumulator(spec, state):
     yield "pre", state
     slots = spec.SLOTS_PER_HISTORICAL_ROOT
     yield "slots", int(slots)
-    spec.process_slots(state, state.slot + slots)
+    spec.process_slots(state, state.slot + spec.Slot(slots))
     yield "post", state
 
     # check history update
@@ -127,7 +127,7 @@ def test_balance_change_affects_proposer(spec, state):
             next_epoch(spec, state)
 
     # Transition to the last slot of the current epoch
-    slot = state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
+    slot = state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - spec.Slot(1)
     transition_to(spec, state, slot)
 
     yield "pre", state

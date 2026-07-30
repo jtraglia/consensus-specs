@@ -373,6 +373,8 @@ def test_on_attestation_invalid_attestation(spec, state):
     if is_post_electra(spec):
         attestation.committee_bits = spec.CommitteeBits()
     else:
-        attestation.data.index = spec.MAX_COMMITTEES_PER_SLOT * spec.SLOTS_PER_EPOCH
+        attestation.data.index = spec.CommitteeIndex(
+            int(spec.MAX_COMMITTEES_PER_SLOT) * int(spec.SLOTS_PER_EPOCH)
+        )
 
     run_on_attestation(spec, state, store, attestation, valid=False)
