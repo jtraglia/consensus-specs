@@ -31,7 +31,7 @@ def test_min_balance_exit(spec, state):
     state.exit_balance_to_consume = churn_limit
 
     validator_index = spec.get_active_validator_indices(state, spec.get_current_epoch(state))[0]
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
     signed_voluntary_exit = sign_voluntary_exit(
         spec,
         state,
@@ -69,7 +69,7 @@ def test_min_balance_exits_up_to_churn(spec, state):
     validator_index = spec.get_active_validator_indices(state, spec.get_current_epoch(state))[
         num_to_exit
     ]
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
     signed_voluntary_exit = sign_voluntary_exit(
         spec,
         state,
@@ -116,7 +116,7 @@ def test_min_balance_exits_above_churn(spec, state):
     validator_index = spec.get_active_validator_indices(state, spec.get_current_epoch(state))[
         num_to_exit
     ]
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
     signed_voluntary_exit = sign_voluntary_exit(
         spec,
         state,
@@ -150,7 +150,7 @@ def test_max_balance_exit(spec, state):
     to_exit = spec.MAX_EFFECTIVE_BALANCE_ELECTRA
     state.validators[validator_index].effective_balance = to_exit
 
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
     signed_voluntary_exit = sign_voluntary_exit(
         spec,
         state,
@@ -189,7 +189,7 @@ def test_exit_with_balance_equal_to_churn_limit(spec, state):
     # Set 0th validator effective balance to churn_limit
     state.validators[validator_index].effective_balance = churn_limit
 
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
     signed_voluntary_exit = sign_voluntary_exit(
         spec,
         state,
@@ -226,7 +226,7 @@ def test_exit_with_balance_multiple_of_churn_limit(spec, state):
     epochs_to_consume = 3
     state.validators[validator_index].effective_balance = epochs_to_consume * churn_limit
 
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
     signed_voluntary_exit = sign_voluntary_exit(
         spec,
         state,
@@ -272,7 +272,7 @@ def test_exit_existing_churn_and_churn_limit_balance(spec, state):
     # Set validator effective balance to the churn limit
     state.validators[validator_index].effective_balance = churn_limit
 
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
     signed_voluntary_exit = sign_voluntary_exit(
         spec,
         state,
@@ -318,7 +318,7 @@ def test_exit_existing_churn_and_balance_multiple_of_churn_limit(spec, state):
     epochs_to_consume = 3
     state.validators[validator_index].effective_balance = epochs_to_consume * churn_limit
 
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
     signed_voluntary_exit = sign_voluntary_exit(
         spec,
         state,
@@ -349,7 +349,7 @@ def test_voluntary_exit_with_pending_deposit(spec, state):
     current_epoch = spec.get_current_epoch(state)
     validator_index = spec.get_active_validator_indices(state, current_epoch)[0]
     validator = state.validators[validator_index]
-    privkey = pubkey_to_privkey[validator.pubkey]
+    privkey = pubkey_to_privkey[bytes(validator.pubkey)]
 
     voluntary_exit = spec.VoluntaryExit(
         epoch=current_epoch,
@@ -379,7 +379,7 @@ def test_invalid_validator_has_pending_withdrawal(spec, state):
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = spec.get_active_validator_indices(state, current_epoch)[0]
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
 
     voluntary_exit = spec.VoluntaryExit(
         epoch=current_epoch,

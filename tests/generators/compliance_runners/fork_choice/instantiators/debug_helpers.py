@@ -1,6 +1,7 @@
 from eth_consensus_specs.test.helpers.state import (
     transition_to,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def attesters_in_block(spec, epoch_state, signed_block, target_epoch):
@@ -42,7 +43,7 @@ def print_block(spec, epoch_state, signed_block):
 
 def print_slot_range(spec, root_state, signed_blocks, start_slot, end_slot):
     ret = ""
-    epoch_state = root_state.copy()
+    epoch_state = copy(root_state)
     for slot in range(start_slot, end_slot):
         transition_to(spec, epoch_state, slot)
         blocks_in_slot = [b for b in signed_blocks if b.message.slot == slot]

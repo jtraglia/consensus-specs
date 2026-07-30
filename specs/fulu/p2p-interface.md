@@ -265,7 +265,7 @@ def verify_data_column_sidecar_inclusion_proof(sidecar: DataColumnSidecar) -> bo
 
 ```python
 def compute_subnet_for_data_column_sidecar(column_index: ColumnIndex) -> SubnetID:
-    return SubnetID(column_index % DATA_COLUMN_SIDECAR_SUBNET_COUNT)
+    return SubnetID(Uint64(column_index) % DATA_COLUMN_SIDECAR_SUBNET_COUNT)
 ```
 
 ### MetaData

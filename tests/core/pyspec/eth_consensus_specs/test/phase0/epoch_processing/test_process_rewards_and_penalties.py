@@ -28,6 +28,7 @@ from eth_consensus_specs.test.helpers.state import (
     next_epoch,
     next_slot,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def run_process_rewards_and_penalties(spec, state):
@@ -79,7 +80,7 @@ def validate_resulting_balances(spec, pre_state, post_state, attestations):
 @with_all_phases
 @spec_state_test
 def test_genesis_epoch_no_attestations_no_penalties(spec, state):
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     assert spec.compute_epoch_at_slot(state.slot) == spec.GENESIS_EPOCH
 
@@ -107,7 +108,7 @@ def test_genesis_epoch_full_attestations_no_rewards(spec, state):
     # ensure has not cross the epoch boundary
     assert spec.compute_epoch_at_slot(state.slot) == spec.GENESIS_EPOCH
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_process_rewards_and_penalties(spec, state)
 
@@ -141,13 +142,13 @@ def test_full_attestations_random_incorrect_fields(spec, state):
 @with_all_phases
 @spec_test
 @with_custom_state(
-    balances_fn=misc_balances, threshold_fn=lambda spec: spec.MAX_EFFECTIVE_BALANCE // 2
+    balances_fn=misc_balances, threshold_fn=lambda spec: spec.MAX_EFFECTIVE_BALANCE // spec.Gwei(2)
 )
 @single_phase
 def test_full_attestations_misc_balances(spec, state):
     attestations = prepare_state_with_attestations(spec, state)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_process_rewards_and_penalties(spec, state)
 
@@ -184,7 +185,7 @@ def test_full_attestations_default_balances_except_a_validator_with_one_gwei(spe
 def test_no_attestations_all_penalties(spec, state):
     # Move to next epoch to ensure rewards/penalties are processed
     next_epoch(spec, state)
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     assert spec.compute_epoch_at_slot(state.slot) == spec.GENESIS_EPOCH + 1
 
@@ -204,7 +205,7 @@ def run_with_participation(spec, state, participation_fn):
     attestations = prepare_state_with_attestations(
         spec, state, participation_fn=participation_tracker
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_process_rewards_and_penalties(spec, state)
 
@@ -312,8 +313,8 @@ def test_duplicate_attestation(spec, state):
 
     assert len(participants) > 0
 
-    single_state = state.copy()
-    dup_state = state.copy()
+    single_state = copy(state)
+    dup_state = copy(state)
 
     inclusion_slot = state.slot + spec.MIN_ATTESTATION_INCLUSION_DELAY
     add_attestations_to_state(spec, single_state, [attestation], inclusion_slot)
@@ -343,7 +344,7 @@ def test_duplicate_participants_different_attestation_1(spec, state):
     Note: although these are slashable, they can validly be included
     """
     correct_attestation = get_valid_attestation(spec, state, signed=True)
-    incorrect_attestation = correct_attestation.copy()
+    incorrect_attestation = copy(correct_attestation)
     incorrect_attestation.data.beacon_block_root = b"\x42" * 32
     sign_attestation(spec, state, incorrect_attestation)
 
@@ -352,8 +353,8 @@ def test_duplicate_participants_different_attestation_1(spec, state):
 
     assert len(participants) > 0
 
-    single_correct_state = state.copy()
-    dup_state = state.copy()
+    single_correct_state = copy(state)
+    dup_state = copy(state)
 
     inclusion_slot = state.slot + spec.MIN_ATTESTATION_INCLUSION_DELAY
     add_attestations_to_state(spec, single_correct_state, [correct_attestation], inclusion_slot)
@@ -385,7 +386,7 @@ def test_duplicate_participants_different_attestation_2(spec, state):
     Note: although these are slashable, they can validly be included
     """
     correct_attestation = get_valid_attestation(spec, state, signed=True)
-    incorrect_attestation = correct_attestation.copy()
+    incorrect_attestation = copy(correct_attestation)
     incorrect_attestation.data.beacon_block_root = b"\x42" * 32
     sign_attestation(spec, state, incorrect_attestation)
 
@@ -394,8 +395,8 @@ def test_duplicate_participants_different_attestation_2(spec, state):
 
     assert len(participants) > 0
 
-    single_correct_state = state.copy()
-    dup_state = state.copy()
+    single_correct_state = copy(state)
+    dup_state = copy(state)
 
     inclusion_slot = state.slot + spec.MIN_ATTESTATION_INCLUSION_DELAY
     add_attestations_to_state(spec, single_correct_state, [correct_attestation], inclusion_slot)
@@ -428,7 +429,7 @@ def test_duplicate_participants_different_attestation_3(spec, state):
     Note: although these are slashable, they can validly be included
     """
     correct_attestation = get_valid_attestation(spec, state, signed=True)
-    incorrect_attestation = correct_attestation.copy()
+    incorrect_attestation = copy(correct_attestation)
     incorrect_attestation.data.beacon_block_root = b"\x42" * 32
     sign_attestation(spec, state, incorrect_attestation)
 
@@ -437,8 +438,8 @@ def test_duplicate_participants_different_attestation_3(spec, state):
 
     assert len(participants) > 0
 
-    single_correct_state = state.copy()
-    dup_state = state.copy()
+    single_correct_state = copy(state)
+    dup_state = copy(state)
 
     inclusion_slot = state.slot + spec.MIN_ATTESTATION_INCLUSION_DELAY
     add_attestations_to_state(spec, single_correct_state, [correct_attestation], inclusion_slot)
@@ -477,7 +478,7 @@ def test_attestations_some_slashed(spec, state):
     if not is_post_altair(spec):
         assert len(state.previous_epoch_attestations) == len(attestations)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_process_rewards_and_penalties(spec, state)
 

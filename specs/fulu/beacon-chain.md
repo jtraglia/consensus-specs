@@ -349,8 +349,8 @@ def compute_proposer_indices(
     Return the proposer indices for the given ``epoch``.
     """
     start_slot = compute_start_slot_at_epoch(epoch)
-    seeds = [hash(seed + uint_to_bytes(Slot(start_slot + i))) for i in range(SLOTS_PER_EPOCH)]
-    return ProposerIndices(compute_proposer_index(state, indices, seed) for seed in seeds)
+    seeds = [hash(seed + uint_to_bytes(start_slot + Slot(i))) for i in range(int(SLOTS_PER_EPOCH))]
+    return ProposerIndices(data=[compute_proposer_index(state, indices, seed) for seed in seeds])
 ```
 
 ### Beacon state accessors
@@ -415,7 +415,7 @@ for the former deposit mechanism.
 
 ```python
 def process_pending_deposits(state: BeaconState) -> None:
-    next_epoch = Epoch(get_current_epoch(state) + 1)
+    next_epoch = get_current_epoch(state) + Epoch(1)
     available_for_processing = state.deposit_balance_to_consume + get_activation_exit_churn_limit(
         state
     )
@@ -431,7 +431,7 @@ def process_pending_deposits(state: BeaconState) -> None:
             break
 
         # Check if number of processed deposits has not reached the limit, otherwise, stop processing.
-        if next_deposit_index >= MAX_PENDING_DEPOSITS_PER_EPOCH:
+        if next_deposit_index >= int(MAX_PENDING_DEPOSITS_PER_EPOCH):
             break
 
         # Read validator state
@@ -462,7 +462,9 @@ def process_pending_deposits(state: BeaconState) -> None:
         # Regardless of how the deposit was handled, we move on in the queue.
         next_deposit_index += 1
 
-    state.pending_deposits = state.pending_deposits[next_deposit_index:] + deposits_to_postpone
+    state.pending_deposits = PendingDeposits(
+        data=list(state.pending_deposits[next_deposit_index:]) + deposits_to_postpone
+    )
 
     # Accumulate churn only if the churn limit has been hit.
     if is_churn_limit_reached:
@@ -481,9 +483,9 @@ this means that at the start of epoch `N`, the proposer lookahead for epoch
 
 ```python
 def process_proposer_lookahead(state: BeaconState) -> None:
-    last_epoch_start = len(state.proposer_lookahead) - SLOTS_PER_EPOCH
+    last_epoch_start = len(state.proposer_lookahead) - int(SLOTS_PER_EPOCH)
     # Shift out proposers in the first epoch
-    state.proposer_lookahead[:last_epoch_start] = state.proposer_lookahead[SLOTS_PER_EPOCH:]
+    state.proposer_lookahead[:last_epoch_start] = state.proposer_lookahead[int(SLOTS_PER_EPOCH) :]
     # Fill in the last epoch with new proposer indices
     last_epoch_proposers = get_beacon_proposer_indices(
         state, Epoch(get_current_epoch(state) + MIN_SEED_LOOKAHEAD + 1)

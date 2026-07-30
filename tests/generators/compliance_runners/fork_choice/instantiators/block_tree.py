@@ -15,6 +15,7 @@ from eth_consensus_specs.test.helpers.state import (
     transition_to,
 )
 from eth_consensus_specs.utils import bls
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 from .debug_helpers import (
     attesters_in_block,
@@ -96,7 +97,7 @@ def _create_new_branch_tip(spec, branch_tips: dict[SmLink:BranchTip], sm_link: S
     # Find and return the most adanced one
     most_recent_tip = max(tips_with_justified_source, key=lambda s: s.beacon_state.slot)
     return BranchTip(
-        most_recent_tip.beacon_state.copy(),
+        copy(most_recent_tip.beacon_state),
         most_recent_tip.attestations.copy(),
         [],
         most_recent_tip.eventually_justified_checkpoint,
@@ -481,7 +482,7 @@ def _get_random_payload_attestation_messages(spec, state, rnd: random.Random):
     if attested_slot != state.slot or attested_slot == 0:
         return []
 
-    parent_header = state.latest_block_header.copy()
+    parent_header = copy(state.latest_block_header)
     if parent_header.state_root == spec.Root():
         parent_header.state_root = spec.hash_tree_root(state)
     beacon_block_root = spec.hash_tree_root(parent_header)
@@ -597,7 +598,7 @@ class RuntimeState:
     def __init__(self, spec, anchor_tip: BranchTip):
         self.spec = spec
         self.current_slot = anchor_tip.beacon_state.slot
-        self.post_states = [anchor_tip.beacon_state.copy()]
+        self.post_states = [copy(anchor_tip.beacon_state)]
         self.block_tree_tips = {0}
         self.payload_known_block_indices = set()
         self.att_dependent_roots = {}
@@ -629,9 +630,9 @@ class StateCache:
     def get_state_by_block_index_and_slot(self, index):
         cache_key = (index, self.runtime.current_slot)
         if self.cache_key == cache_key:
-            return self.cached_state.copy()
+            return copy(self.cached_state)
 
-        state = self.runtime.post_states[index].copy()
+        state = copy(self.runtime.post_states[index])
         transition_to(self.spec, state, self.runtime.current_slot)
         self.cache_key = cache_key
         self.cached_state = state
@@ -673,7 +674,7 @@ def _roll(rnd, rate):
 
 
 def _get_state_block_root(spec, state):
-    block_header = state.latest_block_header.copy()
+    block_header = copy(state.latest_block_header)
     if block_header.state_root == spec.Bytes32():
         block_header.state_root = spec.hash_tree_root(state)
     return spec.hash_tree_root(block_header)
@@ -687,7 +688,7 @@ def _debug_assert_block_tree_shape(spec, anchor_state, block_parents, signed_blo
     )
 
     block_roots = [_get_state_block_root(spec, anchor_state)]
-    block_roots.extend(block.message.hash_tree_root() for block in signed_blocks)
+    block_roots.extend(hash_tree_root(block.message) for block in signed_blocks)
 
     for block_index in range(1, len(block_parents)):
         expected_parent_index = block_parents[block_index]
@@ -897,7 +898,7 @@ def _generate_block_tree(
         if not is_post_gloas(spec) or new_block_index is None:
             return False
 
-        block_root = signed_block.message.hash_tree_root()
+        block_root = hash_tree_root(signed_block.message)
         envelope = build_signed_execution_payload_envelope(
             spec, post_state, block_root, signed_block
         )

@@ -596,7 +596,7 @@ def process_registry_updates(state: BeaconState) -> None:
     # Process activation eligibility and ejections
     for index, validator in enumerate(state.validators):
         if is_eligible_for_activation_queue(validator):
-            validator.activation_eligibility_epoch = get_current_epoch(state) + 1
+            validator.activation_eligibility_epoch = get_current_epoch(state) + Epoch(1)
 
         if (
             is_active_validator(validator, get_current_epoch(state))

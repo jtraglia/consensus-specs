@@ -18,6 +18,7 @@ from eth_consensus_specs.test.helpers.keys import privkeys, pubkeys
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def run_deposit_transition_block(spec, state, block, top_up_keys=None, valid=True):
@@ -323,7 +324,7 @@ def test_deposit_transition__deposit_with_same_pubkey_different_withdrawal_crede
 
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
 
-    deposit_requests = block.body.execution_requests.deposits.copy()
+    deposit_requests = copy(block.body.execution_requests.deposits)
 
     yield from run_deposit_transition_block(spec, state, block)
 

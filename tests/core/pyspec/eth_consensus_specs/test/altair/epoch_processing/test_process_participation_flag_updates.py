@@ -11,6 +11,7 @@ from eth_consensus_specs.test.context import (
 from eth_consensus_specs.test.helpers.constants import MINIMAL
 from eth_consensus_specs.test.helpers.epoch_processing import run_epoch_processing_with
 from eth_consensus_specs.test.helpers.state import next_epoch_via_block
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def get_full_flags(spec):
@@ -21,7 +22,7 @@ def get_full_flags(spec):
 
 
 def run_process_participation_flag_updates(spec, state):
-    old = state.current_epoch_participation.copy()
+    old = copy(state.current_epoch_participation)
     yield from run_epoch_processing_with(spec, state, "process_participation_flag_updates")
     assert state.current_epoch_participation == [0] * len(state.validators)
     assert state.previous_epoch_participation == old
@@ -135,7 +136,9 @@ def test_previous_epoch_zeroed(spec, state):
 def custom_validator_count(factor: float):
     def initializer(spec):
         num_validators = (
-            spec.SLOTS_PER_EPOCH * spec.MAX_COMMITTEES_PER_SLOT * spec.TARGET_COMMITTEE_SIZE
+            int(spec.SLOTS_PER_EPOCH)
+            * int(spec.MAX_COMMITTEES_PER_SLOT)
+            * int(spec.TARGET_COMMITTEE_SIZE)
         )
         return [spec.MAX_EFFECTIVE_BALANCE] * int(float(int(num_validators)) * factor)
 

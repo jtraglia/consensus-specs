@@ -25,7 +25,7 @@ def test_basic(spec, state):
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = spec.get_active_validator_indices(state, current_epoch)[0]
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
 
     signed_voluntary_exit = sign_voluntary_exit(
         spec,
@@ -74,7 +74,7 @@ def run_test_success_exit_queue(spec, state):
     # Prepare a bunch of exits, based on the current state
     exit_queue = []
     for index in initial_indices:
-        privkey = pubkey_to_privkey[state.validators[index].pubkey]
+        privkey = pubkey_to_privkey[bytes(state.validators[index].pubkey)]
 
         signed_voluntary_exit = sign_voluntary_exit(
             spec, state, spec.VoluntaryExit(epoch=current_epoch, validator_index=index), privkey
@@ -90,7 +90,7 @@ def run_test_success_exit_queue(spec, state):
 
     # exit an additional validator
     validator_index = spec.get_active_validator_indices(state, current_epoch)[-1]
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
 
     signed_voluntary_exit = sign_voluntary_exit(
         spec,
@@ -140,7 +140,7 @@ def test_default_exit_epoch_subsequent_exit(spec, state):
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = spec.get_active_validator_indices(state, current_epoch)[0]
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
 
     signed_voluntary_exit = sign_voluntary_exit(
         spec,
@@ -168,7 +168,7 @@ def test_invalid_validator_exit_in_future(spec, state):
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = spec.get_active_validator_indices(state, current_epoch)[0]
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
 
     voluntary_exit = spec.VoluntaryExit(
         epoch=current_epoch + 1,
@@ -187,7 +187,7 @@ def test_invalid_validator_incorrect_validator_index(spec, state):
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = spec.get_active_validator_indices(state, current_epoch)[0]
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
 
     voluntary_exit = spec.VoluntaryExit(
         epoch=current_epoch,
@@ -203,7 +203,7 @@ def test_invalid_validator_incorrect_validator_index(spec, state):
 def test_invalid_validator_not_active(spec, state):
     current_epoch = spec.get_current_epoch(state)
     validator_index = spec.get_active_validator_indices(state, current_epoch)[0]
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
 
     state.validators[validator_index].activation_epoch = spec.FAR_FUTURE_EPOCH
 
@@ -225,7 +225,7 @@ def test_invalid_validator_already_exited(spec, state):
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = spec.get_active_validator_indices(state, current_epoch)[0]
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
 
     # but validator already has exited
     state.validators[validator_index].exit_epoch = current_epoch + 2
@@ -245,7 +245,7 @@ def test_invalid_validator_already_exited(spec, state):
 def test_invalid_validator_not_active_long_enough(spec, state):
     current_epoch = spec.get_current_epoch(state)
     validator_index = spec.get_active_validator_indices(state, current_epoch)[0]
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
 
     signed_voluntary_exit = sign_voluntary_exit(
         spec,

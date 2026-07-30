@@ -63,7 +63,7 @@ def exit_random_validators(
     If exit_epoch is configured, use the given exit_epoch. Otherwise, randomly set exit_epoch and withdrawable_epoch.
     """
     if from_epoch is None:
-        from_epoch = spec.MAX_SEED_LOOKAHEAD + 1
+        from_epoch = spec.MAX_SEED_LOOKAHEAD + spec.Epoch(1)
     epoch_diff = int(from_epoch) - int(spec.get_current_epoch(state))
     for _ in range(epoch_diff):
         # NOTE: if `epoch_diff` is negative, then this loop body does not execute.

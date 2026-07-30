@@ -1,6 +1,7 @@
 from eth_consensus_specs.test.context import spec_state_test, with_gloas_and_later
 from eth_consensus_specs.test.helpers.keys import builder_pubkeys
 from eth_consensus_specs.test.helpers.state import next_slots
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def advance_past_finalization(spec, state):
@@ -34,7 +35,7 @@ def run_builder_exit_request_processing(spec, state, builder_exit_request, valid
     The function never raises. If valid is False, expect the request to be
     consumed without changing the state.
     """
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield "pre", state
     yield "builder_exit_request", builder_exit_request

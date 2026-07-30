@@ -11,7 +11,7 @@ from eth_consensus_specs.test.context import (
 def test_requests_serialization_round_trip__sweep_thresholds(spec):
     execution_requests = spec.ExecutionRequests(
         sweep_thresholds=spec.SweepThresholdRequests(
-            [
+            data=[
                 spec.SetSweepThresholdRequest(
                     source_address=spec.ExecutionAddress(b"\x11" * 20),
                     validator_pubkey=spec.BLSPubkey(b"\x22" * 48),

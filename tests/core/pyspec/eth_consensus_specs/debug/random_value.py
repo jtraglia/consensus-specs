@@ -2,7 +2,6 @@ from enum import Enum
 from random import Random
 
 from eth_consensus_specs.utils.ssz.ssz_typing import (
-    BasicView,
     BitList,
     BitVector,
     Boolean,
@@ -14,11 +13,9 @@ from eth_consensus_specs.utils.ssz.ssz_typing import (
     ProgressiveBitList,
     ProgressiveContainer,
     ProgressiveList,
+    SSZType,
     Uint,
-    Uint8,
-    Union,
     Vector,
-    View,
 )
 
 # in bytes
@@ -50,12 +47,12 @@ class RandomizationMode(Enum):
 
 def get_random_ssz_object(
     rng: Random,
-    typ: type[View],
+    typ: type[SSZType],
     max_bytes_length: int,
     max_list_length: int,
     mode: RandomizationMode,
     chaos: bool,
-) -> View:
+) -> SSZType:
     """
     Create an object for a given type, filled with random data.
     :param rng: The random number generator to use.
@@ -71,28 +68,28 @@ def get_random_ssz_object(
     if issubclass(typ, ByteList):
         # ByteList array
         if mode == RandomizationMode.mode_nil_count:
-            return typ(b"")
+            return typ(data=b"")
         elif mode == RandomizationMode.mode_max_count:
-            return typ(get_random_bytes_list(rng, min(max_bytes_length, typ.limit())))
+            return typ(data=get_random_bytes_list(rng, min(max_bytes_length, typ.LIMIT)))
         elif mode == RandomizationMode.mode_one_count:
-            return typ(get_random_bytes_list(rng, min(1, typ.limit())))
+            return typ(data=get_random_bytes_list(rng, min(1, typ.LIMIT)))
         elif mode == RandomizationMode.mode_zero:
-            return typ(b"\x00" * min(1, typ.limit()))
+            return typ(data=b"\x00" * min(1, typ.LIMIT))
         elif mode == RandomizationMode.mode_max:
-            return typ(b"\xff" * min(1, typ.limit()))
+            return typ(data=b"\xff" * min(1, typ.LIMIT))
         else:
             return typ(
-                get_random_bytes_list(rng, rng.randint(0, min(max_bytes_length, typ.limit())))
+                data=get_random_bytes_list(rng, rng.randint(0, min(max_bytes_length, typ.LIMIT)))
             )
     if issubclass(typ, ByteVector):
         # Random byte vectors can be bigger than max bytes size, e.g. custody chunk data.
         # No max-bytes-length limitation here.
         if mode == RandomizationMode.mode_zero:
-            return typ(b"\x00" * typ.type_byte_length())
+            return typ(b"\x00" * typ.LENGTH)
         elif mode == RandomizationMode.mode_max:
-            return typ(b"\xff" * typ.type_byte_length())
+            return typ(b"\xff" * typ.LENGTH)
         else:
-            return typ(get_random_bytes_list(rng, typ.type_byte_length()))
+            return typ(get_random_bytes_list(rng, typ.LENGTH))
     elif issubclass(typ, Boolean | Uint):
         # Basic types
         if mode == RandomizationMode.mode_zero:
@@ -102,16 +99,20 @@ def get_random_ssz_object(
         else:
             return get_random_basic_value(rng, typ)
     elif issubclass(typ, Vector | BitVector):
-        elem_type = typ.element_cls() if issubclass(typ, Vector) else Boolean
+        elem_type = typ.ELEMENT_TYPE if issubclass(typ, Vector) else Boolean
         return typ(
-            get_random_ssz_object(rng, elem_type, max_bytes_length, max_list_length, mode, chaos)
-            for _ in range(typ.vector_length())
+            data=[
+                get_random_ssz_object(
+                    rng, elem_type, max_bytes_length, max_list_length, mode, chaos
+                )
+                for _ in range(typ.LENGTH)
+            ]
         )
     elif issubclass(typ, List | ProgressiveList | BitList | ProgressiveBitList):
         limit = max_list_length
         # SSZ imposes a hard limit on lists, we can't put in more than that
-        if not issubclass(typ, ProgressiveList | ProgressiveBitList) and typ.limit() < limit:
-            limit = typ.limit()
+        if not issubclass(typ, ProgressiveList | ProgressiveBitList) and limit > typ.LIMIT:
+            limit = typ.LIMIT
 
         length = rng.randint(0, limit)
         if mode == RandomizationMode.mode_one_count:
@@ -121,90 +122,78 @@ def get_random_ssz_object(
         elif mode == RandomizationMode.mode_nil_count:
             length = 0
 
-        elem_type = Boolean if issubclass(typ, BitList | ProgressiveBitList) else typ.element_cls()
+        elem_type = Boolean if issubclass(typ, BitList | ProgressiveBitList) else typ.ELEMENT_TYPE
         max_list_length = 1 << (max_list_length.bit_length() >> 1)
         return typ(
-            get_random_ssz_object(rng, elem_type, max_bytes_length, max_list_length, mode, chaos)
-            for _ in range(length)
+            data=[
+                get_random_ssz_object(
+                    rng, elem_type, max_bytes_length, max_list_length, mode, chaos
+                )
+                for _ in range(length)
+            ]
         )
     elif issubclass(typ, Container | ProgressiveContainer):
-        fields = typ.fields()
         # Container
         return typ(
             **{
                 field_name: get_random_ssz_object(
                     rng, field_type, max_bytes_length, max_list_length, mode, chaos
                 )
-                for field_name, field_type in fields.items()
+                for field_name, field_type in get_field_types(typ).items()
             }
         )
-    elif issubclass(typ, Union):
-        options = typ.options()
-        selector: int
-        if mode == RandomizationMode.mode_zero:
-            selector = 0
-        elif mode == RandomizationMode.mode_max:
-            selector = len(options) - 1
-        else:
-            selector = rng.randrange(0, len(options))
-        elem_type = options[selector]
-        elem: View
-        if elem_type is None:
-            elem = None
-        else:
-            elem = get_random_ssz_object(
-                rng, elem_type, max_bytes_length, max_list_length, mode, chaos
-            )
-        return typ(selector=selector, value=elem)
     elif issubclass(typ, CompatibleUnion):
-        options = typ.options()
-        selector: Uint8
+        options = typ.OPTIONS
         if mode == RandomizationMode.mode_zero:
             selector = min(options.keys())
         elif mode == RandomizationMode.mode_max:
             selector = max(options.keys())
         else:
             selector = rng.choice(list(options.keys()))
-        elem_type = options[selector]
         return typ(
             selector=selector,
             data=get_random_ssz_object(
-                rng, elem_type, max_bytes_length, max_list_length, mode, chaos
+                rng, options[selector], max_bytes_length, max_list_length, mode, chaos
             ),
         )
     else:
         raise Exception(f"Type not recognized: typ={typ}")
 
 
+def get_field_types(typ: type[Container | ProgressiveContainer]) -> dict[str, type[SSZType]]:
+    """Map each field of a container type to its declared SSZ type."""
+    return {name: field.annotation for name, field in typ.model_fields.items()}
+
+
 def get_random_bytes_list(rng: Random, length: int) -> bytes:
     return bytes(rng.getrandbits(8) for _ in range(length))
 
 
-def get_random_basic_value(rng: Random, typ) -> BasicView:
+def get_random_basic_value(rng: Random, typ) -> Boolean | Uint:
     if issubclass(typ, Boolean):
         return typ(rng.choice((True, False)))
     elif issubclass(typ, Uint):
-        assert typ.type_byte_length() in UINT_BYTE_SIZES
-        return typ(rng.randint(0, 256 ** typ.type_byte_length() - 1))
+        assert typ.get_byte_length() in UINT_BYTE_SIZES
+        return typ(rng.randint(0, 256 ** typ.get_byte_length() - 1))
     else:
         raise ValueError(f"Not a basic type: typ={typ}")
 
 
-def get_min_basic_value(typ) -> BasicView:
+def get_min_basic_value(typ) -> Boolean | Uint:
     if issubclass(typ, Boolean):
         return typ(False)  # noqa: FBT003
     elif issubclass(typ, Uint):
-        assert typ.type_byte_length() in UINT_BYTE_SIZES
+        assert typ.get_byte_length() in UINT_BYTE_SIZES
         return typ(0)
     else:
         raise ValueError(f"Not a basic type: typ={typ}")
 
 
-def get_max_basic_value(typ) -> BasicView:
+def get_max_basic_value(typ) -> Boolean | Uint:
     if issubclass(typ, Boolean):
         return typ(True)  # noqa: FBT003
     elif issubclass(typ, Uint):
-        assert typ.type_byte_length() in UINT_BYTE_SIZES
-        return typ(256 ** typ.type_byte_length() - 1)
+        assert typ.get_byte_length() in UINT_BYTE_SIZES
+        return typ(256 ** typ.get_byte_length() - 1)
     else:
         raise ValueError(f"Not a basic type: typ={typ}")

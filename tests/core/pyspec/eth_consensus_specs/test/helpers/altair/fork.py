@@ -4,8 +4,11 @@ ALTAIR_FORK_TEST_META_TAGS = {
 
 
 def run_fork_test(post_spec, pre_state):
-    # Clean up state to be more realistic
-    pre_state.current_epoch_attestations = []
+    # Clean up state to be more realistic. The empty value has to carry the
+    # field's own type, which belongs to the pre-fork spec rather than to
+    # ``post_spec``, so it is read off the state's own field list.
+    attestations_type = type(pre_state).model_fields["current_epoch_attestations"].annotation
+    pre_state.current_epoch_attestations = attestations_type()
 
     yield "pre", pre_state
 

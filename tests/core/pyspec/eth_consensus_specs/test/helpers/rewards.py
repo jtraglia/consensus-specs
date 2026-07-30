@@ -15,6 +15,7 @@ from eth_consensus_specs.test.helpers.random import (
 from eth_consensus_specs.test.helpers.state import (
     next_epoch,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 from eth_consensus_specs.utils.ssz.ssz_typing import Container, ProgressiveList, Uint64
 
 
@@ -298,8 +299,8 @@ def run_get_inactivity_penalty_deltas(spec, state):
 def transition_state_to_leak(spec, state, epochs=None):
     if epochs is None:
         # +2 because finality delay is based on previous_epoch and must be more than `MIN_EPOCHS_TO_INACTIVITY_PENALTY`
-        epochs = spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY + 2
-    assert epochs > spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY
+        epochs = spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY + spec.Epoch(2)
+    assert spec.Epoch(epochs) > spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY
 
     for _ in range(epochs):
         next_epoch(spec, state)
@@ -316,20 +317,18 @@ def leaking(epochs=None):
             # transition it to leak, and put it in the LRU.
             # The input state is likely already cached, so the hash-tree-root does not affect speed.
             key = (
-                state.hash_tree_root(),
+                hash_tree_root(state),
                 spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY,
                 spec.SLOTS_PER_EPOCH,
                 epochs,
             )
             if key not in _cache_dict:
                 transition_state_to_leak(spec, state, epochs=epochs)
-                _cache_dict[key] = (
-                    state.get_backing()
-                )  # cache the tree structure, not the view wrapping it.
+                _cache_dict[key] = copy(state)
 
-            # Take an entry out of the LRU.
-            # No copy is necessary, as we wrap the immutable backing with a new view.
-            state = spec.BeaconState(backing=_cache_dict[key])
+            # Take an entry out of the LRU. States are mutable, so the test gets a
+            # copy and the cached one stays as it was transitioned.
+            state = copy(_cache_dict[key])
             return fn(*args, spec=spec, state=state, **kw)
 
         return entry
@@ -525,7 +524,7 @@ def run_test_duplicate_attestations_at_later_slots(spec, state):
         # duplicate if slot exceeds the max slot in previous_epoch_attestations
         if a.data.slot + a.inclusion_delay >= max_slot:
             continue
-        later_a = a.copy()
+        later_a = copy(a)
         later_a.inclusion_delay += 1
         later_a.proposer_index = per_slot_proposers[later_a.data.slot + later_a.inclusion_delay]
         later_attestations.append(later_a)

@@ -23,6 +23,7 @@ from eth_consensus_specs.test.helpers.state import (
     next_slot,
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def _setup_boost_scenario(spec, state, adjacent, weak, sibling):
@@ -50,10 +51,10 @@ def _setup_boost_scenario(spec, state, adjacent, weak, sibling):
     store, state, test_steps = yield from setup_finalized_store(spec, state)
 
     # --- parent (the re-org target) ---
-    parent_pre_state = state.copy()
+    parent_pre_state = copy(state)
     parent_block = build_empty_block_for_next_slot(spec, state)
     signed_parent = state_transition_and_sign_block(spec, state, parent_block)
-    parent_root = signed_parent.message.hash_tree_root()
+    parent_root = hash_tree_root(signed_parent.message)
     # Timely add: ticks to parent.slot start, so it is PTC-timely and attestation-timely
     yield from tick_and_add_block(spec, store, signed_parent, test_steps)
 
@@ -64,11 +65,11 @@ def _setup_boost_scenario(spec, state, adjacent, weak, sibling):
         # tiebreak on a weight tie. Graffiti only perturbs the block root; bounded
         # so a helper change can never spin forever.
         for graffiti_seed in range(256):
-            sibling_state = parent_pre_state.copy()
+            sibling_state = copy(parent_pre_state)
             sibling_block = build_empty_block(spec, sibling_state, slot=parent_block.slot)
             sibling_block.body.graffiti = spec.Bytes32(graffiti_seed.to_bytes(32, "little"))
             signed_sibling = state_transition_and_sign_block(spec, sibling_state, sibling_block)
-            sibling_root = signed_sibling.message.hash_tree_root()
+            sibling_root = hash_tree_root(signed_sibling.message)
             if sibling_root > parent_root:
                 break
         else:
@@ -113,7 +114,7 @@ def _setup_boost_scenario(spec, state, adjacent, weak, sibling):
 
     block = build_empty_block_for_next_slot(spec, state)
     signed_block = state_transition_and_sign_block(spec, state, block)
-    block_root = signed_block.message.hash_tree_root()
+    block_root = hash_tree_root(signed_block.message)
     # Timely add in the current slot -> sets store.proposer_boost_root = block
     yield from tick_and_add_block(spec, store, signed_block, test_steps)
 

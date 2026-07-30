@@ -129,7 +129,7 @@ def test_initialize_beacon_state_one_topup_activation(spec):
         yield "description", "meta", get_post_altair_description(spec)
 
     # Submit all but one deposit as MAX_EFFECTIVE_BALANCE
-    main_deposit_count = spec.config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT - 1
+    main_deposit_count = int(spec.config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT) - 1
     main_deposits, _, deposit_data_list = prepare_full_genesis_deposits(
         spec,
         spec.MAX_EFFECTIVE_BALANCE,
@@ -212,8 +212,8 @@ def test_initialize_beacon_state_random_valid_genesis(spec):
     random_deposits, _, deposit_data_list = prepare_random_genesis_deposits(
         spec,
         deposit_count=20,
-        min_pubkey_index=spec.config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT - 5,
-        max_pubkey_index=spec.config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT + 5,
+        min_pubkey_index=int(spec.config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT) - 5,
+        max_pubkey_index=int(spec.config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT) + 5,
     )
 
     # Then make spec.config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT full deposits

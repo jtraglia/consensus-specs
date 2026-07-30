@@ -13,6 +13,7 @@ from eth_consensus_specs.test.helpers.withdrawals import (
     set_compounding_withdrawal_credential_with_balance,
     set_eth1_withdrawal_credential_with_balance,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 #  ***********************
 #  * CONSOLIDATION TESTS *
@@ -59,8 +60,8 @@ def test_consolidation_not_yet_withdrawable_validator(spec, state):
     # Initiate exit of source validator
     spec.initiate_validator_exit(state, source_index)
 
-    pre_pending_consolidations = state.pending_consolidations.copy()
-    pre_balances = state.balances.copy()
+    pre_pending_consolidations = copy(state.pending_consolidations)
+    pre_balances = copy(state.balances)
 
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
 
@@ -132,8 +133,8 @@ def test_all_consolidation_cases_together(spec, state):
     # Initiate exit of third source validator
     spec.initiate_validator_exit(state, 2)
 
-    pre_balances = state.balances.copy()
-    pre_pending_consolidations = state.pending_consolidations.copy()
+    pre_balances = copy(state.balances)
+    pre_pending_consolidations = copy(state.pending_consolidations)
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
 
     # First consolidation is successfully processed
@@ -173,7 +174,7 @@ def test_pending_consolidation_future_epoch(spec, state):
         next_epoch_with_full_participation(spec, state)
 
     # Obtain state before the call to process_pending_consolidations
-    state_before_consolidation = state.copy()
+    state_before_consolidation = copy(state)
     run_epoch_processing_to(spec, state_before_consolidation, "process_pending_consolidations")
 
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
@@ -220,7 +221,7 @@ def test_pending_consolidation_compounding_creds(spec, state):
         next_epoch_with_full_participation(spec, state)
 
     # Obtain state before the call to process_pending_consolidations
-    state_before_consolidation = state.copy()
+    state_before_consolidation = copy(state)
     run_epoch_processing_to(spec, state_before_consolidation, "process_pending_consolidations")
 
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
@@ -280,7 +281,7 @@ def test_pending_consolidation_with_pending_deposit(spec, state):
         next_epoch_with_full_participation(spec, state)
 
     # Obtain state before the call to process_pending_balance_deposits
-    state_before_consolidation = state.copy()
+    state_before_consolidation = copy(state)
     run_epoch_processing_to(spec, state_before_consolidation, "process_pending_consolidations")
 
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
@@ -510,7 +511,7 @@ def run_balance_computation_test(spec, state, instance_tuples):
         )
         max_index += 2
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
 

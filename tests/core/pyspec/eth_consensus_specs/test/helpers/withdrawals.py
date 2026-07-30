@@ -6,6 +6,7 @@ from eth_consensus_specs.test.helpers.forks import (
     is_post_fulu,
     is_post_gloas,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def check_is_partially_withdrawable_validator(spec, state, validator_index, balance=None):
@@ -243,7 +244,7 @@ def run_withdrawals_processing(
     if num_expected_withdrawals is not None:
         assert len(expected_withdrawals) == num_expected_withdrawals
 
-    pre_state = state.copy()
+    pre_state = copy(state)
     yield "pre", state
 
     if not valid:
@@ -312,8 +313,8 @@ def set_parent_block_full(spec, state):
     state.latest_block_hash = state.latest_execution_payload_bid.block_hash
 
     # For testing purposes, ensure we have a block hash
-    if state.latest_block_hash == b"\x00" * 32:
-        state.latest_block_hash = b"\x01" * 32
+    if state.latest_block_hash == spec.Hash32():
+        state.latest_block_hash = spec.Hash32(b"\x01" * 32)
         state.latest_execution_payload_bid.block_hash = state.latest_block_hash
 
 
@@ -692,7 +693,7 @@ def assert_process_withdrawals(
     withdrawals = list(state.payload_expected_withdrawals)
 
     # INVARIANT: Verify payload_expected_withdrawals matches expected
-    expected_list = spec.ProgressiveList[spec.Withdrawal](expected_withdrawals)
+    expected_list = spec.Withdrawals(data=expected_withdrawals)
     assert list(withdrawals) == list(expected_list), (
         "state.payload_expected_withdrawals must match spec.get_expected_withdrawals()"
     )
@@ -874,7 +875,7 @@ def assert_process_withdrawals(
 
 
 def get_expected_withdrawals(spec, state):
-    return spec.get_expected_withdrawals(state).withdrawals
+    return spec.Withdrawals(data=spec.get_expected_withdrawals(state).withdrawals)
 
 
 def assert_process_withdrawals_pre_gloas(

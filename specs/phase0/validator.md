@@ -171,7 +171,7 @@ Withdrawal credentials with the BLS withdrawal prefix allow a BLS key pair
 `(bls_withdrawal_privkey, bls_withdrawal_pubkey)` to trigger withdrawals. The
 `withdrawal_credentials` field must be such that:
 
-- `withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX`
+- `Bytes1(withdrawal_credentials[:1]) == BLS_WITHDRAWAL_PREFIX`
 - `withdrawal_credentials[1:] == hash(bls_withdrawal_pubkey)[1:]`
 
 *Note*: The `bls_withdrawal_privkey` is not required for validating and can be
@@ -186,7 +186,7 @@ account or of a contract.
 
 The `withdrawal_credentials` field must be such that:
 
-- `withdrawal_credentials[:1] == ETH1_ADDRESS_WITHDRAWAL_PREFIX`
+- `Bytes1(withdrawal_credentials[:1]) == ETH1_ADDRESS_WITHDRAWAL_PREFIX`
 - `withdrawal_credentials[1:12] == b'\x00' * 11`
 - `withdrawal_credentials[12:] == eth1_withdrawal_address`
 
@@ -291,7 +291,7 @@ def get_committee_assignment(
         * ``assignment[2]`` is the slot at which the committee is assigned
     Return None if no assignment.
     """
-    next_epoch = Epoch(get_current_epoch(state) + 1)
+    next_epoch = get_current_epoch(state) + Epoch(1)
     assert epoch <= next_epoch
 
     start_slot = compute_start_slot_at_epoch(epoch)
@@ -732,7 +732,7 @@ def is_aggregator(
     state: BeaconState, slot: Slot, index: CommitteeIndex, slot_signature: BLSSignature
 ) -> bool:
     committee = get_beacon_committee(state, slot, index)
-    modulo = max(1, len(committee) // TARGET_AGGREGATORS_PER_COMMITTEE)
+    modulo = max(Uint64(1), Uint64(len(committee)) // TARGET_AGGREGATORS_PER_COMMITTEE)
     return bytes_to_uint64(hash(slot_signature)[0:8]) % modulo == 0
 ```
 

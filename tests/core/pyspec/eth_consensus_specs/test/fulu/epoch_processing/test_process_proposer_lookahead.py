@@ -1,6 +1,7 @@
 from eth_consensus_specs.test.context import spec_state_test, with_fulu_and_later
 from eth_consensus_specs.test.helpers.epoch_processing import run_epoch_processing_with
 from eth_consensus_specs.test.helpers.state import next_epoch
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 @with_fulu_and_later
@@ -12,7 +13,7 @@ def test_proposer_lookahead_in_state_matches_computed_lookahead(spec, state):
         next_epoch(spec, state)
 
     # Get initial lookahead
-    initial_lookahead = state.proposer_lookahead.copy()
+    initial_lookahead = copy(state.proposer_lookahead)
 
     # Run epoch processing
     yield from run_epoch_processing_with(spec, state, "process_proposer_lookahead")

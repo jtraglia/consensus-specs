@@ -36,7 +36,7 @@ def _template_test_at_fork_deactivate_validators_wo_block(
     @with_meta_tags(meta_tags)
     def test_after_fork_deactivate_validators_wo_block(spec, phases, state):
         current_epoch = spec.get_current_epoch(state)
-        fork_epoch = current_epoch + spec.MIN_SEED_LOOKAHEAD + 1
+        fork_epoch = current_epoch + spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1)
 
         exited_validators = []
         # Change the active validator set by exiting half of the validators in future epochs
@@ -95,7 +95,7 @@ def _template_test_at_fork_deactivate_validators(
     @with_meta_tags(meta_tags)
     def test_after_fork_deactivate_validators(spec, phases, state):
         current_epoch = spec.get_current_epoch(state)
-        fork_epoch = current_epoch + spec.MIN_SEED_LOOKAHEAD + 1
+        fork_epoch = current_epoch + spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1)
 
         exited_validators = []
         # Change the active validator set by exiting half of the validators in future epochs

@@ -261,13 +261,13 @@ deposit requests and builder exit requests.
 
 ```python
 def get_execution_requests(execution_requests_list: Sequence[bytes]) -> ExecutionRequests:
-    deposits = []
-    withdrawals = []
-    consolidations = []
+    deposits = DepositRequests()
+    withdrawals = WithdrawalRequests()
+    consolidations = ConsolidationRequests()
     # [New in Gloas:EIP8282]
-    builder_deposits = []
+    builder_deposits = BuilderDepositRequests()
     # [New in Gloas:EIP8282]
-    builder_exits = []
+    builder_exits = BuilderExitRequests()
 
     request_types = [
         DEPOSIT_REQUEST_TYPE,
@@ -281,7 +281,7 @@ def get_execution_requests(execution_requests_list: Sequence[bytes]) -> Executio
 
     prev_request_type = None
     for request in execution_requests_list:
-        request_type, request_data = request[0:1], request[1:]
+        request_type, request_data = Bytes1(request[0:1]), request[1:]
 
         # Check that the request type is valid
         assert request_type in request_types

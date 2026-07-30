@@ -26,6 +26,7 @@
   - [`is_finality_update`](#is_finality_update)
   - [`is_better_update`](#is_better_update)
   - [`is_next_sync_committee_known`](#is_next_sync_committee_known)
+  - [`count_active_participants`](#count_active_participants)
   - [`get_safety_threshold`](#get_safety_threshold)
   - [`get_subtree_index`](#get_subtree_index)
   - [`is_valid_normalized_merkle_branch`](#is_valid_normalized_merkle_branch)
@@ -250,11 +251,15 @@ def is_finality_update(update: LightClientUpdate) -> bool:
 ```python
 def is_better_update(new_update: LightClientUpdate, old_update: LightClientUpdate) -> bool:
     # Compare supermajority (> 2/3) sync committee participation
-    max_active_participants = len(new_update.sync_aggregate.sync_committee_bits)
-    new_num_active_participants = sum(new_update.sync_aggregate.sync_committee_bits)
-    old_num_active_participants = sum(old_update.sync_aggregate.sync_committee_bits)
-    new_has_supermajority = new_num_active_participants * 3 >= max_active_participants * 2
-    old_has_supermajority = old_num_active_participants * 3 >= max_active_participants * 2
+    max_active_participants = Uint64(len(new_update.sync_aggregate.sync_committee_bits))
+    new_num_active_participants = count_active_participants(new_update.sync_aggregate)
+    old_num_active_participants = count_active_participants(old_update.sync_aggregate)
+    new_has_supermajority = new_num_active_participants * Uint64(
+        3
+    ) >= max_active_participants * Uint64(2)
+    old_has_supermajority = old_num_active_participants * Uint64(
+        3
+    ) >= max_active_participants * Uint64(2)
     if new_has_supermajority != old_has_supermajority:
         return new_has_supermajority
     if not new_has_supermajority and new_num_active_participants != old_num_active_participants:
@@ -308,24 +313,31 @@ def is_next_sync_committee_known(store: LightClientStore) -> bool:
     return store.next_sync_committee != SyncCommittee()
 ```
 
+### `count_active_participants`
+
+```python
+def count_active_participants(sync_aggregate: SyncAggregate) -> Uint64:
+    """
+    Return the number of sync committee members that participated.
+    """
+    return Uint64(len([bit for bit in sync_aggregate.sync_committee_bits if bit]))
+```
+
 ### `get_safety_threshold`
 
 ```python
 def get_safety_threshold(store: LightClientStore) -> Uint64:
-    return (
-        max(
-            store.previous_max_active_participants,
-            store.current_max_active_participants,
-        )
-        // 2
-    )
+    return max(
+        store.previous_max_active_participants,
+        store.current_max_active_participants,
+    ) // Uint64(2)
 ```
 
 ### `get_subtree_index`
 
 ```python
 def get_subtree_index(generalized_index: GeneralizedIndex) -> Uint64:
-    return Uint64(generalized_index % 2 ** (floorlog2(generalized_index)))
+    return generalized_index % Uint64(2) ** floorlog2(generalized_index)
 ```
 
 ### `is_valid_normalized_merkle_branch`
@@ -411,7 +423,7 @@ def validate_light_client_update(
 ) -> None:
     # Verify sync committee has sufficient participants
     sync_aggregate = update.sync_aggregate
-    assert sum(sync_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS
+    assert count_active_participants(sync_aggregate) >= MIN_SYNC_COMMITTEE_PARTICIPANTS
 
     # Verify update does not skip a sync committee period
     assert is_valid_light_client_header(update.attested_header)
@@ -543,6 +555,7 @@ def process_light_client_update(
     validate_light_client_update(store, update, current_slot, genesis_validators_root)
 
     sync_committee_bits = update.sync_aggregate.sync_committee_bits
+    num_active_participants = count_active_participants(update.sync_aggregate)
 
     # Update the best update in case we have to force-update to it if the timeout elapses
     if store.best_valid_update is None or is_better_update(update, store.best_valid_update):
@@ -551,12 +564,12 @@ def process_light_client_update(
     # Track the maximum number of active participants in the committee signatures
     store.current_max_active_participants = max(
         store.current_max_active_participants,
-        sum(sync_committee_bits),
+        num_active_participants,
     )
 
     # Update the optimistic header
     if (
-        sum(sync_committee_bits) > get_safety_threshold(store)
+        num_active_participants > get_safety_threshold(store)
         and update.attested_header.beacon.slot > store.optimistic_header.beacon.slot
     ):
         store.optimistic_header = update.attested_header
@@ -571,7 +584,7 @@ def process_light_client_update(
             == compute_sync_committee_period_at_slot(update.attested_header.beacon.slot)
         )
     )
-    if sum(sync_committee_bits) * 3 >= len(sync_committee_bits) * 2 and (
+    if num_active_participants * Uint64(3) >= Uint64(len(sync_committee_bits)) * Uint64(2) and (
         update.finalized_header.beacon.slot > store.finalized_header.beacon.slot
         or update_has_finalized_next_sync_committee
     ):

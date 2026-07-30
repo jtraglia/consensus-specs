@@ -211,7 +211,7 @@ def get_custody_groups(node_id: NodeID, custody_group_count: Uint64) -> Sequence
 
     current_id = Uint256(node_id)
     custody_groups: List[CustodyIndex] = []
-    while len(custody_groups) < custody_group_count:
+    while Uint64(len(custody_groups)) < custody_group_count:
         custody_group = CustodyIndex(
             bytes_to_uint64(hash(uint_to_bytes(current_id))[0:8]) % NUMBER_OF_CUSTODY_GROUPS
         )
@@ -221,7 +221,7 @@ def get_custody_groups(node_id: NodeID, custody_group_count: Uint64) -> Sequence
             # Overflow prevention
             current_id = Uint256(0)
         else:
-            current_id += 1
+            current_id += Uint256(1)
 
     assert len(custody_groups) == len(set(custody_groups))
     return sorted(custody_groups)
@@ -231,10 +231,11 @@ def get_custody_groups(node_id: NodeID, custody_group_count: Uint64) -> Sequence
 
 ```python
 def compute_columns_for_custody_group(custody_group: CustodyIndex) -> Sequence[ColumnIndex]:
-    assert custody_group < NUMBER_OF_CUSTODY_GROUPS
+    assert custody_group < CustodyIndex(NUMBER_OF_CUSTODY_GROUPS)
     columns_per_group = NUMBER_OF_COLUMNS // NUMBER_OF_CUSTODY_GROUPS
     return [
-        ColumnIndex(NUMBER_OF_CUSTODY_GROUPS * i + custody_group) for i in range(columns_per_group)
+        ColumnIndex(NUMBER_OF_CUSTODY_GROUPS * Uint64(i) + Uint64(custody_group))
+        for i in range(columns_per_group)
     ]
 ```
 
@@ -292,8 +293,9 @@ def recover_matrix(
     """
     matrix = []
     for blob_index in range(blob_count):
-        cell_indices = [e.column_index for e in partial_matrix if e.row_index == blob_index]
-        cells = [e.cell for e in partial_matrix if e.row_index == blob_index]
+        row_index = RowIndex(blob_index)
+        cell_indices = [e.column_index for e in partial_matrix if e.row_index == row_index]
+        cells = [e.cell for e in partial_matrix if e.row_index == row_index]
         recovered_cells, recovered_proofs = kzg.recover_cells_and_kzg_proofs(cell_indices, cells)
         for cell_index, (cell, proof) in enumerate(
             zip(recovered_cells, recovered_proofs, strict=True)

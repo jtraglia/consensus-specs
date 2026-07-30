@@ -17,6 +17,7 @@ from eth_consensus_specs.test.helpers.gossip import (
     wrap_genesis_block,
 )
 from eth_consensus_specs.test.helpers.state import next_slot
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def get_correct_subnet(spec, state, attestation):
@@ -29,7 +30,7 @@ def get_correct_subnet(spec, state, attestation):
 def prepare_single_attestation(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
     next_slot(spec, state)
     attestation = get_valid_attestation(spec, state, signed=False, beacon_block_root=anchor_root)
     single = to_single_attestation(spec, state, attestation)

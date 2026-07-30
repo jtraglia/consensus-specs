@@ -394,7 +394,7 @@ subcommittees.
 def compute_subnets_for_sync_committee(
     state: BeaconState, validator_index: ValidatorIndex
 ) -> Set[SubnetID]:
-    next_slot_epoch = compute_epoch_at_slot(Slot(state.slot + 1))
+    next_slot_epoch = compute_epoch_at_slot(state.slot + Slot(1))
     if compute_sync_committee_period(get_current_epoch(state)) == compute_sync_committee_period(
         next_slot_epoch
     ):
@@ -407,7 +407,7 @@ def compute_subnets_for_sync_committee(
         index for index, pubkey in enumerate(sync_committee.pubkeys) if pubkey == target_pubkey
     ]
     return {
-        SubnetID(index // (SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT))
+        SubnetID(Uint64(index) // (SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT))
         for index in sync_committee_indices
     }
 ```
@@ -451,7 +451,7 @@ def get_sync_committee_selection_proof(
 ```python
 def is_sync_committee_aggregator(signature: BLSSignature) -> bool:
     modulo = max(
-        1,
+        Uint64(1),
         SYNC_COMMITTEE_SIZE
         // SYNC_COMMITTEE_SUBNET_COUNT
         // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE,

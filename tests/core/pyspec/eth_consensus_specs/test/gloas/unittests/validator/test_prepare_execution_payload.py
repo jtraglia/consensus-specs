@@ -20,6 +20,7 @@ from eth_consensus_specs.test.helpers.fork_choice import (
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 SAMPLE_PAYLOAD_ID = b"\x12" * 8
 
@@ -65,7 +66,7 @@ def _add_block_to_store(spec, state, execution_requests=None):
     )
     spec.on_tick(store, block_time)
     run_on_block(spec, store, signed_block)
-    block_root = signed_block.message.hash_tree_root()
+    block_root = hash_tree_root(signed_block.message)
 
     return store, signed_block, block_root
 
@@ -82,7 +83,7 @@ def _setup_full_parent(spec, state):
 
 
 def _advance_to_proposal_slot(spec, state, store):
-    proposal_state = state.copy()
+    proposal_state = copy(state)
     spec.process_slots(proposal_state, proposal_state.slot + 1)
 
     proposal_time = store.genesis_time + proposal_state.slot * spec.config.SLOT_DURATION_MS // 1000
@@ -155,7 +156,7 @@ def test_prepare_execution_payload__extend_payload(spec, state):
     assert payload_id == SAMPLE_PAYLOAD_ID
     assert engine.head_block_hash == parent_bid.block_hash
 
-    expected_state = proposal_state.copy()
+    expected_state = copy(proposal_state)
     spec.apply_parent_execution_payload(expected_state, envelope.message.execution_requests)
     expected_withdrawals = spec.get_expected_withdrawals(expected_state).withdrawals
     assert engine.payload_attributes.withdrawals == expected_withdrawals
@@ -163,7 +164,7 @@ def test_prepare_execution_payload__extend_payload(spec, state):
     # Confirm the scenario actually exercises apply_parent_execution_payload:
     # without it, validator[0] would remain 0x01 + excess and contribute a
     # partial withdrawal that is absent once the switch is applied.
-    skip_apply_withdrawals = spec.get_expected_withdrawals(proposal_state.copy()).withdrawals
+    skip_apply_withdrawals = spec.get_expected_withdrawals(copy(proposal_state)).withdrawals
     assert list(skip_apply_withdrawals) != list(expected_withdrawals)
 
 
@@ -201,7 +202,7 @@ def test_prepare_execution_payload__extend_payload_does_not_mutate_state(spec, s
     store, _, _ = _setup_full_parent(spec, state)
     proposal_state = _advance_to_proposal_slot(spec, state, store)
 
-    state_root_before = proposal_state.hash_tree_root()
+    state_root_before = hash_tree_root(proposal_state)
 
     engine = CaptureEngine()
     spec.prepare_execution_payload(
@@ -215,7 +216,7 @@ def test_prepare_execution_payload__extend_payload_does_not_mutate_state(spec, s
         execution_engine=engine,
     )
 
-    assert proposal_state.hash_tree_root() == state_root_before
+    assert hash_tree_root(proposal_state) == state_root_before
 
 
 @with_phases([GLOAS])
@@ -241,7 +242,7 @@ def test_prepare_execution_payload__payload_attributes(spec, state):
     assert attrs.prev_randao == spec.get_randao_mix(
         proposal_state, spec.get_current_epoch(proposal_state)
     )
-    assert attrs.parent_beacon_block_root == proposal_state.latest_block_header.hash_tree_root()
+    assert attrs.parent_beacon_block_root == hash_tree_root(proposal_state.latest_block_header)
     assert attrs.slot_number == proposal_state.slot
     assert attrs.suggested_fee_recipient == spec.ExecutionAddress()
     assert attrs.target_gas_limit == spec.Uint64(60_000_000)

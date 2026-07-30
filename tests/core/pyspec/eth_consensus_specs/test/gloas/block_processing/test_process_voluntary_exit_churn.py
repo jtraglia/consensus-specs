@@ -38,7 +38,7 @@ def run_exit_at_churn_boundary(spec, state):
         expected_exit_epoch + spec.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
     )
 
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
     signed_voluntary_exit = sign_voluntary_exit(
         spec,
         state,

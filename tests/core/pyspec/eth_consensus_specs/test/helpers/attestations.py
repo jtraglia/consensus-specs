@@ -15,7 +15,7 @@ from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
 from eth_consensus_specs.utils import bls
-from eth_consensus_specs.utils.ssz.ssz_typing import BitList
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def process_attestation(spec, state, attestation):
@@ -237,9 +237,7 @@ def fill_aggregate_attestation(
         )
     else:
         committee_size = len(beacon_committee)
-        attestation.aggregation_bits = BitList[spec.MAX_VALIDATORS_PER_COMMITTEE](
-            *([0] * committee_size)
-        )
+        attestation.aggregation_bits = spec.AggregationBits(data=[0] * committee_size)
 
     # fill in the `aggregation_bits`
     for i in range(len(beacon_committee)):
@@ -330,7 +328,7 @@ def next_slots_with_attestations(
     """
     participation_fn: (slot, committee_index, committee_indices_set) -> participants_indices_set
     """
-    post_state = state.copy()
+    post_state = copy(state)
     signed_blocks = []
     for _ in range(slot_count):
         signed_block = state_transition_with_full_block(
@@ -471,9 +469,9 @@ def prepare_state_with_attestations(spec, state, participation_fn=None):
 
     start_slot = state.slot
     start_epoch = spec.get_current_epoch(state)
-    next_epoch_start_slot = spec.compute_start_slot_at_epoch(start_epoch + 1)
+    next_epoch_start_slot = spec.compute_start_slot_at_epoch(start_epoch + spec.Epoch(1))
     attestations = []
-    for _ in range(spec.SLOTS_PER_EPOCH + spec.MIN_ATTESTATION_INCLUSION_DELAY):
+    for _ in range(int(spec.SLOTS_PER_EPOCH + spec.MIN_ATTESTATION_INCLUSION_DELAY)):
         # create an attestation for each index in each slot in epoch
         if state.slot < next_epoch_start_slot:
             for committee_index in range(
@@ -520,15 +518,17 @@ def cached_prepare_state_with_attestations(spec, state):
     # If the pre-state is not already known in the LRU, then take it,
     # prepare it with attestations, and put it in the LRU.
     # The input state is likely already cached, so the hash-tree-root does not affect speed.
-    key = (spec.fork, state.hash_tree_root())
+    key = (spec.fork, hash_tree_root(state))
     if key not in _prep_state_cache_dict:
         prepare_state_with_attestations(spec, state)
-        _prep_state_cache_dict[key] = (
-            state.get_backing()
-        )  # cache the tree structure, not the view wrapping it.
+        _prep_state_cache_dict[key] = copy(state)
+        return
 
-    # Put the LRU cache result into the state view, as if we transitioned the original view
-    state.set_backing(_prep_state_cache_dict[key])
+    # Restore the cached result into the caller's state, which it expects to be
+    # mutated in place. Each field is copied so the cache entry stays untouched.
+    cached = _prep_state_cache_dict[key]
+    for field_name in type(state).model_fields:
+        setattr(state, field_name, copy(getattr(cached, field_name)))
 
 
 def get_max_attestations(spec):
@@ -544,7 +544,7 @@ def get_empty_eip7549_aggregation_bits(spec, state, committee_bits, slot):
     for index in committee_indices:
         committee = spec.get_beacon_committee(state, slot, index)
         participants_count += len(committee)
-    aggregation_bits = spec.AggregationBits([False] * participants_count)
+    aggregation_bits = spec.AggregationBits(data=[False] * participants_count)
     return aggregation_bits
 
 
@@ -553,10 +553,10 @@ def get_eip7549_aggregation_bits_offset(spec, state, slot, committee_bits, commi
     Calculate the offset for the aggregation bits based on the committee index.
     """
     committee_indices = spec.get_committee_indices(committee_bits)
-    assert committee_index in committee_indices
+    assert spec.CommitteeIndex(committee_index) in committee_indices
     offset = 0
     for i in committee_indices:
-        if committee_index == i:
+        if spec.CommitteeIndex(committee_index) == i:
             break
         committee = spec.get_beacon_committee(state, slot, committee_indices[i])
         offset += len(committee)

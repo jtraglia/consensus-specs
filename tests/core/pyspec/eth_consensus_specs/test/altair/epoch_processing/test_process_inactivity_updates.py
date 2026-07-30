@@ -19,6 +19,7 @@ from eth_consensus_specs.test.helpers.state import (
     set_full_participation,
 )
 from eth_consensus_specs.test.helpers.voluntary_exits import exit_validators, get_exited_validators
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def run_process_inactivity_updates(spec, state):
@@ -36,7 +37,7 @@ def test_genesis(spec, state):
 def test_genesis_random_scores(spec, state):
     rng = Random(10102)
     state.inactivity_scores = [rng.randint(0, 100) for _ in state.inactivity_scores]
-    pre_scores = state.inactivity_scores.copy()
+    pre_scores = copy(state.inactivity_scores)
 
     yield from run_process_inactivity_updates(spec, state)
 
@@ -250,7 +251,7 @@ def slash_some_validators_for_inactivity_scores_test(spec, state, rng=None):
     # ``run_inactivity_scores_test`` runs at the next epoch from `state`.
     # We retrieve the proposer of this future state to avoid
     # accidentally slashing that validator
-    future_state = state.copy()
+    future_state = copy(state)
     next_epoch_via_block(spec, future_state)
 
     proposer_index = spec.get_beacon_proposer_index(future_state)
@@ -355,7 +356,7 @@ def test_some_exited_full_random_leaking(spec, state):
         next_epoch(spec, state)
     assert len(get_exited_validators(spec, state)) == exit_count
 
-    previous_scores = state.inactivity_scores.copy()
+    previous_scores = copy(state.inactivity_scores)
 
     yield from run_inactivity_scores_test(
         spec,

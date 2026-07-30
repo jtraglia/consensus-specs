@@ -284,7 +284,7 @@ def _run_transition_test_with_attestations(
     yield "pre", state
 
     current_epoch = spec.get_current_epoch(state)
-    assert current_epoch < fork_epoch
+    assert current_epoch < spec.Epoch(fork_epoch)
     assert current_epoch == spec.GENESIS_EPOCH
 
     # skip genesis epoch to avoid dealing with some edge cases...

@@ -65,7 +65,7 @@ def prepare_process_builder_deposit_request(
     # Phase 2: Derive effective values
     index = builder_index if builder_index is not None else len(state.builders)
     effective_pubkey = pubkey if pubkey is not None else builder_pubkeys[index]
-    effective_privkey = builder_pubkey_to_privkey[effective_pubkey]
+    effective_privkey = builder_pubkey_to_privkey[bytes(effective_pubkey)]
     effective_amount = amount if amount is not None else spec.MIN_ACTIVATION_BALANCE
     if withdrawal_credentials is not None:
         effective_withdrawal_credentials = withdrawal_credentials

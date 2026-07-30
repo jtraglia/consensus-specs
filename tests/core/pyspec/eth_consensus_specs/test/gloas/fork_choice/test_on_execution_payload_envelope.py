@@ -22,6 +22,7 @@ from eth_consensus_specs.test.helpers.keys import builder_privkeys, privkeys
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def _build_invalid_envelope(spec, state, block_root, signed_block, **overrides):
@@ -244,8 +245,8 @@ def test_on_execution_payload_envelope_wrong_execution_requests_root(spec, state
 
     # Build envelope with non-empty requests but bid commits to empty requests
     non_empty_requests = spec.ExecutionRequests(
-        deposits=spec.ProgressiveList[spec.DepositRequest](
-            [
+        deposits=spec.DepositRequests(
+            data=[
                 spec.DepositRequest(
                     pubkey=spec.BLSPubkey(b"\x01" * 48),
                     withdrawal_credentials=spec.Bytes32(b"\x02" * 32),
@@ -255,8 +256,8 @@ def test_on_execution_payload_envelope_wrong_execution_requests_root(spec, state
                 )
             ]
         ),
-        withdrawals=spec.ProgressiveList[spec.WithdrawalRequest](),
-        consolidations=spec.ProgressiveList[spec.ConsolidationRequest](),
+        withdrawals=spec.WithdrawalRequests(),
+        consolidations=spec.ConsolidationRequests(),
     )
 
     envelope = _build_invalid_envelope(
@@ -289,7 +290,7 @@ def test_on_execution_payload_envelope_wrong_withdrawals(spec, state):
         state,
         block_root,
         signed_block,
-        withdrawals=spec.ProgressiveList[spec.Withdrawal]([wrong_withdrawal]),
+        withdrawals=spec.Withdrawals(data=[wrong_withdrawal]),
     )
     yield from add_execution_payload(spec, store, envelope, test_steps, valid=False)
 
@@ -310,9 +311,7 @@ def test_on_execution_payload_envelope_missing_expected_withdrawal(spec, state):
     expected_withdrawal = spec.Withdrawal(
         index=0, validator_index=0, address=b"\x22" * 20, amount=spec.Gwei(1)
     )
-    state.payload_expected_withdrawals = spec.ProgressiveList[spec.Withdrawal](
-        [expected_withdrawal]
-    )
+    state.payload_expected_withdrawals = spec.Withdrawals(data=[expected_withdrawal])
 
     store, block_root, _, signed_block, test_steps = yield from setup_one_block_store(spec, state)
 
@@ -325,7 +324,7 @@ def test_on_execution_payload_envelope_missing_expected_withdrawal(spec, state):
         state,
         block_root,
         signed_block,
-        withdrawals=spec.ProgressiveList[spec.Withdrawal](),
+        withdrawals=spec.Withdrawals(),
     )
     yield from add_execution_payload(spec, store, envelope, test_steps, valid=False)
 
@@ -447,7 +446,7 @@ def test_on_execution_payload_envelope_invalid_full_child(spec, state):
 
     # Build a child that points its bid at parent.bid.block_hash so it claims
     # the parent is FULL
-    child_state = block_state.copy()
+    child_state = copy(block_state)
     child = build_empty_block_for_next_slot(spec, child_state)
     child.body.signed_execution_payload_bid.message.parent_block_hash = (
         signed_block.message.body.signed_execution_payload_bid.message.block_hash

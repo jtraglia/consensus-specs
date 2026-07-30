@@ -990,10 +990,10 @@ def integer_squareroot(n: Uint64) -> Uint64:
     if n == UINT64_MAX:
         return UINT64_MAX_SQRT
     x = n
-    y = (x + 1) // 2
+    y = (x + Uint64(1)) // Uint64(2)
     while y < x:
         x = y
-        y = (x + n // x) // 2
+        y = (x + n // x) // Uint64(2)
     return x
 ```
 
@@ -1166,7 +1166,7 @@ def is_valid_merkle_branch(
     """
     Check if ``leaf`` at ``index`` verifies against the Merkle ``root`` and ``branch``.
     """
-    if depth != len(branch):
+    if depth != Uint64(len(branch)):
         return False
     return compute_merkle_branch_root(leaf, branch, depth, index) == root
 ```
@@ -1185,19 +1185,19 @@ def compute_shuffled_permutation(index_count: Uint64, seed: Bytes32) -> Sequence
     indices = [Uint64(i) for i in range(index_count)]
     for current_round in range(SHUFFLE_ROUND_COUNT):
         round_bytes = current_round.to_bytes(1, "little")
-        pivot = int.from_bytes(hash(seed + round_bytes)[0:8], "little") % index_count
+        pivot = Uint64(int.from_bytes(hash(seed + round_bytes)[0:8], "little")) % index_count
         source_by_bucket: Dict[Uint64, Bytes32] = {}
         for i in range(index_count):
             flip = (pivot + index_count - indices[i]) % index_count
             position = max(indices[i], flip)
-            position_bucket = position // 256
+            position_bucket = position // Uint64(256)
             if position_bucket not in source_by_bucket:
                 source_by_bucket[position_bucket] = hash(
                     seed + round_bytes + position_bucket.to_bytes(4, "little")
                 )
             source = source_by_bucket[position_bucket]
-            byte_val = source[(position % 256) // 8]
-            bit = (byte_val >> int(position % 8)) % 2
+            byte_val = source[(position % Uint64(256)) // Uint64(8)]
+            bit = (byte_val >> int(position % Uint64(8))) % 2
             indices[i] = flip if bit else indices[i]
     return indices
 ```
@@ -1223,16 +1223,16 @@ def compute_proposer_index(
     Return from ``indices`` a random index sampled by effective balance.
     """
     assert len(indices) > 0
-    MAX_RANDOM_BYTE = 2**8 - 1
+    MAX_RANDOM_BYTE = Gwei(2**8 - 1)
     i = Uint64(0)
     total = Uint64(len(indices))
     while True:
         candidate_index = indices[compute_shuffled_index(i % total, total, seed)]
-        random_byte = hash(seed + uint_to_bytes(Uint64(i // 32)))[i % 32]
+        random_byte = Gwei(hash(seed + uint_to_bytes(i // Uint64(32)))[i % Uint64(32)])
         effective_balance = state.validators[candidate_index].effective_balance
         if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
             return candidate_index
-        i += 1
+        i += Uint64(1)
 ```
 
 #### `compute_committee`
@@ -1244,8 +1244,8 @@ def compute_committee(
     """
     Return the committee corresponding to ``indices``, ``seed``, ``index``, and committee ``count``.
     """
-    start = (len(indices) * index) // count
-    end = (len(indices) * Uint64(index + 1)) // count
+    start = (Uint64(len(indices)) * index) // count
+    end = (Uint64(len(indices)) * (index + Uint64(1))) // count
     return [
         indices[compute_shuffled_index(Uint64(i), Uint64(len(indices)), seed)]
         for i in range(start, end)
@@ -1259,7 +1259,7 @@ def compute_committee(
 ```python
 def compute_time_at_slot(state: BeaconState, slot: Slot) -> Uint64:
     slots_since_genesis = slot - GENESIS_SLOT
-    return Uint64(state.genesis_time + slots_since_genesis * SLOT_DURATION_MS // 1000)
+    return state.genesis_time + Uint64(slots_since_genesis) * SLOT_DURATION_MS // Uint64(1000)
 ```
 
 #### `compute_epoch_at_slot`
@@ -1279,7 +1279,7 @@ def compute_start_slot_at_epoch(epoch: Epoch) -> Slot:
     """
     Return the start slot of ``epoch``.
     """
-    return Slot(epoch * SLOTS_PER_EPOCH)
+    return Slot(epoch) * SLOTS_PER_EPOCH
 ```
 
 #### `compute_activation_exit_epoch`
@@ -1289,7 +1289,7 @@ def compute_activation_exit_epoch(epoch: Epoch) -> Epoch:
     """
     Return the epoch during which validator activations and exits initiated in ``epoch`` take effect.
     """
-    return Epoch(epoch + 1 + MAX_SEED_LOOKAHEAD)
+    return epoch + Epoch(1) + MAX_SEED_LOOKAHEAD
 ```
 
 #### `compute_fork_data_root`
@@ -1362,7 +1362,7 @@ def get_previous_epoch(state: BeaconState) -> Epoch:
     Return the previous epoch (unless the current epoch is ``GENESIS_EPOCH``).
     """
     current_epoch = get_current_epoch(state)
-    return GENESIS_EPOCH if current_epoch == GENESIS_EPOCH else Epoch(current_epoch - 1)
+    return GENESIS_EPOCH if current_epoch == GENESIS_EPOCH else current_epoch - Epoch(1)
 ```
 
 #### `get_block_root`
@@ -1429,7 +1429,7 @@ def get_seed(state: BeaconState, epoch: Epoch, domain_type: DomainType) -> Bytes
     Return the seed at ``epoch``.
     """
     mix = get_randao_mix(
-        state, Epoch(epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD - 1)
+        state, epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD - Epoch(1)
     )  # Avoid underflow
     return hash(domain_type + uint_to_bytes(epoch) + mix)
 ```
@@ -1446,7 +1446,7 @@ def get_committee_count_per_slot(state: BeaconState, epoch: Epoch) -> Uint64:
         min(
             MAX_COMMITTEES_PER_SLOT,
             Uint64(len(get_active_validator_indices(state, epoch)))
-            // SLOTS_PER_EPOCH
+            // Uint64(SLOTS_PER_EPOCH)
             // TARGET_COMMITTEE_SIZE,
         ),
     )
@@ -1466,8 +1466,8 @@ def get_beacon_committee(
     return compute_committee(
         indices=get_active_validator_indices(state, epoch),
         seed=get_seed(state, epoch, DOMAIN_BEACON_ATTESTER),
-        index=(slot % SLOTS_PER_EPOCH) * committees_per_slot + index,
-        count=committees_per_slot * SLOTS_PER_EPOCH,
+        index=Uint64(slot % SLOTS_PER_EPOCH) * committees_per_slot + Uint64(index),
+        count=committees_per_slot * Uint64(SLOTS_PER_EPOCH),
     )
 ```
 
@@ -1496,7 +1496,10 @@ def get_total_balance(state: BeaconState, indices: Set[ValidatorIndex]) -> Gwei:
     return Gwei(
         max(
             EFFECTIVE_BALANCE_INCREMENT,
-            sum([state.validators[index].effective_balance for index in indices]),
+            sum(
+                [state.validators[index].effective_balance for index in indices],
+                Gwei(0),
+            ),
         )
     )
 ```
@@ -1540,7 +1543,7 @@ def get_indexed_attestation(state: BeaconState, attestation: Attestation) -> Ind
     attesting_indices = get_attesting_indices(state, attestation)
 
     return IndexedAttestation(
-        attesting_indices=sorted(attesting_indices),
+        attesting_indices=AttestingIndices(data=sorted(attesting_indices)),
         data=attestation.data,
         signature=attestation.signature,
     )
@@ -1677,7 +1680,7 @@ def initialize_beacon_state_from_eth1(
     # Process deposits
     leaves = [deposit.data for deposit in deposits]
     for index, deposit in enumerate(deposits):
-        deposit_data_list = DepositDataList(*leaves[: index + 1])
+        deposit_data_list = DepositDataList(data=leaves[: index + 1])
         state.eth1_data.deposit_root = hash_tree_root(deposit_data_list)
         process_deposit(state, deposit)
 
@@ -1758,9 +1761,9 @@ def process_slots(state: BeaconState, slot: Slot) -> None:
     while state.slot < slot:
         process_slot(state)
         # Process epoch on the start slot of the next epoch
-        if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
+        if (state.slot + Slot(1)) % SLOTS_PER_EPOCH == Slot(0):
             process_epoch(state)
-        state.slot = Slot(state.slot + 1)
+        state.slot = state.slot + Slot(1)
 ```
 
 ```python
@@ -1853,7 +1856,7 @@ def get_attesting_balance(state: BeaconState, attestations: Sequence[PendingAtte
 def process_justification_and_finalization(state: BeaconState) -> None:
     # Initial FFG checkpoint values have a `0x00` stub for `root`.
     # Skip FFG updates in the first two epochs to avoid corner cases that might result in modifying this stub.
-    if get_current_epoch(state) <= GENESIS_EPOCH + 1:
+    if get_current_epoch(state) <= GENESIS_EPOCH + Epoch(1):
         return
     previous_attestations = get_matching_target_attestations(state, get_previous_epoch(state))
     current_attestations = get_matching_target_attestations(state, get_current_epoch(state))
@@ -1918,8 +1921,8 @@ def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
     effective_balance = state.validators[index].effective_balance
     return Gwei(
         effective_balance
-        * BASE_REWARD_FACTOR
-        // integer_squareroot(total_balance)
+        * Gwei(BASE_REWARD_FACTOR)
+        // Gwei(integer_squareroot(total_balance))
         // BASE_REWARDS_PER_EPOCH
     )
 ```
@@ -2112,7 +2115,7 @@ def process_registry_updates(state: BeaconState) -> None:
     # Process activation eligibility and ejections
     for index, validator in enumerate(state.validators):
         if is_eligible_for_activation_queue(validator):
-            validator.activation_eligibility_epoch = get_current_epoch(state) + 1
+            validator.activation_eligibility_epoch = get_current_epoch(state) + Epoch(1)
 
         if (
             is_active_validator(validator, get_current_epoch(state))
@@ -2143,7 +2146,7 @@ def process_slashings(state: BeaconState) -> None:
     epoch = get_current_epoch(state)
     total_balance = get_total_active_balance(state)
     adjusted_total_slashing_balance = min(
-        sum(state.slashings) * PROPORTIONAL_SLASHING_MULTIPLIER, total_balance
+        sum(state.slashings, Gwei(0)) * Gwei(PROPORTIONAL_SLASHING_MULTIPLIER), total_balance
     )
     for index, validator in enumerate(state.validators):
         if (
@@ -2162,9 +2165,9 @@ def process_slashings(state: BeaconState) -> None:
 
 ```python
 def process_eth1_data_reset(state: BeaconState) -> None:
-    next_epoch = Epoch(get_current_epoch(state) + 1)
+    next_epoch = get_current_epoch(state) + Epoch(1)
     # Reset eth1 data votes
-    if next_epoch % EPOCHS_PER_ETH1_VOTING_PERIOD == 0:
+    if next_epoch % EPOCHS_PER_ETH1_VOTING_PERIOD == Epoch(0):
         state.eth1_data_votes = Eth1DataVotes()
 ```
 
@@ -2175,9 +2178,9 @@ def process_effective_balance_updates(state: BeaconState) -> None:
     # Update effective balances with hysteresis
     for index, validator in enumerate(state.validators):
         balance = state.balances[index]
-        HYSTERESIS_INCREMENT = Uint64(EFFECTIVE_BALANCE_INCREMENT // HYSTERESIS_QUOTIENT)
-        DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER
-        UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER
+        HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT // Gwei(HYSTERESIS_QUOTIENT)
+        DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * Gwei(HYSTERESIS_DOWNWARD_MULTIPLIER)
+        UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * Gwei(HYSTERESIS_UPWARD_MULTIPLIER)
         if (
             balance + DOWNWARD_THRESHOLD < validator.effective_balance
             or validator.effective_balance + UPWARD_THRESHOLD < balance
@@ -2191,7 +2194,7 @@ def process_effective_balance_updates(state: BeaconState) -> None:
 
 ```python
 def process_slashings_reset(state: BeaconState) -> None:
-    next_epoch = Epoch(get_current_epoch(state) + 1)
+    next_epoch = get_current_epoch(state) + Epoch(1)
     # Reset slashings
     state.slashings[next_epoch % EPOCHS_PER_SLASHINGS_VECTOR] = Gwei(0)
 ```
@@ -2201,7 +2204,7 @@ def process_slashings_reset(state: BeaconState) -> None:
 ```python
 def process_randao_mixes_reset(state: BeaconState) -> None:
     current_epoch = get_current_epoch(state)
-    next_epoch = Epoch(current_epoch + 1)
+    next_epoch = current_epoch + Epoch(1)
     # Set randao mix
     state.randao_mixes[next_epoch % EPOCHS_PER_HISTORICAL_VECTOR] = get_randao_mix(
         state, current_epoch
@@ -2213,8 +2216,8 @@ def process_randao_mixes_reset(state: BeaconState) -> None:
 ```python
 def process_historical_roots_update(state: BeaconState) -> None:
     # Set historical root accumulator
-    next_epoch = Epoch(get_current_epoch(state) + 1)
-    if next_epoch % (SLOTS_PER_HISTORICAL_ROOT // SLOTS_PER_EPOCH) == 0:
+    next_epoch = get_current_epoch(state) + Epoch(1)
+    if next_epoch % Epoch(SLOTS_PER_HISTORICAL_ROOT // SLOTS_PER_EPOCH) == Epoch(0):
         historical_batch = HistoricalBatch(
             block_roots=state.block_roots, state_roots=state.state_roots
         )
@@ -2285,10 +2288,9 @@ def process_randao(state: BeaconState, body: BeaconBlockBody) -> None:
 ```python
 def process_eth1_data(state: BeaconState, body: BeaconBlockBody) -> None:
     state.eth1_data_votes.append(body.eth1_data)
-    if (
-        state.eth1_data_votes.count(body.eth1_data) * 2
-        > EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH
-    ):
+    if Uint64(list(state.eth1_data_votes).count(body.eth1_data)) * Uint64(2) > Uint64(
+        EPOCHS_PER_ETH1_VOTING_PERIOD
+    ) * Uint64(SLOTS_PER_EPOCH):
         state.eth1_data = body.eth1_data
 ```
 
@@ -2297,7 +2299,7 @@ def process_eth1_data(state: BeaconState, body: BeaconBlockBody) -> None:
 ```python
 def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
     # Verify that outstanding deposits are processed up to the maximum number of deposits
-    assert len(body.deposits) == min(
+    assert Uint64(len(body.deposits)) == min(
         MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index
     )
 

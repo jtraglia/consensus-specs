@@ -293,17 +293,17 @@ def get_validators_sweep_withdrawals(
     prior_withdrawals: Sequence[Withdrawal],
 ) -> Tuple[Sequence[Withdrawal], WithdrawalIndex, Uint64]:
     epoch = get_current_epoch(state)
-    validators_limit = min(len(state.validators), MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
+    validators_limit = min(Uint64(len(state.validators)), MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
     withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD
     # There must be at least one space reserved for validator sweep withdrawals
-    assert len(prior_withdrawals) < withdrawals_limit
+    assert Uint64(len(prior_withdrawals)) < withdrawals_limit
 
     processed_count: Uint64 = 0
     withdrawals: List[Withdrawal] = []
     validator_index = state.next_withdrawal_validator_index
     for _ in range(validators_limit):
         all_withdrawals = prior_withdrawals + withdrawals
-        has_reached_limit = len(all_withdrawals) >= withdrawals_limit
+        has_reached_limit = Uint64(len(all_withdrawals)) >= withdrawals_limit
         if has_reached_limit:
             break
 
@@ -334,7 +334,7 @@ def get_validators_sweep_withdrawals(
             )
             withdrawal_index += WithdrawalIndex(1)
 
-        validator_index = ValidatorIndex((validator_index + 1) % len(state.validators))
+        validator_index = ValidatorIndex((int(validator_index) + 1) % len(state.validators))
         processed_count += 1
 
     return withdrawals, withdrawal_index, processed_count

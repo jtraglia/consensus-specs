@@ -19,6 +19,7 @@ from eth_consensus_specs.test.helpers.constants import FULU, PHASE0
 from eth_consensus_specs.test.helpers.keys import privkeys, pubkeys
 from eth_consensus_specs.test.helpers.state import next_epoch
 from eth_consensus_specs.utils import bls
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 from eth_consensus_specs.utils.ssz.ssz_typing import BitList
 
 
@@ -229,7 +230,7 @@ def test_get_eth1_vote_consensus_vote(spec, state):
 
     state.eth1_data_votes = eth1_data_votes
     eth1_data = spec.get_eth1_vote(state, eth1_chain)
-    assert eth1_data.block_hash == block_2.hash_tree_root()
+    assert eth1_data.block_hash == hash_tree_root(block_2)
 
 
 @with_all_phases_from_to(PHASE0, FULU)
@@ -272,7 +273,7 @@ def test_get_eth1_vote_tie(spec, state):
     eth1_data = spec.get_eth1_vote(state, eth1_chain)
 
     # Tiebreak by smallest distance -> eth1_chain[0]
-    assert eth1_data.block_hash == eth1_chain[0].hash_tree_root()
+    assert eth1_data.block_hash == hash_tree_root(eth1_chain[0])
 
 
 @with_all_phases_from_to(PHASE0, FULU)
@@ -307,18 +308,18 @@ def test_get_eth1_vote_chain_in_past(spec, state):
 @with_all_phases
 @spec_state_test
 def test_compute_new_state_root(spec, state):
-    pre_state = state.copy()
-    post_state = state.copy()
+    pre_state = copy(state)
+    post_state = copy(state)
     block = build_empty_block(spec, state, state.slot + 1)
     state_root = spec.compute_new_state_root(state, block)
 
-    assert state_root != pre_state.hash_tree_root()
+    assert state_root != hash_tree_root(pre_state)
     assert state == pre_state
 
     # dumb verification
     spec.process_slots(post_state, block.slot)
     spec.process_block(post_state, block)
-    assert state_root == post_state.hash_tree_root()
+    assert state_root == hash_tree_root(post_state)
 
 
 @with_all_phases
@@ -462,7 +463,7 @@ def test_get_aggregate_signature(spec, state):
     committee_size = len(beacon_committee)
     aggregation_bits = BitList[spec.MAX_VALIDATORS_PER_COMMITTEE](*([0] * committee_size))
     for i, validator_index in enumerate(beacon_committee):
-        bits = aggregation_bits.copy()
+        bits = copy(aggregation_bits)
         bits[i] = True
         attestations.append(
             spec.Attestation(
@@ -523,10 +524,10 @@ def test_get_aggregate_and_proof_signature(spec, state):
 def run_compute_subscribed_subnets_arguments(spec, rng=None):
     if rng is None:
         rng = random.Random(1111)
-    node_id = rng.randint(0, 2**256 - 1)
-    epoch = rng.randint(0, 2**64 - 1)
+    node_id = spec.NodeID(rng.randint(0, 2**256 - 1))
+    epoch = spec.Epoch(rng.randint(0, 2**64 - 1))
     subnets = spec.compute_subscribed_subnets(node_id, epoch)
-    assert len(subnets) == spec.config.SUBNETS_PER_NODE
+    assert len(subnets) == int(spec.config.SUBNETS_PER_NODE)
 
 
 @with_all_phases

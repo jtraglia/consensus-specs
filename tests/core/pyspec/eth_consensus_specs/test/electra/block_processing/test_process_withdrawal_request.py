@@ -15,6 +15,7 @@ from eth_consensus_specs.test.helpers.withdrawals import (
     set_compounding_withdrawal_credential,
     set_eth1_withdrawal_credential_with_balance,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 #
 # Run processing
@@ -38,7 +39,7 @@ def run_withdrawal_request_processing(spec, state, withdrawal_request, valid=Tru
         yield "post", None
         return
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     spec.process_withdrawal_request(state, withdrawal_request)
 
@@ -50,7 +51,7 @@ def run_withdrawal_request_processing(spec, state, withdrawal_request, valid=Tru
     else:
         validator_index = get_validator_index_by_pubkey(state, withdrawal_request.validator_pubkey)
         pre_exit_epoch = pre_state.validators[validator_index].exit_epoch
-        pre_pending_partial_withdrawals = pre_state.pending_partial_withdrawals.copy()
+        pre_pending_partial_withdrawals = copy(pre_state.pending_partial_withdrawals)
         pre_balance = pre_state.balances[validator_index]
         pre_effective_balance = pre_state.validators[validator_index].effective_balance
         assert state.balances[validator_index] == pre_balance

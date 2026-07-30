@@ -28,6 +28,7 @@ from eth_consensus_specs.test.helpers.state import (
     next_slots,
     transition_to,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 class LightClientSyncTest:
@@ -65,11 +66,11 @@ def setup_lc_sync_test(spec, state, s_spec=None, phases=None):
     yield "genesis_validators_root", "meta", "0x" + state.genesis_validators_root.hex()
     test.genesis_validators_root = state.genesis_validators_root
 
-    next_slots(spec, state, spec.SLOTS_PER_EPOCH * 2 - 1)
+    next_slots(spec, state, int(spec.SLOTS_PER_EPOCH) * 2 - 1)
     trusted_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
-    trusted_block_root = trusted_block.message.hash_tree_root()
+    trusted_block_root = hash_tree_root(trusted_block.message)
     yield "trusted_block_root", "meta", "0x" + trusted_block_root.hex()
 
     data_epoch = spec.compute_epoch_at_slot(trusted_block.message.slot)
@@ -100,7 +101,7 @@ def _get_update_file_name(d_spec, update):
         suffix2 = "f"
     else:
         suffix2 = "x"
-    return f"update_{encode_hex(update.attested_header.beacon.hash_tree_root())}_{suffix1}{suffix2}"
+    return f"update_{encode_hex(hash_tree_root(update.attested_header.beacon))}_{suffix1}{suffix2}"
 
 
 def _get_checks(s_spec, store):
@@ -108,12 +109,12 @@ def _get_checks(s_spec, store):
         return {
             "finalized_header": {
                 "slot": int(store.finalized_header.beacon.slot),
-                "beacon_root": encode_hex(store.finalized_header.beacon.hash_tree_root()),
+                "beacon_root": encode_hex(hash_tree_root(store.finalized_header.beacon)),
                 "execution_root": encode_hex(s_spec.get_lc_execution_root(store.finalized_header)),
             },
             "optimistic_header": {
                 "slot": int(store.optimistic_header.beacon.slot),
-                "beacon_root": encode_hex(store.optimistic_header.beacon.hash_tree_root()),
+                "beacon_root": encode_hex(hash_tree_root(store.optimistic_header.beacon)),
                 "execution_root": encode_hex(s_spec.get_lc_execution_root(store.optimistic_header)),
             },
         }
@@ -121,11 +122,11 @@ def _get_checks(s_spec, store):
     return {
         "finalized_header": {
             "slot": int(store.finalized_header.beacon.slot),
-            "beacon_root": encode_hex(store.finalized_header.beacon.hash_tree_root()),
+            "beacon_root": encode_hex(hash_tree_root(store.finalized_header.beacon)),
         },
         "optimistic_header": {
             "slot": int(store.optimistic_header.beacon.slot),
-            "beacon_root": encode_hex(store.optimistic_header.beacon.hash_tree_root()),
+            "beacon_root": encode_hex(hash_tree_root(store.optimistic_header.beacon)),
         },
     }
 
@@ -210,11 +211,11 @@ def run_lc_sync_test_single_fork(spec, phases, state, fork):
 
     # Initial `LightClientUpdate`
     finalized_block = create_signed_genesis_block(spec, state)
-    finalized_state = state.copy()
+    finalized_state = copy(state)
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
-    attested_state = state.copy()
+    attested_state = copy(state)
     sync_aggregate, _ = get_sync_aggregate(spec, state, phases=phases)
     block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True, sync_aggregate=sync_aggregate
@@ -233,7 +234,7 @@ def run_lc_sync_test_single_fork(spec, phases, state, fork):
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
-    attested_state = state.copy()
+    attested_state = copy(state)
     sync_aggregate, _ = get_sync_aggregate(spec, state, phases=phases)
     block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True, sync_aggregate=sync_aggregate
@@ -251,8 +252,8 @@ def run_lc_sync_test_single_fork(spec, phases, state, fork):
     update = test.store.best_valid_update
 
     # Final slot before fork, check that importing the pre-fork format still works
-    attested_block = block.copy()
-    attested_state = state.copy()
+    attested_block = copy(block)
+    attested_state = copy(state)
     sync_aggregate, _ = get_sync_aggregate(spec, state, phases=phases)
     block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True, sync_aggregate=sync_aggregate
@@ -266,8 +267,8 @@ def run_lc_sync_test_single_fork(spec, phases, state, fork):
     assert test.store.optimistic_header.beacon.slot == attested_state.slot
 
     # Upgrade to post-fork spec, attested block is still before the fork
-    attested_block = block.copy()
-    attested_state = state.copy()
+    attested_block = copy(block)
+    attested_state = copy(state)
     sync_aggregate, _ = get_sync_aggregate(spec, state, phases=phases)
     state, block = do_fork(state, spec, phases[fork], fork_epoch, sync_aggregate=sync_aggregate)
     spec = phases[fork]
@@ -280,8 +281,8 @@ def run_lc_sync_test_single_fork(spec, phases, state, fork):
     assert test.store.optimistic_header.beacon.slot == attested_state.slot
 
     # Another block after the fork, this time attested block is after the fork
-    attested_block = block.copy()
-    attested_state = state.copy()
+    attested_block = copy(block)
+    attested_state = copy(state)
     sync_aggregate, _ = get_sync_aggregate(spec, state, phases=phases)
     block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True, sync_aggregate=sync_aggregate
@@ -299,7 +300,7 @@ def run_lc_sync_test_single_fork(spec, phases, state, fork):
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
-    attested_state = state.copy()
+    attested_state = copy(state)
     sync_aggregate, _ = get_sync_aggregate(spec, state, phases=phases)
     block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True, sync_aggregate=sync_aggregate
@@ -313,15 +314,15 @@ def run_lc_sync_test_single_fork(spec, phases, state, fork):
     assert test.store.optimistic_header.beacon.slot == attested_state.slot
 
     # Finalize the fork
-    finalized_block = block.copy()
-    finalized_state = state.copy()
+    finalized_block = copy(block)
+    finalized_state = copy(state)
     _, _, state = next_slots_with_attestations(
         spec, state, 2 * spec.SLOTS_PER_EPOCH - 1, fill_cur_epoch=True, fill_prev_epoch=True
     )
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
-    attested_state = state.copy()
+    attested_state = copy(state)
     sync_aggregate, _ = get_sync_aggregate(spec, state, phases=phases)
     block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True, sync_aggregate=sync_aggregate
@@ -344,7 +345,7 @@ def run_lc_sync_test_multi_fork(spec, phases, state, fork_1, fork_2):
 
     # Set up so that finalized is from `spec`, ...
     finalized_block = create_signed_genesis_block(spec, state)
-    finalized_state = state.copy()
+    finalized_state = copy(state)
 
     # ..., attested is from `fork_1`, ...
     fork_1_epoch = getattr(phases[fork_1].config, fork_1.upper() + "_FORK_EPOCH")
@@ -355,7 +356,7 @@ def run_lc_sync_test_multi_fork(spec, phases, state, fork_1, fork_2):
         phases,
         with_block=True,
     )
-    attested_state = state.copy()
+    attested_state = copy(state)
 
     # ..., and signature is from `fork_2`
     fork_2_epoch = getattr(phases[fork_2].config, fork_2.upper() + "_FORK_EPOCH")

@@ -2,6 +2,7 @@ from eth_consensus_specs.test.helpers.forks import (
     is_post_altair,
     is_post_capella,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def get_process_calls(spec):
@@ -63,8 +64,8 @@ def run_process_slots_up_to_epoch_boundary(spec, state):
     slot = state.slot + (spec.SLOTS_PER_EPOCH - state.slot % spec.SLOTS_PER_EPOCH)
 
     # transition state to slot before epoch state transition
-    if state.slot < slot - 1:
-        spec.process_slots(state, slot - 1)
+    if state.slot < slot - spec.Slot(1):
+        spec.process_slots(state, slot - spec.Slot(1))
 
     # start transitioning, do one slot update before the epoch itself.
     spec.process_slot(state)
@@ -101,6 +102,6 @@ def run_epoch_processing_with(spec, state, process_name: str):
     yield "pre", state
     getattr(spec, process_name)(state)
     yield "post", state
-    continue_state = state.copy()
+    continue_state = copy(state)
     run_epoch_processing_from(spec, continue_state, process_name)
     yield "post_epoch", continue_state

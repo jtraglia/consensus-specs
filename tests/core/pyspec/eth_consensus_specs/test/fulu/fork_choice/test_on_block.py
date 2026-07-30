@@ -17,6 +17,7 @@ from eth_consensus_specs.test.helpers.fork_choice import (
     on_tick_and_append_step,
     tick_and_add_block_with_data,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def flip_one_bit_in_bytes(data: bytes, index: int = 0) -> bytes:
@@ -37,7 +38,7 @@ def get_alt_sidecars(spec, state):
     Get alternative sidecars for negative test cases.
     """
     rng = Random(4321)
-    state_copy = state.copy()
+    state_copy = copy(state)
     _, _, _, _, alt_sidecars, _ = get_block_with_blob_and_sidecars(
         spec, state_copy, rng=rng, blob_count=2
     )
@@ -71,7 +72,7 @@ def test_on_block_peerdas__ok(spec, state):
 
     yield from tick_and_add_block_with_data(spec, store, signed_block, test_steps, blob_data)
 
-    assert spec.get_head(store).root == signed_block.message.hash_tree_root()
+    assert spec.get_head(store).root == hash_tree_root(signed_block.message)
 
     # On receiving a block of next epoch
     _, _, _, signed_block, sidecars, kzg_commitments = get_block_with_blob_and_sidecars(
@@ -81,7 +82,7 @@ def test_on_block_peerdas__ok(spec, state):
 
     yield from tick_and_add_block_with_data(spec, store, signed_block, test_steps, blob_data)
 
-    assert spec.get_head(store).root == signed_block.message.hash_tree_root()
+    assert spec.get_head(store).root == hash_tree_root(signed_block.message)
 
     yield "steps", test_steps
 
@@ -111,7 +112,7 @@ def run_on_block_peerdas_invalid_test(spec, state, fn):
     yield from tick_and_add_block_with_data(
         spec, store, signed_block, test_steps, blob_data, valid=False
     )
-    assert spec.get_head(store).root != signed_block.message.hash_tree_root()
+    assert spec.get_head(store).root != hash_tree_root(signed_block.message)
 
     yield "steps", test_steps
 

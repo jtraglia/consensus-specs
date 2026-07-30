@@ -29,6 +29,7 @@ from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
     transition_to,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def build_signed_block_and_sidecars(spec, state, blob_count=1):
@@ -632,7 +633,7 @@ def test_gossip_data_column_sidecar__reject_parent_failed_validation(spec, state
     # Build the failed parent on a separate state copy so the yielded anchor state stays
     # at slot 0 (its `latest_block_header` points at the genesis-equivalent anchor, not at
     # `signed_parent`)
-    parent_state = state.copy()
+    parent_state = copy(state)
     parent_block = build_empty_block_for_next_slot(spec, parent_state)
     signed_parent = state_transition_and_sign_block(spec, parent_state, parent_block)
 
@@ -640,7 +641,7 @@ def test_gossip_data_column_sidecar__reject_parent_failed_validation(spec, state
 
     # Add the parent block to store.blocks but not store.block_states, matching
     # the reference-test encoding of a failed block.
-    store.blocks[signed_parent.message.hash_tree_root()] = signed_parent.message
+    store.blocks[hash_tree_root(signed_parent.message)] = signed_parent.message
 
     yield (
         "blocks",
@@ -651,7 +652,7 @@ def test_gossip_data_column_sidecar__reject_parent_failed_validation(spec, state
         ],
     )
 
-    _, sidecars = build_signed_block_and_sidecars(spec, parent_state.copy(), blob_count=1)
+    _, sidecars = build_signed_block_and_sidecars(spec, copy(parent_state), blob_count=1)
     sidecar = sidecars[0]
 
     yield get_filename(sidecar), sidecar
@@ -704,14 +705,14 @@ def test_gossip_data_column_sidecar__reject_slot_not_higher_than_parent(spec, st
     signed_anchor = wrap_genesis_block(spec, anchor_block)
     yield get_filename(signed_anchor), signed_anchor
 
-    parent_state = state.copy()
+    parent_state = copy(state)
     parent_block = build_empty_block_for_next_slot(spec, parent_state)
     signed_parent = state_transition_and_sign_block(spec, parent_state, parent_block)
 
     yield get_filename(signed_parent), signed_parent
-    parent_root = signed_parent.message.hash_tree_root()
+    parent_root = hash_tree_root(signed_parent.message)
     store.blocks[parent_root] = signed_parent.message
-    store.block_states[parent_root] = parent_state.copy()
+    store.block_states[parent_root] = copy(parent_state)
     yield (
         "blocks",
         "meta",
@@ -721,7 +722,7 @@ def test_gossip_data_column_sidecar__reject_slot_not_higher_than_parent(spec, st
         ],
     )
 
-    _, sidecars = build_signed_block_and_sidecars(spec, parent_state.copy(), blob_count=1)
+    _, sidecars = build_signed_block_and_sidecars(spec, copy(parent_state), blob_count=1)
     sidecar = sidecars[0]
     sidecar.signed_block_header.message.slot = signed_parent.message.slot
     resign_sidecar_header(spec, parent_state, sidecar)

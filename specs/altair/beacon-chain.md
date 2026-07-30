@@ -325,24 +325,24 @@ def get_next_sync_committee_indices(state: BeaconState) -> Sequence[ValidatorInd
     """
     Return the sync committee indices, with possible duplicates, for the next sync committee.
     """
-    epoch = Epoch(get_current_epoch(state) + 1)
+    epoch = get_current_epoch(state) + Epoch(1)
 
-    MAX_RANDOM_BYTE = 2**8 - 1
+    MAX_RANDOM_BYTE = Gwei(2**8 - 1)
     active_validator_indices = get_active_validator_indices(state, epoch)
     active_validator_count = Uint64(len(active_validator_indices))
     seed = get_seed(state, epoch, DOMAIN_SYNC_COMMITTEE)
-    i = 0
+    i = Uint64(0)
     sync_committee_indices: List[ValidatorIndex] = []
-    while len(sync_committee_indices) < SYNC_COMMITTEE_SIZE:
+    while Uint64(len(sync_committee_indices)) < SYNC_COMMITTEE_SIZE:
         shuffled_index = compute_shuffled_index(
-            Uint64(i % active_validator_count), active_validator_count, seed
+            i % active_validator_count, active_validator_count, seed
         )
         candidate_index = active_validator_indices[shuffled_index]
-        random_byte = hash(seed + uint_to_bytes(Uint64(i // 32)))[i % 32]
+        random_byte = Gwei(hash(seed + uint_to_bytes(i // Uint64(32)))[i % Uint64(32)])
         effective_balance = state.validators[candidate_index].effective_balance
         if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
             sync_committee_indices.append(candidate_index)
-        i += 1
+        i += Uint64(1)
     return sync_committee_indices
 ```
 
@@ -358,7 +358,7 @@ def get_next_sync_committee(state: BeaconState) -> SyncCommittee:
     Return the next sync committee, with possible pubkey duplicates.
     """
     indices = get_next_sync_committee_indices(state)
-    pubkeys = [state.validators[index].pubkey for index in indices]
+    pubkeys = SyncCommitteePubkeys(data=[state.validators[index].pubkey for index in indices])
     aggregate_pubkey = eth_aggregate_pubkeys(pubkeys)
     return SyncCommittee(pubkeys=pubkeys, aggregate_pubkey=aggregate_pubkey)
 ```
@@ -367,10 +367,10 @@ def get_next_sync_committee(state: BeaconState) -> SyncCommittee:
 
 ```python
 def get_base_reward_per_increment(state: BeaconState) -> Gwei:
-    return Gwei(
+    return (
         EFFECTIVE_BALANCE_INCREMENT
-        * BASE_REWARD_FACTOR
-        // integer_squareroot(get_total_active_balance(state))
+        * Gwei(BASE_REWARD_FACTOR)
+        // Gwei(integer_squareroot(get_total_active_balance(state)))
     )
 ```
 
@@ -634,10 +634,10 @@ def process_sync_aggregate(state: BeaconState, sync_aggregate: SyncAggregate) ->
     # Verify sync committee aggregate signature signing over the previous slot block root
     committee_pubkeys = state.current_sync_committee.pubkeys
     committee_bits = sync_aggregate.sync_committee_bits
-    if sum(committee_bits) == SYNC_COMMITTEE_SIZE:
+    if Uint64(len([bit for bit in committee_bits if bit])) == SYNC_COMMITTEE_SIZE:
         # All members participated - use precomputed aggregate key
         participant_pubkeys = [state.current_sync_committee.aggregate_pubkey]
-    elif sum(committee_bits) > SYNC_COMMITTEE_SIZE // 2:
+    elif Uint64(len([bit for bit in committee_bits if bit])) > SYNC_COMMITTEE_SIZE // Uint64(2):
         # More than half participated - subtract non-participant keys.
         # First determine nonparticipating members
         non_participant_pubkeys = [
@@ -730,7 +730,7 @@ adapt to the new participation records.
 def process_justification_and_finalization(state: BeaconState) -> None:
     # Initial FFG checkpoint values have a `0x00` stub for `root`.
     # Skip FFG updates in the first two epochs to avoid corner cases that might result in modifying this stub.
-    if get_current_epoch(state) <= GENESIS_EPOCH + 1:
+    if get_current_epoch(state) <= GENESIS_EPOCH + Epoch(1):
         return
     previous_indices = get_unslashed_participating_indices(
         state, TIMELY_TARGET_FLAG_INDEX, get_previous_epoch(state)
@@ -803,7 +803,7 @@ def process_slashings(state: BeaconState) -> None:
     epoch = get_current_epoch(state)
     total_balance = get_total_active_balance(state)
     adjusted_total_slashing_balance = min(
-        sum(state.slashings) * PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR, total_balance
+        sum(state.slashings, Gwei(0)) * Gwei(PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR), total_balance
     )
     for index, validator in enumerate(state.validators):
         if (
@@ -826,7 +826,7 @@ def process_slashings(state: BeaconState) -> None:
 def process_participation_flag_updates(state: BeaconState) -> None:
     state.previous_epoch_participation = state.current_epoch_participation
     state.current_epoch_participation = EpochParticipation(
-        ParticipationFlags(0b0000_0000) for _ in range(len(state.validators))
+        data=[ParticipationFlags(0b0000_0000) for _ in range(len(state.validators))]
     )
 ```
 
@@ -837,7 +837,7 @@ def process_participation_flag_updates(state: BeaconState) -> None:
 ```python
 def process_sync_committee_updates(state: BeaconState) -> None:
     next_epoch = get_current_epoch(state) + Epoch(1)
-    if next_epoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD == 0:
+    if next_epoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD == Epoch(0):
         state.current_sync_committee = state.next_sync_committee
         state.next_sync_committee = get_next_sync_committee(state)
 ```

@@ -316,7 +316,7 @@ def has_eth1_withdrawal_credential(validator: Validator) -> bool:
     """
     Check if ``validator`` has an 0x01 prefixed "eth1" withdrawal credential.
     """
-    return validator.withdrawal_credentials[:1] == ETH1_ADDRESS_WITHDRAWAL_PREFIX
+    return Bytes1(validator.withdrawal_credentials[:1]) == ETH1_ADDRESS_WITHDRAWAL_PREFIX
 ```
 
 #### `is_fully_withdrawable_validator`
@@ -380,8 +380,8 @@ def process_epoch(state: BeaconState) -> None:
 ```python
 def process_historical_summaries_update(state: BeaconState) -> None:
     # Set historical block root accumulator.
-    next_epoch = Epoch(get_current_epoch(state) + 1)
-    if next_epoch % (SLOTS_PER_HISTORICAL_ROOT // SLOTS_PER_EPOCH) == 0:
+    next_epoch = get_current_epoch(state) + Epoch(1)
+    if next_epoch % Epoch(SLOTS_PER_HISTORICAL_ROOT // SLOTS_PER_EPOCH) == Epoch(0):
         historical_summary = HistoricalSummary(
             block_summary_root=hash_tree_root(state.block_roots),
             state_summary_root=hash_tree_root(state.state_roots),
@@ -416,9 +416,12 @@ def get_balance_after_withdrawals(
     withdrawals: Sequence[Withdrawal],
 ) -> Gwei:
     withdrawn = sum(
-        withdrawal.amount
-        for withdrawal in withdrawals
-        if withdrawal.validator_index == validator_index
+        (
+            withdrawal.amount
+            for withdrawal in withdrawals
+            if withdrawal.validator_index == validator_index
+        ),
+        Gwei(0),
     )
     return state.balances[validator_index] - withdrawn
 ```
@@ -432,17 +435,17 @@ def get_validators_sweep_withdrawals(
     prior_withdrawals: Sequence[Withdrawal],
 ) -> Tuple[Sequence[Withdrawal], WithdrawalIndex, Uint64]:
     epoch = get_current_epoch(state)
-    validators_limit = min(len(state.validators), MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
+    validators_limit = min(Uint64(len(state.validators)), MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
     withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD
     # There must be at least one space reserved for validator sweep withdrawals
-    assert len(prior_withdrawals) < withdrawals_limit
+    assert Uint64(len(prior_withdrawals)) < withdrawals_limit
 
     processed_count: Uint64 = 0
     withdrawals: List[Withdrawal] = []
     validator_index = state.next_withdrawal_validator_index
     for _ in range(validators_limit):
         all_withdrawals = prior_withdrawals + withdrawals
-        has_reached_limit = len(all_withdrawals) >= withdrawals_limit
+        has_reached_limit = Uint64(len(all_withdrawals)) >= withdrawals_limit
         if has_reached_limit:
             break
 
@@ -469,7 +472,7 @@ def get_validators_sweep_withdrawals(
             )
             withdrawal_index += WithdrawalIndex(1)
 
-        validator_index = ValidatorIndex((validator_index + 1) % len(state.validators))
+        validator_index = ValidatorIndex((int(validator_index) + 1) % len(state.validators))
         processed_count += 1
 
     return withdrawals, withdrawal_index, processed_count
@@ -522,7 +525,7 @@ def update_next_withdrawal_validator_index(
     if len(withdrawals) == MAX_WITHDRAWALS_PER_PAYLOAD:
         # Next sweep starts after the latest withdrawal's validator index
         next_validator_index = ValidatorIndex(
-            (withdrawals[-1].validator_index + 1) % len(state.validators)
+            (int(withdrawals[-1].validator_index) + 1) % len(state.validators)
         )
         state.next_withdrawal_validator_index = next_validator_index
     else:
@@ -600,7 +603,7 @@ def process_execution_payload(
 ```python
 def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
     # Verify that outstanding deposits are processed up to the maximum number of deposits
-    assert len(body.deposits) == min(
+    assert Uint64(len(body.deposits)) == min(
         MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index
     )
 
@@ -629,7 +632,7 @@ def process_bls_to_execution_change(
 
     validator = state.validators[address_change.validator_index]
 
-    assert validator.withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX
+    assert Bytes1(validator.withdrawal_credentials[:1]) == BLS_WITHDRAWAL_PREFIX
     assert validator.withdrawal_credentials[1:] == hash(address_change.from_bls_pubkey)[1:]
 
     # Fork-agnostic domain since address changes are valid across forks

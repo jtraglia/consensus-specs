@@ -36,6 +36,7 @@ from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
     transition_to,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 DEBUG = False
 
@@ -240,7 +241,7 @@ class FCRTest:
         if current_slot == self.spec.GENESIS_SLOT:
             return self.store.finalized_checkpoint.root
 
-        parent_state = self.store.block_states[parent_root].copy()
+        parent_state = copy(self.store.block_states[parent_root])
         assert parent_state.slot < current_slot
 
         # Obtain parent payload or its header
@@ -354,7 +355,7 @@ class FCRTest:
         if slot is None:
             slot = self.current_slot()
 
-        att_state = self.store.block_states[block_root].copy()
+        att_state = copy(self.store.block_states[block_root])
 
         # Advance state if needed
         transition_to(self.spec, att_state, slot)
@@ -489,7 +490,7 @@ class FCRTest:
     ) -> list[object]:
         if slot is None:
             slot = self.current_slot()
-        state = self.store.block_states[self.head_root()].copy()
+        state = copy(self.store.block_states[self.head_root()])
         if slashing_indices is None:
             assert slashing_percentage is not None
             slashing_count = len(state.validators) * slashing_percentage // 100

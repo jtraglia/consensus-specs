@@ -480,9 +480,9 @@ def process_slashings(state: BeaconState) -> None:
     epoch = get_current_epoch(state)
     total_balance = get_total_active_balance(state)
     adjusted_total_slashing_balance = min(
-        sum(state.slashings)
+        sum(state.slashings, Gwei(0))
         # [Modified in Bellatrix]
-        * PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX,
+        * Gwei(PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX),
         total_balance,
     )
     for index, validator in enumerate(state.validators):

@@ -33,6 +33,7 @@ from eth_consensus_specs.test.helpers.withdrawals import (
     set_validator_fully_withdrawable,
     set_validator_partially_withdrawable,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 @with_capella_and_later
@@ -262,7 +263,7 @@ def test_invalid_one_expected_full_withdrawal_and_duplicate_in_withdrawals(spec,
 
     next_slot(spec, state)
     execution_payload = build_empty_execution_payload(spec, state)
-    execution_payload.withdrawals.append(execution_payload.withdrawals[0].copy())
+    execution_payload.withdrawals.append(copy(execution_payload.withdrawals[0]))
     execution_payload.block_hash = compute_el_block_hash(spec, execution_payload, state)
 
     yield from run_withdrawals_processing(spec, state, execution_payload, valid=False)
@@ -275,7 +276,7 @@ def test_invalid_two_expected_partial_withdrawal_and_duplicate_in_withdrawals(sp
 
     next_slot(spec, state)
     execution_payload = build_empty_execution_payload(spec, state)
-    execution_payload.withdrawals.append(execution_payload.withdrawals[0].copy())
+    execution_payload.withdrawals.append(copy(execution_payload.withdrawals[0]))
     execution_payload.block_hash = compute_el_block_hash(spec, execution_payload, state)
 
     yield from run_withdrawals_processing(spec, state, execution_payload, valid=False)

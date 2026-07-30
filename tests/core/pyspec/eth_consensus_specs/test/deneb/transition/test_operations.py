@@ -25,6 +25,7 @@ from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
     transition_to,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 #
 # BLSToExecutionChange
@@ -101,7 +102,7 @@ def test_transition_attestation_from_previous_fork_with_new_range(
         # NOTE: attestation format changes from Deneb to Electra
         # so the attestation must be made with the `post_spec`
         target_spec = post_spec
-        target_state = post_spec.upgrade_to_electra(state.copy())
+        target_state = post_spec.upgrade_to_electra(copy(state))
         target_state.fork = state.fork
     else:
         target_spec = spec

@@ -23,6 +23,7 @@ from eth_consensus_specs.test.helpers.constants import (
 from eth_consensus_specs.test.helpers.execution_payload import (
     compute_el_block_hash,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def _run_blob_kzg_commitment_merkle_proof_test(spec, state, rng=None):
@@ -55,14 +56,14 @@ def _run_blob_kzg_commitment_merkle_proof_test(spec, state, rng=None):
     yield (
         "proof",
         {
-            "leaf": "0x" + blob_sidecar.kzg_commitment.hash_tree_root().hex(),
+            "leaf": "0x" + hash_tree_root(blob_sidecar.kzg_commitment).hex(),
             "leaf_index": gindex,
             "branch": ["0x" + root.hex() for root in kzg_commitment_inclusion_proof],
         },
     )
 
     assert spec.is_valid_merkle_branch(
-        leaf=blob_sidecar.kzg_commitment.hash_tree_root(),
+        leaf=hash_tree_root(blob_sidecar.kzg_commitment),
         branch=blob_sidecar.kzg_commitment_inclusion_proof,
         depth=spec.floorlog2(gindex),
         index=spec.get_subtree_index(gindex),

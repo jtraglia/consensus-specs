@@ -93,7 +93,7 @@ def test_one_more_validator(spec):
     if is_post_altair(spec):
         yield "description", "meta", get_post_altair_description(spec)
 
-    deposit_count = spec.config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT + 1
+    deposit_count = int(spec.config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT) + 1
     deposits, _, _ = prepare_full_genesis_deposits(
         spec,
         amount=spec.MAX_EFFECTIVE_BALANCE,
@@ -116,7 +116,7 @@ def test_invalid_not_enough_validator_count(spec):
     if is_post_altair(spec):
         yield "description", "meta", get_post_altair_description(spec)
 
-    deposit_count = spec.config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT - 1
+    deposit_count = int(spec.config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT) - 1
     deposits, _, _ = prepare_full_genesis_deposits(
         spec,
         amount=spec.MAX_EFFECTIVE_BALANCE,

@@ -40,6 +40,7 @@ from eth_consensus_specs.test.helpers.state import (
     next_slot,
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def large_validator_balances(spec):
@@ -94,7 +95,7 @@ def test_gossip_beacon_aggregate_and_proof__valid(spec, state):
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -140,7 +141,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_committee_index_out_of_range(
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -158,8 +159,8 @@ def test_gossip_beacon_aggregate_and_proof__reject_committee_index_out_of_range(
         # at the smallest position that is both out-of-range and inside the bitvector.
         assert committee_count < spec.MAX_COMMITTEES_PER_SLOT
         oob_index = committee_count
-        signed_agg.message.aggregate.committee_bits = spec.BitVector[spec.MAX_COMMITTEES_PER_SLOT](
-            *[i == oob_index for i in range(spec.MAX_COMMITTEES_PER_SLOT)]
+        signed_agg.message.aggregate.committee_bits = spec.CommitteeBits(
+            data=[i == oob_index for i in range(spec.MAX_COMMITTEES_PER_SLOT)]
         )
     else:
         signed_agg.message.aggregate.data.index = committee_count + 10
@@ -207,7 +208,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_slot_not_within_range(spec, s
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -262,7 +263,7 @@ def test_gossip_beacon_aggregate_and_proof__valid_within_clock_disparity(spec, s
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -316,7 +317,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_epoch_mismatch(spec, state):
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -373,7 +374,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_already_seen_aggregate(spec, 
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -438,7 +439,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_same_data_root_without_supers
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -489,16 +490,14 @@ def test_gossip_beacon_aggregate_and_proof__ignore_same_data_root_without_supers
         # ``MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT`` and includes
         # ``committee_bits``; preserve both from the first aggregate.
         aggregate_2 = spec.Attestation(
-            aggregation_bits=spec.BitList[
-                spec.MAX_VALIDATORS_PER_COMMITTEE * spec.MAX_COMMITTEES_PER_SLOT
-            ](*modified_bits),
+            aggregation_bits=spec.AggregationBits(data=list(modified_bits)),
             data=signed_agg_1.message.aggregate.data,
             committee_bits=signed_agg_1.message.aggregate.committee_bits,
             signature=signed_agg_1.message.aggregate.signature,
         )
     else:
         aggregate_2 = spec.Attestation(
-            aggregation_bits=spec.BitList[spec.MAX_VALIDATORS_PER_COMMITTEE](*modified_bits),
+            aggregation_bits=spec.AggregationBits(data=list(modified_bits)),
             data=signed_agg_1.message.aggregate.data,
             signature=signed_agg_1.message.aggregate.signature,
         )
@@ -553,7 +552,7 @@ def test_gossip_beacon_aggregate_and_proof__valid_two_aggregators_same_data(spec
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -656,7 +655,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_block_not_seen(spec, state):
 
     # Create an attestation referencing the unseen block
     attestation = get_valid_attestation(
-        spec, state, signed=True, beacon_block_root=signed_block.message.hash_tree_root()
+        spec, state, signed=True, beacon_block_root=hash_tree_root(signed_block.message)
     )
     signed_agg = create_signed_aggregate_and_proof(spec, state, attestation)
 
@@ -703,7 +702,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_aggregation_bits_size_mismatc
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -718,9 +717,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_aggregation_bits_size_mismatc
     wrong_size = len(committee) + 5
     wrong_bits = [False] * wrong_size
     wrong_bits[0] = True
-    signed_agg.message.aggregate.aggregation_bits = spec.BitList[spec.MAX_VALIDATORS_PER_COMMITTEE](
-        *wrong_bits
-    )
+    signed_agg.message.aggregate.aggregation_bits = spec.AggregationBits(data=list(wrong_bits))
 
     yield get_filename(signed_agg), signed_agg
 
@@ -765,7 +762,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_no_participants(spec, state):
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -778,9 +775,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_no_participants(spec, state):
     # Set all aggregation bits to False (no participants)
     committee = spec.get_beacon_committee(state, attestation.data.slot, attestation.data.index)
     empty_bits = [False] * len(committee)
-    signed_agg.message.aggregate.aggregation_bits = spec.BitList[spec.MAX_VALIDATORS_PER_COMMITTEE](
-        *empty_bits
-    )
+    signed_agg.message.aggregate.aggregation_bits = spec.AggregationBits(data=list(empty_bits))
 
     yield get_filename(signed_agg), signed_agg
 
@@ -826,7 +821,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_already_seen_aggregator(spec,
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -905,7 +900,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_not_aggregator(spec, state):
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -992,7 +987,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_aggregator_not_in_committee(s
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -1056,7 +1051,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_aggregator_index_out_of_range
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -1112,7 +1107,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_invalid_selection_proof(spec,
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -1169,7 +1164,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_invalid_aggregator_signature(
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -1226,7 +1221,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_invalid_aggregate_signature(s
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -1294,7 +1289,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_block_failed_validation(spec,
     yield get_filename(signed_block), signed_block
 
     # Add block to store.blocks but NOT to store.block_states (simulating failed validation)
-    store.blocks[signed_block.message.hash_tree_root()] = signed_block.message
+    store.blocks[hash_tree_root(signed_block.message)] = signed_block.message
 
     yield (
         "blocks",
@@ -1351,7 +1346,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_target_not_ancestor(spec, sta
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
@@ -1408,7 +1403,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_finalized_not_ancestor(spec, 
     seen = get_seen(spec)
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]

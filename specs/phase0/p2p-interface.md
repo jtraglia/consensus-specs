@@ -365,7 +365,7 @@ def compute_time_at_slot_ms(state: BeaconState, slot: Slot) -> Uint64:
     Return the time in milliseconds at the start of the given slot.
     """
     slots_since_genesis = slot - GENESIS_SLOT
-    return Uint64(state.genesis_time * 1000 + slots_since_genesis * SLOT_DURATION_MS)
+    return state.genesis_time * Uint64(1000) + Uint64(slots_since_genesis) * SLOT_DURATION_MS
 ```
 
 #### `is_not_from_future_slot`
@@ -1805,17 +1805,15 @@ should:
 ```python
 def compute_subscribed_subnet(node_id: NodeID, epoch: Epoch, index: int) -> SubnetID:
     prefix_bits = int(compute_attestation_subnet_prefix_bits())
-    node_id_prefix = node_id >> int(NODE_ID_BITS - prefix_bits)
-    node_offset = Uint64(node_id % Uint256(EPOCHS_PER_SUBNET_SUBSCRIPTION))
-    permutation_seed = hash(
-        uint_to_bytes(Uint64((epoch + node_offset) // EPOCHS_PER_SUBNET_SUBSCRIPTION))
-    )
+    node_id_prefix = Uint64(node_id >> NodeID(int(NODE_ID_BITS) - prefix_bits))
+    node_offset = Epoch(node_id % NodeID(EPOCHS_PER_SUBNET_SUBSCRIPTION))
+    permutation_seed = hash(uint_to_bytes((epoch + node_offset) // EPOCHS_PER_SUBNET_SUBSCRIPTION))
     permutated_prefix = compute_shuffled_index(
         node_id_prefix,
-        1 << prefix_bits,
+        Uint64(1 << prefix_bits),
         permutation_seed,
     )
-    return SubnetID((permutated_prefix + index) % ATTESTATION_SUBNET_COUNT)
+    return SubnetID((permutated_prefix + Uint64(index)) % ATTESTATION_SUBNET_COUNT)
 ```
 
 ```python

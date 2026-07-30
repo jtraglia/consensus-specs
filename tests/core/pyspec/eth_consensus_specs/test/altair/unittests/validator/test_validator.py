@@ -16,6 +16,7 @@ from eth_consensus_specs.test.helpers.keys import privkeys, pubkey_to_privkey, p
 from eth_consensus_specs.test.helpers.state import transition_to
 from eth_consensus_specs.test.helpers.sync_committee import compute_sync_committee_signature
 from eth_consensus_specs.utils import bls
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from eth_consensus_specs.utils.ssz.ssz_typing import BitVector
 
 rng = random.Random(1337)
@@ -77,7 +78,7 @@ def _get_sync_committee_signature(
     subcommittee_size = spec.SYNC_COMMITTEE_SIZE // spec.SYNC_COMMITTEE_SUBNET_COUNT
     sync_committee_index = subcommittee_index * subcommittee_size + index_in_subcommittee
     pubkey = state.current_sync_committee.pubkeys[sync_committee_index]
-    privkey = pubkey_to_privkey[pubkey]
+    privkey = pubkey_to_privkey[bytes(pubkey)]
 
     return compute_sync_committee_signature(
         spec, state, target_slot, privkey, block_root=target_block_root
@@ -132,8 +133,8 @@ def test_process_sync_committee_contributions(spec, state):
 @always_bls
 def test_get_sync_committee_message(spec, state):
     validator_index = 0
-    block = spec.BeaconBlock(state_root=state.hash_tree_root())
-    block_root = spec.Root(block.hash_tree_root())
+    block = spec.BeaconBlock(state_root=hash_tree_root(state))
+    block_root = spec.Root(hash_tree_root(block))
     sync_committee_message = spec.get_sync_committee_message(
         state=state,
         block_root=block_root,
@@ -276,9 +277,7 @@ def test_get_contribution_and_proof(spec, state):
         slot=10,
         beacon_block_root=b"\x12" * 32,
         subcommittee_index=1,
-        aggregation_bits=spec.BitVector[
-            spec.SYNC_COMMITTEE_SIZE // spec.SYNC_COMMITTEE_SUBNET_COUNT
-        ](),
+        aggregation_bits=spec.SyncSubcommitteeBits(),
         signature=b"\x32" * 96,
     )
     selection_proof = spec.get_sync_committee_selection_proof(
@@ -313,9 +312,7 @@ def test_get_contribution_and_proof_signature(spec, state):
             slot=10,
             beacon_block_root=b"\x12" * 32,
             subcommittee_index=1,
-            aggregation_bits=spec.BitVector[
-                spec.SYNC_COMMITTEE_SIZE // spec.SYNC_COMMITTEE_SUBNET_COUNT
-            ](),
+            aggregation_bits=spec.SyncSubcommitteeBits(),
             signature=b"\x34" * 96,
         ),
         selection_proof=b"\x56" * 96,

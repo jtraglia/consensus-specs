@@ -4,6 +4,7 @@ from eth_consensus_specs.test.helpers.deposit_requests import (
     prepare_process_deposit_request,
     run_deposit_request_processing,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 #
 # In Gloas, deposit requests never create or top up builders. Builders are
@@ -37,7 +38,7 @@ def test_process_deposit_request__builder_credentials_queued(spec, state):
         signed=True,
         withdrawal_credentials=withdrawal_credentials,
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_deposit_request_processing(spec, state, deposit_request)
 
@@ -78,7 +79,7 @@ def test_process_deposit_request__builder_pubkey_queued(spec, state):
         signed=True,
         withdrawal_credentials=withdrawal_credentials,
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_deposit_request_processing(spec, state, deposit_request)
 
@@ -119,7 +120,7 @@ def test_process_deposit_request__builder_pubkey_validator_credentials(spec, sta
         signed=True,
         withdrawal_credentials=withdrawal_credentials,
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_deposit_request_processing(spec, state, deposit_request)
 

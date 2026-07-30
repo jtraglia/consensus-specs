@@ -28,7 +28,7 @@ def get_builder_withdrawal_credentials(spec, pubkey):
 
 def create_pending_deposit_for_builder(spec, pubkey, amount, signed=True):
     """Create a pending deposit with builder withdrawal credentials."""
-    privkey = builder_pubkey_to_privkey[pubkey]
+    privkey = builder_pubkey_to_privkey[bytes(pubkey)]
     withdrawal_credentials = get_builder_withdrawal_credentials(spec, pubkey)
 
     deposit_data = build_deposit_data(
@@ -406,7 +406,7 @@ def test_fork_builder_deposit_followed_by_non_builder_credentials(spec, phases, 
     amount = post_spec.MIN_DEPOSIT_AMOUNT
 
     builder_pubkey = builder_pubkeys[0]
-    privkey = builder_pubkey_to_privkey[builder_pubkey]
+    privkey = builder_pubkey_to_privkey[bytes(builder_pubkey)]
 
     # First deposit: builder credentials
     builder_deposit = create_pending_deposit_for_builder(post_spec, builder_pubkey, amount)
@@ -461,7 +461,7 @@ def test_fork_validator_deposit_followed_by_builder_credentials(spec, phases, st
     amount = post_spec.MIN_DEPOSIT_AMOUNT
 
     builder_pubkey = builder_pubkeys[0]
-    privkey = builder_pubkey_to_privkey[builder_pubkey]
+    privkey = builder_pubkey_to_privkey[bytes(builder_pubkey)]
 
     # First deposit: compounding credentials (0x02)
     compounding_withdrawal_credentials = (

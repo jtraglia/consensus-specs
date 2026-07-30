@@ -19,6 +19,7 @@ from eth_consensus_specs.test.helpers.gossip import (
 )
 from eth_consensus_specs.test.helpers.keys import privkeys
 from eth_consensus_specs.test.helpers.state import transition_to
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def get_correct_subnet_for_attestation(spec, state, attestation):
@@ -40,7 +41,7 @@ def build_unaggregated_attestation(spec, state, beacon_block_root):
     committee = spec.get_beacon_committee(state, attestation.data.slot, attestation.data.index)
     single_bit = [False] * len(committee)
     single_bit[0] = True
-    attestation.aggregation_bits = spec.BitList[spec.MAX_VALIDATORS_PER_COMMITTEE](*single_bit)
+    attestation.aggregation_bits = spec.AggregationBits(data=list(single_bit))
     attestation.signature = spec.get_attestation_signature(
         state, attestation.data, privkeys[committee[0]]
     )
@@ -50,7 +51,7 @@ def build_unaggregated_attestation(spec, state, beacon_block_root):
 def prepare_attestation(spec, state, slot):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
 
     transition_to(spec, state, slot)
     attestation = build_unaggregated_attestation(spec, state, anchor_root)

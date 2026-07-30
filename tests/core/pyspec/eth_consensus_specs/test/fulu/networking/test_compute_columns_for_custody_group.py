@@ -9,14 +9,16 @@ from eth_consensus_specs.test.context import (
 
 def _run_compute_columns_for_custody_group(spec, rng, custody_group=None):
     if custody_group is None:
-        custody_group = rng.randint(0, spec.config.NUMBER_OF_CUSTODY_GROUPS - 1)
+        custody_group = spec.CustodyIndex(
+            rng.randint(0, int(spec.config.NUMBER_OF_CUSTODY_GROUPS) - 1)
+        )
 
-    result = spec.compute_columns_for_custody_group(custody_group)
+    result = spec.compute_columns_for_custody_group(spec.CustodyIndex(custody_group))
     yield "custody_group", "meta", custody_group
 
     assert len(result) == len(set(result))
-    assert len(result) == spec.NUMBER_OF_COLUMNS // spec.config.NUMBER_OF_CUSTODY_GROUPS
-    assert all(i < spec.NUMBER_OF_COLUMNS for i in result)
+    assert len(result) == int(spec.NUMBER_OF_COLUMNS // spec.config.NUMBER_OF_CUSTODY_GROUPS)
+    assert all(i < spec.ColumnIndex(spec.NUMBER_OF_COLUMNS) for i in result)
     python_list_result = [int(i) for i in result]
 
     yield "result", "meta", python_list_result
@@ -36,7 +38,9 @@ def test_compute_columns_for_custody_group__min_custody_group(spec):
 def test_compute_columns_for_custody_group__max_custody_group(spec):
     rng = random.Random(1111)
     yield from _run_compute_columns_for_custody_group(
-        spec, rng, custody_group=spec.config.NUMBER_OF_CUSTODY_GROUPS - 1
+        spec,
+        rng,
+        custody_group=spec.CustodyIndex(spec.config.NUMBER_OF_CUSTODY_GROUPS - spec.Uint64(1)),
     )
 
 

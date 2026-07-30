@@ -662,7 +662,7 @@ def is_confirmed_chain_safe(fcr_store: FastConfirmationStore, confirmed_root: Ro
         ancestor_at_previous_epoch_start = get_ancestor(
             store,
             get_node_for_root(confirmed_root),
-            compute_start_slot_at_epoch(Epoch(current_epoch - 1)),
+            compute_start_slot_at_epoch(current_epoch - Epoch(1)),
         ).root
         if get_block_epoch(store, ancestor_at_previous_epoch_start) + 1 == current_epoch:
             # The parent of the first block of the previous epoch

@@ -3,6 +3,8 @@ from typing import get_origin, get_type_hints
 
 from eth_utils import encode_hex
 
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
+
 PAYLOAD_STATUS_VALID = "VALID"
 PAYLOAD_STATUS_INVALIDATED = "INVALIDATED"
 PAYLOAD_STATUS_NOT_VALIDATED = "NOT_VALIDATED"
@@ -112,7 +114,7 @@ def get_filename(obj):
     info = _MESSAGE_INFO.get(class_name)
     if info is None:
         raise Exception(f"unsupported type: {class_name}")
-    return f"{info['file_prefix']}_{encode_hex(obj.hash_tree_root())}"
+    return f"{info['file_prefix']}_{encode_hex(hash_tree_root(obj))}"
 
 
 def run_validate_gossip(spec, **kwargs):

@@ -150,7 +150,8 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "**/*.md" = [
-  "F821", # https://docs.astral.sh/ruff/rules/undefined-name/
+  "F821",  # https://docs.astral.sh/ruff/rules/undefined-name/
+  "RUF012", # https://docs.astral.sh/ruff/rules/mutable-class-default/
 ]
 "!specs/**" = [
   "ARG", # https://docs.astral.sh/ruff/rules/#flake8-unused-arguments-arg

@@ -1039,7 +1039,7 @@ def is_active_builder(state: BeaconState, builder_index: BuilderIndex) -> bool:
 
 ```python
 def is_builder_withdrawal_credential(withdrawal_credentials: Bytes32) -> bool:
-    return withdrawal_credentials[:1] == BUILDER_WITHDRAWAL_PREFIX
+    return Bytes1(withdrawal_credentials[:1]) == BUILDER_WITHDRAWAL_PREFIX
 ```
 
 #### New `is_attestation_same_slot`
@@ -1167,25 +1167,25 @@ def compute_balance_weighted_selection(
     are themselves sampled from ``indices`` by shuffling it, otherwise
     ``indices`` is traversed in order. The returned list can contain duplicates.
     """
-    MAX_RANDOM_VALUE = 2**16 - 1
+    MAX_RANDOM_VALUE = Gwei(2**16 - 1)
     total = Uint64(len(indices))
-    assert total > 0
+    assert total > Uint64(0)
     effective_balances = [state.validators[index].effective_balance for index in indices]
     selected: List[ValidatorIndex] = []
     i = Uint64(0)
-    while len(selected) < size:
-        offset = i % 16 * 2
-        if offset == 0:
-            random_bytes = hash(seed + uint_to_bytes(i // 16))
+    while Uint64(len(selected)) < size:
+        offset = i % Uint64(16) * Uint64(2)
+        if offset == Uint64(0):
+            random_bytes = hash(seed + uint_to_bytes(i // Uint64(16)))
         next_index = i % total
         if shuffle_indices:
             next_index = compute_shuffled_index(next_index, total, seed)
         weight = effective_balances[next_index] * MAX_RANDOM_VALUE
-        random_value = bytes_to_uint64(random_bytes[offset : offset + 2])
+        random_value = Gwei(bytes_to_uint64(random_bytes[offset : offset + Uint64(2)]))
         threshold = MAX_EFFECTIVE_BALANCE_ELECTRA * random_value
         if weight >= threshold:
             selected.append(indices[next_index])
-        i += 1
+        i += Uint64(1)
     return selected
 ```
 
@@ -1203,11 +1203,15 @@ def compute_proposer_indices(
     Return the proposer indices for the given ``epoch``.
     """
     start_slot = compute_start_slot_at_epoch(epoch)
-    seeds = [hash(seed + uint_to_bytes(Slot(start_slot + i))) for i in range(SLOTS_PER_EPOCH)]
+    seeds = [hash(seed + uint_to_bytes(start_slot + Slot(i))) for i in range(int(SLOTS_PER_EPOCH))]
     # [Modified in Gloas:EIP7732]
     return ProposerIndices(
-        compute_balance_weighted_selection(state, indices, seed, size=1, shuffle_indices=True)[0]
-        for seed in seeds
+        data=[
+            compute_balance_weighted_selection(
+                state, indices, seed, size=Uint64(1), shuffle_indices=True
+            )[0]
+            for seed in seeds
+        ]
     )
 ```
 
@@ -1227,7 +1231,7 @@ def compute_ptc(state: BeaconState, slot: Slot) -> PTC:
         committee = get_beacon_committee(state, slot, CommitteeIndex(i))
         indices.extend(committee)
     return PTC(
-        compute_balance_weighted_selection(
+        data=compute_balance_weighted_selection(
             state, indices, seed, size=PTC_SIZE, shuffle_indices=False
         )
     )
@@ -1267,7 +1271,7 @@ def get_next_sync_committee_indices(state: BeaconState) -> Sequence[ValidatorInd
     """
     Return the sync committee indices, with possible duplicates, for the next sync committee.
     """
-    epoch = Epoch(get_current_epoch(state) + 1)
+    epoch = get_current_epoch(state) + Epoch(1)
     seed = get_seed(state, epoch, DOMAIN_SYNC_COMMITTEE)
     indices = get_active_validator_indices(state, epoch)
     return compute_balance_weighted_selection(
@@ -1382,9 +1386,9 @@ def get_builder_payment_quorum_threshold(state: BeaconState) -> Uint64:
     """
     Calculate the quorum threshold for builder payments.
     """
-    per_slot_balance = get_total_active_balance(state) // SLOTS_PER_EPOCH
-    quorum = per_slot_balance * BUILDER_PAYMENT_THRESHOLD_NUMERATOR
-    return Uint64(quorum // BUILDER_PAYMENT_THRESHOLD_DENOMINATOR)
+    per_slot_balance = get_total_active_balance(state) // Gwei(SLOTS_PER_EPOCH)
+    quorum = per_slot_balance * Gwei(BUILDER_PAYMENT_THRESHOLD_NUMERATOR)
+    return Uint64(quorum // Gwei(BUILDER_PAYMENT_THRESHOLD_DENOMINATOR))
 ```
 
 #### New `get_activation_churn_limit`
@@ -1397,7 +1401,7 @@ def get_activation_churn_limit(state: BeaconState) -> Gwei:
     """
     churn = max(
         MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA,
-        get_total_active_balance(state) // CHURN_LIMIT_QUOTIENT_GLOAS,
+        get_total_active_balance(state) // Gwei(CHURN_LIMIT_QUOTIENT_GLOAS),
     )
     churn = churn - churn % EFFECTIVE_BALANCE_INCREMENT
     return min(MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS, churn)
@@ -1413,7 +1417,7 @@ def get_exit_churn_limit(state: BeaconState) -> Gwei:
     """
     churn = max(
         MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA,
-        get_total_active_balance(state) // CHURN_LIMIT_QUOTIENT_GLOAS,
+        get_total_active_balance(state) // Gwei(CHURN_LIMIT_QUOTIENT_GLOAS),
     )
     return churn - churn % EFFECTIVE_BALANCE_INCREMENT
 ```
@@ -1527,7 +1531,7 @@ def process_slot(state: BeaconState) -> None:
     state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
     # [New in Gloas:EIP7732]
     # Unset the next payload availability
-    state.execution_payload_availability[(state.slot + 1) % SLOTS_PER_HISTORICAL_ROOT] = 0b0
+    state.execution_payload_availability[(state.slot + Slot(1)) % SLOTS_PER_HISTORICAL_ROOT] = 0b0
 ```
 
 ### Epoch processing
@@ -1565,7 +1569,7 @@ def process_epoch(state: BeaconState) -> None:
 
 ```python
 def process_pending_deposits(state: BeaconState) -> None:
-    next_epoch = Epoch(get_current_epoch(state) + 1)
+    next_epoch = get_current_epoch(state) + Epoch(1)
     # [Modified in Gloas:EIP8061]
     # Deposits still consume the activation-only churn budget in Gloas.
     available_for_processing = state.deposit_balance_to_consume + get_activation_churn_limit(state)
@@ -1581,7 +1585,7 @@ def process_pending_deposits(state: BeaconState) -> None:
             break
 
         # Check if number of processed deposits has not reached the limit, otherwise, stop processing.
-        if next_deposit_index >= MAX_PENDING_DEPOSITS_PER_EPOCH:
+        if next_deposit_index >= int(MAX_PENDING_DEPOSITS_PER_EPOCH):
             break
 
         # Read validator state
@@ -1612,7 +1616,9 @@ def process_pending_deposits(state: BeaconState) -> None:
         # Regardless of how the deposit was handled, we move on in the queue.
         next_deposit_index += 1
 
-    state.pending_deposits = state.pending_deposits[next_deposit_index:] + deposits_to_postpone
+    state.pending_deposits = PendingDeposits(
+        data=list(state.pending_deposits[next_deposit_index:]) + deposits_to_postpone
+    )
 
     # Accumulate churn only if the churn limit has been hit.
     if is_churn_limit_reached:
@@ -1767,13 +1773,13 @@ def get_builder_withdrawals(
     prior_withdrawals: Sequence[Withdrawal],
 ) -> Tuple[Sequence[Withdrawal], WithdrawalIndex, Uint64]:
     withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD - 1
-    assert len(prior_withdrawals) <= withdrawals_limit
+    assert Uint64(len(prior_withdrawals)) <= withdrawals_limit
 
     processed_count: Uint64 = 0
     withdrawals: List[Withdrawal] = []
     for withdrawal in state.builder_pending_withdrawals:
         all_withdrawals = prior_withdrawals + withdrawals
-        has_reached_limit = len(all_withdrawals) >= withdrawals_limit
+        has_reached_limit = Uint64(len(all_withdrawals)) >= withdrawals_limit
         if has_reached_limit:
             break
 
@@ -1803,14 +1809,14 @@ def get_builders_sweep_withdrawals(
     epoch = get_current_epoch(state)
     builders_limit = min(len(state.builders), MAX_BUILDERS_PER_WITHDRAWALS_SWEEP)
     withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD - 1
-    assert len(prior_withdrawals) <= withdrawals_limit
+    assert Uint64(len(prior_withdrawals)) <= withdrawals_limit
 
     processed_count: Uint64 = 0
     withdrawals: List[Withdrawal] = []
     builder_index = state.next_withdrawal_builder_index
     for _ in range(builders_limit):
         all_withdrawals = prior_withdrawals + withdrawals
-        has_reached_limit = len(all_withdrawals) >= withdrawals_limit
+        has_reached_limit = Uint64(len(all_withdrawals)) >= withdrawals_limit
         if has_reached_limit:
             break
 
@@ -1826,7 +1832,7 @@ def get_builders_sweep_withdrawals(
             )
             withdrawal_index += WithdrawalIndex(1)
 
-        builder_index = BuilderIndex((builder_index + 1) % len(state.builders))
+        builder_index = BuilderIndex((int(builder_index) + 1) % len(state.builders))
         processed_count += 1
 
     return withdrawals, withdrawal_index, processed_count
@@ -2037,8 +2043,8 @@ def process_execution_payload_bid(
 
     # For self-builds, amount must be zero regardless of withdrawal credential prefix
     if builder_index == BUILDER_INDEX_SELF_BUILD:
-        assert amount == 0
-        assert signed_bid.signature == bls.G2_POINT_AT_INFINITY
+        assert amount == Gwei(0)
+        assert signed_bid.signature == BLSSignature(bls.G2_POINT_AT_INFINITY)
     else:
         # Verify that the builder is active
         assert is_active_builder(state, builder_index)
