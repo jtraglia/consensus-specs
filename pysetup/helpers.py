@@ -48,16 +48,30 @@ def make_function_abstract(protocol_def: ProtocolDefinition, key: str):
 
 
 def objects_to_spec(
-    preset_name: str, spec_object: SpecObject, fork: str, ordered_class_objects: dict[str, str]
+    preset_name: str,
+    spec_object: SpecObject,
+    fork: str,
+    ordered_class_objects: dict[str, str],
+    shared_types: dict[str, str] | None = None,
 ) -> str:
     """
     Given all the objects that constitute a spec, combine them into a single pyfile.
+
+    ``shared_types`` maps the name of a type this fork inherits unchanged to the
+    module it is inherited from. Such a type is bound to the previous fork's class
+    instead of being declared again, so that ``phase0.Slot`` and ``bellatrix.Slot``
+    are one class. The SSZ type system compares by exact type, so a value built
+    under one fork has to stay usable under the next.
     """
+    shared_types = shared_types or {}
 
     def gen_new_type_definitions(custom_types: dict[str, str]) -> str:
-        return "\n\n\n".join(
-            [gen_new_type_definition(key, value) for key, value in custom_types.items()]
-        )
+        return "\n\n\n".join([
+            f"{key} = {shared_types[key]}.{key}"
+            if key in shared_types
+            else gen_new_type_definition(key, value)
+            for key, value in custom_types.items()
+        ])
 
     new_type_definitions = gen_new_type_definitions(spec_object.custom_types)
 
@@ -102,7 +116,10 @@ def objects_to_spec(
     ordered_class_objects = {
         k: v for k, v in ordered_class_objects.items() if k not in deprecate_containers
     }
-    ordered_class_objects_spec = "\n\n\n".join(ordered_class_objects.values())
+    ordered_class_objects_spec = "\n\n\n".join(
+        f"{k} = {shared_types[k]}.{k}" if k in shared_types else v
+        for k, v in ordered_class_objects.items()
+    )
 
     # Access global dict of config vars for runtime configurables
     # Ignore variable between quotes and doubles quotes

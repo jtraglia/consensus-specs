@@ -27,4 +27,6 @@ def test_sampling_config(spec):
     bytes_per_slot = column_size_in_bytes * spec.config.SAMPLES_PER_SLOT
     # TODO: What is the bandwidth requirement?
     bandwidth_requirement = 10000  # bytes/s
-    assert bytes_per_slot * 1000 // spec.config.SLOT_DURATION_MS < bandwidth_requirement
+    assert (
+        bytes_per_slot * spec.Uint64(1000) // spec.config.SLOT_DURATION_MS < bandwidth_requirement
+    )

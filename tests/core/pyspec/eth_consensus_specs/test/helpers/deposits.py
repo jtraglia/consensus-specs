@@ -83,7 +83,11 @@ def deposit_from_context(spec, deposit_data_list, index):
     ]
     leaf = hash_tree_root(deposit_data)
     assert spec.is_valid_merkle_branch(
-        leaf, proof, spec.DEPOSIT_CONTRACT_TREE_DEPTH + spec.Uint64(1), index, root
+        leaf,
+        proof,
+        spec.DEPOSIT_CONTRACT_TREE_DEPTH + spec.Uint64(1),
+        spec.Uint64(index),
+        root,
     )
     deposit = spec.Deposit(proof=spec.DepositProof(data=proof), data=deposit_data)
 
@@ -96,7 +100,7 @@ def prepare_full_genesis_deposits(
     if deposit_data_list is None:
         deposit_data_list = []
     genesis_deposits = []
-    for pubkey_index in range(min_pubkey_index, min_pubkey_index + deposit_count):
+    for pubkey_index in range(int(min_pubkey_index), int(min_pubkey_index) + int(deposit_count)):
         pubkey = pubkeys[pubkey_index]
         privkey = privkeys[pubkey_index]
         # insecurely use pubkey as withdrawal key if no credentials provided
@@ -395,7 +399,9 @@ def run_deposit_processing(spec, state, deposit, validator_index, valid=True, ef
                 effective_balance = min(spec.MAX_EFFECTIVE_BALANCE, deposit.data.amount)
                 effective_balance -= effective_balance % spec.EFFECTIVE_BALANCE_INCREMENT
                 assert state.validators[validator_index].effective_balance == effective_balance
-            assert get_balance(state, validator_index) == pre_balance + deposit.data.amount
+            assert (
+                get_balance(state, validator_index) == spec.Gwei(pre_balance) + deposit.data.amount
+            )
         else:
             # no balance or effective balance changes on deposit processing post electra
             assert get_balance(state, validator_index) == pre_balance

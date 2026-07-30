@@ -44,9 +44,9 @@ def test_process_builder_pending_payments_empty_queue(spec, state):
     # Queue should be rotated - first SLOTS_PER_EPOCH should be empty
     for i in range(spec.SLOTS_PER_EPOCH):
         payment = state.builder_pending_payments[i]
-        assert payment.weight == 0
-        assert payment.withdrawal.amount == 0
-        assert payment.withdrawal.builder_index == 0
+        assert payment.weight == spec.Gwei(0)
+        assert payment.withdrawal.amount == spec.Gwei(0)
+        assert payment.withdrawal.builder_index == spec.BuilderIndex(0)
 
 
 @with_gloas_and_later
@@ -74,7 +74,7 @@ def test_process_builder_pending_payments_below_quorum(spec, state):
     assert len(state.builder_pending_withdrawals) == pre_builder_pending_withdrawals
 
     # Payment should be rotated out of the first SLOTS_PER_EPOCH
-    assert state.builder_pending_payments[0].weight == 0
+    assert state.builder_pending_payments[0].weight == spec.Gwei(0)
 
 
 @with_gloas_and_later
@@ -108,7 +108,7 @@ def test_process_builder_pending_payments_equal_quorum(spec, state):
     assert withdrawal.amount == amount
     assert withdrawal.builder_index == builder_index
     # Payment should be rotated out
-    assert state.builder_pending_payments[0].weight == 0
+    assert state.builder_pending_payments[0].weight == spec.Gwei(0)
 
 
 @with_gloas_and_later
@@ -143,7 +143,7 @@ def test_process_builder_pending_payments_above_quorum(spec, state):
     assert withdrawal.builder_index == builder_index
 
     # Payment should be rotated out
-    assert state.builder_pending_payments[0].weight == 0
+    assert state.builder_pending_payments[0].weight == spec.Gwei(0)
 
 
 @with_gloas_and_later
@@ -186,7 +186,7 @@ def test_process_builder_pending_payments_multiple_above_quorum(spec, state):
 
     # All payments should be cleared (weights set to 0)
     for i in range(num_payments):
-        assert state.builder_pending_payments[i].weight == 0
+        assert state.builder_pending_payments[i].weight == spec.Gwei(0)
 
 
 @with_gloas_and_later
@@ -252,7 +252,7 @@ def test_process_builder_pending_payments_queue_rotation(spec, state):
     test_weight = 12345
     state.builder_pending_payments = [
         create_builder_pending_payment(spec, i, spec.MIN_ACTIVATION_BALANCE, test_weight)
-        for i in range(2 * spec.SLOTS_PER_EPOCH)
+        for i in range(spec.Slot(2) * spec.SLOTS_PER_EPOCH)
     ]
 
     # Store the second epoch data for comparison
@@ -271,8 +271,8 @@ def test_process_builder_pending_payments_queue_rotation(spec, state):
         assert payment.withdrawal.builder_index == expected_builder_index
 
     # Second SLOTS_PER_EPOCH should be empty
-    for i in range(spec.SLOTS_PER_EPOCH, 2 * spec.SLOTS_PER_EPOCH):
+    for i in range(spec.SLOTS_PER_EPOCH, spec.Slot(2) * spec.SLOTS_PER_EPOCH):
         payment = state.builder_pending_payments[i]
-        assert payment.weight == 0
-        assert payment.withdrawal.amount == 0
-        assert payment.withdrawal.builder_index == 0
+        assert payment.weight == spec.Gwei(0)
+        assert payment.withdrawal.amount == spec.Gwei(0)
+        assert payment.withdrawal.builder_index == spec.BuilderIndex(0)

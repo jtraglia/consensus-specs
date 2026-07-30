@@ -152,15 +152,17 @@ def upgrade_to_gloas(pre: fulu.BeaconState) -> BeaconState:
         eth1_data_votes=pre.eth1_data_votes,
         eth1_deposit_index=pre.eth1_deposit_index,
         # [Modified in Gloas:EIP7688]
-        validators=Validators(list(pre.validators)),
+        validators=Validators(data=list(pre.validators)),
         # [Modified in Gloas:EIP7688]
-        balances=Balances(list(pre.balances)),
+        balances=Balances(data=list(pre.balances)),
         randao_mixes=pre.randao_mixes,
         slashings=pre.slashings,
         # [Modified in Gloas:EIP7688]
-        previous_epoch_participation=EpochParticipation(list(pre.previous_epoch_participation)),
+        previous_epoch_participation=EpochParticipation(
+            data=list(pre.previous_epoch_participation)
+        ),
         # [Modified in Gloas:EIP7688]
-        current_epoch_participation=EpochParticipation(list(pre.current_epoch_participation)),
+        current_epoch_participation=EpochParticipation(data=list(pre.current_epoch_participation)),
         justification_bits=pre.justification_bits,
         previous_justified_checkpoint=pre.previous_justified_checkpoint,
         current_justified_checkpoint=pre.current_justified_checkpoint,

@@ -79,7 +79,7 @@ def run_test_effective_balance_hysteresis(spec, state, with_compounding_credenti
             (
                 min,
                 min * 2 - 1,
-                min * 2 - spec.EFFECTIVE_BALANCE_INCREMENT,
+                min * spec.Gwei(2) - spec.EFFECTIVE_BALANCE_INCREMENT,
                 "top up or consolidation almost doubling the balance",
             ),
         ]

@@ -165,7 +165,7 @@ def _build_block_for_next_slot_with_sync_participation(
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
-            block.slot - 1,
+            block.slot - spec.Slot(1),
             [index for index, bit in zip(committee_indices, committee_bits, strict=False) if bit],
             block_root=block.parent_root,
         ),

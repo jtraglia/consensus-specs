@@ -225,9 +225,9 @@ def run_bad_timestamp_test(spec, state, is_future):
     # execution payload
     execution_payload = build_empty_execution_payload(spec, state)
     if is_future:
-        timestamp = execution_payload.timestamp + 1
+        timestamp = execution_payload.timestamp + spec.Uint64(1)
     else:
-        timestamp = execution_payload.timestamp - 1
+        timestamp = execution_payload.timestamp - spec.Uint64(1)
     execution_payload.timestamp = timestamp
     execution_payload.block_hash = compute_el_block_hash(spec, execution_payload, state)
 
@@ -266,7 +266,7 @@ def run_non_empty_extra_data_test(spec, state):
     next_slot(spec, state)
 
     execution_payload = build_empty_execution_payload(spec, state)
-    execution_payload.extra_data = b"\x45" * 12
+    execution_payload.extra_data = spec.ExtraData(data=b"\x45" * 12)
     execution_payload.block_hash = compute_el_block_hash(spec, execution_payload, state)
 
     yield from run_execution_payload_processing(spec, state, execution_payload)
@@ -322,7 +322,7 @@ def run_zero_length_transaction_test(spec, state):
     next_slot(spec, state)
 
     execution_payload = build_empty_execution_payload(spec, state)
-    execution_payload.transactions = [spec.Transaction(b"")]
+    execution_payload.transactions = spec.Transactions(data=[spec.Transaction(b"")])
     assert len(execution_payload.transactions[0]) == 0
     execution_payload.block_hash = compute_el_block_hash(spec, execution_payload, state)
 

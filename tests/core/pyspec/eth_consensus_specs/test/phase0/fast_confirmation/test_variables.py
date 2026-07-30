@@ -39,7 +39,7 @@ def test_fcr_invariants_monotone_and_canonical(spec, state):
 
     # Run through an entire epoch + 1 to cross epoch boundary
     # This tests reconfirmation and restart logic
-    for _ in range(spec.SLOTS_PER_EPOCH + 1):
+    for _ in range(spec.SLOTS_PER_EPOCH + spec.Slot(1)):
         fcr.next_slot_with_block_and_fast_confirmation(participation_rate=100)
 
         head = fcr.head_root()

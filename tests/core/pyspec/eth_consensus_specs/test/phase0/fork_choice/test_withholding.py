@@ -39,7 +39,9 @@ def test_withholding_attack(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = (
+        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
@@ -47,7 +49,7 @@ def test_withholding_attack(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // 1000,
+        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -57,8 +59,12 @@ def test_withholding_attack(spec, state):
             spec, state, store, fill_cur_epoch=True, fill_prev_epoch=True, test_steps=test_steps
         )
 
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 4
-    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 3
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(4)
+    assert (
+        state.current_justified_checkpoint.epoch
+        == store.justified_checkpoint.epoch
+        == spec.Epoch(3)
+    )
 
     # Create the attack block that includes justifying attestations for epoch 4
     # This block is withheld & revealed only in epoch 5
@@ -74,15 +80,19 @@ def test_withholding_attack(spec, state):
         check_head_against_root(spec, store, current_root)
     head_root = hash_tree_root(signed_blocks[-2].message)
     check_head_against_root(spec, store, head_root)
-    assert spec.compute_epoch_at_slot(state.slot) == 4
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 4
-    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 3
+    assert spec.compute_epoch_at_slot(state.slot) == spec.Epoch(4)
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(4)
+    assert (
+        state.current_justified_checkpoint.epoch
+        == store.justified_checkpoint.epoch
+        == spec.Epoch(3)
+    )
     state = copy(store.block_states[head_root])
 
     # Create an honest chain in epoch 5 that includes the justifying attestations from the attack block
     next_epoch(spec, state)
-    assert spec.compute_epoch_at_slot(state.slot) == 5
-    assert state.current_justified_checkpoint.epoch == 3
+    assert spec.compute_epoch_at_slot(state.slot) == spec.Epoch(5)
+    assert state.current_justified_checkpoint.epoch == spec.Epoch(3)
     # Create two blocks in the honest chain with full attestations, and add to the store
     honest_state = copy(state)
     for _ in range(2):
@@ -92,34 +102,44 @@ def test_withholding_attack(spec, state):
         yield from tick_and_add_block(spec, store, signed_block, test_steps)
     # Create final block in the honest chain that includes the justifying attestations from the attack block
     honest_block = build_empty_block_for_next_slot(spec, honest_state)
-    honest_block.body.attestations = signed_attack_block.message.body.attestations
+    honest_block.body.attestations = spec.Attestations(
+        data=signed_attack_block.message.body.attestations
+    )
     signed_honest_block = state_transition_and_sign_block(spec, honest_state, honest_block)
     # Add the honest block to the store
     yield from tick_and_add_block(spec, store, signed_honest_block, test_steps)
     check_head_against_root(spec, store, hash_tree_root(signed_honest_block.message))
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 5
-    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 3
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(5)
+    assert (
+        state.current_justified_checkpoint.epoch
+        == store.justified_checkpoint.epoch
+        == spec.Epoch(3)
+    )
 
     # Tick to the next slot so proposer boost is not a factor in choosing the head
-    current_time = (
-        honest_block.slot + 1
-    ) * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = (honest_block.slot + spec.Slot(1)) * int(
+        spec.config.SLOT_DURATION_MS
+    ) // 1000 + store.genesis_time
     on_tick_and_append_step(spec, store, current_time, test_steps)
     check_head_against_root(spec, store, hash_tree_root(signed_honest_block.message))
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 5
-    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 3
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(5)
+    assert (
+        state.current_justified_checkpoint.epoch
+        == store.justified_checkpoint.epoch
+        == spec.Epoch(3)
+    )
 
     # Upon revealing the withheld attack block, the honest block should still be the head
     yield from tick_and_add_block(spec, store, signed_attack_block, test_steps)
     check_head_against_root(spec, store, hash_tree_root(signed_honest_block.message))
     # As a side effect of the pull-up logic, the attack block is pulled up and store.justified_checkpoint is updated
-    assert store.justified_checkpoint.epoch == 4
+    assert store.justified_checkpoint.epoch == spec.Epoch(4)
 
     # Even after going to the next epoch, the honest block should remain the head
     slot = spec.get_current_slot(store) + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH)
-    current_time = slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
     on_tick_and_append_step(spec, store, current_time, test_steps)
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 6
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(6)
     check_head_against_root(spec, store, hash_tree_root(signed_honest_block.message))
 
     yield "steps", test_steps
@@ -138,7 +158,9 @@ def test_withholding_attack_unviable_honest_chain(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = (
+        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
@@ -146,7 +168,7 @@ def test_withholding_attack_unviable_honest_chain(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // 1000,
+        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -156,11 +178,15 @@ def test_withholding_attack_unviable_honest_chain(spec, state):
             spec, state, store, fill_cur_epoch=True, fill_prev_epoch=True, test_steps=test_steps
         )
 
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 4
-    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 3
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(4)
+    assert (
+        state.current_justified_checkpoint.epoch
+        == store.justified_checkpoint.epoch
+        == spec.Epoch(3)
+    )
 
     next_epoch(spec, state)
-    assert spec.compute_epoch_at_slot(state.slot) == 5
+    assert spec.compute_epoch_at_slot(state.slot) == spec.Epoch(5)
 
     # Create the attack block that includes justifying attestations for epoch 5
     # This block is withheld & revealed only in epoch 6
@@ -174,59 +200,73 @@ def test_withholding_attack_unviable_honest_chain(spec, state):
         yield from tick_and_add_block(spec, store, signed_block, test_steps)
         check_head_against_root(spec, store, hash_tree_root(signed_block.message))
     state = copy(store.block_states[hash_tree_root(signed_block.message)])
-    assert spec.compute_epoch_at_slot(state.slot) == 5
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 5
-    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 3
+    assert spec.compute_epoch_at_slot(state.slot) == spec.Epoch(5)
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(5)
+    assert (
+        state.current_justified_checkpoint.epoch
+        == store.justified_checkpoint.epoch
+        == spec.Epoch(3)
+    )
 
     # Create an honest chain in epoch 6 that includes the justifying attestations from the attack block
     next_epoch(spec, state)
-    assert spec.compute_epoch_at_slot(state.slot) == 6
-    assert state.current_justified_checkpoint.epoch == 3
+    assert spec.compute_epoch_at_slot(state.slot) == spec.Epoch(6)
+    assert state.current_justified_checkpoint.epoch == spec.Epoch(3)
     # Create two blocks in the honest chain with full attestations, and add to the store
     for _ in range(2):
         signed_block = state_transition_with_full_block(
             spec, state, fill_cur_epoch=True, fill_prev_epoch=False
         )
-        assert state.current_justified_checkpoint.epoch == 3
+        assert state.current_justified_checkpoint.epoch == spec.Epoch(3)
         yield from tick_and_add_block(spec, store, signed_block, test_steps)
         check_head_against_root(spec, store, hash_tree_root(signed_block.message))
     # Create final block in the honest chain that includes the justifying attestations from the attack block
     honest_block = build_empty_block_for_next_slot(spec, state)
-    honest_block.body.attestations = signed_attack_block.message.body.attestations
+    honest_block.body.attestations = spec.Attestations(
+        data=signed_attack_block.message.body.attestations
+    )
     signed_honest_block = state_transition_and_sign_block(spec, state, honest_block)
     honest_block_root = hash_tree_root(signed_honest_block.message)
-    assert state.current_justified_checkpoint.epoch == 3
+    assert state.current_justified_checkpoint.epoch == spec.Epoch(3)
     # Add the honest block to the store
     yield from tick_and_add_block(spec, store, signed_honest_block, test_steps)
     current_epoch = spec.compute_epoch_at_slot(spec.get_current_slot(store))
     assert current_epoch == 6
-    # assert store.voting_source[honest_block_root].epoch == 3
+    # assert store.voting_source[honest_block_root].epoch == spec.Epoch(3)
     check_head_against_root(spec, store, honest_block_root)
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 6
-    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 3
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(6)
+    assert (
+        state.current_justified_checkpoint.epoch
+        == store.justified_checkpoint.epoch
+        == spec.Epoch(3)
+    )
 
     # Tick to the next slot so proposer boost is not a factor in choosing the head
-    current_time = (
-        honest_block.slot + 1
-    ) * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = (honest_block.slot + spec.Slot(1)) * int(
+        spec.config.SLOT_DURATION_MS
+    ) // 1000 + store.genesis_time
     on_tick_and_append_step(spec, store, current_time, test_steps)
     check_head_against_root(spec, store, honest_block_root)
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 6
-    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 3
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(6)
+    assert (
+        state.current_justified_checkpoint.epoch
+        == store.justified_checkpoint.epoch
+        == spec.Epoch(3)
+    )
 
     # Upon revealing the withheld attack block, it should become the head
     yield from tick_and_add_block(spec, store, signed_attack_block, test_steps)
     # The attack block is pulled up and store.justified_checkpoint is updated
-    assert store.justified_checkpoint.epoch == 5
+    assert store.justified_checkpoint.epoch == spec.Epoch(5)
     attack_block_root = hash_tree_root(signed_attack_block.message)
     check_head_against_root(spec, store, attack_block_root)
 
     # After going to the next epoch, the honest block should become the head
     slot = spec.get_current_slot(store) + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH)
-    current_time = slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
     on_tick_and_append_step(spec, store, current_time, test_steps)
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 7
-    # assert store.voting_source[honest_block_root].epoch == 5
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(7)
+    # assert store.voting_source[honest_block_root].epoch == spec.Epoch(5)
     check_head_against_root(spec, store, honest_block_root)
 
     yield "steps", test_steps

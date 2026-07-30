@@ -400,7 +400,7 @@ def is_within_slot_range(
     start_time_ms = compute_time_at_slot_ms(state, slot)
     if current_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY < start_time_ms:
         return False
-    end_time_ms = compute_time_at_slot_ms(state, Slot(slot + slot_range + 1))
+    end_time_ms = compute_time_at_slot_ms(state, slot + slot_range + Slot(1))
     if end_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY < current_time_ms:
         return False
     return True
@@ -650,7 +650,7 @@ def validate_beacon_block_gossip(
         raise GossipIgnore("block is not the first valid block for this proposer and slot")
 
     # [REJECT] The proposer index is a valid validator index
-    if block.proposer_index >= len(state.validators):
+    if block.proposer_index >= ValidatorIndex(len(state.validators)):
         raise GossipReject("proposer index out of range")
 
     # [REJECT] The proposer signature is valid
@@ -718,7 +718,7 @@ def validate_beacon_aggregate_and_proof_gossip(
 
     # [REJECT] The committee index is within the expected range
     committee_count = get_committee_count_per_slot(state, aggregate.data.target.epoch)
-    if index >= committee_count:
+    if Uint64(index) >= committee_count:
         raise GossipReject("committee index out of range")
 
     # [IGNORE] The aggregate attestation's slot is within the propagation range
@@ -834,7 +834,7 @@ def validate_voluntary_exit_gossip(
         raise GossipIgnore("already seen voluntary exit for this validator")
 
     # [REJECT] The validator index is valid
-    if validator_index >= len(state.validators):
+    if validator_index >= ValidatorIndex(len(state.validators)):
         raise GossipReject("validator index out of range")
 
     validator = state.validators[validator_index]
@@ -903,7 +903,7 @@ def validate_proposer_slashing_gossip(
         raise GossipReject("headers are not different")
 
     # [REJECT] The proposer index is a valid validator index
-    if proposer_index >= len(state.validators):
+    if proposer_index >= ValidatorIndex(len(state.validators)):
         raise GossipReject("proposer index out of range")
 
     # [REJECT] The proposer is slashable
@@ -957,7 +957,9 @@ def validate_attester_slashing_gossip(
         raise GossipReject("attestation data is not slashable")
 
     # [REJECT] All validator indices in the first indexed attestation are valid
-    if any(index >= len(state.validators) for index in attestation_1.attesting_indices):
+    if any(
+        index >= ValidatorIndex(len(state.validators)) for index in attestation_1.attesting_indices
+    ):
         raise GossipReject("validator index out of range in indexed attestation 1")
 
     # [REJECT] The first indexed attestation has valid properties
@@ -965,7 +967,9 @@ def validate_attester_slashing_gossip(
         raise GossipReject("invalid indexed attestation 1")
 
     # [REJECT] All validator indices in the second indexed attestation are valid
-    if any(index >= len(state.validators) for index in attestation_2.attesting_indices):
+    if any(
+        index >= ValidatorIndex(len(state.validators)) for index in attestation_2.attesting_indices
+    ):
         raise GossipReject("validator index out of range in indexed attestation 2")
 
     # [REJECT] The second indexed attestation has valid properties
@@ -1018,14 +1022,14 @@ def validate_beacon_attestation_gossip(
 
     # [REJECT] The committee index is within the expected range
     committees_per_slot = get_committee_count_per_slot(state, target_epoch)
-    if committee_index >= committees_per_slot:
+    if Uint64(committee_index) >= committees_per_slot:
         raise GossipReject("committee index out of range")
 
     # [REJECT] The attestation is for the correct subnet
     expected_subnet = compute_subnet_for_attestation(
         committees_per_slot, data.slot, committee_index
     )
-    if expected_subnet != subnet_id:
+    if expected_subnet != SubnetID(subnet_id):
         raise GossipReject("attestation is for wrong subnet")
 
     # [IGNORE] The attestation slot is within the propagation range
@@ -1050,7 +1054,7 @@ def validate_beacon_attestation_gossip(
         raise GossipReject("aggregation bits length does not match committee size")
 
     # [IGNORE] No other valid attestation seen for this validator and target epoch
-    participant_index = committee[aggregation_bits.index(True)]
+    participant_index = committee[[bool(bit) for bit in aggregation_bits].index(True)]
     if (participant_index, target_epoch) in seen.attestation_validator_epochs:
         raise GossipIgnore("already seen attestation from this validator for this epoch")
 

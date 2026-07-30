@@ -12,11 +12,11 @@ def run_process_eth1_data_reset(spec, state):
 @with_all_phases
 @spec_state_test
 def test_eth1_vote_no_reset(spec, state):
-    assert spec.EPOCHS_PER_ETH1_VOTING_PERIOD > 1
+    assert spec.Epoch(1) < spec.EPOCHS_PER_ETH1_VOTING_PERIOD
     # skip ahead to the end of the epoch
-    transition_to(spec, state, spec.SLOTS_PER_EPOCH - 1)
+    transition_to(spec, state, spec.SLOTS_PER_EPOCH - spec.Slot(1))
 
-    for _i in range(state.slot + 1):  # add a vote for each skipped slot.
+    for _i in range(state.slot + spec.Slot(1)):  # add a vote for each skipped slot.
         state.eth1_data_votes.append(
             spec.Eth1Data(
                 deposit_root=b"\xaa" * 32,
@@ -35,7 +35,7 @@ def test_eth1_vote_no_reset(spec, state):
 def test_eth1_vote_reset(spec, state):
     # skip ahead to the end of the voting period
     state.slot = (spec.EPOCHS_PER_ETH1_VOTING_PERIOD * spec.SLOTS_PER_EPOCH) - 1
-    for _i in range(state.slot + 1):  # add a vote for each skipped slot.
+    for _i in range(state.slot + spec.Slot(1)):  # add a vote for each skipped slot.
         state.eth1_data_votes.append(
             spec.Eth1Data(
                 deposit_root=b"\xaa" * 32,

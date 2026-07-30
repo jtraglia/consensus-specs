@@ -32,7 +32,7 @@ def test_on_block_parent_full_rejects_unverified_payload(spec, state):
 
     # Build a child that points its bid at parent.bid.block_hash so it claims
     # the parent is FULL
-    tick_store_to_slot(spec, store, block_state.slot + 1, test_steps)
+    tick_store_to_slot(spec, store, block_state.slot + spec.Slot(1), test_steps)
     child_state = copy(block_state)
     child = build_empty_block_for_next_slot(spec, child_state)
     child.body.signed_execution_payload_bid.message.parent_block_hash = (
@@ -61,7 +61,7 @@ def test_on_block_parent_full_accepts_verified_payload(spec, state):
     yield from add_execution_payload(spec, store, envelope, test_steps)
 
     # Build the same FULL-claim child fixture as the rejection test
-    tick_store_to_slot(spec, store, block_state.slot + 1, test_steps)
+    tick_store_to_slot(spec, store, block_state.slot + spec.Slot(1), test_steps)
     child_state = copy(block_state)
     child = build_empty_block_for_next_slot(spec, child_state)
     child.body.signed_execution_payload_bid.message.parent_block_hash = (

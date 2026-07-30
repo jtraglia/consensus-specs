@@ -68,7 +68,7 @@ def test_get_inclusion_committee_assignment_current_epoch(spec, state):
 )
 @single_phase
 def test_get_inclusion_committee_assignment_next_epoch(spec, state):
-    epoch = spec.get_current_epoch(state) + 1
+    epoch = spec.get_current_epoch(state) + spec.Epoch(1)
     run_get_inclusion_list_committee_assignments(spec, state, epoch, valid=True)
 
 
@@ -79,7 +79,7 @@ def test_get_inclusion_committee_assignment_next_epoch(spec, state):
 )
 @single_phase
 def test_get_inclusion_committee_assignment_out_bound_epoch(spec, state):
-    epoch = spec.get_current_epoch(state) + 2
+    epoch = spec.get_current_epoch(state) + spec.Epoch(2)
     run_get_inclusion_list_committee_assignments(spec, state, epoch, valid=False)
 
 

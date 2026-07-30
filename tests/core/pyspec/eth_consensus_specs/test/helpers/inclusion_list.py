@@ -29,7 +29,7 @@ def get_empty_inclusion_list(spec, state, slot=None, validator_index=None):
     empty_inclusion_list.slot = slot
     empty_inclusion_list.validator_index = validator_index
     empty_inclusion_list.inclusion_list_committee_root = committee_root
-    empty_inclusion_list.transactions = []
+    empty_inclusion_list.transactions = spec.Transactions(data=[])
 
     return empty_inclusion_list
 

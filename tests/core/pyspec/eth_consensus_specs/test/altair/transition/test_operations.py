@@ -68,7 +68,7 @@ def test_transition_with_proposer_slashing_right_before_fork(
         pre_tag,
         post_tag,
         operation_type=OperationType.PROPOSER_SLASHING,
-        operation_at_slot=fork_epoch * spec.SLOTS_PER_EPOCH - 1,
+        operation_at_slot=fork_epoch * spec.SLOTS_PER_EPOCH - spec.Slot(1),
     )
 
 
@@ -123,7 +123,7 @@ def test_transition_with_attester_slashing_right_before_fork(
         pre_tag,
         post_tag,
         operation_type=OperationType.ATTESTER_SLASHING,
-        operation_at_slot=fork_epoch * spec.SLOTS_PER_EPOCH - 1,
+        operation_at_slot=fork_epoch * spec.SLOTS_PER_EPOCH - spec.Slot(1),
     )
 
 
@@ -178,7 +178,7 @@ def test_transition_with_deposit_right_before_fork(
         pre_tag,
         post_tag,
         operation_type=OperationType.DEPOSIT,
-        operation_at_slot=fork_epoch * spec.SLOTS_PER_EPOCH - 1,
+        operation_at_slot=fork_epoch * spec.SLOTS_PER_EPOCH - spec.Slot(1),
     )
 
 
@@ -241,5 +241,5 @@ def test_transition_with_voluntary_exit_right_before_fork(
         pre_tag,
         post_tag,
         operation_type=OperationType.VOLUNTARY_EXIT,
-        operation_at_slot=fork_epoch * spec.SLOTS_PER_EPOCH - 1,
+        operation_at_slot=fork_epoch * spec.SLOTS_PER_EPOCH - spec.Slot(1),
     )

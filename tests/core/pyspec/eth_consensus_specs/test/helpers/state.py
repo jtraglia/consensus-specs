@@ -200,7 +200,7 @@ def simulate_lookahead(spec, state):
     """
     lookahead = []
     simulation_state = copy(state)
-    for _ in range(spec.SLOTS_PER_EPOCH * (spec.MIN_SEED_LOOKAHEAD + 1)):
+    for _ in range(spec.SLOTS_PER_EPOCH * (spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1))):
         proposer_index = spec.get_beacon_proposer_index(simulation_state)
         lookahead.append(proposer_index)
         next_slot(spec, simulation_state)
@@ -228,7 +228,7 @@ def simulate_lookahead_with_thresholds(spec, state) -> Sequence[tuple[Uint64, Ui
     """
     lookahead = []
     simulation_state = copy(state)
-    for _ in range(spec.SLOTS_PER_EPOCH * (spec.MIN_SEED_LOOKAHEAD + 1)):
+    for _ in range(spec.SLOTS_PER_EPOCH * (spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1))):
         proposer_index = get_beacon_proposer_index_and_threshold(spec, simulation_state)
         lookahead.append(proposer_index)
         next_slot(spec, simulation_state)

@@ -226,9 +226,9 @@ def messages_to_payload_attestations(spec, state, messages):
 
 def is_attestation_eligible_for_block(spec, state, attestation) -> bool:
     if is_post_deneb(spec):
-        return spec.compute_epoch_at_slot(attestation.data.slot) + 1 >= spec.compute_epoch_at_slot(
-            state.slot
-        )
+        return spec.compute_epoch_at_slot(attestation.data.slot) + spec.Epoch(
+            1
+        ) >= spec.compute_epoch_at_slot(state.slot)
 
     return state.slot <= attestation.data.slot + spec.SLOTS_PER_EPOCH
 
@@ -238,7 +238,9 @@ def get_dependent_root(spec, state, slot):
     if epoch <= spec.MIN_SEED_LOOKAHEAD:
         dependent_slot = spec.GENESIS_SLOT
     else:
-        dependent_slot = spec.compute_start_slot_at_epoch(epoch - spec.MIN_SEED_LOOKAHEAD) - 1
+        dependent_slot = spec.compute_start_slot_at_epoch(
+            epoch - spec.MIN_SEED_LOOKAHEAD
+        ) - spec.Slot(1)
 
     if dependent_slot > spec.GENESIS_SLOT:
         return spec.get_block_root_at_slot(state, dependent_slot)
@@ -313,7 +315,8 @@ def produce_block(
         eligible_pa_messages = [
             m
             for m in payload_attestation_messages
-            if m.data.beacon_block_root == block.parent_root and m.data.slot + 1 == block.slot
+            if m.data.beacon_block_root == block.parent_root
+            and m.data.slot + spec.Slot(1) == block.slot
         ]
         for pa in messages_to_payload_attestations(spec, state, eligible_pa_messages):
             block.body.payload_attestations.append(pa)
@@ -519,7 +522,7 @@ def make_events(spec, test_data: FCTestData) -> list[tuple[int, object, bool]]:
     test_events = []
 
     def slot_to_time(slot):
-        return slot * spec.config.SLOT_DURATION_MS // 1000 + genesis_time
+        return slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + genesis_time
 
     def add_tick_step(time):
         test_events.append(("tick", time, None))
@@ -535,7 +538,7 @@ def make_events(spec, test_data: FCTestData) -> list[tuple[int, object, bool]]:
         if event_kind == "block":
             return data.message.slot
         elif event_kind == "attestation":
-            return data.data.slot + 1
+            return data.data.slot + spec.Slot(1)
         elif event_kind == "attester_slashing":
             return max(data.attestation_1.data.slot, data.attestation_1.data.slot) + 1
         elif event_kind == "execution_payload":

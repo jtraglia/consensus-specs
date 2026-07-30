@@ -16,7 +16,7 @@ def test_updated_participation_record(spec, state):
     current_epoch_attestations = spec.PendingAttestations(
         data=[spec.PendingAttestation(proposer_index=200)]
     )
-    state.current_epoch_attestations = current_epoch_attestations
+    state.current_epoch_attestations = spec.PendingAttestations(data=current_epoch_attestations)
 
     yield from run_process_participation_record_updates(spec, state)
 

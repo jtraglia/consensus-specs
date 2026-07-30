@@ -91,7 +91,7 @@ def test_inclusion_list_store_transaction_uniqueness(spec, state):
                 spec,
                 state,
                 validator_index=inclusion_list_committee[6],
-                max_transaction_size=spec.config.MAX_BYTES_PER_INCLUSION_LIST // 16,
+                max_transaction_size=spec.config.MAX_BYTES_PER_INCLUSION_LIST // spec.Uint64(16),
                 max_transaction_count=16,
             )
         )
@@ -138,7 +138,7 @@ def test_inclusion_list_store_by_slot_and_committee_root__empty_slot(spec, state
             inclusion_list_store, state, state.slot
         )
         inclusion_list_transactions_slot_1 = spec.get_inclusion_list_transactions(
-            inclusion_list_store, state, state.slot + 1
+            inclusion_list_store, state, state.slot + spec.Slot(1)
         )
 
         assert set(inclusion_list_transactions_slot_0) == set(
@@ -284,8 +284,8 @@ def test_inclusion_list_store_equivocation_scope(spec, state):
 
         # Find a later slot where the equivocator rejoins under a different committee root.
         found_different_committee = False
-        for _ in range(spec.SLOTS_PER_EPOCH * 2):
-            spec.process_slots(state, state.slot + 1)
+        for _ in range(spec.SLOTS_PER_EPOCH * spec.Slot(2)):
+            spec.process_slots(state, state.slot + spec.Slot(1))
             committee = spec.get_inclusion_list_committee(state, state.slot)
             committee_root = spec.hash_tree_root(committee)
             if validator_index in committee and inclusion_list_committee_root != committee_root:
@@ -337,8 +337,8 @@ def test_inclusion_list_store_inclusion_list_due(spec, state):
         assert set(inclusion_list_transactions) == set(signed_inclusion_list_1.message.transactions)
 
         # Advance time to after the inclusion list due
-        inclusion_list_due_ceiling = spec.get_inclusion_list_due_ms() // 1000 + 1
-        assert inclusion_list_due_ceiling < spec.config.SLOT_DURATION_MS // 1000
+        inclusion_list_due_ceiling = spec.get_inclusion_list_due_ms() // spec.Uint64(1000) + 1
+        assert inclusion_list_due_ceiling < spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
 
         time = forkchoice_store.time + inclusion_list_due_ceiling
         spec.on_tick(forkchoice_store, time)

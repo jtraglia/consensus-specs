@@ -39,8 +39,8 @@ def run_get_committee_assignment(spec, state, epoch, validator_index, valid=True
         committee, committee_index, slot = assignment
         assert spec.compute_epoch_at_slot(slot) == epoch
         assert committee == spec.get_beacon_committee(state, slot, committee_index)
-        assert committee_index < spec.get_committee_count_per_slot(state, epoch)
-        assert validator_index in committee
+        assert spec.Uint64(committee_index) < spec.get_committee_count_per_slot(state, epoch)
+        assert spec.ValidatorIndex(validator_index) in committee
     except AssertionError:
         assert not valid
     else:
@@ -53,10 +53,11 @@ def run_is_candidate_block(spec, eth1_block, period_start, success=True):
 
 def get_min_new_period_epochs(spec):
     return (
-        (spec.config.SECONDS_PER_ETH1_BLOCK * spec.config.ETH1_FOLLOW_DISTANCE * 2)  # to seconds
+        # to seconds
+        (int(spec.config.SECONDS_PER_ETH1_BLOCK) * int(spec.config.ETH1_FOLLOW_DISTANCE) * 2)
         * 1000
-        // spec.config.SLOT_DURATION_MS
-        // spec.SLOTS_PER_EPOCH
+        // int(spec.config.SLOT_DURATION_MS)
+        // int(spec.SLOTS_PER_EPOCH)
     )
 
 
@@ -100,7 +101,7 @@ def test_get_committee_assignment_current_epoch(spec, state):
 @with_all_phases
 @spec_state_test
 def test_get_committee_assignment_next_epoch(spec, state):
-    epoch = spec.get_current_epoch(state) + 1
+    epoch = spec.get_current_epoch(state) + spec.Epoch(1)
     validator_index = len(state.validators) - 1
     run_get_committee_assignment(spec, state, epoch, validator_index, valid=True)
 
@@ -108,7 +109,7 @@ def test_get_committee_assignment_next_epoch(spec, state):
 @with_all_phases
 @spec_state_test
 def test_get_committee_assignment_out_bound_epoch(spec, state):
-    epoch = spec.get_current_epoch(state) + 2
+    epoch = spec.get_current_epoch(state) + spec.Epoch(2)
     validator_index = len(state.validators) - 1
     run_get_committee_assignment(spec, state, epoch, validator_index, valid=False)
 
@@ -188,7 +189,7 @@ def test_get_eth1_vote_default_vote(spec, state):
     for _ in range(min_new_period_epochs):
         next_epoch(spec, state)
 
-    state.eth1_data_votes = ()
+    state.eth1_data_votes = spec.Eth1DataVotes(data=())
     eth1_chain = []
     eth1_data = spec.get_eth1_vote(state, eth1_chain)
     assert eth1_data == state.eth1_data
@@ -204,19 +205,19 @@ def test_get_eth1_vote_consensus_vote(spec, state):
     period_start = spec.voting_period_start_time(state)
     votes_length = spec.get_current_epoch(state) % spec.EPOCHS_PER_ETH1_VOTING_PERIOD
     assert votes_length >= 3  # We need to have the majority vote
-    state.eth1_data_votes = ()
+    state.eth1_data_votes = spec.Eth1DataVotes(data=())
 
     block_1 = spec.Eth1Block(
         timestamp=period_start
         - spec.config.SECONDS_PER_ETH1_BLOCK * spec.config.ETH1_FOLLOW_DISTANCE
-        - 1,
+        - spec.Uint64(1),
         deposit_count=state.eth1_data.deposit_count,
         deposit_root=b"\x04" * 32,
     )
     block_2 = spec.Eth1Block(
         timestamp=period_start
         - spec.config.SECONDS_PER_ETH1_BLOCK * spec.config.ETH1_FOLLOW_DISTANCE,
-        deposit_count=state.eth1_data.deposit_count + 1,
+        deposit_count=state.eth1_data.deposit_count + spec.Uint64(1),
         deposit_root=b"\x05" * 32,
     )
     eth1_chain = [block_1, block_2]
@@ -228,7 +229,7 @@ def test_get_eth1_vote_consensus_vote(spec, state):
     for _ in range(votes_length - 1):
         eth1_data_votes.append(spec.get_eth1_data(block_2))
 
-    state.eth1_data_votes = eth1_data_votes
+    state.eth1_data_votes = spec.Eth1DataVotes(data=eth1_data_votes)
     eth1_data = spec.get_eth1_vote(state, eth1_chain)
     assert eth1_data.block_hash == hash_tree_root(block_2)
 
@@ -245,18 +246,18 @@ def test_get_eth1_vote_tie(spec, state):
     assert votes_length > 0
     assert votes_length % 2 == 0
 
-    state.eth1_data_votes = ()
+    state.eth1_data_votes = spec.Eth1DataVotes(data=())
     block_1 = spec.Eth1Block(
         timestamp=period_start
         - spec.config.SECONDS_PER_ETH1_BLOCK * spec.config.ETH1_FOLLOW_DISTANCE
-        - 1,
+        - spec.Uint64(1),
         deposit_count=state.eth1_data.deposit_count,
         deposit_root=b"\x04" * 32,
     )
     block_2 = spec.Eth1Block(
         timestamp=period_start
         - spec.config.SECONDS_PER_ETH1_BLOCK * spec.config.ETH1_FOLLOW_DISTANCE,
-        deposit_count=state.eth1_data.deposit_count + 1,
+        deposit_count=state.eth1_data.deposit_count + spec.Uint64(1),
         deposit_root=b"\x05" * 32,
     )
     eth1_chain = [block_1, block_2]
@@ -269,7 +270,7 @@ def test_get_eth1_vote_tie(spec, state):
             block = block_2
         eth1_data_votes.append(spec.get_eth1_data(block))
 
-    state.eth1_data_votes = eth1_data_votes
+    state.eth1_data_votes = spec.Eth1DataVotes(data=eth1_data_votes)
     eth1_data = spec.get_eth1_vote(state, eth1_chain)
 
     # Tiebreak by smallest distance -> eth1_chain[0]
@@ -288,17 +289,18 @@ def test_get_eth1_vote_chain_in_past(spec, state):
     assert votes_length > 0
     assert votes_length % 2 == 0
 
-    state.eth1_data_votes = ()
+    state.eth1_data_votes = spec.Eth1DataVotes(data=())
     block_1 = spec.Eth1Block(
         timestamp=period_start
         - spec.config.SECONDS_PER_ETH1_BLOCK * spec.config.ETH1_FOLLOW_DISTANCE,
-        deposit_count=state.eth1_data.deposit_count - 1,  # Chain prior to current eth1data
+        deposit_count=state.eth1_data.deposit_count
+        - spec.Uint64(1),  # Chain prior to current eth1data
         deposit_root=b"\x42" * 32,
     )
     eth1_chain = [block_1]
     eth1_data_votes = []
 
-    state.eth1_data_votes = eth1_data_votes
+    state.eth1_data_votes = spec.Eth1DataVotes(data=eth1_data_votes)
     eth1_data = spec.get_eth1_vote(state, eth1_chain)
 
     # Should be default vote
@@ -310,7 +312,7 @@ def test_get_eth1_vote_chain_in_past(spec, state):
 def test_compute_new_state_root(spec, state):
     pre_state = copy(state)
     post_state = copy(state)
-    block = build_empty_block(spec, state, state.slot + 1)
+    block = build_empty_block(spec, state, state.slot + spec.Slot(1))
     state_root = spec.compute_new_state_root(state, block)
 
     assert state_root != hash_tree_root(pre_state)

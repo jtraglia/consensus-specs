@@ -14,11 +14,11 @@ def run_epoch_processing(spec, state, pending_deposits=None, pending_consolidati
     # Transition to the last slot of the epoch
     slot = state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
     transition_to(spec, state, slot)
-    state.pending_deposits = pending_deposits
-    state.pending_consolidations = pending_consolidations
+    state.pending_deposits = spec.PendingDeposits(data=pending_deposits)
+    state.pending_consolidations = spec.PendingConsolidations(data=pending_consolidations)
     yield "pre", state
     yield "slots", 1
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
     yield "post", state
 
     assert state.pending_deposits == []
@@ -70,12 +70,15 @@ def test_multiple_pending_deposits_same_pubkey_different_signature(spec, state):
 
     # First deposit with valid signature
     deposit0 = prepare_pending_deposit(
-        spec, validator_index=index, amount=spec.MIN_ACTIVATION_BALANCE // 2, signed=True
+        spec, validator_index=index, amount=spec.MIN_ACTIVATION_BALANCE // spec.Gwei(2), signed=True
     )
 
     # Second deposit without signature
     deposit1 = prepare_pending_deposit(
-        spec, validator_index=index, amount=spec.MIN_ACTIVATION_BALANCE // 2, signed=False
+        spec,
+        validator_index=index,
+        amount=spec.MIN_ACTIVATION_BALANCE // spec.Gwei(2),
+        signed=False,
     )
 
     pending_deposits = [deposit0, deposit1]
@@ -146,7 +149,7 @@ def test_multiple_pending_deposits_same_pubkey_above_upward_threshold(spec, stat
         spec.EFFECTIVE_BALANCE_INCREMENT
         // spec.HYSTERESIS_QUOTIENT
         * spec.HYSTERESIS_UPWARD_MULTIPLIER
-        + 1
+        + spec.Uint64(1)
     )
     deposit_1 = prepare_pending_deposit(spec, validator_index=index, amount=amount, signed=True)
     pending_deposits = [deposit_0, deposit_1]
@@ -192,6 +195,8 @@ def test_pending_consolidation(spec, state):
 
     # Check the consolidation is processed correctly
     assert state.balances[source_index] == 0
-    assert state.validators[source_index].effective_balance == 0
-    assert state.balances[target_index] == spec.MIN_ACTIVATION_BALANCE * 2
-    assert state.validators[target_index].effective_balance == spec.MIN_ACTIVATION_BALANCE * 2
+    assert state.validators[source_index].effective_balance == spec.Gwei(0)
+    assert state.balances[target_index] == spec.MIN_ACTIVATION_BALANCE * spec.Gwei(2)
+    assert state.validators[
+        target_index
+    ].effective_balance == spec.MIN_ACTIVATION_BALANCE * spec.Gwei(2)

@@ -451,7 +451,9 @@ def process_pending_deposits(state: BeaconState) -> None:
             deposits_to_postpone.append(deposit)
         else:
             # Check if deposit fits in the churn, otherwise, do no more deposit processing in this epoch.
-            is_churn_limit_reached = processed_amount + deposit.amount > available_for_processing
+            is_churn_limit_reached = processed_amount + deposit.amount > Gwei(
+                available_for_processing
+            )
             if is_churn_limit_reached:
                 break
 
@@ -488,7 +490,7 @@ def process_proposer_lookahead(state: BeaconState) -> None:
     state.proposer_lookahead[:last_epoch_start] = state.proposer_lookahead[int(SLOTS_PER_EPOCH) :]
     # Fill in the last epoch with new proposer indices
     last_epoch_proposers = get_beacon_proposer_indices(
-        state, Epoch(get_current_epoch(state) + MIN_SEED_LOOKAHEAD + 1)
+        state, get_current_epoch(state) + MIN_SEED_LOOKAHEAD + Epoch(1)
     )
     state.proposer_lookahead[last_epoch_start:] = last_epoch_proposers
 ```

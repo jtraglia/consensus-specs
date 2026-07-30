@@ -284,7 +284,7 @@ def add_flag(flags: ParticipationFlags, flag_index: int) -> ParticipationFlags:
     """
     Return a new ``ParticipationFlags`` adding ``flag_index`` to ``flags``.
     """
-    flag = ParticipationFlags(2**flag_index)
+    flag = ParticipationFlags(1) << ParticipationFlags(flag_index)
     return flags | flag
 ```
 
@@ -295,7 +295,7 @@ def has_flag(flags: ParticipationFlags, flag_index: int) -> bool:
     """
     Return whether ``flags`` has ``flag_index`` set.
     """
-    flag = ParticipationFlags(2**flag_index)
+    flag = ParticipationFlags(1) << ParticipationFlags(flag_index)
     return flags & flag == flag
 ```
 
@@ -370,7 +370,7 @@ def get_base_reward_per_increment(state: BeaconState) -> Gwei:
     return (
         EFFECTIVE_BALANCE_INCREMENT
         * Gwei(BASE_REWARD_FACTOR)
-        // Gwei(integer_squareroot(get_total_active_balance(state)))
+        // Gwei(integer_squareroot(Uint64(get_total_active_balance(state))))
     )
 ```
 
@@ -441,7 +441,7 @@ def get_attestation_participation_flag_indices(
     assert is_matching_source
 
     participation_flag_indices = []
-    if is_matching_source and inclusion_delay <= integer_squareroot(SLOTS_PER_EPOCH):
+    if is_matching_source and inclusion_delay <= Slot(integer_squareroot(Uint64(SLOTS_PER_EPOCH))):
         participation_flag_indices.append(TIMELY_SOURCE_FLAG_INDEX)
     if is_matching_target and inclusion_delay <= SLOTS_PER_EPOCH:
         participation_flag_indices.append(TIMELY_TARGET_FLAG_INDEX)
@@ -476,10 +476,14 @@ def get_flag_index_deltas(
         base_reward = get_base_reward(state, index)
         if index in unslashed_participating_indices:
             if not is_in_inactivity_leak(state):
-                reward_numerator = base_reward * weight * unslashed_participating_increments
-                rewards[index] += Gwei(reward_numerator // (active_increments * WEIGHT_DENOMINATOR))
-        elif flag_index != TIMELY_HEAD_FLAG_INDEX:
-            penalties[index] += Gwei(base_reward * weight // WEIGHT_DENOMINATOR)
+                reward_numerator = (
+                    base_reward * Gwei(weight) * Gwei(unslashed_participating_increments)
+                )
+                rewards[index] += reward_numerator // (
+                    Gwei(active_increments) * Gwei(WEIGHT_DENOMINATOR)
+                )
+        elif Uint64(flag_index) != TIMELY_HEAD_FLAG_INDEX:
+            penalties[index] += base_reward * Gwei(weight) // Gwei(WEIGHT_DENOMINATOR)
     return rewards, penalties
 ```
 
@@ -569,7 +573,7 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
     assert data.target.epoch == compute_epoch_at_slot(data.slot)
     assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
-    assert data.index < get_committee_count_per_slot(state, data.target.epoch)
+    assert Uint64(data.index) < get_committee_count_per_slot(state, data.target.epoch)
 
     committee = get_beacon_committee(state, data.slot, data.index)
     assert len(attestation.aggregation_bits) == len(committee)
@@ -671,11 +675,14 @@ def process_sync_aggregate(state: BeaconState, sync_aggregate: SyncAggregate) ->
 
     # Compute participant and proposer rewards
     total_active_increments = get_total_active_balance(state) // EFFECTIVE_BALANCE_INCREMENT
-    total_base_rewards = Gwei(get_base_reward_per_increment(state) * total_active_increments)
-    max_participant_rewards = Gwei(
-        total_base_rewards * SYNC_REWARD_WEIGHT // WEIGHT_DENOMINATOR // SLOTS_PER_EPOCH
+    total_base_rewards = get_base_reward_per_increment(state) * Gwei(total_active_increments)
+    max_participant_rewards = (
+        total_base_rewards
+        * Gwei(SYNC_REWARD_WEIGHT)
+        // Gwei(WEIGHT_DENOMINATOR)
+        // Gwei(SLOTS_PER_EPOCH)
     )
-    participant_reward = Gwei(max_participant_rewards // SYNC_COMMITTEE_SIZE)
+    participant_reward = max_participant_rewards // Gwei(SYNC_COMMITTEE_SIZE)
     proposer_reward = Gwei(
         participant_reward * PROPOSER_WEIGHT // (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
     )

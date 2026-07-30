@@ -103,7 +103,7 @@ def test_gossip_beacon_block__ignore_future_slot(spec, state):
     yield get_filename(signed_block), signed_block
 
     block_time_ms = spec.compute_time_at_slot_ms(state, signed_block.message.slot)
-    current_time_ms = block_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - 1
+    current_time_ms = block_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - spec.Uint64(1)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
@@ -431,7 +431,7 @@ def test_gossip_beacon_block__reject_parent_failed_validation(spec, state):
     )
 
     # Get the correct proposer for the child block's slot
-    child_slot = signed_block.message.slot + 1
+    child_slot = signed_block.message.slot + spec.Slot(1)
     temp_state = copy(state)
     spec.process_slots(temp_state, child_slot)
     proposer_index = spec.get_beacon_proposer_index(temp_state)
@@ -607,7 +607,7 @@ def test_gossip_beacon_block__reject_finalized_checkpoint_not_ancestor(spec, sta
     yield "finalized_checkpoint", "meta", {"epoch": 0, "root": "0x" + "ab" * 32}
 
     # Get the correct proposer for the child block's slot
-    child_slot = signed_block.message.slot + 1
+    child_slot = signed_block.message.slot + spec.Slot(1)
     temp_state = copy(state)
     spec.process_slots(temp_state, child_slot)
     proposer_index = spec.get_beacon_proposer_index(temp_state)

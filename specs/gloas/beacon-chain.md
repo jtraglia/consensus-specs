@@ -1002,7 +1002,7 @@ def is_valid_indexed_attestation(
         len(indices) == 0
         # [New in Gloas:EIP7688]
         or len(indices) > MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
-        or indices != sorted(set(indices))
+        or list(indices) != sorted(set(indices))
     ):
         return False
     # Verify aggregate signature
@@ -1071,7 +1071,7 @@ def is_valid_indexed_payload_attestation(
     """
     # Verify indices are non-empty and sorted
     indices = attestation.attesting_indices
-    if len(indices) == 0 or indices != sorted(indices):
+    if len(indices) == 0 or list(indices) != sorted(indices):
         return False
 
     # Verify aggregate signature
@@ -1331,7 +1331,7 @@ def get_attestation_participation_flag_indices(
     assert is_matching_source
 
     participation_flag_indices = []
-    if is_matching_source and inclusion_delay <= integer_squareroot(SLOTS_PER_EPOCH):
+    if is_matching_source and inclusion_delay <= Slot(integer_squareroot(Uint64(SLOTS_PER_EPOCH))):
         participation_flag_indices.append(TIMELY_SOURCE_FLAG_INDEX)
     if is_matching_target:
         participation_flag_indices.append(TIMELY_TARGET_FLAG_INDEX)
@@ -1605,7 +1605,9 @@ def process_pending_deposits(state: BeaconState) -> None:
             deposits_to_postpone.append(deposit)
         else:
             # Check if deposit fits in the churn, otherwise, do no more deposit processing in this epoch.
-            is_churn_limit_reached = processed_amount + deposit.amount > available_for_processing
+            is_churn_limit_reached = processed_amount + deposit.amount > Gwei(
+                available_for_processing
+            )
             if is_churn_limit_reached:
                 break
 
@@ -1635,13 +1637,13 @@ def process_builder_pending_payments(state: BeaconState) -> None:
     Processes the builder pending payments from the previous epoch.
     """
     quorum = get_builder_payment_quorum_threshold(state)
-    for payment in state.builder_pending_payments[:SLOTS_PER_EPOCH]:
-        if payment.weight >= quorum:
+    for payment in state.builder_pending_payments[: int(SLOTS_PER_EPOCH)]:
+        if payment.weight >= Gwei(quorum):
             state.builder_pending_withdrawals.append(payment.withdrawal)
 
-    old_payments = state.builder_pending_payments[SLOTS_PER_EPOCH:]
-    new_payments = [BuilderPendingPayment() for _ in range(SLOTS_PER_EPOCH)]
-    state.builder_pending_payments = old_payments + new_payments
+    old_payments = list(state.builder_pending_payments[int(SLOTS_PER_EPOCH) :])
+    new_payments = [BuilderPendingPayment() for _ in range(int(SLOTS_PER_EPOCH))]
+    state.builder_pending_payments = BuilderPendingPayments(data=old_payments + new_payments)
 ```
 
 #### New `process_ptc_window`
@@ -1772,7 +1774,7 @@ def get_builder_withdrawals(
     withdrawal_index: WithdrawalIndex,
     prior_withdrawals: Sequence[Withdrawal],
 ) -> Tuple[Sequence[Withdrawal], WithdrawalIndex, Uint64]:
-    withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD - 1
+    withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD - Uint64(1)
     assert Uint64(len(prior_withdrawals)) <= withdrawals_limit
 
     processed_count: Uint64 = 0
@@ -1808,7 +1810,7 @@ def get_builders_sweep_withdrawals(
 ) -> Tuple[Sequence[Withdrawal], WithdrawalIndex, Uint64]:
     epoch = get_current_epoch(state)
     builders_limit = min(len(state.builders), MAX_BUILDERS_PER_WITHDRAWALS_SWEEP)
-    withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD - 1
+    withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD - Uint64(1)
     assert Uint64(len(prior_withdrawals)) <= withdrawals_limit
 
     processed_count: Uint64 = 0
@@ -2057,7 +2059,7 @@ def process_execution_payload_bid(
 
     # Verify commitments are under limit
     assert (
-        len(bid.blob_kzg_commitments)
+        Uint64(len(bid.blob_kzg_commitments))
         <= get_blob_parameters(get_current_epoch(state)).max_blobs_per_block
     )
 

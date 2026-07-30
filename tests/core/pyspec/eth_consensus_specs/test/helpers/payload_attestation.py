@@ -58,11 +58,11 @@ def ptc_size_balances(spec):
 
 def setup_verified_parent_with_distinct_ptc(spec, state):
     """
-    Build a Gloas store with one block at state.slot+1 whose envelope has been delivered,
+    Build a Gloas store with one block at state.slot + spec.Slot(1) whose envelope has been delivered,
     and pin each PTC seat for that slot to a distinct validator so each cast vote later
     lands on exactly one position.
     """
-    block_slot = state.slot + 1
+    block_slot = state.slot + spec.Slot(1)
     window_idx = spec.SLOTS_PER_EPOCH + block_slot % spec.SLOTS_PER_EPOCH
     for i in range(spec.PTC_SIZE):
         state.ptc_window[window_idx][i] = spec.ValidatorIndex(i)
@@ -86,7 +86,7 @@ def vote_via_child_block(
     blob_data_available=True,
 ):
     """
-    Deliver PTC votes for parent_root through a child block at parent_state.slot + 1
+    Deliver PTC votes for parent_root through a child block at parent_state.slot + spec.Slot(1)
     that carries a PayloadAttestation aggregate.
     """
     aggregate = prepare_signed_payload_attestation(

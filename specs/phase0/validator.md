@@ -299,7 +299,7 @@ def get_committee_assignment(
     for slot in range(start_slot, start_slot + SLOTS_PER_EPOCH):
         for index in range(committee_count_per_slot):
             committee = get_beacon_committee(state, Slot(slot), CommitteeIndex(index))
-            if validator_index in committee:
+            if ValidatorIndex(validator_index) in committee:
                 return committee, CommitteeIndex(index), Slot(slot)
     return None
 ```
@@ -461,7 +461,7 @@ An honest block proposer sets
 ```python
 def voting_period_start_time(state: BeaconState) -> Uint64:
     eth1_voting_period_start_slot = Slot(
-        state.slot - state.slot % (EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH)
+        state.slot - state.slot % (Slot(EPOCHS_PER_ETH1_VOTING_PERIOD) * SLOTS_PER_EPOCH)
     )
     return compute_time_at_slot(state, eth1_voting_period_start_slot)
 ```
@@ -704,10 +704,12 @@ def compute_subnet_for_attestation(
     Compute the correct subnet for an attestation for Phase 0.
     Note, this mimics expected future behavior where attestations will be mapped to their shard subnet.
     """
-    slots_since_epoch_start = Uint64(slot % SLOTS_PER_EPOCH)
+    slots_since_epoch_start = Uint64(Slot(slot) % SLOTS_PER_EPOCH)
     committees_since_epoch_start = committees_per_slot * slots_since_epoch_start
 
-    return SubnetID((committees_since_epoch_start + committee_index) % ATTESTATION_SUBNET_COUNT)
+    return SubnetID(
+        (committees_since_epoch_start + Uint64(committee_index)) % ATTESTATION_SUBNET_COUNT
+    )
 ```
 
 ### Attestation aggregation
@@ -733,7 +735,7 @@ def is_aggregator(
 ) -> bool:
     committee = get_beacon_committee(state, slot, index)
     modulo = max(Uint64(1), Uint64(len(committee)) // TARGET_AGGREGATORS_PER_COMMITTEE)
-    return bytes_to_uint64(hash(slot_signature)[0:8]) % modulo == 0
+    return bytes_to_uint64(hash(slot_signature)[0:8]) % modulo == Uint64(0)
 ```
 
 #### Construct aggregate

@@ -138,11 +138,13 @@ def get_block_with_blob(spec, state, rng: Random | None = None, blob_count=1):
                 )
             )
     else:
-        block.body.execution_payload.transactions = [opaque_tx]
+        block.body.execution_payload.transactions = spec.Transactions(
+            data=[spec.Transaction(data=opaque_tx)]
+        )
         block.body.execution_payload.block_hash = compute_el_block_hash(
             spec, block.body.execution_payload, state
         )
-        block.body.blob_kzg_commitments = blob_kzg_commitments
+        block.body.blob_kzg_commitments = spec.BlobKZGCommitments(data=blob_kzg_commitments)
     return block, blobs, blob_kzg_commitments, blob_kzg_proofs
 
 

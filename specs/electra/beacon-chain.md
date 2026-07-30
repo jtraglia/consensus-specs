@@ -1177,7 +1177,9 @@ def process_pending_deposits(state: BeaconState) -> None:
             deposits_to_postpone.append(deposit)
         else:
             # Check if deposit fits in the churn, otherwise, do no more deposit processing in this epoch.
-            is_churn_limit_reached = processed_amount + deposit.amount > available_for_processing
+            is_churn_limit_reached = processed_amount + deposit.amount > Gwei(
+                available_for_processing
+            )
             if is_churn_limit_reached:
                 break
 
@@ -1499,9 +1501,9 @@ def get_expected_withdrawals(state: BeaconState) -> ExpectedWithdrawals:
 def update_pending_partial_withdrawals(
     state: BeaconState, processed_partial_withdrawals_count: Uint64
 ) -> None:
-    state.pending_partial_withdrawals = state.pending_partial_withdrawals[
-        processed_partial_withdrawals_count:
-    ]
+    state.pending_partial_withdrawals = PendingPartialWithdrawals(
+        data=state.pending_partial_withdrawals[processed_partial_withdrawals_count:]
+    )
 ```
 
 ##### Modified `process_withdrawals`
@@ -1512,7 +1514,7 @@ def update_pending_partial_withdrawals(
 def process_withdrawals(state: BeaconState, payload: ExecutionPayload) -> None:
     # Get expected withdrawals
     expected = get_expected_withdrawals(state)
-    assert payload.withdrawals == expected.withdrawals
+    assert list(payload.withdrawals) == list(expected.withdrawals)
 
     # Apply expected withdrawals
     apply_withdrawals(state, expected.withdrawals)

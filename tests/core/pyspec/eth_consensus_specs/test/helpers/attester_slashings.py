@@ -37,8 +37,8 @@ def get_valid_attester_slashing_by_indices(
 
     attester_slashing = get_valid_attester_slashing(spec, state, slot=slot)
 
-    attester_slashing.attestation_1.attesting_indices = indices_1
-    attester_slashing.attestation_2.attesting_indices = indices_2
+    attester_slashing.attestation_1.attesting_indices = spec.AttestingIndices(data=indices_1)
+    attester_slashing.attestation_2.attesting_indices = spec.AttestingIndices(data=indices_2)
 
     if signed_1:
         sign_indexed_attestation(spec, state, attester_slashing.attestation_1)

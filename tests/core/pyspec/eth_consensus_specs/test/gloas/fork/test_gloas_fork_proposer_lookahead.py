@@ -24,8 +24,8 @@ def _transition_to_last_slot_before_fork(spec, state):
     """
     for _ in range(2):
         next_epoch(spec, state)
-    fork_epoch = spec.get_current_epoch(state) + 1
-    transition_to(spec, state, fork_epoch * spec.SLOTS_PER_EPOCH - 1)
+    fork_epoch = spec.get_current_epoch(state) + spec.Epoch(1)
+    transition_to(spec, state, fork_epoch * spec.SLOTS_PER_EPOCH - spec.Slot(1))
     return fork_epoch
 
 

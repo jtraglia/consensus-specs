@@ -885,7 +885,7 @@ def validate_on_attestation(store: Store, attestation: Attestation, is_from_bloc
 
     # Attestations can only affect the fork-choice of subsequent slots.
     # Delay consideration in the fork-choice until their slot is in the past.
-    assert get_current_slot(store) >= attestation.data.slot + 1
+    assert get_current_slot(store) >= attestation.data.slot + Slot(1)
 ```
 
 #### Modified `update_latest_messages`

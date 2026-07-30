@@ -26,7 +26,7 @@ def test_process_execution_payload_bid_valid_builder_with_non_default_inclusion_
     next_epoch_with_full_participation(spec, state)
     next_epoch_with_full_participation(spec, state)
     next_epoch_with_full_participation(spec, state)
-    assert state.finalized_checkpoint.epoch == 2
+    assert state.finalized_checkpoint.epoch == spec.Epoch(2)
 
     block, builder_index = prepare_block_with_non_proposer_builder(spec, state)
     assert spec.is_active_builder(state, builder_index) is True

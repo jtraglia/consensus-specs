@@ -198,7 +198,7 @@ def test_gossip_voluntary_exit__reject_already_initiated_exit(spec, state):
 
     # Pick a validator and set their exit_epoch (simulating already initiated exit)
     validator_index = 0
-    state.validators[validator_index].exit_epoch = spec.get_current_epoch(state) + 10
+    state.validators[validator_index].exit_epoch = spec.get_current_epoch(state) + spec.Epoch(10)
     yield "state", state
 
     # Create voluntary exit
@@ -237,7 +237,7 @@ def test_gossip_voluntary_exit__reject_epoch_in_future(spec, state):
     validator_index = 0
 
     # Create voluntary exit with future epoch
-    future_epoch = spec.get_current_epoch(state) + 10
+    future_epoch = spec.get_current_epoch(state) + spec.Epoch(10)
     signed_exit = create_signed_voluntary_exit(spec, state, validator_index, epoch=future_epoch)
 
     yield get_filename(signed_exit), signed_exit

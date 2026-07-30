@@ -68,6 +68,7 @@ def run_attestation_processing(spec, state, attestation, valid=True):
 
 
 def build_attestation_data(spec, state, slot, index, beacon_block_root=None, shard=None):
+    slot = spec.Slot(slot)
     assert state.slot >= slot
 
     if beacon_block_root is not None:
@@ -205,8 +206,8 @@ def to_single_attestation(spec, state, attestation, attester_index=None):
 
 def compute_max_inclusion_slot(spec, attestation):
     if is_post_deneb(spec):
-        next_epoch = spec.compute_epoch_at_slot(attestation.data.slot) + 1
-        end_of_next_epoch = spec.compute_start_slot_at_epoch(next_epoch + 1) - 1
+        next_epoch = spec.compute_epoch_at_slot(attestation.data.slot) + spec.Epoch(1)
+        end_of_next_epoch = spec.compute_start_slot_at_epoch(next_epoch + 1) - spec.Slot(1)
         return end_of_next_epoch
     return attestation.data.slot + spec.SLOTS_PER_EPOCH
 
@@ -378,7 +379,7 @@ def _add_valid_attestations(spec, state, block, slot_to_attest, participation_fn
 def next_epoch_with_attestations(
     spec, state, fill_cur_epoch, fill_prev_epoch, participation_fn=None
 ):
-    assert state.slot % spec.SLOTS_PER_EPOCH == 0
+    assert state.slot % spec.SLOTS_PER_EPOCH == spec.Slot(0)
 
     return next_slots_with_attestations(
         spec,
@@ -405,13 +406,13 @@ def state_transition_with_full_block(
     if block is None:
         block = build_empty_block_for_next_slot(spec, state)
     if fill_cur_epoch and state.slot >= spec.MIN_ATTESTATION_INCLUSION_DELAY:
-        slot_to_attest = state.slot - spec.MIN_ATTESTATION_INCLUSION_DELAY + 1
+        slot_to_attest = state.slot - spec.MIN_ATTESTATION_INCLUSION_DELAY + spec.Slot(1)
         if slot_to_attest >= spec.compute_start_slot_at_epoch(spec.get_current_epoch(state)):
             _add_valid_attestations(
                 spec, state, block, slot_to_attest, participation_fn=participation_fn
             )
     if fill_prev_epoch and state.slot >= spec.SLOTS_PER_EPOCH:
-        slot_to_attest = state.slot - spec.SLOTS_PER_EPOCH + 1
+        slot_to_attest = state.slot - spec.SLOTS_PER_EPOCH + spec.Slot(1)
         _add_valid_attestations(
             spec, state, block, slot_to_attest, participation_fn=participation_fn
         )
@@ -452,7 +453,7 @@ def state_transition_with_full_attestations_block(spec, state, fill_cur_epoch, f
                 target_slot,
             )
 
-    block.body.attestations = attestations
+    block.body.attestations = spec.Attestations(data=attestations)
     signed_block = state_transition_and_sign_block(spec, state, block)
     return signed_block
 

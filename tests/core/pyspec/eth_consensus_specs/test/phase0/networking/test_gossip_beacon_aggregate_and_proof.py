@@ -48,7 +48,7 @@ def large_validator_balances(spec):
     Create enough validators to have committees with >= 32 members,
     so that there's a chance of non-aggregators (modulo >= 2).
     """
-    num_validators = 32 * spec.SLOTS_PER_EPOCH
+    num_validators = spec.Slot(32) * spec.SLOTS_PER_EPOCH
     return [spec.MAX_EFFECTIVE_BALANCE] * num_validators
 
 
@@ -222,7 +222,9 @@ def test_gossip_beacon_aggregate_and_proof__ignore_slot_not_within_range(spec, s
 
     # Set current time to be before the attestation's slot (too far in future)
     attestation_slot_time_ms = spec.compute_time_at_slot_ms(state, attestation.data.slot)
-    current_time_ms = attestation_slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - 1
+    current_time_ms = (
+        attestation_slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - spec.Uint64(1)
+    )
 
     yield "current_time_ms", "meta", int(current_time_ms)
 

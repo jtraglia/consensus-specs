@@ -40,7 +40,7 @@ def run_sync_committee_sanity_test(spec, state, fraction_full=1.0, rng=None):
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
-            block.slot - 1,
+            block.slot - spec.Slot(1),
             participants,
         ),
     )

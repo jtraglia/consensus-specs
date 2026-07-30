@@ -416,7 +416,7 @@ def test_gossip_blob_sidecar__ignore_future_slot(spec, state):
     slot_time_ms = spec.compute_time_at_slot_ms(
         state, blob_sidecar.signed_block_header.message.slot
     )
-    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - 1
+    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     subnet_id = correct_subnet(spec, blob_sidecar)
@@ -513,7 +513,7 @@ def test_gossip_blob_sidecar__ignore_not_later_than_finalized_slot(spec, state):
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
-    transition_to(spec, state, spec.Slot(spec.SLOTS_PER_EPOCH - 1))
+    transition_to(spec, state, spec.Slot(spec.SLOTS_PER_EPOCH - spec.Slot(1)))
     yield "state", state
 
     _, sidecars = build_signed_block_and_sidecars(spec, state, blob_count=1)

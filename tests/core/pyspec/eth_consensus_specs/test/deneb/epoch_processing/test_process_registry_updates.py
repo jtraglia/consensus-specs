@@ -25,7 +25,7 @@ def run_test_activation_churn_limit(spec, state):
             get_activation_churn_limit(spec, state) // spec.MIN_ACTIVATION_BALANCE
         ) * 2
     else:
-        mock_activations = spec.get_validator_activation_churn_limit(state) * 2
+        mock_activations = spec.get_validator_activation_churn_limit(state) * spec.Uint64(2)
 
     validator_count_0 = len(state.validators)
 

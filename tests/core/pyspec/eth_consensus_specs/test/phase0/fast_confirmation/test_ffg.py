@@ -98,9 +98,9 @@ def test_will_no_conflicting_checkpoint_be_justified_fails_at_strictly_one_third
     assert spec.get_voting_source(
         store, fcr_store.previous_slot_head
     ).epoch + 2 >= spec.get_current_store_epoch(store)
-    assert store.unrealized_justifications[
-        spec.get_head(store).root
-    ].epoch + 1 >= spec.get_current_store_epoch(store)
+    assert store.unrealized_justifications[spec.get_head(store).root].epoch + spec.Epoch(
+        1
+    ) >= spec.get_current_store_epoch(store)
     assert is_ancestor(spec, store, fcr_store.previous_slot_head, target_root)
 
     # Check will_no_conflicting_checkpoint_be_justified fails

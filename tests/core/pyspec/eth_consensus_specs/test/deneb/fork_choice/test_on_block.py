@@ -31,7 +31,9 @@ def test_simple_blob_data(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = (
+        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
@@ -66,7 +68,9 @@ def test_invalid_incorrect_proof(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = (
+        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
@@ -96,7 +100,9 @@ def test_invalid_data_unavailable(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = (
+        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
@@ -126,7 +132,9 @@ def test_invalid_wrong_proofs_length(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = (
+        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
@@ -156,7 +164,9 @@ def test_invalid_wrong_blobs_length(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = (
+        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 

@@ -225,7 +225,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_future_slot(spec, 
         spec, state
     )
 
-    future_slot = state.slot + 1
+    future_slot = state.slot + spec.Slot(1)
     signed_cap = create_valid_signed_contribution_and_proof(
         spec,
         state,
@@ -277,11 +277,11 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_past_slot(spec, st
     )
 
     # Advance state so there's a past slot (gap >= 2 needed to exceed MAXIMUM_GOSSIP_CLOCK_DISPARITY)
-    state.slot += 3
+    state.slot += spec.Slot(3)
 
     yield "state", state
 
-    past_slot = state.slot - 2
+    past_slot = state.slot - spec.Slot(2)
     signed_cap = create_valid_signed_contribution_and_proof(
         spec,
         state,

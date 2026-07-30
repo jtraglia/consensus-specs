@@ -74,12 +74,12 @@ from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 @spec_state_test
 def test_invalid_prev_slot_block_transition(spec, state):
     # Go to clean slot
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
     # Make a block for it
     block = build_empty_block(spec, state, slot=state.slot)
     proposer_index = spec.get_beacon_proposer_index(state)
     # Transition to next slot, above block will not be invalid on top of new state.
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
 
     yield "pre", state
     # State is beyond block slot, but the block can still be realistic when invalid.
@@ -95,7 +95,7 @@ def test_invalid_prev_slot_block_transition(spec, state):
 @spec_state_test
 def test_invalid_same_slot_block_transition(spec, state):
     # Same slot on top of pre-state, but move out of slot 0 first.
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
 
     block = build_empty_block(spec, state, slot=state.slot)
 
@@ -369,7 +369,7 @@ def test_skipped_slots(spec, state):
     pre_slot = state.slot
     yield "pre", state
 
-    block = build_empty_block(spec, state, state.slot + 4)
+    block = build_empty_block(spec, state, state.slot + spec.Slot(4))
 
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -429,7 +429,7 @@ def test_empty_epoch_transition_large_validator_set(spec, state):
 @with_all_phases
 @spec_state_test
 def test_empty_epoch_transition_not_finalizing(spec, state):
-    if spec.SLOTS_PER_EPOCH > 8:
+    if spec.Slot(8) < spec.SLOTS_PER_EPOCH:
         return dump_skipping_message(
             "Skip mainnet config for saving time."
             " Minimal config suffice to cover the target-of-test."
@@ -439,7 +439,7 @@ def test_empty_epoch_transition_not_finalizing(spec, state):
     pre_balances = list(state.balances)
     yield "pre", state
 
-    spec.process_slots(state, state.slot + (spec.SLOTS_PER_EPOCH * 5))
+    spec.process_slots(state, state.slot + (spec.SLOTS_PER_EPOCH * spec.Slot(5)))
     block = build_empty_block_for_next_slot(spec, state)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -447,7 +447,7 @@ def test_empty_epoch_transition_not_finalizing(spec, state):
     yield "post", state
 
     assert state.slot == block.slot
-    assert state.finalized_checkpoint.epoch < spec.get_current_epoch(state) - 4
+    assert state.finalized_checkpoint.epoch < spec.get_current_epoch(state) - spec.Epoch(4)
     for index in range(len(state.validators)):
         assert state.balances[index] < pre_balances[index]
 
@@ -511,7 +511,9 @@ def test_invalid_duplicate_proposer_slashings_same_block(spec, state):
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.proposer_slashings = [proposer_slashing, proposer_slashing]
+    block.body.proposer_slashings = spec.ProposerSlashings(
+        data=[proposer_slashing, proposer_slashing]
+    )
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 
     yield "blocks", [signed_block]
@@ -545,7 +547,9 @@ def test_invalid_similar_proposer_slashings_same_block(spec, state):
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.proposer_slashings = [proposer_slashing_1, proposer_slashing_2]
+    block.body.proposer_slashings = spec.ProposerSlashings(
+        data=[proposer_slashing_1, proposer_slashing_2]
+    )
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 
     yield "blocks", [signed_block]
@@ -566,7 +570,7 @@ def test_multiple_different_proposer_slashings_same_block(spec, state):
     # Add to state via block transition
     #
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.proposer_slashings = proposer_slashings
+    block.body.proposer_slashings = spec.ProposerSlashings(data=proposer_slashings)
 
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -639,7 +643,7 @@ def test_invalid_duplicate_attester_slashing_same_block(spec, state):
     # Add to state via block transition
     #
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.attester_slashings = attester_slashings
+    block.body.attester_slashings = spec.AttesterSlashings(data=attester_slashings)
 
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 
@@ -685,7 +689,7 @@ def test_multiple_attester_slashings_no_overlap(spec, state):
     # Add to state via block transition
     #
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.attester_slashings = attester_slashings
+    block.body.attester_slashings = spec.AttesterSlashings(data=attester_slashings)
 
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -733,7 +737,7 @@ def test_multiple_attester_slashings_partial_overlap(spec, state):
     # Add to state via block transition
     #
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.attester_slashings = attester_slashings
+    block.body.attester_slashings = spec.AttesterSlashings(data=attester_slashings)
 
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -779,7 +783,7 @@ def test_high_proposer_index(spec, state):
         state.validators[i].exit_epoch = current_epoch
 
     # skip forward, get brand new proposers
-    state.slot = spec.SLOTS_PER_EPOCH * 2
+    state.slot = spec.SLOTS_PER_EPOCH * spec.Slot(2)
     block = build_empty_block_for_next_slot(spec, state)
     state_transition_and_sign_block(spec, state, block)
 
@@ -803,7 +807,7 @@ def test_high_proposer_index(spec, state):
 @spec_state_test
 def test_invalid_only_increase_deposit_count(spec, state):
     # Make the state expect a deposit, then don't provide it.
-    state.eth1_data.deposit_count += 1
+    state.eth1_data.deposit_count += spec.Uint64(1)
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
@@ -868,7 +872,7 @@ def test_invalid_duplicate_deposit_same_block(spec, state):
 @spec_state_test
 def test_deposit_top_up(spec, state):
     validator_index = 0
-    amount = spec.MAX_EFFECTIVE_BALANCE // 4
+    amount = spec.MAX_EFFECTIVE_BALANCE // spec.Gwei(4)
     deposit = prepare_state_and_deposit(spec, state, validator_index, amount)
 
     initial_registry_len = len(state.validators)
@@ -1029,7 +1033,7 @@ def test_voluntary_exit(spec, state):
 
     # Add to state via block transition
     initiate_exit_block = build_empty_block_for_next_slot(spec, state)
-    initiate_exit_block.body.voluntary_exits = signed_exits
+    initiate_exit_block.body.voluntary_exits = spec.VoluntaryExits(data=signed_exits)
     signed_initiate_exit_block = state_transition_and_sign_block(spec, state, initiate_exit_block)
 
     assert state.validators[validator_index].exit_epoch < spec.FAR_FUTURE_EPOCH
@@ -1058,7 +1062,7 @@ def test_invalid_duplicate_validator_exit_same_block(spec, state):
 
     # Add to state via block transition
     initiate_exit_block = build_empty_block_for_next_slot(spec, state)
-    initiate_exit_block.body.voluntary_exits = signed_exits
+    initiate_exit_block.body.voluntary_exits = spec.VoluntaryExits(data=signed_exits)
     signed_initiate_exit_block = state_transition_and_sign_block(
         spec, state, initiate_exit_block, expect_fail=True
     )
@@ -1081,7 +1085,7 @@ def test_multiple_different_validator_exits_same_block(spec, state):
 
     # Add to state via block transition
     initiate_exit_block = build_empty_block_for_next_slot(spec, state)
-    initiate_exit_block.body.voluntary_exits = signed_exits
+    initiate_exit_block.body.voluntary_exits = spec.VoluntaryExits(data=signed_exits)
     signed_initiate_exit_block = state_transition_and_sign_block(spec, state, initiate_exit_block)
 
     for index in validator_indices:

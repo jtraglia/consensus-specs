@@ -249,7 +249,7 @@ def yield_mutated_test_case_parts(spec, test_data, events, mut_seed):
     store = spec.get_forkchoice_store(test_data.anchor_state, test_data.anchor_block)
 
     test_vector = events_to_test_vector(events)
-    mops = MutationOps(store.time, spec.config.SLOT_DURATION_MS // 1000)
+    mops = MutationOps(store.time, spec.config.SLOT_DURATION_MS // spec.Uint64(1000))
     mutated_vector, mutations = mops.rand_mutations(test_vector, 4, random.Random(mut_seed))
 
     test_data.meta["mut_seed"] = mut_seed
@@ -446,7 +446,7 @@ def yield_test_parts(spec, store, test_data: FCTestData, events):
             raise ValueError(f"not implemented {kind}")
     next_slot_time = (
         store.genesis_time
-        + (spec.get_current_slot(store) + 1) * spec.config.SLOT_DURATION_MS // 1000
+        + (spec.get_current_slot(store) + spec.Slot(1)) * int(spec.config.SLOT_DURATION_MS) // 1000
     )
     on_tick_and_append_step(spec, store, next_slot_time, test_steps)
     output_store_checks(spec, store, test_steps, with_viable_for_head_weights=True)

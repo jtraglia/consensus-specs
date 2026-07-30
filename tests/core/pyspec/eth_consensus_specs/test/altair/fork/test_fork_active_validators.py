@@ -52,12 +52,12 @@ def _template_test_at_fork_deactivate_validators_wo_block(
             spec.process_slots(
                 state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH)
             )
-            assert state.slot % spec.SLOTS_PER_EPOCH == 0
+            assert state.slot % spec.SLOTS_PER_EPOCH == spec.Slot(0)
 
         spec.process_slots(
             state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
         )
-        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - 1
+        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
         state, _ = yield from do_fork_generate(
             state, spec, phases[post_spec], fork_epoch, with_block=False
@@ -111,12 +111,12 @@ def _template_test_at_fork_deactivate_validators(
             spec.process_slots(
                 state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH)
             )
-            assert state.slot % spec.SLOTS_PER_EPOCH == 0
+            assert state.slot % spec.SLOTS_PER_EPOCH == spec.Slot(0)
 
         spec.process_slots(
             state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
         )
-        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - 1
+        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
         state, _ = yield from do_fork_generate(
             state, spec, phases[post_spec], fork_epoch, with_block=True
@@ -168,7 +168,7 @@ def _template_test_after_fork_new_validator_active_pre_electra(
         next_epoch(spec, state)
         next_epoch(spec, state)
 
-        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - 1
+        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - spec.Epoch(1)
 
         next_epoch(spec, state)
 
@@ -186,7 +186,7 @@ def _template_test_after_fork_new_validator_active_pre_electra(
         ):
             next_epoch(spec, state)
 
-        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - 1
+        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - spec.Epoch(1)
 
         while state.validators[new_validator_index].activation_epoch == spec.FAR_FUTURE_EPOCH:
             next_epoch(spec, state)
@@ -206,7 +206,7 @@ def _template_test_after_fork_new_validator_active_pre_electra(
         spec.process_slots(
             state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
         )
-        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - 1
+        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
         state, _ = yield from do_fork_generate(state, spec, phases[post_spec], fork_epoch)
 
@@ -266,7 +266,7 @@ def _template_test_after_fork_new_validator_active_post_electra(
         next_epoch(spec, state)
         next_epoch(spec, state)
 
-        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - 1
+        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - spec.Epoch(1)
 
         next_epoch(spec, state)
 
@@ -286,7 +286,7 @@ def _template_test_after_fork_new_validator_active_post_electra(
         ):
             next_epoch(spec, state)
 
-        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - 1
+        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - spec.Epoch(1)
 
         while state.validators[new_validator_index].activation_epoch == spec.FAR_FUTURE_EPOCH:
             next_epoch(spec, state)
@@ -306,7 +306,7 @@ def _template_test_after_fork_new_validator_active_post_electra(
         spec.process_slots(
             state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
         )
-        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - 1
+        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
         state, _ = yield from do_fork_generate(state, spec, phases[post_spec], fork_epoch)
 

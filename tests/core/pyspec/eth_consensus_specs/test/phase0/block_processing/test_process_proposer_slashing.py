@@ -159,7 +159,7 @@ def test_self_slashing_future_slot(spec, state):
     Input State Configured:
         - Block proposer determined for current slot
         - Proposer slashing created targeting the same proposer
-        - Headers reference a future slot (state.slot + 5)
+        - Headers reference a future slot (state.slot + spec.Slot(5))
 
     Output State Verified:
         - Slashing succeeds
@@ -224,7 +224,7 @@ def test_block_header_from_past(spec, state):
 @spec_state_test
 def test_block_header_from_future(spec, state):
     proposer_slashing = get_valid_proposer_slashing(
-        spec, state, slot=state.slot + 5, signed_1=True, signed_2=True
+        spec, state, slot=state.slot + spec.Slot(5), signed_1=True, signed_2=True
     )
     pre_state = copy(state)
 
@@ -421,7 +421,7 @@ def test_invalid_slots_same_epoch_different_slot(spec, state):
 
     Input State Configured:
         - Proposer slashing with header_1 at state.slot
-        - header_2 at state.slot + 1 (different slot, same epoch)
+        - header_2 at state.slot + spec.Slot(1) (different slot, same epoch)
 
     Output State Verified:
         - AssertionError raised (slots must match exactly)
@@ -429,7 +429,7 @@ def test_invalid_slots_same_epoch_different_slot(spec, state):
     proposer_slashing, _ = prepare_process_proposer_slashing(
         spec,
         state,
-        slot_2=state.slot + 1,  # Different slot for header_2
+        slot_2=state.slot + spec.Slot(1),  # Different slot for header_2
         parent_root_2=b"\x99" * 32,  # Make headers different
     )
 
@@ -490,7 +490,9 @@ def test_invalid_proposer_is_not_activated(spec, state):
 
     # set proposer to be not active yet
     proposer_index = proposer_slashing.signed_header_1.message.proposer_index
-    state.validators[proposer_index].activation_epoch = spec.get_current_epoch(state) + 1
+    state.validators[proposer_index].activation_epoch = spec.get_current_epoch(state) + spec.Epoch(
+        1
+    )
 
     pre_state = copy(state)
 
@@ -651,7 +653,7 @@ def test_header_slot_at_epoch_start(spec, state):
         parent_root_2=b"\x99" * 32,  # Make headers different
     )
 
-    assert state.slot % spec.SLOTS_PER_EPOCH == 0
+    assert state.slot % spec.SLOTS_PER_EPOCH == spec.Slot(0)
 
     pre_state = copy(state)
 
@@ -680,7 +682,7 @@ def test_header_slot_at_epoch_end(spec, state):
         - Validator marked as slashed
     """
     # Advance to last slot of epoch before calling helper
-    slots_to_end = spec.SLOTS_PER_EPOCH - 1 - (state.slot % spec.SLOTS_PER_EPOCH)
+    slots_to_end = spec.SLOTS_PER_EPOCH - spec.Slot(1) - (state.slot % spec.SLOTS_PER_EPOCH)
     next_slots(spec, state, slots_to_end)
 
     proposer_slashing, _ = prepare_process_proposer_slashing(
@@ -690,7 +692,7 @@ def test_header_slot_at_epoch_end(spec, state):
         parent_root_2=b"\x99" * 32,  # Make headers different
     )
 
-    assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - 1
+    assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
     pre_state = copy(state)
 

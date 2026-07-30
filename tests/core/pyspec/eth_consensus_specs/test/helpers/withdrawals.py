@@ -953,9 +953,9 @@ def _verify_withdrawals_next_withdrawal_index(spec, pre_state, post_state, expec
     # Verify post_state.next_withdrawal_validator_index
     if len(expected_withdrawals) == spec.MAX_WITHDRAWALS_PER_PAYLOAD:
         # Next sweep starts after the latest withdrawal's validator index
-        next_validator_index = (expected_withdrawals[-1].validator_index + 1) % len(
-            post_state.validators
-        )
+        next_validator_index = (
+            expected_withdrawals[-1].validator_index + spec.ValidatorIndex(1)
+        ) % len(post_state.validators)
         assert post_state.next_withdrawal_validator_index == next_validator_index
     else:
         # Advance sweep by the max length if there was not a full set of withdrawals

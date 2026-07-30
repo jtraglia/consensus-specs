@@ -52,8 +52,8 @@ def run_block_with_blobs(
 
     rng.shuffle(txs)
 
-    block.body.blob_kzg_commitments = blob_kzg_commitments
-    block.body.execution_payload.transactions = txs
+    block.body.blob_kzg_commitments = spec.BlobKZGCommitments(data=blob_kzg_commitments)
+    block.body.execution_payload.transactions = spec.Transactions(data=txs)
     block.body.execution_payload.blob_gas_used = blob_gas_used
     block.body.execution_payload.excess_blob_gas = excess_blob_gas
     block.body.execution_payload.block_hash = compute_el_block_hash(

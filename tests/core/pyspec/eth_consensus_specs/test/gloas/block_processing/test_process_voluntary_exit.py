@@ -23,7 +23,7 @@ def test_voluntary_exit__invalid__builder_index(spec, state):
 
     # Advance slots and finalize so that genesis-epoch builders become active
     epoch = spec.get_current_epoch(state)
-    next_slots(spec, state, spec.SLOTS_PER_EPOCH * 3)
+    next_slots(spec, state, spec.SLOTS_PER_EPOCH * spec.Slot(3))
     state.finalized_checkpoint.epoch = epoch + 1
     assert spec.is_active_builder(state, builder_index)
 

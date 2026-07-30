@@ -67,7 +67,7 @@ def test_new_validator_deposit_with_multiple_epoch_transitions(spec, state):
     yield from tick_and_add_block(spec, store, signed_deposit_block, test_steps)
 
     # (2) finalize and process pending deposit on one fork
-    slots = 4 * spec.SLOTS_PER_EPOCH - state.slot
+    slots = spec.Slot(4) * spec.SLOTS_PER_EPOCH - state.slot
     post_state, _, latest_block = yield from apply_next_slots_with_attestations(
         spec, state, store, slots, fill_cur_epoch=True, fill_prev_epoch=True, test_steps=test_steps
     )

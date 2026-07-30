@@ -39,7 +39,9 @@ def test_basic_is_head_root(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = (
+        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
@@ -54,7 +56,7 @@ def test_basic_is_head_root(spec, state):
     next_slot(spec, state)
     slot = state.slot
 
-    current_time = slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
     on_tick_and_append_step(spec, store, current_time, test_steps)
     proposer_head = spec.get_proposer_head(store, head, slot)
     assert proposer_head.root == head.root
@@ -79,7 +81,9 @@ def test_basic_is_parent_root(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
+    current_time = (
+        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
@@ -87,7 +91,7 @@ def test_basic_is_parent_root(spec, state):
     on_tick_and_append_step(
         spec,
         store,
-        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // 1000,
+        store.genesis_time + state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000),
         test_steps,
     )
 
@@ -97,9 +101,13 @@ def test_basic_is_parent_root(spec, state):
             spec, state, store, fill_cur_epoch=True, fill_prev_epoch=True, test_steps=test_steps
         )
 
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 4
-    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 3
-    assert state.finalized_checkpoint.epoch == store.finalized_checkpoint.epoch == 2
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(4)
+    assert (
+        state.current_justified_checkpoint.epoch
+        == store.justified_checkpoint.epoch
+        == spec.Epoch(3)
+    )
+    assert state.finalized_checkpoint.epoch == store.finalized_checkpoint.epoch == spec.Epoch(2)
 
     # Make an empty block
     block = build_empty_block_for_next_slot(spec, state)
@@ -113,7 +121,7 @@ def test_basic_is_parent_root(spec, state):
 
     # Fill a slot with attestations to its parent
     block = build_empty_block_for_next_slot(spec, state)
-    parent_block_slot = block.slot - 1
+    parent_block_slot = block.slot - spec.Slot(1)
     block.body.attestations = get_valid_attestations_at_slot(
         state,
         spec,
@@ -126,7 +134,9 @@ def test_basic_is_parent_root(spec, state):
     attestation_due_ms = spec.get_attestation_due_ms()
     attesting_cutoff = (attestation_due_ms + 999) // 1000
     current_time = (
-        state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time + attesting_cutoff
+        state.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        + store.genesis_time
+        + attesting_cutoff
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
@@ -161,8 +171,8 @@ def test_basic_is_parent_root(spec, state):
     assert spec.is_finalization_ok(store, slot)
     assert spec.is_proposing_on_time(store)
 
-    parent_slot_ok = parent_block.slot + 1 == head_block.slot
-    current_time_ok = head_block.slot + 1 == slot
+    parent_slot_ok = parent_block.slot + spec.Slot(1) == head_block.slot
+    current_time_ok = head_block.slot + spec.Slot(1) == slot
     single_slot_reorg = parent_slot_ok and current_time_ok
     assert single_slot_reorg
 

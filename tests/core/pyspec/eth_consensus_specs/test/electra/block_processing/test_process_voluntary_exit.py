@@ -206,7 +206,7 @@ def test_exit_with_balance_equal_to_churn_limit(spec, state):
     assert state.validators[validator_index].exit_epoch == expected_exit_epoch
     assert state.validators[validator_index].withdrawable_epoch == expected_withdrawable_epoch
     # Check exit_balance_to_consume
-    assert state.exit_balance_to_consume == 0
+    assert state.exit_balance_to_consume == spec.Gwei(0)
     # Check earliest_exit_epoch
     assert state.earliest_exit_epoch == expected_exit_epoch
 
@@ -245,7 +245,7 @@ def test_exit_with_balance_multiple_of_churn_limit(spec, state):
     assert state.validators[validator_index].exit_epoch == expected_exit_epoch
     assert state.validators[validator_index].withdrawable_epoch == expected_withdrawable_epoch
     # Check exit_balance_to_consume
-    assert state.exit_balance_to_consume == 0
+    assert state.exit_balance_to_consume == spec.Gwei(0)
     # Check earliest_exit_epoch
     assert state.earliest_exit_epoch == expected_exit_epoch
 

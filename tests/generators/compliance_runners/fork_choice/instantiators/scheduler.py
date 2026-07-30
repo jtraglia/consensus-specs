@@ -26,7 +26,7 @@ class QueueItem:
         self.kind = kind
         if kind == QueueItemKind.ATTESTATION:
             data = message.data
-            self.effective_slot = data.slot + 1
+            self.effective_slot = data.slot + type(data.slot)(1)
             self.dependencies = [data.beacon_block_root, data.target.root]
             self.is_from_block = is_from_block
         elif kind == QueueItemKind.BLOCK:
@@ -113,7 +113,9 @@ class MessageScheduler:
         while self.spec.get_current_slot(self.store) < tick_slot:
             previous_time = (
                 self.store.genesis_time
-                + (self.spec.get_current_slot(self.store) + 1) * SLOT_DURATION_MS // 1000
+                + (self.spec.get_current_slot(self.store) + self.spec.Slot(1))
+                * SLOT_DURATION_MS
+                // 1000
             )
             self.spec.on_tick(self.store, previous_time)
             applied_events.append(

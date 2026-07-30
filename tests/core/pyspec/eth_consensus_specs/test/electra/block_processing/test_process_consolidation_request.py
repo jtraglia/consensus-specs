@@ -197,7 +197,7 @@ def test_basic_consolidation_with_preexisting_churn(spec, state):
     expected_exit_epoch = spec.compute_activation_exit_epoch(current_epoch)
     state.earliest_consolidation_epoch = expected_exit_epoch
     # Set some nonzero preexisting churn lower than churn limit and sufficient to process the consolidation
-    preexisting_churn = 2 * spec.MIN_ACTIVATION_BALANCE
+    preexisting_churn = spec.Gwei(2) * spec.MIN_ACTIVATION_BALANCE
     state.consolidation_balance_to_consume = preexisting_churn
 
     yield from run_consolidation_processing(spec, state, consolidation)
@@ -246,7 +246,7 @@ def test_basic_consolidation_with_insufficient_preexisting_churn(spec, state):
     yield from run_consolidation_processing(spec, state, consolidation)
 
     # It takes one more epoch to process the consolidation due to insufficient churn
-    expected_exit_epoch = spec.compute_activation_exit_epoch(current_epoch) + 1
+    expected_exit_epoch = spec.compute_activation_exit_epoch(current_epoch) + spec.Epoch(1)
     # Check consolidation churn is decremented correctly
     consolidation_churn_limit = spec.get_consolidation_churn_limit(state)
     remainder = spec.MIN_ACTIVATION_BALANCE % preexisting_churn
@@ -490,7 +490,7 @@ def test_consolidation_balance_larger_than_churn_limit(spec, state):
 
     yield from run_consolidation_processing(spec, state, consolidation)
 
-    expected_exit_epoch = spec.compute_activation_exit_epoch(current_epoch) + 1
+    expected_exit_epoch = spec.compute_activation_exit_epoch(current_epoch) + spec.Epoch(1)
     # Check consolidation churn is decremented correctly
     assert state.consolidation_balance_to_consume == expected_balance
     # Check exit epoch
@@ -537,7 +537,7 @@ def test_consolidation_balance_through_two_churn_epochs(spec, state):
     yield from run_consolidation_processing(spec, state, consolidation)
 
     # when exiting a multiple of the churn limit greater than 1, an extra exit epoch is added
-    expected_exit_epoch = spec.compute_activation_exit_epoch(current_epoch) + 2
+    expected_exit_epoch = spec.compute_activation_exit_epoch(current_epoch) + spec.Epoch(2)
     assert state.validators[0].exit_epoch == expected_exit_epoch
     # since the earliest exit epoch moves to a new one, consolidation balance is back to full
     assert state.consolidation_balance_to_consume == expected_balance
@@ -590,7 +590,7 @@ def test_switch_to_compounding_with_excess(spec, state):
 def test_switch_to_compounding_with_pending_consolidations_at_limit(spec, state):
     state.pending_consolidations = [
         spec.PendingConsolidation(source_index=0, target_index=1)
-    ] * spec.PENDING_CONSOLIDATIONS_LIMIT
+    ] * int(spec.PENDING_CONSOLIDATIONS_LIMIT)
 
     current_epoch = spec.get_current_epoch(state)
     source_index = spec.get_active_validator_indices(state, current_epoch)[0]
@@ -660,7 +660,7 @@ def test_incorrect_exceed_pending_consolidations_limit(spec, state):
 
     state.pending_consolidations = [
         spec.PendingConsolidation(source_index=0, target_index=1)
-    ] * spec.PENDING_CONSOLIDATIONS_LIMIT
+    ] * int(spec.PENDING_CONSOLIDATIONS_LIMIT)
 
     # Set up an otherwise correct consolidation
     current_epoch = spec.get_current_epoch(state)
@@ -688,7 +688,9 @@ def test_incorrect_not_enough_consolidation_churn_available(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for consolidation
     state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
 
-    state.pending_consolidations = [spec.PendingConsolidation(source_index=0, target_index=1)]
+    state.pending_consolidations = spec.PendingConsolidations(
+        data=[spec.PendingConsolidation(source_index=0, target_index=1)]
+    )
 
     # Set up an otherwise correct consolidation
     current_epoch = spec.get_current_epoch(state)
@@ -1114,7 +1116,7 @@ def test_incorrect_source_has_pending_withdrawal(spec, state):
     source_index = spec.get_active_validator_indices(state, current_epoch)[0]
     target_index = spec.get_active_validator_indices(state, current_epoch)[1]
     source_address = b"\x22" * 20
-    excess_balance = spec.EFFECTIVE_BALANCE_INCREMENT // 4
+    excess_balance = spec.EFFECTIVE_BALANCE_INCREMENT // spec.Gwei(4)
     set_eth1_withdrawal_credential_with_balance(
         spec,
         state,
@@ -1137,7 +1139,7 @@ def test_incorrect_source_has_pending_withdrawal(spec, state):
     state.pending_partial_withdrawals.append(pending_withdrawal)
 
     # Check the return condition
-    assert spec.get_pending_balance_to_withdraw(state, source_index) > 0
+    assert spec.get_pending_balance_to_withdraw(state, source_index) > spec.Gwei(0)
 
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 
@@ -1156,7 +1158,7 @@ def test_incorrect_source_not_active_long_enough(spec, state):
     source_index = spec.get_active_validator_indices(state, current_epoch)[0]
     target_index = spec.get_active_validator_indices(state, current_epoch)[1]
     source_address = b"\x22" * 20
-    excess_balance = spec.EFFECTIVE_BALANCE_INCREMENT // 4
+    excess_balance = spec.EFFECTIVE_BALANCE_INCREMENT // spec.Gwei(4)
     set_eth1_withdrawal_credential_with_balance(
         spec,
         state,

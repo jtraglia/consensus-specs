@@ -150,7 +150,7 @@ def epochs_until_leak(spec):
     State is "leaking" if the current epoch is at least
     this value after the last finalized epoch.
     """
-    return spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY + 1
+    return spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY + spec.Epoch(1)
 
 
 def epochs_for_shard_committee_period(spec):
@@ -161,17 +161,17 @@ def epochs_for_shard_committee_period(spec):
 
 
 def last_slot_in_epoch(spec):
-    return spec.SLOTS_PER_EPOCH - 1
+    return spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
 
 def random_slot_in_epoch(spec, rng=None):
     if rng is None:
         rng = Random(1336)
-    return rng.randrange(1, spec.SLOTS_PER_EPOCH - 2)
+    return rng.randrange(1, spec.SLOTS_PER_EPOCH - spec.Slot(2))
 
 
 def penultimate_slot_in_epoch(spec):
-    return spec.SLOTS_PER_EPOCH - 2
+    return spec.SLOTS_PER_EPOCH - spec.Slot(2)
 
 
 # blocks
@@ -260,7 +260,7 @@ def random_block_altair_with_cycling_sync_committee_participation(
     block.body.sync_aggregate = get_random_sync_aggregate(
         spec,
         state,
-        block.slot - 1,
+        block.slot - spec.Slot(1),
         block_root=previous_root,
         fraction_participated=fraction_participated,
     )
@@ -301,7 +301,7 @@ def random_block_deneb(spec, state, signed_blocks, scenario_state, rng=None):
     )
     block.body.execution_payload.transactions.append(opaque_tx)
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
-    block.body.blob_kzg_commitments = blob_kzg_commitments
+    block.body.blob_kzg_commitments = spec.BlobKZGCommitments(data=blob_kzg_commitments)
 
     return block
 
@@ -342,7 +342,9 @@ def random_block_gloas(spec, state, signed_blocks, scenario_state, rng=None):
     block.body.signed_execution_payload_bid = _build_random_signed_bid(spec, state, block, rng)
 
     # Add payload_attestations
-    block.body.payload_attestations = get_random_payload_attestations(spec, state, rng)
+    block.body.payload_attestations = spec.PayloadAttestations(
+        data=get_random_payload_attestations(spec, state, rng)
+    )
 
     return block
 
@@ -422,7 +424,9 @@ def _add_random_builders(spec, state, rng=None):
     num_builders = rng.randint(0, 8)
 
     for i in range(num_builders):
-        balance = spec.MIN_DEPOSIT_AMOUNT + rng.randint(0, 10) * spec.EFFECTIVE_BALANCE_INCREMENT
+        balance = spec.MIN_DEPOSIT_AMOUNT + rng.randint(0, 10) * int(
+            spec.EFFECTIVE_BALANCE_INCREMENT
+        )
         builder = build_mock_builder(spec, i, balance)
         state.builders.append(builder)
 

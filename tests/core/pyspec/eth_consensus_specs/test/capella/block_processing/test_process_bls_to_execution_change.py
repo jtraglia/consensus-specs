@@ -60,7 +60,7 @@ def test_success(spec, state):
 def test_success_not_activated(spec, state):
     validator_index = 3
     validator = state.validators[validator_index]
-    validator.activation_eligibility_epoch += 4
+    validator.activation_eligibility_epoch += spec.Epoch(4)
     validator.activation_epoch = spec.FAR_FUTURE_EPOCH
 
     assert not spec.is_active_validator(validator, spec.get_current_epoch(state))
@@ -81,7 +81,7 @@ def test_success_in_activation_queue(spec, state):
     validator_index = 3
     validator = state.validators[validator_index]
     validator.activation_eligibility_epoch = spec.get_current_epoch(state)
-    validator.activation_epoch += 4
+    validator.activation_epoch += spec.Epoch(4)
 
     assert not spec.is_active_validator(validator, spec.get_current_epoch(state))
 

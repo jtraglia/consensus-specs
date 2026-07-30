@@ -77,7 +77,7 @@ def prepare_process_builder_deposit_request(
 
     # Phase 3: Apply state overrides (before creating request)
     if builders is not None:
-        state.builders = builders
+        state.builders = spec.Builders(data=builders)
 
     if builder_modifications is not None:
         current_epoch = spec.get_current_epoch(state)
@@ -249,7 +249,7 @@ def assert_process_builder_deposit_request(
             f"withdrawable_epoch <= current_epoch: "
             f"withdrawable_epoch={pre_builder.withdrawable_epoch}, current_epoch={current_epoch}"
         )
-        assert pre_builder.balance == 0, (
+        assert pre_builder.balance == spec.Gwei(0), (
             f"slot_reused=True: reused builder at index {reused_idx} must have "
             f"zero balance: balance={pre_builder.balance}"
         )

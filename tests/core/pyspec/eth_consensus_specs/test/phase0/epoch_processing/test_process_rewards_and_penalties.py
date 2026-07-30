@@ -51,7 +51,9 @@ def validate_resulting_balances(spec, pre_state, post_state, attestations):
         if not spec.is_active_validator(pre_state.validators[index], current_epoch):
             assert post_state.balances[index] == pre_state.balances[index]
         elif not is_post_altair(spec):
-            proposer_indices = [a.proposer_index for a in post_state.previous_epoch_attestations]
+            proposer_indices = [
+                int(a.proposer_index) for a in post_state.previous_epoch_attestations
+            ]
             if spec.is_in_inactivity_leak(post_state):
                 # Proposers can still make money during a leak before LIGHTCLIENT_PATCH
                 if index in proposer_indices and index in attesting_indices:
@@ -94,7 +96,7 @@ def test_genesis_epoch_no_attestations_no_penalties(spec, state):
 @spec_state_test
 def test_genesis_epoch_full_attestations_no_rewards(spec, state):
     attestations = []
-    for slot in range(spec.SLOTS_PER_EPOCH - 1):
+    for slot in range(spec.SLOTS_PER_EPOCH - spec.Slot(1)):
         # create an attestation for each slot
         if slot < spec.SLOTS_PER_EPOCH:
             attestation = get_valid_attestation(spec, state, signed=True)
@@ -187,7 +189,7 @@ def test_no_attestations_all_penalties(spec, state):
     next_epoch(spec, state)
     pre_state = copy(state)
 
-    assert spec.compute_epoch_at_slot(state.slot) == spec.GENESIS_EPOCH + 1
+    assert spec.compute_epoch_at_slot(state.slot) == spec.GENESIS_EPOCH + spec.Epoch(1)
 
     yield from run_process_rewards_and_penalties(spec, state)
 

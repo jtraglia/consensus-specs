@@ -25,7 +25,7 @@ def test_invariants(spec):
 @spec_test
 @single_phase
 def test_polynomial_commitments_sampling(spec):
-    assert spec.Uint64(2) * spec.FIELD_ELEMENTS_PER_BLOB == spec.FIELD_ELEMENTS_PER_EXT_BLOB
+    assert spec.Uint64(2) * int(spec.FIELD_ELEMENTS_PER_BLOB) == spec.FIELD_ELEMENTS_PER_EXT_BLOB
 
 
 @with_fulu_and_later

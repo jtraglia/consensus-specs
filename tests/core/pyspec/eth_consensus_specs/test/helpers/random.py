@@ -81,13 +81,18 @@ def exit_random_validators(
         if exit_epoch is None:
             assert withdrawable_epoch is None
             validator.exit_epoch = rng.choice(
-                [current_epoch, current_epoch - 1, current_epoch - 2, current_epoch - 3]
+                [
+                    current_epoch,
+                    current_epoch - spec.Epoch(1),
+                    current_epoch - spec.Epoch(2),
+                    current_epoch - spec.Epoch(3),
+                ]
             )
             # ~1/2 are withdrawable (note, unnatural span between exit epoch and withdrawable epoch)
             if rng.choice([True, False]):
                 validator.withdrawable_epoch = current_epoch
             else:
-                validator.withdrawable_epoch = current_epoch + 1
+                validator.withdrawable_epoch = current_epoch + spec.Epoch(1)
         else:
             validator.exit_epoch = exit_epoch
             if withdrawable_epoch is None:
@@ -126,11 +131,13 @@ def randomize_epoch_participation(spec, state, epoch, rng):
             if rng.randint(0, 2) == 0:
                 pending_attestation.data.beacon_block_root = b"\x66" * 32
             # ~50% participation
-            pending_attestation.aggregation_bits = [
-                rng.choice([True, False]) for _ in pending_attestation.aggregation_bits
-            ]
+            pending_attestation.aggregation_bits = type(pending_attestation.aggregation_bits)(
+                data=[rng.choice([True, False]) for _ in pending_attestation.aggregation_bits]
+            )
             # Random inclusion delay
-            pending_attestation.inclusion_delay = rng.randint(1, spec.SLOTS_PER_EPOCH)
+            pending_attestation.inclusion_delay = spec.Slot(
+                rng.randint(1, int(spec.SLOTS_PER_EPOCH))
+            )
     else:
         if epoch == spec.get_current_epoch(state):
             epoch_participation = state.current_epoch_participation
@@ -169,7 +176,7 @@ def randomize_previous_epoch_participation(spec, state, rng=None):
     cached_prepare_state_with_attestations(spec, state)
     randomize_epoch_participation(spec, state, spec.get_previous_epoch(state), rng)
     if not is_post_altair(spec):
-        state.current_epoch_attestations = []
+        state.current_epoch_attestations = spec.PendingAttestations(data=[])
     else:
         state.current_epoch_participation = [
             spec.ParticipationFlags(0b0000_0000) for _ in range(len(state.validators))
@@ -326,7 +333,7 @@ def patch_state_to_non_leaking(spec, state):
     state.justification_bits[1] = True
     previous_epoch = spec.get_previous_epoch(state)
     previous_root = spec.get_block_root(state, previous_epoch)
-    previous_previous_epoch = max(spec.GENESIS_EPOCH, spec.Epoch(previous_epoch - 1))
+    previous_previous_epoch = max(spec.GENESIS_EPOCH, previous_epoch - spec.Epoch(1))
     previous_previous_root = spec.get_block_root(state, previous_previous_epoch)
     state.previous_justified_checkpoint = spec.Checkpoint(
         epoch=previous_previous_epoch,

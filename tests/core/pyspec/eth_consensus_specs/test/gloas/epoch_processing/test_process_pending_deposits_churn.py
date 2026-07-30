@@ -36,7 +36,7 @@ def run_test_pending_deposits_activation_churn(spec, state):
     yield from run_process_pending_deposits(spec, state)
 
     assert state.balances[index] == pre_balance + amount
-    assert state.deposit_balance_to_consume == 0
+    assert state.deposit_balance_to_consume == spec.Gwei(0)
     assert state.pending_deposits == []
 
 

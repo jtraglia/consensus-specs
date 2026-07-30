@@ -17,7 +17,7 @@ from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def prepare_state_for_header_processing(spec, state):
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
 
 
 def run_block_header_processing(spec, state, block, prepare_state=True, valid=True):
@@ -54,7 +54,7 @@ def test_basic_block_header(spec, state):
 @spec_state_test
 def test_invalid_slot_block_header(spec, state):
     block = build_empty_block_for_next_slot(spec, state)
-    block.slot = state.slot + 2  # invalid slot
+    block.slot = state.slot + spec.Slot(2)  # invalid slot
 
     yield from run_block_header_processing(spec, state, block, valid=False)
 

@@ -108,7 +108,7 @@ def test_on_payload_attestation_message_slot_mismatch(spec, state):
         block_root,
         ptc[0],
         payload_present=True,
-        slot=spec.Slot(block_state.slot + 1),
+        slot=spec.Slot(block_state.slot + spec.Slot(1)),
     )
 
     # Spec function runs without error but returns early on the slot mismatch
@@ -196,7 +196,7 @@ def test_on_payload_attestation_message_current_slot_and_signature(spec, state):
         ptc[0],
         payload_present=True,
     )
-    tick_store_to_slot(spec, store, block_state.slot + 1, test_steps)
+    tick_store_to_slot(spec, store, block_state.slot + spec.Slot(1), test_steps)
     yield from add_payload_attestation_message(
         spec,
         store,
@@ -277,7 +277,7 @@ def test_on_payload_attestation_message_multiple_ptc_members_vote_independently(
     Test that two different PTC members voting for the same block update independent vote sets.
     """
     # Set two different validators on the PTC
-    block_slot = state.slot + 1
+    block_slot = state.slot + spec.Slot(1)
     window_idx = spec.SLOTS_PER_EPOCH + block_slot % spec.SLOTS_PER_EPOCH
     state.ptc_window[window_idx][0] = spec.ValidatorIndex(0)
     state.ptc_window[window_idx][1] = spec.ValidatorIndex(1)

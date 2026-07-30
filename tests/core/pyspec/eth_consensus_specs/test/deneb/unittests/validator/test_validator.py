@@ -26,8 +26,12 @@ def _get_sample_sidecars(spec, state, rng):
         spec, blob_count=blob_count, rng=rng
     )
     assert opaque_tx_1 != opaque_tx_2
-    block.body.blob_kzg_commitments = blob_kzg_commitments_1 + blob_kzg_commitments_2
-    block.body.execution_payload.transactions = [opaque_tx_1, opaque_tx_2]
+    block.body.blob_kzg_commitments = spec.BlobKZGCommitments(
+        data=blob_kzg_commitments_1 + blob_kzg_commitments_2
+    )
+    block.body.execution_payload.transactions = spec.Transactions(
+        data=[spec.Transaction(data=opaque_tx_1), spec.Transaction(data=opaque_tx_2)]
+    )
     block.body.execution_payload.block_hash = compute_el_block_hash(
         spec, block.body.execution_payload, state
     )

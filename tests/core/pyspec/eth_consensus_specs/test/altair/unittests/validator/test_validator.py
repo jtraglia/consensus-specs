@@ -91,12 +91,12 @@ def _get_sync_committee_signature(
 @always_bls
 def test_process_sync_committee_contributions(spec, state):
     # skip over slots at genesis
-    transition_to(spec, state, state.slot + 3)
+    transition_to(spec, state, state.slot + spec.Slot(3))
 
     # build a block and attempt to assemble a sync aggregate
     # from some sync committee contributions
     block = build_empty_block(spec, state)
-    previous_slot = state.slot - 1
+    previous_slot = state.slot - spec.Slot(1)
     target_block_root = spec.get_block_root_at_slot(state, previous_slot)
     aggregation_bits = BitVector[spec.SYNC_COMMITTEE_SIZE // spec.SYNC_COMMITTEE_SUBNET_COUNT]()
     aggregation_index = 0
@@ -174,7 +174,7 @@ def test_compute_subnets_for_sync_committee(state, spec):
     # Transition to the head of the next period
     transition_to(spec, state, spec.SLOTS_PER_EPOCH * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
 
-    next_slot_epoch = spec.compute_epoch_at_slot(state.slot + 1)
+    next_slot_epoch = spec.compute_epoch_at_slot(state.slot + spec.Slot(1))
     assert spec.compute_sync_committee_period(
         spec.get_current_epoch(state)
     ) == spec.compute_sync_committee_period(next_slot_epoch)
@@ -200,9 +200,11 @@ def test_compute_subnets_for_sync_committee(state, spec):
 @spec_state_test
 def test_compute_subnets_for_sync_committee_slot_period_boundary(state, spec):
     # Transition to the end of the period
-    transition_to(spec, state, spec.SLOTS_PER_EPOCH * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD - 1)
+    transition_to(
+        spec, state, spec.SLOTS_PER_EPOCH * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD - spec.Epoch(1)
+    )
 
-    next_slot_epoch = spec.compute_epoch_at_slot(state.slot + 1)
+    next_slot_epoch = spec.compute_epoch_at_slot(state.slot + spec.Slot(1))
     assert spec.compute_sync_committee_period(
         spec.get_current_epoch(state)
     ) != spec.compute_sync_committee_period(next_slot_epoch)
@@ -262,9 +264,9 @@ def test_is_sync_committee_aggregator(spec, state):
 
     # Accept ~10% deviation
     assert (
-        spec.TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE * 100 * 0.9
+        spec.TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE * spec.Uint64(100) * 0.9
         <= is_aggregator_count
-        <= spec.TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE * 100 * 1.1
+        <= spec.TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE * spec.Uint64(100) * 1.1
     )
 
 

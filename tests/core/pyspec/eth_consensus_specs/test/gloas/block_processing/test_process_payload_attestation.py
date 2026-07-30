@@ -51,9 +51,9 @@ def prepare_signed_payload_attestation(
     Helper to create a signed payload attestation with customizable parameters.
     """
     if slot is None:
-        if state.slot == 0:
+        if state.slot == spec.Slot(0):
             raise ValueError("Cannot attest to previous slot when state.slot is 0")
-        slot = state.slot - 1  # Attest to previous slot
+        slot = state.slot - spec.Slot(1)  # Attest to previous slot
 
     if beacon_block_root is None:
         beacon_block_root = state.latest_block_header.parent_root
@@ -156,7 +156,7 @@ def test_process_payload_attestation_payload_present(spec, state):
     """
     Test basic valid payload attestation processing
     """
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
 
     payload_attestation = prepare_signed_payload_attestation(spec, state, payload_present=True)
 
@@ -170,7 +170,7 @@ def test_process_payload_attestation_payload_not_present(spec, state):
     """
     Test valid payload attestation indicating payload was not present
     """
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
 
     payload_attestation = prepare_signed_payload_attestation(spec, state, payload_present=False)
 
@@ -184,9 +184,9 @@ def test_process_payload_attestation_partial_participation(spec, state):
     """
     Test valid payload attestation with only some PTC members participating
     """
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
 
-    ptc = spec.get_ptc(state, state.slot - 1)
+    ptc = spec.get_ptc(state, state.slot - spec.Slot(1))
     # Only half of the PTC members attest
     attesting_indices = ptc[: len(ptc) // 2] if ptc else []
 
@@ -208,7 +208,7 @@ def test_process_payload_attestation_invalid_beacon_block_root(spec, state):
     """
     Test payload attestation with wrong beacon block root fails
     """
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
 
     wrong_root = spec.Root(b"\x42" * 32)
     payload_attestation = prepare_signed_payload_attestation(
@@ -229,7 +229,7 @@ def test_process_payload_attestation_future_slot(spec, state):
     """
     Test payload attestation for future slot fails
     """
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
 
     # Try to attest to current slot (should be previous slot)
     payload_attestation = prepare_signed_payload_attestation(spec, state, slot=state.slot)
@@ -244,10 +244,12 @@ def test_process_payload_attestation_too_old_slot(spec, state):
     Test payload attestation for slot too far in the past fails
     """
     # Advance state to slot 3
-    spec.process_slots(state, state.slot + 3)
+    spec.process_slots(state, state.slot + spec.Slot(3))
 
     # Try to attest to slot 0 (2 slots ago, should be 1 slot ago)
-    payload_attestation = prepare_signed_payload_attestation(spec, state, slot=state.slot - 2)
+    payload_attestation = prepare_signed_payload_attestation(
+        spec, state, slot=state.slot - spec.Slot(2)
+    )
 
     yield from run_payload_attestation_processing(spec, state, payload_attestation, valid=False)
 
@@ -259,7 +261,7 @@ def test_process_payload_attestation_invalid_signature(spec, state):
     Test payload attestation with invalid signature fails
     """
     # Advance state to slot 1 so we can attest to slot 0
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
 
     payload_attestation = prepare_signed_payload_attestation(spec, state, valid_signature=False)
 
@@ -273,7 +275,7 @@ def test_process_payload_attestation_no_attesting_indices(spec, state):
     Test payload attestation with no attesting indices fails
     """
     # Advance state to slot 1 so we can attest to slot 0
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
 
     payload_attestation = prepare_signed_payload_attestation(spec, state, attesting_indices=[])
 
@@ -295,7 +297,7 @@ def test_process_payload_attestation_cross_epoch_wrong_domain(spec, state):
     # Advance to first slot of next epoch, attest to last slot of previous epoch
     next_epoch(spec, state)
 
-    attested_slot = state.slot - 1
+    attested_slot = state.slot - spec.Slot(1)
     correct_epoch = spec.compute_epoch_at_slot(attested_slot)
     wrong_epoch = spec.get_current_epoch(state)
     assert wrong_epoch != correct_epoch
@@ -387,7 +389,7 @@ def test_process_payload_attestation_sampling_not_capped(spec, state):
     for validator in state.validators:
         validator.effective_balance = low_balance
     # Direct balance mutations bypass epoch processing, so refresh the cached current-epoch PTC.
-    state.ptc_window = initialize_ptc_window(spec, state)
+    state.ptc_window = spec.PTCWindow(data=initialize_ptc_window(spec, state))
 
     chosen_slot = None
     chosen_index = None

@@ -54,7 +54,7 @@ def test_empty_epoch(spec, state):
 @spec_state_test
 def test_double_empty_epoch(spec, state):
     yield "pre", state
-    slots = spec.SLOTS_PER_EPOCH * 2
+    slots = spec.SLOTS_PER_EPOCH * spec.Slot(2)
     yield "slots", int(slots)
     spec.process_slots(state, state.slot + slots)
     yield "post", state
@@ -63,8 +63,8 @@ def test_double_empty_epoch(spec, state):
 @with_all_phases
 @spec_state_test
 def test_over_epoch_boundary(spec, state):
-    if spec.SLOTS_PER_EPOCH > 1:
-        spec.process_slots(state, state.slot + (spec.SLOTS_PER_EPOCH // 2))
+    if spec.Slot(1) < spec.SLOTS_PER_EPOCH:
+        spec.process_slots(state, state.slot + (spec.SLOTS_PER_EPOCH // spec.Slot(2)))
     yield "pre", state
     slots = spec.SLOTS_PER_EPOCH
     yield "slots", int(slots)
@@ -111,7 +111,9 @@ def test_balance_change_affects_proposer(spec, state):
 
         # Reduce the validator's balance, making it less likely to propose
         # The validator's effective balance will be updated during epoch processing
-        spec.decrease_balance(state, proposer_next_epoch, 10 * spec.EFFECTIVE_BALANCE_INCREMENT)
+        spec.decrease_balance(
+            state, proposer_next_epoch, spec.Gwei(10) * spec.EFFECTIVE_BALANCE_INCREMENT
+        )
 
         # Check if the proposer changed as a result of the balance change
         tmp_state = copy(state)

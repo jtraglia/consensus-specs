@@ -29,7 +29,7 @@ def test_validate_on_attestation_same_slot_empty_vote(spec, state):
     # Get valid empty-node attestation at the anchor's slot.
     att = get_valid_attestation(spec, block_state, payload_index=0, signed=True)
 
-    tick_store_to_slot(spec, store, att.data.slot + 1, test_steps)
+    tick_store_to_slot(spec, store, att.data.slot + spec.Slot(1), test_steps)
     yield from add_attestation(spec, store, att, test_steps)
     yield "steps", test_steps
 
@@ -50,7 +50,7 @@ def test_validate_on_attestation_same_slot_full_vote_rejected(spec, state):
     # Get valid full-node attestation at the anchor's slot.
     att = get_valid_attestation(spec, block_state, payload_index=1, signed=True)
 
-    tick_store_to_slot(spec, store, block_state.slot + 1, test_steps)
+    tick_store_to_slot(spec, store, block_state.slot + spec.Slot(1), test_steps)
     yield from add_attestation(spec, store, att, test_steps, valid=False)
     yield "steps", test_steps
 
@@ -81,7 +81,7 @@ def test_validate_on_attestation_later_slot_full_vote_valid(spec, state):
         signed=True,
     )
 
-    tick_store_to_slot(spec, store, att.data.slot + 1, test_steps)
+    tick_store_to_slot(spec, store, att.data.slot + spec.Slot(1), test_steps)
     yield from add_attestation(spec, store, att, test_steps)
     yield "steps", test_steps
 
@@ -93,7 +93,7 @@ def test_validate_on_attestation_payload_invalid_index(spec, state):
     Test that an attestation with an invalid index is rejected.
     """
     store, _, block_state, _, test_steps = yield from setup_one_block_store(spec, state)
-    tick_store_to_slot(spec, store, block_state.slot + 1, test_steps)
+    tick_store_to_slot(spec, store, block_state.slot + spec.Slot(1), test_steps)
 
     # Get attestation with an invalid index.
     att = get_valid_attestation(spec, block_state, payload_index=2, signed=True)

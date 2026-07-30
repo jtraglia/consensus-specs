@@ -182,7 +182,7 @@ def test_on_execution_payload_envelope_wrong_slot(spec, state):
         state,
         block_root,
         signed_block,
-        slot_number=state.slot + 1,
+        slot_number=state.slot + spec.Slot(1),
     )
     yield from add_execution_payload(spec, store, envelope, test_steps, valid=False)
 
@@ -346,7 +346,7 @@ def test_on_execution_payload_envelope_wrong_gas_limit(spec, state):
         state,
         block_root,
         signed_block,
-        gas_limit=state.latest_execution_payload_bid.gas_limit + 1,
+        gas_limit=state.latest_execution_payload_bid.gas_limit + spec.Uint64(1),
     )
     yield from add_execution_payload(spec, store, envelope, test_steps, valid=False)
 
@@ -412,7 +412,7 @@ def test_on_execution_payload_envelope_wrong_timestamp(spec, state):
         state,
         block_root,
         signed_block,
-        timestamp=spec.compute_time_at_slot(state, state.slot) + 1,
+        timestamp=spec.compute_time_at_slot(state, state.slot) + spec.Uint64(1),
     )
     yield from add_execution_payload(spec, store, envelope, test_steps, valid=False)
 
@@ -442,7 +442,7 @@ def test_on_execution_payload_envelope_invalid_full_child(spec, state):
     )
     yield from add_execution_payload(spec, store, envelope, test_steps, valid=False)
 
-    tick_store_to_slot(spec, store, block_state.slot + 1, test_steps)
+    tick_store_to_slot(spec, store, block_state.slot + spec.Slot(1), test_steps)
 
     # Build a child that points its bid at parent.bid.block_hash so it claims
     # the parent is FULL

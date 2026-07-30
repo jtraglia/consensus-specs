@@ -173,7 +173,10 @@ class FCRTest:
 
     def tick(self, slot):
         assert slot > self.current_slot() or slot == self.spec.GENESIS_SLOT
-        new_time = slot * self.spec.config.SLOT_DURATION_MS // 1000 + self.store.genesis_time
+        new_time = (
+            slot * self.spec.config.SLOT_DURATION_MS // self.spec.Uint64(1000)
+            + self.store.genesis_time
+        )
         self.spec.on_tick(self.store, new_time)
         self.test_steps.append({"tick": int(new_time)})
 
@@ -181,11 +184,12 @@ class FCRTest:
         self.tick(self.current_slot() + 1)
 
         # Discard outdated attestations from the pool
-        if self.current_slot() % self.spec.SLOTS_PER_EPOCH == 0:
+        if self.current_slot() % self.spec.SLOTS_PER_EPOCH == self.spec.Slot(0):
             self.attestation_pool = [
                 a
                 for a in self.attestation_pool
-                if self.spec.compute_epoch_at_slot(a.data.slot) + 1 >= self.current_epoch()
+                if self.spec.compute_epoch_at_slot(a.data.slot) + self.spec.Epoch(1)
+                >= self.current_epoch()
             ]
 
         # Apply recent attestations
@@ -284,9 +288,9 @@ class FCRTest:
                     continue
 
                 if is_post_electra(self.spec):
-                    if self.spec.compute_epoch_at_slot(
-                        att.data.slot
-                    ) + 1 < self.spec.compute_epoch_at_slot(block.slot):
+                    if self.spec.compute_epoch_at_slot(att.data.slot) + self.spec.Epoch(
+                        1
+                    ) < self.spec.compute_epoch_at_slot(block.slot):
                         continue
                 elif att.data.slot + self.spec.SLOTS_PER_EPOCH < block.slot:
                     continue

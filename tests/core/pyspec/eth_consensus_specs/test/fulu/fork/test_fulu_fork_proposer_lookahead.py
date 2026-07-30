@@ -81,7 +81,7 @@ def test_lookahead_consistency_with_effective_balance_change_at_fork(spec, phase
     spec.process_slots(
         state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
     )
-    assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - 1
+    assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
     # Calculate the lookahead of next epoch, including the thresholds of effective balance that
     # make a validator be a proposer at each slot.
@@ -102,7 +102,7 @@ def test_lookahead_consistency_with_effective_balance_change_at_fork(spec, phase
     )
 
     state, _ = yield from do_fork_generate(
-        state, spec, phases[FULU], spec.get_current_epoch(state) + 1
+        state, spec, phases[FULU], spec.get_current_epoch(state) + spec.Epoch(1)
     )
 
     # Calculate the actual lookahead

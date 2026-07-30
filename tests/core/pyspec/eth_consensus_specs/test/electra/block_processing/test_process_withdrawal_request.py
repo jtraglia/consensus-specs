@@ -60,7 +60,7 @@ def run_withdrawal_request_processing(spec, state, withdrawal_request, valid=Tru
         if withdrawal_request.amount == spec.FULL_EXIT_REQUEST_AMOUNT:
             assert pre_exit_epoch == spec.FAR_FUTURE_EPOCH
             assert state.validators[validator_index].exit_epoch < spec.FAR_FUTURE_EPOCH
-            assert spec.get_pending_balance_to_withdraw(state, validator_index) == 0
+            assert spec.get_pending_balance_to_withdraw(state, validator_index) == spec.Gwei(0)
             assert state.pending_partial_withdrawals == pre_pending_partial_withdrawals
         # Partial withdrawal request
         else:
@@ -175,9 +175,9 @@ def test_basic_withdrawal_request_with_full_partial_withdrawal_queue(spec, state
     partial_withdrawal = spec.PendingPartialWithdrawal(
         validator_index=1, amount=1, withdrawable_epoch=current_epoch
     )
-    state.pending_partial_withdrawals = [
-        partial_withdrawal
-    ] * spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT
+    state.pending_partial_withdrawals = [partial_withdrawal] * int(
+        spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT
+    )
 
     # Exit should still be processed
     yield from run_withdrawal_request_processing(
@@ -423,7 +423,9 @@ def test_partial_withdrawal_request_with_pending_withdrawals(spec, state):
     partial_withdrawal = spec.PendingPartialWithdrawal(
         validator_index=validator_index, amount=amount, withdrawable_epoch=current_epoch
     )
-    state.pending_partial_withdrawals = [partial_withdrawal] * 2
+    state.pending_partial_withdrawals = spec.PendingPartialWithdrawals(
+        data=[partial_withdrawal] * 2
+    )
 
     # Set balance so that the validator still has excess balance even with the pending withdrawals
     state.balances[validator_index] += 3 * amount
@@ -464,7 +466,7 @@ def test_partial_withdrawal_request_with_pending_withdrawals_and_high_amount(spe
         withdrawable_epoch=current_epoch,
     )
     state.pending_partial_withdrawals = [partial_withdrawal] * (
-        spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT - 1
+        spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT - spec.Uint64(1)
     )
 
     # Set balance so that the validator still has excess balance even with the pending withdrawals
@@ -488,7 +490,7 @@ def test_partial_withdrawal_request_with_high_balance(spec, state):
     validator_pubkey = state.validators[validator_index].pubkey
     address = b"\x22" * 20
     amount = spec.MAX_EFFECTIVE_BALANCE_ELECTRA
-    state.balances[validator_index] = 3 * spec.MAX_EFFECTIVE_BALANCE_ELECTRA
+    state.balances[validator_index] = spec.Gwei(3) * spec.MAX_EFFECTIVE_BALANCE_ELECTRA
     state.validators[validator_index].effective_balance = spec.MAX_EFFECTIVE_BALANCE_ELECTRA
 
     set_compounding_withdrawal_credential(spec, state, validator_index, address=address)
@@ -601,9 +603,9 @@ def test_partial_withdrawal_queue_full(spec, state):
     partial_withdrawal = spec.PendingPartialWithdrawal(
         validator_index=1, amount=1, withdrawable_epoch=current_epoch
     )
-    state.pending_partial_withdrawals = [
-        partial_withdrawal
-    ] * spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT
+    state.pending_partial_withdrawals = [partial_withdrawal] * int(
+        spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT
+    )
     yield from run_withdrawal_request_processing(spec, state, withdrawal_request, success=False)
 
 
@@ -680,7 +682,9 @@ def test_pending_withdrawals_consume_all_excess_balance(spec, state):
     partial_withdrawal = spec.PendingPartialWithdrawal(
         validator_index=validator_index, amount=amount, withdrawable_epoch=current_epoch
     )
-    state.pending_partial_withdrawals = [partial_withdrawal] * 10
+    state.pending_partial_withdrawals = spec.PendingPartialWithdrawals(
+        data=[partial_withdrawal] * 10
+    )
 
     yield from run_withdrawal_request_processing(spec, state, withdrawal_request, success=False)
 

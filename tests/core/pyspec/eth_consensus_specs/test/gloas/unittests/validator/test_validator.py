@@ -52,7 +52,7 @@ def test_get_ptc_assignment__current_epoch_minus_2(spec, state):
     next_epoch(spec, state)
     next_epoch(spec, state)
 
-    epoch = spec.Epoch(spec.get_current_epoch(state) - 2)
+    epoch = spec.Epoch(spec.get_current_epoch(state) - spec.Epoch(2))
     _run_get_ptc_assignments(spec, state, epoch, valid=False)
 
 
@@ -89,7 +89,7 @@ def test_get_ptc_assignment__current_epoch(spec, state):
 @with_state
 @single_phase
 def test_get_ptc_assignment__current_epoch_plus_1(spec, state):
-    epoch = spec.Epoch(spec.get_current_epoch(state) + 1)
+    epoch = spec.Epoch(spec.get_current_epoch(state) + spec.Epoch(1))
     _run_get_ptc_assignments(spec, state, epoch, valid=True)
 
 
@@ -98,5 +98,5 @@ def test_get_ptc_assignment__current_epoch_plus_1(spec, state):
 @with_state
 @single_phase
 def test_get_ptc_assignment__current_epoch_plus_2(spec, state):
-    epoch = spec.Epoch(spec.get_current_epoch(state) + 2)
+    epoch = spec.Epoch(spec.get_current_epoch(state) + spec.Epoch(2))
     _run_get_ptc_assignments(spec, state, epoch, valid=False)

@@ -26,7 +26,9 @@ def test_get_consolidation_churn_limit_independent(spec, state):
 @spec_state_test
 def test_get_consolidation_churn_limit_rounded(spec, state):
     """Consolidation churn must be a multiple of EFFECTIVE_BALANCE_INCREMENT."""
-    assert spec.get_consolidation_churn_limit(state) % spec.EFFECTIVE_BALANCE_INCREMENT == 0
+    assert spec.get_consolidation_churn_limit(
+        state
+    ) % spec.EFFECTIVE_BALANCE_INCREMENT == spec.Gwei(0)
 
 
 @with_gloas_and_later
@@ -61,7 +63,9 @@ def test_exit_churn_approximately_double_consolidation(spec, state):
     exit churn should be approximately 2x consolidation churn (before rounding)."""
     exit_churn = spec.get_exit_churn_limit(state)
     consolidation_churn = spec.get_consolidation_churn_limit(state)
-    assert abs(exit_churn - 2 * consolidation_churn) <= 2 * spec.EFFECTIVE_BALANCE_INCREMENT
+    assert (
+        abs(exit_churn - 2 * consolidation_churn) <= spec.Gwei(2) * spec.EFFECTIVE_BALANCE_INCREMENT
+    )
 
 
 @with_gloas_and_later
@@ -128,7 +132,7 @@ def test_compute_consolidation_epoch_uses_new_quotient(spec, state):
 
     epoch = spec.compute_consolidation_epoch_and_update_churn(state, consolidation_churn)
     assert epoch == earliest_consolidation_epoch
-    assert state.consolidation_balance_to_consume == 0
+    assert state.consolidation_balance_to_consume == spec.Gwei(0)
 
     state.earliest_consolidation_epoch = spec.Epoch(0)
     state.consolidation_balance_to_consume = spec.Gwei(0)

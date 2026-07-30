@@ -270,7 +270,7 @@ def test_partial_withdrawal_in_epoch_transition(spec, state):
 def test_many_partial_withdrawals_in_epoch_transition(spec, state):
     assert len(state.validators) > spec.MAX_WITHDRAWALS_PER_PAYLOAD
 
-    for i in range(spec.MAX_WITHDRAWALS_PER_PAYLOAD + 1):
+    for i in range(spec.MAX_WITHDRAWALS_PER_PAYLOAD + spec.Uint64(1)):
         index = (i + state.next_withdrawal_index) % len(state.validators)
         if is_post_gloas(spec):
             # In Gloas, partial withdrawals must be explicitly added to pending_partial_withdrawals
@@ -281,7 +281,8 @@ def test_many_partial_withdrawals_in_epoch_transition(spec, state):
     # In Gloas, the number of expected withdrawals is limited by MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP
     if is_post_gloas(spec):
         expected_count = min(
-            spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP, spec.MAX_WITHDRAWALS_PER_PAYLOAD - 1
+            spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
+            spec.MAX_WITHDRAWALS_PER_PAYLOAD - spec.Uint64(1),
         )
         assert len(get_expected_withdrawals(spec, state)) == expected_count
         # Make parent block full in Gloas so withdrawals are processed
@@ -303,9 +304,10 @@ def test_many_partial_withdrawals_in_epoch_transition(spec, state):
         # In Gloas, we added MAX_WITHDRAWALS_PER_PAYLOAD + 1 pending withdrawals
         # But only MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP were processed
         processed_count = min(
-            spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP, spec.MAX_WITHDRAWALS_PER_PAYLOAD - 1
+            spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
+            spec.MAX_WITHDRAWALS_PER_PAYLOAD - spec.Uint64(1),
         )
-        expected_remaining = (spec.MAX_WITHDRAWALS_PER_PAYLOAD + 1) - processed_count
+        expected_remaining = (spec.MAX_WITHDRAWALS_PER_PAYLOAD + spec.Uint64(1)) - processed_count
         remaining_pending = len(
             [
                 w
@@ -323,8 +325,8 @@ def _perform_valid_withdrawal(spec, state):
         spec,
         state,
         rng=random.Random(42),
-        num_partial_withdrawals=spec.MAX_WITHDRAWALS_PER_PAYLOAD * 2,
-        num_full_withdrawals=spec.MAX_WITHDRAWALS_PER_PAYLOAD * 2,
+        num_partial_withdrawals=spec.MAX_WITHDRAWALS_PER_PAYLOAD * spec.Uint64(2),
+        num_full_withdrawals=spec.MAX_WITHDRAWALS_PER_PAYLOAD * spec.Uint64(2),
     )
 
     # In Gloas, also add pending partial withdrawals for the partial withdrawal indices
@@ -406,7 +408,7 @@ def test_withdrawal_success_two_blocks(spec, state):
     else:
         assert (
             state.next_withdrawal_index
-            == pre_next_withdrawal_index + spec.MAX_WITHDRAWALS_PER_PAYLOAD * 2
+            == pre_next_withdrawal_index + spec.MAX_WITHDRAWALS_PER_PAYLOAD * spec.Uint64(2)
         )
 
     yield "blocks", [signed_block_1, signed_block_2]
@@ -422,7 +424,7 @@ def test_invalid_withdrawal_fail_second_block_payload_isnt_compatible(spec, stat
     block = build_empty_block_for_next_slot(spec, state)
 
     # Modify state.next_withdrawal_index to incorrect number
-    state.next_withdrawal_index += 1
+    state.next_withdrawal_index += spec.WithdrawalIndex(1)
 
     # Only need to output the state transition of signed_block_2
     yield "pre", state
@@ -450,7 +452,7 @@ def test_top_up_and_partial_withdrawable_validator(spec, state):
     assert not check_is_partially_withdrawable_validator(spec, state, validator_index)
 
     # Make a top-up balance to validator
-    amount = spec.MAX_EFFECTIVE_BALANCE // 4
+    amount = spec.MAX_EFFECTIVE_BALANCE // spec.Gwei(4)
     deposit = prepare_state_and_deposit(spec, state, validator_index, amount, signed=True)
 
     yield "pre", state
@@ -495,12 +497,12 @@ def test_top_up_to_fully_withdrawn_validator(spec, state):
 
     next_epoch_via_block(spec, state)
     assert state.balances[validator_index] == 0
-    assert state.validators[validator_index].effective_balance > 0
+    assert state.validators[validator_index].effective_balance > spec.Gwei(0)
     next_epoch_via_block(spec, state)
-    assert state.validators[validator_index].effective_balance == 0
+    assert state.validators[validator_index].effective_balance == spec.Gwei(0)
 
     # Make a top-up deposit to validator
-    amount = spec.MAX_EFFECTIVE_BALANCE // 4
+    amount = spec.MAX_EFFECTIVE_BALANCE // spec.Gwei(4)
     deposit = prepare_state_and_deposit(spec, state, validator_index, amount, signed=True)
 
     yield "pre", state
@@ -566,7 +568,7 @@ def _run_activate_and_partial_withdrawal(spec, state, initial_balance):
     validator_index = _insert_validator(spec, state, balance=initial_balance)
 
     # To make it eligible activation
-    transition_to(spec, state, spec.compute_start_slot_at_epoch(2) - 1)
+    transition_to(spec, state, spec.compute_start_slot_at_epoch(2) - spec.Slot(1))
     assert not spec.is_active_validator(
         state.validators[validator_index], spec.get_current_epoch(state)
     )
@@ -611,5 +613,5 @@ def test_activate_and_partial_withdrawal_max_effective_balance(spec, state):
 @spec_state_test
 def test_activate_and_partial_withdrawal_overdeposit(spec, state):
     yield from _run_activate_and_partial_withdrawal(
-        spec, state, initial_balance=spec.MAX_EFFECTIVE_BALANCE + 10000000
+        spec, state, initial_balance=spec.MAX_EFFECTIVE_BALANCE + spec.Gwei(10000000)
     )

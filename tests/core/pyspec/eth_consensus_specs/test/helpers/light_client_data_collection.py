@@ -29,7 +29,7 @@ from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 def _next_epoch_boundary_slot(spec, slot):
     # Compute the first possible epoch boundary state slot of a `Checkpoint`
     # referring to a block at given slot.
-    epoch = spec.compute_epoch_at_slot(slot + spec.SLOTS_PER_EPOCH - 1)
+    epoch = spec.compute_epoch_at_slot(slot + spec.SLOTS_PER_EPOCH - spec.Slot(1))
     return spec.compute_start_slot_at_epoch(epoch)
 
 
@@ -492,7 +492,7 @@ def _process_head_change_for_light_client(test, spec, head_bid, old_finalized_bi
     if signature_bid is None or signature_bid.slot <= low_slot:
         test.lc_data_store.cache.latest = ForkedLightClientFinalityUpdate(spec=None, data=None)
         return
-    attested_bid = get_ancestor_of_block_id(test, signature_bid, signature_bid.slot - 1)
+    attested_bid = get_ancestor_of_block_id(test, signature_bid, signature_bid.slot - spec.Slot(1))
     if attested_bid is None or attested_bid.slot < low_slot:
         test.lc_data_store.cache.latest = ForkedLightClientFinalityUpdate(spec=None, data=None)
         return
@@ -512,7 +512,7 @@ def _process_finalization_for_light_client(test, spec, finalized_bid, old_finali
         return
 
     # Cache `LightClientBootstrap` for newly finalized epoch boundary blocks
-    first_new_slot = old_finalized_bid.slot + 1
+    first_new_slot = old_finalized_bid.slot + spec.Slot(1)
     low_slot = max(first_new_slot, test.lc_data_store.cache.tail_slot)
     boundary_slot = finalized_slot
     while boundary_slot >= low_slot:
@@ -660,7 +660,7 @@ def _encode_lc_object(test, prefix, obj, slot, genesis_validators_root):
 
 def add_new_block(test, spec, state, slot=None, num_sync_participants=0):
     if slot is None:
-        slot = state.slot + 1
+        slot = state.slot + spec.Slot(1)
     assert slot > state.slot
     parent_bid = _state_to_block_id(state)
 
@@ -713,7 +713,9 @@ def select_new_head(test, spec, head_bid):
             new_finalized_epoch = state.data.finalized_checkpoint.epoch
             while bid.slot > test.latest_finalized_bid.slot:
                 test.finalized_block_roots[bid.slot] = bid.root
-                finalized_epoch = spec.compute_epoch_at_slot(bid.slot + spec.SLOTS_PER_EPOCH - 1)
+                finalized_epoch = spec.compute_epoch_at_slot(
+                    bid.slot + spec.SLOTS_PER_EPOCH - spec.Slot(1)
+                )
                 if finalized_epoch != old_finalized_epoch:
                     state = test.states[block.data.message.state_root]
                     test.finalized_checkpoint_states[block.data.message.state_root] = state

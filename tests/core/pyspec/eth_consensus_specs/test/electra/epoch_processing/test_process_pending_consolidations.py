@@ -39,7 +39,7 @@ def test_basic_pending_consolidation(spec, state):
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
 
     # Pending consolidation was successfully processed
-    assert state.balances[target_index] == 2 * spec.MIN_ACTIVATION_BALANCE
+    assert state.balances[target_index] == spec.Gwei(2) * spec.MIN_ACTIVATION_BALANCE
     assert state.balances[source_index] == 0
     assert state.pending_consolidations == []
 
@@ -105,7 +105,7 @@ def test_skip_consolidation_when_source_slashed(spec, state):
     assert state.balances[target0_index] == spec.MIN_ACTIVATION_BALANCE
     assert state.balances[source0_index] == spec.MIN_ACTIVATION_BALANCE
     # second pending consolidation should be processed: first one is skipped and doesn't block the queue
-    assert state.balances[target1_index] == 2 * spec.MIN_ACTIVATION_BALANCE
+    assert state.balances[target1_index] == spec.Gwei(2) * spec.MIN_ACTIVATION_BALANCE
     assert state.balances[source1_index] == 0
 
 
@@ -138,14 +138,14 @@ def test_all_consolidation_cases_together(spec, state):
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
 
     # First consolidation is successfully processed
-    assert state.balances[target_index[0]] == 2 * spec.MIN_ACTIVATION_BALANCE
+    assert state.balances[target_index[0]] == spec.Gwei(2) * spec.MIN_ACTIVATION_BALANCE
     assert state.balances[source_index[0]] == 0
     # All other consolidations are not processed
     for i in [1, 2, 3]:
         assert state.balances[source_index[i]] == pre_balances[source_index[i]]
         assert state.balances[target_index[i]] == pre_balances[target_index[i]]
     # First consolidation is processed, second is skipped, last two are left in the queue
-    state.pending_consolidations = pre_pending_consolidations[2:]
+    state.pending_consolidations = spec.PendingConsolidations(data=pre_pending_consolidations[2:])
 
 
 @with_electra_and_later
@@ -317,9 +317,9 @@ def test_pending_consolidation_source_balance_less_than_max_effective(spec, stat
     set_eth1_withdrawal_credential_with_balance(spec, state, source_index)
     set_eth1_withdrawal_credential_with_balance(spec, state, target_index)
     # Set the source balance to be less than effective_balance
-    pre_balance_source = (
-        state.validators[source_index].effective_balance - spec.EFFECTIVE_BALANCE_INCREMENT // 8
-    )
+    pre_balance_source = state.validators[
+        source_index
+    ].effective_balance - spec.EFFECTIVE_BALANCE_INCREMENT // spec.Gwei(8)
     state.balances[source_index] = pre_balance_source
 
     pre_balance_target = state.balances[target_index]
@@ -352,7 +352,7 @@ def test_pending_consolidation_source_balance_greater_than_max_effective(spec, s
     set_eth1_withdrawal_credential_with_balance(spec, state, source_index)
     set_eth1_withdrawal_credential_with_balance(spec, state, target_index)
     # Set the source balance to be greater than effective_balance
-    excess_source_balance = spec.EFFECTIVE_BALANCE_INCREMENT // 8
+    excess_source_balance = spec.EFFECTIVE_BALANCE_INCREMENT // spec.Gwei(8)
     pre_balance_source = state.validators[source_index].effective_balance + excess_source_balance
     state.balances[source_index] = pre_balance_source
 
@@ -385,9 +385,9 @@ def test_pending_consolidation_source_balance_less_than_max_effective_compoundin
     set_compounding_withdrawal_credential_with_balance(spec, state, source_index)
     set_compounding_withdrawal_credential_with_balance(spec, state, target_index)
     # Set the source balance to be less than effective_balance
-    pre_balance_source = (
-        state.validators[source_index].effective_balance - spec.EFFECTIVE_BALANCE_INCREMENT // 8
-    )
+    pre_balance_source = state.validators[
+        source_index
+    ].effective_balance - spec.EFFECTIVE_BALANCE_INCREMENT // spec.Gwei(8)
     state.balances[source_index] = pre_balance_source
 
     pre_balance_target = state.balances[target_index]
@@ -420,7 +420,7 @@ def test_pending_consolidation_source_balance_greater_than_max_effective_compoun
     set_compounding_withdrawal_credential_with_balance(spec, state, source_index)
     set_compounding_withdrawal_credential_with_balance(spec, state, target_index)
     # Set the source balance to be greater than effective_balance
-    excess_source_balance = spec.EFFECTIVE_BALANCE_INCREMENT // 8
+    excess_source_balance = spec.EFFECTIVE_BALANCE_INCREMENT // spec.Gwei(8)
     pre_balance_source = state.validators[source_index].effective_balance + excess_source_balance
     state.balances[source_index] = pre_balance_source
 
@@ -484,13 +484,13 @@ def prepare_consolidation_and_state(
 
     if balance_to_eb == "<":
         state.balances[source_index] = (
-            source.effective_balance - spec.EFFECTIVE_BALANCE_INCREMENT // 2
+            source.effective_balance - spec.EFFECTIVE_BALANCE_INCREMENT // spec.Gwei(2)
         )
     elif balance_to_eb == "=":
         state.balances[source_index] = source.effective_balance
     else:
         state.balances[source_index] = (
-            source.effective_balance + spec.EFFECTIVE_BALANCE_INCREMENT // 2
+            source.effective_balance + spec.EFFECTIVE_BALANCE_INCREMENT // spec.Gwei(2)
         )
 
 

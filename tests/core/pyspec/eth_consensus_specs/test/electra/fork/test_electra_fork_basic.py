@@ -104,7 +104,7 @@ def test_fork_pre_activation(spec, phases, state):
 
     validator = post_state.validators[index]
     assert post_state.balances[index] == 0
-    assert validator.effective_balance == 0
+    assert validator.effective_balance == spec.Gwei(0)
     assert validator.activation_eligibility_epoch == spec.FAR_FUTURE_EPOCH
     assert post_state.pending_deposits == [
         post_spec.PendingDeposit(
@@ -149,7 +149,7 @@ def test_fork_has_compounding_withdrawal_credential(spec, phases, state):
     index = 0
     post_spec = phases[ELECTRA]
     validator = state.validators[index]
-    state.balances[index] = post_spec.MIN_ACTIVATION_BALANCE + 1
+    state.balances[index] = post_spec.MIN_ACTIVATION_BALANCE + spec.Gwei(1)
     validator.withdrawal_credentials = (
         post_spec.COMPOUNDING_WITHDRAWAL_PREFIX + validator.withdrawal_credentials[1:]
     )
@@ -177,7 +177,7 @@ def test_fork_inactive_compounding_validator_with_excess_balance(spec, phases, s
     validator = state.validators[index]
 
     # set validator balance greater than min_activation_balance
-    state.balances[index] = post_spec.MIN_ACTIVATION_BALANCE + 1
+    state.balances[index] = post_spec.MIN_ACTIVATION_BALANCE + spec.Gwei(1)
     # set validator as not active yet
     validator.activation_epoch = spec.FAR_FUTURE_EPOCH
     # set validator activation eligibility epoch to the latest finalized epoch
@@ -220,7 +220,9 @@ def test_fork_earliest_exit_epoch_no_validator_exits(spec, phases, state):
 
     # the earliest exit epoch should be the compute_activation_exit_epoch + 1
     current_epoch = post_spec.compute_epoch_at_slot(post_state.slot)
-    expected_earliest_exit_epoch = post_spec.compute_activation_exit_epoch(current_epoch) + 1
+    expected_earliest_exit_epoch = post_spec.compute_activation_exit_epoch(
+        current_epoch
+    ) + spec.Epoch(1)
     assert post_state.earliest_exit_epoch == expected_earliest_exit_epoch
 
 
@@ -237,7 +239,7 @@ def test_fork_earliest_exit_epoch_is_max_validator_exit_epoch(spec, phases, stat
     post_state = yield from run_fork_test(phases[ELECTRA], state)
 
     # the earliest exit epoch should be the greatest validator exit epoch + 1
-    expected_earliest_exit_epoch = post_state.validators[1].exit_epoch + 1
+    expected_earliest_exit_epoch = post_state.validators[1].exit_epoch + spec.Epoch(1)
     assert post_state.earliest_exit_epoch == expected_earliest_exit_epoch
 
 
@@ -259,5 +261,7 @@ def test_fork_earliest_exit_epoch_less_than_current_epoch(spec, phases, state):
 
     # the earliest exit epoch should be the compute_activation_exit_epoch + 1
     current_epoch = post_spec.compute_epoch_at_slot(post_state.slot)
-    expected_earliest_exit_epoch = post_spec.compute_activation_exit_epoch(current_epoch) + 1
+    expected_earliest_exit_epoch = post_spec.compute_activation_exit_epoch(
+        current_epoch
+    ) + spec.Epoch(1)
     assert post_state.earliest_exit_epoch == expected_earliest_exit_epoch

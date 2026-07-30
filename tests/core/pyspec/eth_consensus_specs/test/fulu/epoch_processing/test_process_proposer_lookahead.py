@@ -9,7 +9,7 @@ from eth_consensus_specs.utils.ssz.ssz_impl import copy
 def test_proposer_lookahead_in_state_matches_computed_lookahead(spec, state):
     """Test that the proposer lookahead in the state matches the computed lookahead."""
     # Transition few epochs to past the MIN_SEED_LOOKAHEAD
-    for _ in range(spec.MIN_SEED_LOOKAHEAD + 1):
+    for _ in range(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1)):
         next_epoch(spec, state)
 
     # Get initial lookahead
@@ -32,7 +32,7 @@ def test_proposer_lookahead_does_not_contain_exited_validators(spec, state):
     Test proposer lookahead does not contain exited validators.
     """
     # Transition few epochs to past the MIN_SEED_LOOKAHEAD
-    for _ in range(spec.MIN_SEED_LOOKAHEAD + 1):
+    for _ in range(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1)):
         next_epoch(spec, state)
 
     # Exit first half of active validators
@@ -55,7 +55,7 @@ def test_proposer_lookahead_does_not_contain_exited_validators(spec, state):
     yield from run_epoch_processing_with(spec, state, "process_proposer_lookahead")
 
     # run_epoch_processing_with does not increment the slot
-    state.slot += 1
+    state.slot += spec.Slot(1)
 
     # Check that the proposer lookahead does not contain exited validators
     for validator_index in state.proposer_lookahead:

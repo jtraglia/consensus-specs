@@ -88,7 +88,7 @@ def test_fcr_restarts_to_gu_when_all_conditions_met(spec, state):
     debug_print(f"confirmed == finalized: {fcr_store.confirmed_root == finalized_root}")
     debug_print(f"confirmed == confirmed_before: {fcr_store.confirmed_root == confirmed_before}")
 
-    assert gu.epoch + 1 == current_epoch, (
+    assert gu.epoch + spec.Epoch(1) == current_epoch, (
         f"GU should be fresh after rotation: {gu.epoch} + 1 != {current_epoch}"
     )
 
@@ -168,7 +168,9 @@ def test_fcr_restarts_to_gu_and_confirms_beyond_gu(spec, state):
     gu_slot = spec.get_block_slot(store, gu.root)
     finalized_slot = spec.get_block_slot(store, finalized)
 
-    assert gu.epoch + 1 == current_epoch, f"GU not fresh: {gu.epoch} + 1 != {current_epoch}"
+    assert gu.epoch + spec.Epoch(1) == current_epoch, (
+        f"GU not fresh: {gu.epoch} + 1 != {current_epoch}"
+    )
     assert gu.root != finalized, "GU == finalized (test not meaningful)"
     assert finalized_slot < gu_slot, f"slot(finalized)={finalized_slot} >= slot(GU)={gu_slot}"
 
@@ -401,11 +403,11 @@ def test_fcr_no_restart_when_gu_block_is_epoch_older(spec, state):
     debug_print(f"confirmed == finalized: {fcr_store.confirmed_root == finalized_root}")
     debug_print(f"confirmed == confirmed_before: {fcr_store.confirmed_root == confirmed_before}")
 
-    assert gu.epoch + 1 == current_epoch, (
+    assert gu.epoch + spec.Epoch(1) == current_epoch, (
         f"GU should be fresh after rotation: {gu.epoch} + 1 != {current_epoch}"
     )
 
-    assert spec.get_block_epoch(store, gu.root) + 1 < current_epoch, (
+    assert spec.get_block_epoch(store, gu.root) + spec.Epoch(1) < current_epoch, (
         f"GU block must be old after rotation: {spec.get_block_epoch(store, gu.root)} + 1 == {current_epoch}"
     )
 
@@ -424,7 +426,7 @@ def test_fcr_no_restart_if_head_gu_is_stale(spec, state):
     store, fcr_store = fcr.initialize(state)
 
     S = spec.SLOTS_PER_EPOCH
-    justifying_slot = spec.SLOTS_PER_EPOCH * 2 // 3 + 1
+    justifying_slot = spec.SLOTS_PER_EPOCH * spec.Slot(2) // 3 + 1
 
     # Move to a slot before the justifying slot
     while fcr.current_slot() < S + justifying_slot - 1:
@@ -469,9 +471,9 @@ def test_fcr_no_restart_if_head_gu_is_stale(spec, state):
     observed_justified_block_slot = spec.get_block_slot(
         store, fcr_store.current_epoch_observed_justified_checkpoint.root
     )
-    assert spec.compute_epoch_at_slot(
-        observed_justified_block_slot
-    ) + 1 == spec.get_current_store_epoch(store)
+    assert spec.compute_epoch_at_slot(observed_justified_block_slot) + spec.Epoch(
+        1
+    ) == spec.get_current_store_epoch(store)
     assert spec.get_block_slot(store, fcr_store.confirmed_root) < observed_justified_block_slot
     # Head's GU is stale
     assert (

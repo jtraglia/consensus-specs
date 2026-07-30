@@ -74,7 +74,7 @@ def print_epoch(spec, epoch_state, signed_blocks):
 
 def print_block_tree(spec, root_state, signed_blocks):
     start_slot = signed_blocks[0].message.slot
-    end_slot = signed_blocks[len(signed_blocks) - 1].message.slot + 1
+    end_slot = signed_blocks[len(signed_blocks) - 1].message.slot + spec.Slot(1)
     return print_slot_range(spec, root_state, signed_blocks, start_slot, end_slot)
 
 

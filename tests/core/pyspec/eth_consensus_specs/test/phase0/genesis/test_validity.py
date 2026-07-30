@@ -66,7 +66,7 @@ def test_invalid_invalid_timestamp(spec):
         yield "description", "meta", get_post_altair_description(spec)
 
     state = create_valid_beacon_state(spec)
-    state.genesis_time = spec.config.MIN_GENESIS_TIME - 1
+    state.genesis_time = spec.config.MIN_GENESIS_TIME - spec.Uint64(1)
 
     yield from run_is_valid_genesis_state(spec, state, valid=False)
 
@@ -80,7 +80,7 @@ def test_extra_balance(spec):
         yield "description", "meta", get_post_altair_description(spec)
 
     state = create_valid_beacon_state(spec)
-    state.validators[0].effective_balance = spec.MAX_EFFECTIVE_BALANCE + 1
+    state.validators[0].effective_balance = spec.MAX_EFFECTIVE_BALANCE + spec.Gwei(1)
 
     yield from run_is_valid_genesis_state(spec, state)
 

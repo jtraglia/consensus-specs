@@ -14,7 +14,7 @@ def run_process_historical_summaries_update(spec, state):
 @spec_state_test
 def test_historical_summaries_accumulator(spec, state):
     # skip ahead to near the end of the historical batch period (excl block before epoch processing)
-    state.slot = spec.SLOTS_PER_HISTORICAL_ROOT - 1
+    state.slot = spec.SLOTS_PER_HISTORICAL_ROOT - spec.Slot(1)
     pre_historical_summaries = copy(state.historical_summaries)
 
     yield from run_process_historical_summaries_update(spec, state)

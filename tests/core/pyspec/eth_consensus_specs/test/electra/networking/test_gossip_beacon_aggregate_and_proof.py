@@ -247,8 +247,8 @@ def test_gossip_beacon_aggregate_and_proof__reject_multiple_committees(spec, sta
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     # Set two committee bits.
-    assert spec.MAX_COMMITTEES_PER_SLOT >= 2
-    bits = [False] * spec.MAX_COMMITTEES_PER_SLOT
+    assert spec.Uint64(2) <= spec.MAX_COMMITTEES_PER_SLOT
+    bits = [False] * int(spec.MAX_COMMITTEES_PER_SLOT)
     bits[0] = True
     bits[1] = True
     signed_agg.message.aggregate.committee_bits = spec.CommitteeBits(data=list(bits))

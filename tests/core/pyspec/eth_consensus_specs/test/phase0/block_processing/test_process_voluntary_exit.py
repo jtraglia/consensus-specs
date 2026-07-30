@@ -21,7 +21,7 @@ from eth_consensus_specs.test.helpers.voluntary_exits import (
 @spec_state_test
 def test_basic(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = spec.get_active_validator_indices(state, current_epoch)[0]
@@ -46,7 +46,7 @@ def test_basic(spec, state):
 @always_bls
 def test_invalid_incorrect_signature(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = spec.get_active_validator_indices(state, current_epoch)[0]
@@ -62,7 +62,7 @@ def test_invalid_incorrect_signature(spec, state):
 
 def run_test_success_exit_queue(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     current_epoch = spec.get_current_epoch(state)
 
@@ -104,9 +104,9 @@ def run_test_success_exit_queue(spec, state):
     yield from run_voluntary_exit_processing(spec, state, signed_voluntary_exit)
 
     for index in initial_indices:
-        assert (
-            state.validators[validator_index].exit_epoch == state.validators[index].exit_epoch + 1
-        )
+        assert state.validators[validator_index].exit_epoch == state.validators[
+            index
+        ].exit_epoch + spec.Epoch(1)
 
 
 @with_all_phases
@@ -136,7 +136,7 @@ def test_success_exit_queue__scaled_churn(spec, state):
 @spec_state_test
 def test_default_exit_epoch_subsequent_exit(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = spec.get_active_validator_indices(state, current_epoch)[0]
@@ -164,7 +164,7 @@ def test_default_exit_epoch_subsequent_exit(spec, state):
 @spec_state_test
 def test_invalid_validator_exit_in_future(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = spec.get_active_validator_indices(state, current_epoch)[0]
@@ -183,7 +183,7 @@ def test_invalid_validator_exit_in_future(spec, state):
 @spec_state_test
 def test_invalid_validator_incorrect_validator_index(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = spec.get_active_validator_indices(state, current_epoch)[0]
@@ -221,7 +221,7 @@ def test_invalid_validator_not_active(spec, state):
 @spec_state_test
 def test_invalid_validator_already_exited(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow validator able to exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = spec.get_active_validator_indices(state, current_epoch)[0]

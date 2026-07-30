@@ -172,7 +172,7 @@ def test_process_builder_deposit_request__new_builder_max_minus_one(spec, state)
         - New builder created
         - Builder balance equals MAX_EFFECTIVE_BALANCE - 1
     """
-    amount = spec.MAX_EFFECTIVE_BALANCE - 1
+    amount = spec.MAX_EFFECTIVE_BALANCE - spec.Gwei(1)
     builder_deposit_request = prepare_process_builder_deposit_request(
         spec, state, amount=amount, signed=True
     )
@@ -299,7 +299,7 @@ def test_process_builder_deposit_request__top_up(spec, state):
 def test_process_builder_deposit_request__top_up_large(spec, state):
     """Test large top-up deposit for an existing builder."""
     # Large top-up (500 ETH)
-    amount = spec.Gwei(500 * spec.ETH_TO_GWEI)
+    amount = spec.Gwei(spec.Uint64(500) * spec.ETH_TO_GWEI)
     pubkey = state.builders[0].pubkey
     builder_deposit_request = prepare_builder_deposit_request(
         spec, state, amount, pubkey=pubkey, signed=True
@@ -764,7 +764,7 @@ def test_process_builder_deposit_request__exited_builder_top_up_zero_balance(spe
     )
     # Sanity check: the exited epoch differs from the expected reset value
     assert pre_state.builders[0].withdrawable_epoch != expected_withdrawable_epoch
-    assert pre_state.builders[0].balance == 0
+    assert pre_state.builders[0].balance == spec.Gwei(0)
 
     yield from run_builder_deposit_request_processing(spec, state, deposit_request)
 
@@ -796,8 +796,8 @@ def test_process_builder_deposit_request__exited_builder_top_up_nonzero_balance(
         - withdrawable_epoch unchanged (no reset)
     """
     builder_pubkey = state.builders[0].pubkey
-    balance = 1 * spec.ETH_TO_GWEI
-    amount = spec.Gwei(1 * spec.ETH_TO_GWEI)
+    balance = spec.Uint64(1) * spec.ETH_TO_GWEI
+    amount = spec.Gwei(spec.Uint64(1) * spec.ETH_TO_GWEI)
     pre_builder_count = len(state.builders)
 
     # Advance an epoch and mark builder 0 as exited (withdrawable_epoch in the
@@ -814,7 +814,7 @@ def test_process_builder_deposit_request__exited_builder_top_up_nonzero_balance(
     pre_state = copy(state)
     # Sanity check: the builder is exited but still holds a balance
     assert pre_state.builders[0].withdrawable_epoch != spec.FAR_FUTURE_EPOCH
-    assert pre_state.builders[0].balance > 0
+    assert pre_state.builders[0].balance > spec.Gwei(0)
 
     yield from run_builder_deposit_request_processing(spec, state, deposit_request)
 

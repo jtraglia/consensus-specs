@@ -197,7 +197,9 @@ def test_gossip_data_column_sidecar__reject_too_many_commitments(spec, state):
     # check is independent of the inclusion proof, so we don't need a
     # consistent block here.
     extra = get_max_blob_count(spec, state) + 1 - len(sidecar.kzg_commitments)
-    sidecar.kzg_commitments = list(sidecar.kzg_commitments) + [spec.KZGCommitment()] * extra
+    sidecar.kzg_commitments = spec.BlobKZGCommitments(
+        data=list(sidecar.kzg_commitments) + [spec.KZGCommitment()] * extra
+    )
 
     yield get_filename(sidecar), sidecar
 
@@ -307,7 +309,7 @@ def test_gossip_data_column_sidecar__ignore_future_slot(spec, state):
     yield get_filename(sidecar), sidecar
 
     slot_time_ms = spec.compute_time_at_slot_ms(state, sidecar.signed_block_header.message.slot)
-    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - 1
+    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     subnet_id = correct_subnet(spec, sidecar)
@@ -402,7 +404,7 @@ def test_gossip_data_column_sidecar__ignore_not_later_than_finalized_slot(spec, 
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
-    transition_to(spec, state, spec.Slot(spec.SLOTS_PER_EPOCH - 1))
+    transition_to(spec, state, spec.Slot(spec.SLOTS_PER_EPOCH - spec.Slot(1)))
     yield "state", state
 
     _, sidecars = build_signed_block_and_sidecars(spec, state, blob_count=1)
@@ -891,7 +893,7 @@ def test_gossip_data_column_sidecar__reject_invalid_kzg_proofs(spec, state):
     # Corrupt every KZG proof to the point at infinity, which won't verify
     # against the real commitments.
     bad_proof = spec.KZGProof(b"\xc0" + b"\x00" * 47)
-    sidecar.kzg_proofs = [bad_proof for _ in sidecar.kzg_proofs]
+    sidecar.kzg_proofs = spec.KZGProofs(data=[bad_proof for _ in sidecar.kzg_proofs])
 
     yield get_filename(sidecar), sidecar
 

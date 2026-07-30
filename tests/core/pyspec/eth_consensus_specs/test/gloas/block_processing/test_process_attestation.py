@@ -22,7 +22,7 @@ def _setup_previous_epoch_same_slot_scenario(spec, state):
     single attester. Advance state one epoch so the attestation's target becomes
     the previous epoch.
     """
-    attestation_slot = spec.Slot(spec.SLOTS_PER_EPOCH - 1)
+    attestation_slot = spec.Slot(spec.SLOTS_PER_EPOCH - spec.Slot(1))
     apply_empty_block(spec, state, attestation_slot)
 
     committee = spec.get_beacon_committee(state, attestation_slot, 0)
@@ -115,7 +115,7 @@ def test_valid_attestation_data_index_one_previous_slot_matching_blockroot(spec,
         state, spec.Slot(attestation.data.slot)
     )
     is_current_blockroot = attestation.data.beacon_block_root != spec.get_block_root_at_slot(
-        state, spec.Slot(attestation.data.slot - 1)
+        state, spec.Slot(attestation.data.slot - spec.Slot(1))
     )
     assert is_matching_blockroot is True
     assert is_current_blockroot is False
@@ -142,7 +142,7 @@ def test_valid_attestation_data_index_one_previous_slot_current_blockroot(spec, 
         state, spec.Slot(attestation.data.slot)
     )
     is_current_blockroot = attestation.data.beacon_block_root != spec.get_block_root_at_slot(
-        state, spec.Slot(attestation.data.slot - 1)
+        state, spec.Slot(attestation.data.slot - spec.Slot(1))
     )
     assert is_matching_blockroot is False
     assert is_current_blockroot is True
@@ -261,7 +261,7 @@ def test_builder_payment_weight_no_double_counting(spec, state):
         attestation1.aggregation_bits[i] = i == 0
 
     attesting_validator_index = committee[0]
-    assert state.validators[attesting_validator_index].effective_balance > 0
+    assert state.validators[attesting_validator_index].effective_balance > spec.Gwei(0)
 
     sign_attestation(spec, state, attestation1)
 
@@ -498,7 +498,7 @@ def test_builder_payment_weight_tracking_previous_epoch(spec, state):
     # Assert weight is set for the previous epoch, not current one
     expected_weight = state.validators[attester].effective_balance
     assert state.builder_pending_payments[previous_epoch_idx].weight == expected_weight
-    assert state.builder_pending_payments[current_epoch_idx].weight == 0
+    assert state.builder_pending_payments[current_epoch_idx].weight == spec.Gwei(0)
 
     # Assert flags are set for the previous epoch, not current one
     for flag_index in expected_flag_indices:

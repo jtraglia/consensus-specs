@@ -17,15 +17,15 @@ def add_mock_attestations(
     spec, state, epoch, source, target, sufficient_support=False, messed_up_target=False
 ):
     # we must be at the end of the epoch
-    assert (state.slot + 1) % spec.SLOTS_PER_EPOCH == 0
+    assert (state.slot + spec.Slot(1)) % spec.SLOTS_PER_EPOCH == spec.Slot(0)
 
     previous_epoch = spec.get_previous_epoch(state)
     current_epoch = spec.get_current_epoch(state)
 
     if not is_post_altair(spec):
-        if current_epoch == epoch:
+        if current_epoch == spec.Epoch(epoch):
             attestations = state.current_epoch_attestations
-        elif previous_epoch == epoch:
+        elif previous_epoch == spec.Epoch(epoch):
             attestations = state.previous_epoch_attestations
         else:
             raise Exception(
@@ -41,7 +41,7 @@ def add_mock_attestations(
         )
 
     total_balance = spec.get_total_active_balance(state)
-    remaining_balance = int(total_balance * 2 // 3)  # can become negative
+    remaining_balance = int(total_balance) * 2 // 3  # can become negative
 
     start_slot = spec.compute_start_slot_at_epoch(epoch)
     committees_per_slot = spec.get_committee_count_per_slot(state, epoch)
@@ -90,14 +90,14 @@ def add_mock_attestations(
                 for i, index in enumerate(committee):
                     if aggregation_bits[i]:
                         epoch_participation[index] |= spec.ParticipationFlags(
-                            2**spec.TIMELY_HEAD_FLAG_INDEX
+                            spec.Uint64(2) ** spec.TIMELY_HEAD_FLAG_INDEX
                         )
                         epoch_participation[index] |= spec.ParticipationFlags(
-                            2**spec.TIMELY_SOURCE_FLAG_INDEX
+                            spec.Uint64(2) ** spec.TIMELY_SOURCE_FLAG_INDEX
                         )
                         if not messed_up_target:
                             epoch_participation[index] |= spec.ParticipationFlags(
-                                2**spec.TIMELY_TARGET_FLAG_INDEX
+                                spec.Uint64(2) ** spec.TIMELY_TARGET_FLAG_INDEX
                             )
 
 
@@ -119,7 +119,8 @@ def put_checkpoints_in_block_roots(spec, state, checkpoints):
 
 def finalize_on_234(spec, state, epoch, sufficient_support):
     assert epoch > 4
-    transition_to(spec, state, spec.SLOTS_PER_EPOCH * epoch - 1)  # skip ahead to just before epoch
+    # skip ahead to just before epoch
+    transition_to(spec, state, spec.SLOTS_PER_EPOCH * spec.Slot(epoch) - spec.Slot(1))
 
     # 43210 -- epochs ago
     # 3210x -- justification bitfield indices
@@ -155,7 +156,8 @@ def finalize_on_234(spec, state, epoch, sufficient_support):
 
 def finalize_on_23(spec, state, epoch, sufficient_support):
     assert epoch > 3
-    transition_to(spec, state, spec.SLOTS_PER_EPOCH * epoch - 1)  # skip ahead to just before epoch
+    # skip ahead to just before epoch
+    transition_to(spec, state, spec.SLOTS_PER_EPOCH * spec.Slot(epoch) - spec.Slot(1))
 
     # 43210 -- epochs ago
     # 210xx  -- justification bitfield indices (pre shift)
@@ -189,7 +191,8 @@ def finalize_on_23(spec, state, epoch, sufficient_support):
 
 def finalize_on_123(spec, state, epoch, sufficient_support):
     assert epoch > 5
-    state.slot = (spec.SLOTS_PER_EPOCH * epoch) - 1  # skip ahead to just before epoch
+    # skip ahead to just before epoch
+    state.slot = (spec.SLOTS_PER_EPOCH * spec.Slot(epoch)) - spec.Slot(1)
 
     # 43210 -- epochs ago
     # 210xx  -- justification bitfield indices (pre shift)
@@ -227,7 +230,8 @@ def finalize_on_123(spec, state, epoch, sufficient_support):
 
 def finalize_on_12(spec, state, epoch, sufficient_support, messed_up_target):
     assert epoch > 2
-    transition_to(spec, state, spec.SLOTS_PER_EPOCH * epoch - 1)  # skip ahead to just before epoch
+    # skip ahead to just before epoch
+    transition_to(spec, state, spec.SLOTS_PER_EPOCH * spec.Slot(epoch) - spec.Slot(1))
 
     # 43210 -- epochs ago
     # 210xx  -- justification bitfield indices (pre shift)
@@ -333,7 +337,7 @@ def test_balance_threshold_with_exited_validators(spec, state):
         next_epoch_via_block(spec, state)
 
     # mock attestation helper requires last slot of epoch
-    for _ in range(spec.SLOTS_PER_EPOCH - 1):
+    for _ in range(spec.SLOTS_PER_EPOCH - spec.Slot(1)):
         next_slot(spec, state)
 
     # Step 1: Exit ~1/2 vals in current epoch

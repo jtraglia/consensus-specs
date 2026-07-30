@@ -240,14 +240,14 @@ def get_forkchoice_store(anchor_state: BeaconState, anchor_block: BeaconBlock) -
 
 ```python
 def get_slots_since_genesis(store: Store) -> int:
-    return (store.time - store.genesis_time) * 1000 // SLOT_DURATION_MS
+    return int((store.time - store.genesis_time) * Uint64(1000) // SLOT_DURATION_MS)
 ```
 
 #### `get_current_slot`
 
 ```python
 def get_current_slot(store: Store) -> Slot:
-    return Slot(GENESIS_SLOT + get_slots_since_genesis(store))
+    return GENESIS_SLOT + Slot(get_slots_since_genesis(store))
 ```
 
 #### `get_current_store_epoch`
@@ -541,9 +541,9 @@ def seconds_to_milliseconds(seconds: Uint64) -> Uint64:
     Convert seconds to milliseconds with overflow protection.
     Returns ``UINT64_MAX`` if the result would overflow.
     """
-    if seconds > UINT64_MAX // 1000:
+    if seconds > UINT64_MAX // Uint64(1000):
         return UINT64_MAX
-    return seconds * 1000
+    return seconds * Uint64(1000)
 ```
 
 #### `get_slot_component_duration_ms`
@@ -784,7 +784,7 @@ def on_tick_per_slot(store: Store, time: Uint64) -> None:
         store.proposer_boost_root = Root()
 
     # If a new epoch, pull-up justification and finalization from previous epoch
-    if current_slot > previous_slot and compute_slots_since_epoch_start(current_slot) == 0:
+    if current_slot > previous_slot and compute_slots_since_epoch_start(current_slot) == Uint64(0):
         update_checkpoints(
             store, store.unrealized_justified_checkpoint, store.unrealized_finalized_checkpoint
         )
@@ -801,7 +801,7 @@ def validate_target_epoch_against_current_time(store: Store, attestation: Attest
     # Attestations must be from the current or previous epoch
     current_epoch = get_current_store_epoch(store)
     # Use GENESIS_EPOCH for previous when genesis to avoid underflow
-    previous_epoch = current_epoch - 1 if current_epoch > GENESIS_EPOCH else GENESIS_EPOCH
+    previous_epoch = current_epoch - Epoch(1) if current_epoch > GENESIS_EPOCH else GENESIS_EPOCH
     # If attestation target is from a future epoch, delay consideration until the epoch arrives
     assert target.epoch in [current_epoch, previous_epoch]
 ```
@@ -834,7 +834,7 @@ def validate_on_attestation(store: Store, attestation: Attestation, is_from_bloc
 
     # Attestations can only affect the fork choice of subsequent slots.
     # Delay consideration in the fork choice until their slot is in the past.
-    assert get_current_slot(store) >= attestation.data.slot + 1
+    assert get_current_slot(store) >= attestation.data.slot + Slot(1)
 ```
 
 ##### `store_target_checkpoint_state`
@@ -889,7 +889,7 @@ def get_shuffling_dependent_root(store: Store, root: Root, epoch: Epoch) -> Root
         return Root()
 
     node = ForkChoiceNode(root=root)
-    dependent_slot = Slot(compute_start_slot_at_epoch(epoch - MIN_SEED_LOOKAHEAD) - 1)
+    dependent_slot = compute_start_slot_at_epoch(epoch - MIN_SEED_LOOKAHEAD) - Slot(1)
     return get_ancestor(store, node, dependent_slot).root
 ```
 
@@ -918,11 +918,11 @@ def update_proposer_boost_root(store: Store, head: Root, root: Root) -> None:
 def on_tick(store: Store, time: Uint64) -> None:
     # If the ``store.time`` falls behind, while loop catches up slot by slot
     # to ensure that every previous slot is processed with ``on_tick_per_slot``
-    tick_slot = (time - store.genesis_time) * 1000 // SLOT_DURATION_MS
+    tick_slot = Slot((time - store.genesis_time) * Uint64(1000) // SLOT_DURATION_MS)
     while get_current_slot(store) < tick_slot:
-        previous_time = (
-            store.genesis_time + (get_current_slot(store) + 1) * SLOT_DURATION_MS // 1000
-        )
+        previous_time = store.genesis_time + Uint64(
+            get_current_slot(store) + Slot(1)
+        ) * SLOT_DURATION_MS // Uint64(1000)
         on_tick_per_slot(store, previous_time)
     on_tick_per_slot(store, time)
 ```

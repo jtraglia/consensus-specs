@@ -100,9 +100,9 @@ def test_gossip_beacon_aggregate_and_proof__accepts_one_millisecond_before_slot_
     yield "state", state
     yield get_filename(signed_agg), signed_agg
 
-    current_time_ms = (
-        spec.compute_time_at_slot_ms(state, signed_agg.message.aggregate.data.slot) - 1
-    )
+    current_time_ms = spec.compute_time_at_slot_ms(
+        state, signed_agg.message.aggregate.data.slot
+    ) - spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     seen = get_seen(spec)
@@ -304,7 +304,7 @@ def test_gossip_beacon_aggregate_and_proof__accepts_last_slot_one_millisecond_be
 
     attestation_epoch = spec.Epoch(2)
     attestation_slot = (
-        spec.compute_start_slot_at_epoch(attestation_epoch) + spec.SLOTS_PER_EPOCH - 1
+        spec.compute_start_slot_at_epoch(attestation_epoch) + spec.SLOTS_PER_EPOCH - spec.Slot(1)
     )
     store, signed_anchor, signed_agg = prepare_signed_aggregate_and_proof(
         spec, state, attestation_slot
@@ -314,9 +314,9 @@ def test_gossip_beacon_aggregate_and_proof__accepts_last_slot_one_millisecond_be
     yield "state", state
     yield get_filename(signed_agg), signed_agg
 
-    current_time_ms = (
-        spec.compute_time_at_slot_ms(state, signed_agg.message.aggregate.data.slot) - 1
-    )
+    current_time_ms = spec.compute_time_at_slot_ms(
+        state, signed_agg.message.aggregate.data.slot
+    ) - spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     seen = get_seen(spec)
@@ -342,7 +342,7 @@ def test_gossip_beacon_aggregate_and_proof__accepts_last_slot_at_slot_start(spec
 
     attestation_epoch = spec.Epoch(2)
     attestation_slot = (
-        spec.compute_start_slot_at_epoch(attestation_epoch) + spec.SLOTS_PER_EPOCH - 1
+        spec.compute_start_slot_at_epoch(attestation_epoch) + spec.SLOTS_PER_EPOCH - spec.Slot(1)
     )
     store, signed_anchor, signed_agg = prepare_signed_aggregate_and_proof(
         spec, state, attestation_slot
@@ -378,7 +378,7 @@ def test_gossip_beacon_aggregate_and_proof__accepts_last_slot_when_epoch_window_
 
     attestation_epoch = spec.Epoch(2)
     attestation_slot = (
-        spec.compute_start_slot_at_epoch(attestation_epoch) + spec.SLOTS_PER_EPOCH - 1
+        spec.compute_start_slot_at_epoch(attestation_epoch) + spec.SLOTS_PER_EPOCH - spec.Slot(1)
     )
     store, signed_anchor, signed_agg = prepare_signed_aggregate_and_proof(
         spec, state, attestation_slot
@@ -416,7 +416,7 @@ def test_gossip_beacon_aggregate_and_proof__ignores_last_slot_after_epoch_window
 
     attestation_epoch = spec.Epoch(2)
     attestation_slot = (
-        spec.compute_start_slot_at_epoch(attestation_epoch) + spec.SLOTS_PER_EPOCH - 1
+        spec.compute_start_slot_at_epoch(attestation_epoch) + spec.SLOTS_PER_EPOCH - spec.Slot(1)
     )
     store, signed_anchor, signed_agg = prepare_signed_aggregate_and_proof(
         spec, state, attestation_slot

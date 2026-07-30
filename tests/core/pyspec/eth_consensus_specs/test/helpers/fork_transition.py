@@ -121,7 +121,8 @@ def skip_slots(*slots):
     """
 
     def f(state_at_prior_slot):
-        return state_at_prior_slot.slot + 1 not in slots
+        next_slot = state_at_prior_slot.slot + type(state_at_prior_slot.slot)(1)
+        return next_slot not in slots
 
     return f
 
@@ -136,7 +137,8 @@ def only_at(slot):
     """
 
     def f(state_at_prior_slot):
-        return state_at_prior_slot.slot + 1 == slot
+        next_slot = state_at_prior_slot.slot + type(state_at_prior_slot.slot)(1)
+        return next_slot == slot
 
     return f
 
@@ -164,7 +166,7 @@ def state_transition_across_slots_with_ignoring_proposers(
 
     found_valid = False
     while state.slot < to_slot or not found_valid:
-        if state.slot + 1 < to_slot and only_last_block:
+        if state.slot + spec.Slot(1) < to_slot and only_last_block:
             next_slot(spec, state)
             continue
 
@@ -195,9 +197,9 @@ def get_upgrade_fn(spec, fork):
 def do_fork(
     state, spec, post_spec, fork_epoch, with_block=True, sync_aggregate=None, operation_dict=None
 ):
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
 
-    assert state.slot % spec.SLOTS_PER_EPOCH == 0
+    assert state.slot % spec.SLOTS_PER_EPOCH == spec.Slot(0)
     assert spec.get_current_epoch(state) == fork_epoch
 
     state = get_upgrade_fn(post_spec, post_spec.fork)(state)
@@ -224,9 +226,9 @@ def do_fork(
 def do_fork_generate(
     state, spec, post_spec, fork_epoch, with_block=True, sync_aggregate=None, operation_dict=None
 ):
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
 
-    assert state.slot % spec.SLOTS_PER_EPOCH == 0
+    assert state.slot % spec.SLOTS_PER_EPOCH == spec.Slot(0)
     assert spec.get_current_epoch(state) == fork_epoch
 
     yield "pre", state
@@ -255,12 +257,12 @@ def do_fork_generate(
 
 
 def transition_until_fork(spec, state, fork_epoch):
-    to_slot = spec.Slot(fork_epoch) * spec.SLOTS_PER_EPOCH - spec.Slot(1)
+    to_slot = spec.Slot(fork_epoch) * int(spec.SLOTS_PER_EPOCH) - spec.Slot(1)
     transition_to(spec, state, to_slot)
 
 
 def _transition_until_fork_minus_one(spec, state, fork_epoch):
-    to_slot = spec.Slot(fork_epoch) * spec.SLOTS_PER_EPOCH - spec.Slot(2)
+    to_slot = spec.Slot(fork_epoch) * int(spec.SLOTS_PER_EPOCH) - spec.Slot(2)
     transition_to(spec, state, to_slot)
 
 
@@ -276,7 +278,7 @@ def transition_across_forks(
         epoch = spec.compute_epoch_at_slot(state.slot)
         post_spec, fork_epoch = get_next_fork_transition(spec, epoch, phases)
         if fork_epoch is None or to_epoch < fork_epoch:
-            if with_block and (to_slot == state.slot + 1):
+            if with_block and (to_slot == state.slot + spec.Slot(1)):
                 transition_to(spec, state, to_slot - 1)
                 block = state_transition_with_full_block(
                     spec,
@@ -294,7 +296,7 @@ def transition_across_forks(
                 spec,
                 post_spec,
                 fork_epoch,
-                with_block=with_block and (to_slot == state.slot + 1),
+                with_block=with_block and (to_slot == state.slot + spec.Slot(1)),
                 sync_aggregate=sync_aggregate,
             )
             spec = post_spec
@@ -335,7 +337,7 @@ def run_transition_with_operation(
     The operation would be included into the block at `operation_at_slot`.
     """
     is_at_fork = operation_at_slot == fork_epoch * spec.SLOTS_PER_EPOCH
-    is_right_before_fork = operation_at_slot == fork_epoch * spec.SLOTS_PER_EPOCH - 1
+    is_right_before_fork = operation_at_slot == fork_epoch * spec.SLOTS_PER_EPOCH - spec.Slot(1)
     assert is_at_fork or is_right_before_fork
 
     if is_at_fork:

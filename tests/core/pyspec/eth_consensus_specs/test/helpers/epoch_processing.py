@@ -75,7 +75,7 @@ def run_epoch_processing_from(spec, state, process_name: str):
     """
     Processes to the next epoch transition, from, but not including, the sub-transition named ``process_name``
     """
-    assert (state.slot + 1) % spec.SLOTS_PER_EPOCH == 0
+    assert (state.slot + spec.Slot(1)) % spec.SLOTS_PER_EPOCH == spec.Slot(0)
 
     processing = False
     for name in get_process_calls(spec):

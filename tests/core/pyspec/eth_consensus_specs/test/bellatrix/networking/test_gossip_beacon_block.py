@@ -222,7 +222,7 @@ def test_gossip_beacon_block__reject_parent_consensus_failed_execution_not_verif
     )
 
     # Build child block referencing the "failed" parent
-    child_slot = signed_block.message.slot + 1
+    child_slot = signed_block.message.slot + spec.Slot(1)
     temp_state = copy(state)
     spec.process_slots(temp_state, child_slot)
     proposer_index = spec.get_beacon_proposer_index(temp_state)
@@ -313,7 +313,7 @@ def test_gossip_beacon_block__ignore_parent_consensus_failed_execution_known(spe
         ],
     )
 
-    child_slot = signed_block.message.slot + 1
+    child_slot = signed_block.message.slot + spec.Slot(1)
     temp_state = copy(state)
     spec.process_slots(temp_state, child_slot)
     proposer_index = spec.get_beacon_proposer_index(temp_state)
@@ -403,7 +403,7 @@ def test_gossip_beacon_block__ignore_parent_execution_verified_invalid(spec, sta
     )
 
     # Build child block
-    child_slot = signed_block.message.slot + 1
+    child_slot = signed_block.message.slot + spec.Slot(1)
     temp_state = copy(state)
     spec.process_slots(temp_state, child_slot)
     proposer_index = spec.get_beacon_proposer_index(temp_state)
@@ -492,7 +492,7 @@ def test_gossip_beacon_block__valid_parent_execution_verified_valid(spec, state)
     )
 
     # Build child block
-    child_slot = signed_block.message.slot + 1
+    child_slot = signed_block.message.slot + spec.Slot(1)
     temp_state = copy(state)
     spec.process_slots(temp_state, child_slot)
     proposer_index = spec.get_beacon_proposer_index(temp_state)
@@ -574,7 +574,7 @@ def test_gossip_beacon_block__valid_parent_optimistic(spec, state):
     )
 
     # Build child block
-    child_slot = signed_block.message.slot + 1
+    child_slot = signed_block.message.slot + spec.Slot(1)
     temp_state = copy(state)
     spec.process_slots(temp_state, child_slot)
     proposer_index = spec.get_beacon_proposer_index(temp_state)

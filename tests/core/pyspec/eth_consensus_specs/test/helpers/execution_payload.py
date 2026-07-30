@@ -425,7 +425,9 @@ def build_randomized_execution_payload(spec, state, rng):
     execution_payload.base_fee_per_gas = rng.randint(0, 2**256 - 1)
 
     num_transactions = rng.randint(0, 100)
-    execution_payload.transactions = [get_random_tx(rng) for _ in range(num_transactions)]
+    execution_payload.transactions = spec.Transactions(
+        data=[get_random_tx(rng) for _ in range(num_transactions)]
+    )
 
     execution_payload.block_hash = compute_el_block_hash(spec, execution_payload, state)
 

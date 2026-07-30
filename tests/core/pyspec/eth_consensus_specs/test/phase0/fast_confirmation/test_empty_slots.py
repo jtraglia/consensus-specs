@@ -65,7 +65,7 @@ def test_fcr_handles_single_empty_slot(spec, state):
         parent_root=head_before_empty, graffiti="after_empty", participation_rate=100
     )
 
-    # This block skips a slot, so parent_block.slot + 1 < block.slot
+    # This block skips a slot, so parent_block.slot + spec.Slot(1) < block.slot
     parent_slot = store.blocks[head_before_empty].slot
     block_slot = store.blocks[block_after_empty].slot
     assert parent_slot + 1 < block_slot, "Block should have skipped a slot"

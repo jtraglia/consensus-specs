@@ -374,7 +374,7 @@ def test_gossip_partial_data_column_sidecar__reject_cell_count_mismatch(spec, st
     sidecar = sidecars[0]
     partial = make_partial_sidecar(spec, sidecar, include_header=True)
     # Drop a cell so the count no longer matches the bitmap.
-    partial.partial_column = list(partial.partial_column)[:-1]
+    partial.partial_column = spec.DataColumn(data=list(partial.partial_column)[:-1])
     block_root = block_root_of(spec, sidecar)
     group_id = spec.PartialDataColumnGroupID(beacon_block_root=block_root)
     yield get_filename(group_id), group_id
@@ -433,7 +433,7 @@ def test_gossip_partial_data_column_sidecar__reject_proof_count_mismatch(spec, s
     sidecar = sidecars[0]
     partial = make_partial_sidecar(spec, sidecar, include_header=True)
     # Drop a proof so the count no longer matches the bitmap.
-    partial.kzg_proofs = list(partial.kzg_proofs)[:-1]
+    partial.kzg_proofs = spec.KZGProofs(data=list(partial.kzg_proofs)[:-1])
     block_root = block_root_of(spec, sidecar)
     group_id = spec.PartialDataColumnGroupID(beacon_block_root=block_root)
     yield get_filename(group_id), group_id
@@ -634,7 +634,7 @@ def test_gossip_partial_data_column_sidecar__reject_empty_commitments(spec, stat
     _, sidecars = build_signed_block_and_sidecars(spec, state, blob_count=1)
     sidecar = sidecars[0]
     partial = make_partial_sidecar(spec, sidecar, blob_indices=[], include_header=True)
-    partial.header[0].kzg_commitments = []
+    partial.header[0].kzg_commitments = spec.BlobKZGCommitments(data=[])
     block_root = block_root_of(spec, sidecar)
     group_id = spec.PartialDataColumnGroupID(beacon_block_root=block_root)
     yield get_filename(group_id), group_id
@@ -699,7 +699,7 @@ def test_gossip_partial_data_column_sidecar__ignore_future_slot(spec, state):
     yield get_filename(partial), partial
 
     slot_time_ms = spec.compute_time_at_slot_ms(state, sidecar.signed_block_header.message.slot)
-    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - 1
+    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     column_index = sidecar.index
@@ -745,7 +745,7 @@ def test_gossip_partial_data_column_sidecar__ignore_not_later_than_finalized_slo
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
-    transition_to(spec, state, spec.Slot(spec.SLOTS_PER_EPOCH - 1))
+    transition_to(spec, state, spec.Slot(spec.SLOTS_PER_EPOCH - spec.Slot(1)))
     yield "state", state
 
     _, sidecars = build_signed_block_and_sidecars(spec, state, blob_count=1)
@@ -1403,7 +1403,7 @@ def test_gossip_partial_data_column_sidecar__ignore_cells_with_cached_header_fut
     yield get_filename(cells_msg), cells_msg
 
     slot_time_ms = spec.compute_time_at_slot_ms(state, sidecar.signed_block_header.message.slot)
-    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - 1
+    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     column_index = sidecar.index
@@ -1472,7 +1472,7 @@ def test_gossip_partial_data_column_sidecar__ignore_cells_with_cached_header_not
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
-    transition_to(spec, state, spec.Slot(spec.SLOTS_PER_EPOCH - 1))
+    transition_to(spec, state, spec.Slot(spec.SLOTS_PER_EPOCH - spec.Slot(1)))
     yield "state", state
 
     _, sidecars = build_signed_block_and_sidecars(spec, state, blob_count=1)
@@ -1577,7 +1577,9 @@ def test_gossip_partial_data_column_sidecar__reject_bitmap_length_mismatch(spec,
     cells_msg = make_partial_sidecar(spec, sidecar, blob_indices=[0], include_header=False)
     # Stretch the bitmap so its length exceeds the corresponding header's commitments.
     BitList = type(cells_msg.cells_present_bitmap)
-    cells_msg.cells_present_bitmap = BitList(list(cells_msg.cells_present_bitmap) + [False, False])
+    cells_msg.cells_present_bitmap = spec.CellsBitlist(
+        data=BitList(list(cells_msg.cells_present_bitmap) + [False, False])
+    )
 
     yield get_filename(header_msg), header_msg
     yield get_filename(cells_msg), cells_msg
@@ -1656,7 +1658,7 @@ def test_gossip_partial_data_column_sidecar__reject_invalid_kzg_proofs(spec, sta
     # Corrupt every KZG proof to the point at infinity, which won't verify
     # against the real commitments.
     bad_proof = spec.KZGProof(b"\xc0" + b"\x00" * 47)
-    partial.kzg_proofs = [bad_proof for _ in partial.kzg_proofs]
+    partial.kzg_proofs = spec.KZGProofs(data=[bad_proof for _ in partial.kzg_proofs])
     block_root = block_root_of(spec, sidecar)
     group_id = spec.PartialDataColumnGroupID(beacon_block_root=block_root)
     yield get_filename(group_id), group_id

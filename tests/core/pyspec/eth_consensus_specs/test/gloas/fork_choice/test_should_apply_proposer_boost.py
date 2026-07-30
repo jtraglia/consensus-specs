@@ -83,9 +83,9 @@ def _setup_boost_scenario(spec, state, adjacent, weak, sibling):
         else:
             # Added past the PTC deadline -> block_timeliness[PTC] False -> NOT an
             # equivocation, but still a viable head competitor
-            ptc_due_s = spec.get_payload_attestation_due_ms() // 1000
+            ptc_due_s = spec.get_payload_attestation_due_ms() // spec.Uint64(1000)
             late_time = (
-                parent_block.slot * spec.config.SLOT_DURATION_MS // 1000
+                parent_block.slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
                 + store.genesis_time
                 + ptc_due_s
                 + 1
@@ -108,8 +108,8 @@ def _setup_boost_scenario(spec, state, adjacent, weak, sibling):
 
     # --- boosted block on the parent ---
     if not adjacent:
-        # Leave parent.slot + 1 empty so the boosted block lands two slots after
-        # the parent: parent.slot + 1 < block.slot -> "not adjacent" escape.
+        # Leave parent.slot + spec.Slot(1) empty so the boosted block lands two slots after
+        # the parent: parent.slot + spec.Slot(1) < block.slot -> "not adjacent" escape.
         next_slot(spec, state)
 
     block = build_empty_block_for_next_slot(spec, state)
@@ -147,7 +147,7 @@ def test_should_apply_proposer_boost_parent_not_adjacent(spec, state):
     """
     Parent is two slots back and weak -> the "not adjacent" escape applies the
     boost. (has_equiv is not applicable: the equivocation filter looks for a block
-    at block.slot - 1 with the parent's proposer, which does not exist when the
+    at block.slot - spec.Slot(1) with the parent's proposer, which does not exist when the
     parent is two slots back, and adjacency is checked first anyway.)
 
     Head-discriminating: a client that wrongly withholds here lets the weak parent

@@ -469,7 +469,9 @@ def _spoil_payload_attestation_message(spec, rnd: random.Random, state, ptc_mess
         if validator_index not in ptc:
             ptc_message.validator_index = validator_index
             return
-    ptc_message.validator_index = (ptc_message.validator_index + 1) % len(state.validators)
+    ptc_message.validator_index = (ptc_message.validator_index + spec.ValidatorIndex(1)) % len(
+        state.validators
+    )
 
 
 def _spoil_execution_payload_envelope(spec, rnd: random.Random, signed_envelope):

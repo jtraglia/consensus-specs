@@ -274,7 +274,9 @@ def test_gossip_beacon_attestation__ignore_slot_not_in_range(spec, state):
 
     # Set current time to be before the attestation slot (too far in future)
     attestation_slot_time_ms = spec.compute_time_at_slot_ms(state, attestation.data.slot)
-    current_time_ms = attestation_slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - 1
+    current_time_ms = (
+        attestation_slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - spec.Uint64(1)
+    )
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
@@ -410,7 +412,10 @@ def test_gossip_beacon_attestation__valid_within_clock_disparity_old(spec, state
 
     # Set current time to exactly the boundary (should still be valid)
     attestation_latest_ms = spec.compute_time_at_slot_ms(
-        state, spec.Slot(attestation.data.slot + spec.config.ATTESTATION_PROPAGATION_SLOT_RANGE + 1)
+        state,
+        spec.Slot(
+            attestation.data.slot + spec.config.ATTESTATION_PROPAGATION_SLOT_RANGE + spec.Slot(1)
+        ),
     )
     current_time_ms = attestation_latest_ms + spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY
 
@@ -478,9 +483,14 @@ def test_gossip_beacon_attestation__ignore_slot_too_old(spec, state):
 
     # Set current time to just past the expiry boundary
     attestation_latest_ms = spec.compute_time_at_slot_ms(
-        state, spec.Slot(attestation.data.slot + spec.config.ATTESTATION_PROPAGATION_SLOT_RANGE + 1)
+        state,
+        spec.Slot(
+            attestation.data.slot + spec.config.ATTESTATION_PROPAGATION_SLOT_RANGE + spec.Slot(1)
+        ),
     )
-    current_time_ms = attestation_latest_ms + spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY + 1
+    current_time_ms = (
+        attestation_latest_ms + spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY + spec.Uint64(1)
+    )
 
     yield "current_time_ms", "meta", int(current_time_ms)
 

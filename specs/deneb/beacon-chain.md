@@ -326,7 +326,7 @@ def get_attestation_participation_flag_indices(
     assert is_matching_source
 
     participation_flag_indices = []
-    if is_matching_source and inclusion_delay <= integer_squareroot(SLOTS_PER_EPOCH):
+    if is_matching_source and inclusion_delay <= Slot(integer_squareroot(Uint64(SLOTS_PER_EPOCH))):
         participation_flag_indices.append(TIMELY_SOURCE_FLAG_INDEX)
     # [Modified in Deneb:EIP7045]
     if is_matching_target:
@@ -453,7 +453,7 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     assert data.target.epoch == compute_epoch_at_slot(data.slot)
     # [Modified in Deneb:EIP7045]
     assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot
-    assert data.index < get_committee_count_per_slot(state, data.target.epoch)
+    assert Uint64(data.index) < get_committee_count_per_slot(state, data.target.epoch)
 
     committee = get_beacon_committee(state, data.slot, data.index)
     assert len(attestation.aggregation_bits) == len(committee)

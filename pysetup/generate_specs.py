@@ -1,5 +1,6 @@
 import argparse
 import copy
+import re
 import sys
 from collections import OrderedDict
 from collections.abc import Sequence
@@ -17,7 +18,7 @@ from pysetup.helpers import (
     objects_to_spec,
     parse_config_vars,
 )
-from pysetup.md_doc_paths import get_md_doc_paths
+from pysetup.md_doc_paths import get_md_doc_paths, PREVIOUS_FORK_OF
 from pysetup.md_to_spec import MarkdownToSpec
 from pysetup.spec_builders import spec_builders
 from pysetup.typing import BuildTarget, SpecObject  # type: ignore[attr-defined]
@@ -99,7 +100,64 @@ def build_spec(
         new_objects = copy.deepcopy(class_objects)
         dependency_order_class_objects(class_objects)
 
-    return objects_to_spec(preset_name, spec_object, fork, class_objects)
+    # Names this fork's own documents declare, as opposed to the ones it inherits.
+    redefined: set[str] = set()
+    for source_file, parsed in zip(source_files, all_specs, strict=True):
+        if f"/{fork}/" not in source_file.as_posix():
+            continue
+        redefined |= set(parsed.custom_types)
+        redefined |= set(parsed.ssz_objects)
+        redefined |= set(parsed.dataclasses)
+
+    shared_types = collect_shared_types(fork, redefined, spec_object, class_objects)
+
+    return objects_to_spec(preset_name, spec_object, fork, class_objects, shared_types)
+
+
+def collect_shared_types(
+    fork: str,
+    redefined: set[str],
+    spec_object: SpecObject,
+    class_objects: dict[str, str],
+) -> dict[str, str]:
+    """
+    Find the types this fork inherits unchanged, mapped to the module they come from.
+
+    The SSZ type system compares by exact type, so a ``Slot`` built under one fork
+    must be the same class as the next fork's ``Slot``, and a container handed to
+    ``upgrade_to_<fork>`` must be an instance of the field's declared class. Binding
+    an unchanged type to the previous fork's class is what makes that hold.
+
+    A type counts as unchanged only when this fork's own documents neither declare
+    it nor declare anything it is built from — a container holding a redefined field
+    type is a different shape and has to be declared again here.
+    """
+    previous = PREVIOUS_FORK_OF[fork]
+    if previous is None:
+        return {}
+
+    redefined = set(redefined)
+    candidates = set(spec_object.custom_types) | set(class_objects)
+    candidates -= redefined
+
+    # A type built from a redefined type is itself redefined. Repeat until settled.
+    definitions = {**spec_object.custom_types, **class_objects}
+    while True:
+        newly_redefined = {
+            name
+            for name in candidates
+            if any(
+                re.search(rf"(?<![\w.]){other}\b", definitions[name])
+                for other in redefined
+                if other != name
+            )
+        }
+        if not newly_redefined:
+            break
+        candidates -= newly_redefined
+        redefined |= newly_redefined
+
+    return dict.fromkeys(sorted(candidates), previous)
 
 
 def parse_build_targets(targets_str: str) -> list[BuildTarget]:

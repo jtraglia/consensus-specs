@@ -10,7 +10,7 @@ def test_proposer_lookahead_does_not_contain_slashed_validators(spec, state):
     [EIP-8045] The newly appended epoch of ``proposer_lookahead`` must not
     reference slashed validators.
     """
-    for _ in range(spec.MIN_SEED_LOOKAHEAD + 1):
+    for _ in range(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1)):
         next_epoch(spec, state)
 
     active = spec.get_active_validator_indices(state, spec.get_current_epoch(state))
@@ -33,7 +33,7 @@ def test_proposer_lookahead_full_with_many_slashed_validators(spec, state):
     [EIP-8045] The lookahead must still fill its full ``SLOTS_PER_EPOCH`` entries
     when only a small subset of active validators remain unslashed.
     """
-    for _ in range(spec.MIN_SEED_LOOKAHEAD + 1):
+    for _ in range(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1)):
         next_epoch(spec, state)
 
     active = spec.get_active_validator_indices(state, spec.get_current_epoch(state))
