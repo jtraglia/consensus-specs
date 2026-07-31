@@ -169,7 +169,9 @@ def test_inclusion_list_store_by_slot_and_committee_root__different_committee_ro
             state,
             validator_index=inclusion_list_committee[1],
             # Reverse transaction bytes to ensure IL0 and IL1 have different transactions.
-            transactions=[transaction[::-1] for transaction in transactions],
+            transactions=[
+                spec.Transaction(data=list(transaction)[::-1]) for transaction in transactions
+            ],
         )
 
         # Make IL1 have a different committee root.
@@ -337,7 +339,9 @@ def test_inclusion_list_store_inclusion_list_due(spec, state):
         assert set(inclusion_list_transactions) == set(signed_inclusion_list_1.message.transactions)
 
         # Advance time to after the inclusion list due
-        inclusion_list_due_ceiling = spec.get_inclusion_list_due_ms() // spec.Uint64(1000) + 1
+        inclusion_list_due_ceiling = spec.get_inclusion_list_due_ms() // spec.Uint64(
+            1000
+        ) + spec.Uint64(1)
         assert inclusion_list_due_ceiling < spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
 
         time = forkchoice_store.time + inclusion_list_due_ceiling

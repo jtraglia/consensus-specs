@@ -774,7 +774,7 @@ def get_copy_of_spec(spec):
     module = importlib.util.module_from_spec(module_spec)
     module_spec.loader.exec_module(module)
 
-    # Re-executing the module re-declares every type the fork defines, along with
+    # Re-executing the module redeclares every type the fork defines, along with
     # every constant built from one, while the types it inherits still come from
     # the cached module of the fork that declared them. The SSZ type system
     # compares by exact type, so leaving the fresh declarations in place would

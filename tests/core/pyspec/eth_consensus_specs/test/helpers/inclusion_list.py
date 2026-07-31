@@ -3,7 +3,6 @@ from random import randbytes
 
 from eth_consensus_specs.test.helpers.keys import privkeys
 from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
-from eth_consensus_specs.utils.ssz.ssz_typing import Vector
 
 
 def get_empty_inclusion_list(spec, state, slot=None, validator_index=None):
@@ -12,13 +11,11 @@ def get_empty_inclusion_list(spec, state, slot=None, validator_index=None):
     """
     if slot is None:
         slot = state.slot
+    slot = spec.Slot(slot)
     if slot < state.slot:
         raise Exception("get_empty_inclusion_list cannot build inclusion lists for past slots")
-
     committee = spec.get_inclusion_list_committee(state, slot)
-    committee_root = hash_tree_root(
-        Vector[spec.ValidatorIndex, spec.INCLUSION_LIST_COMMITTEE_SIZE](*committee)
-    )
+    committee_root = hash_tree_root(spec.InclusionListCommittee(data=committee))
 
     if validator_index is None:
         validator_index = committee[0]
@@ -63,8 +60,8 @@ def get_sample_inclusion_list(
     When ``transactions`` is provided, ``max_transaction_size`` and ``max_transaction_count`` are ignored.
     """
     inclusion_list = get_empty_inclusion_list(spec, state, slot, validator_index)
-    inclusion_list.transactions = (
-        get_sample_transactions(spec, max_transaction_size, max_transaction_count)
+    inclusion_list.transactions = spec.Transactions(
+        data=get_sample_transactions(spec, max_transaction_size, max_transaction_count)
         if transactions is None
         else transactions
     )
@@ -103,19 +100,19 @@ def get_sample_transactions(spec, max_transaction_size=200, max_transaction_coun
     """
     Build a list of sample transactions.
     """
-    transaction_size = min(max_transaction_size, spec.config.MAX_BYTES_PER_INCLUSION_LIST)
+    transaction_size = min(int(max_transaction_size), int(spec.config.MAX_BYTES_PER_INCLUSION_LIST))
     transaction_count = min(
-        max_transaction_count,
-        spec.config.MAX_BYTES_PER_INCLUSION_LIST // transaction_size
+        int(max_transaction_count),
+        int(spec.config.MAX_BYTES_PER_INCLUSION_LIST) // transaction_size
         if transaction_size
-        else spec.config.MAX_BYTES_PER_INCLUSION_LIST,
+        else int(spec.config.MAX_BYTES_PER_INCLUSION_LIST),
     )
 
     assert transaction_size >= 0
     assert transaction_count >= 0
 
     transactions = [
-        spec.Transaction(data=randbytes(transaction_size)) for _ in range(transaction_count)
+        spec.Transaction(data=list(randbytes(transaction_size))) for _ in range(transaction_count)
     ]
 
     return transactions
@@ -125,7 +122,7 @@ def sign_inclusion_list(spec, state, inclusion_list):
     """
     Sign an inclusion list.
     """
-    privkey = privkeys[inclusion_list.validator_index]
+    privkey = privkeys[int(inclusion_list.validator_index)]
     signature = spec.get_inclusion_list_signature(state, inclusion_list, privkey)
 
     return spec.SignedInclusionList(message=inclusion_list, signature=signature)

@@ -1110,7 +1110,7 @@ def test_full_builder_payload_reserves_sweep_slot(spec, state):
     assert int(state.next_withdrawal_validator_index) == correct_result, (
         f"Spec produces {state.next_withdrawal_validator_index}, expected {correct_result}"
     )
-    assert state.next_withdrawal_validator_index != buggy_result, (
+    assert int(state.next_withdrawal_validator_index) != buggy_result, (
         f"Bug fix verified: spec no longer produces buggy result {buggy_result}"
     )
 

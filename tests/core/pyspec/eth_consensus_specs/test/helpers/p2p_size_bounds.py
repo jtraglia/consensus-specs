@@ -85,7 +85,7 @@ def build_max_size_partial_data_column_sidecar(spec):
 
 def build_max_size_signed_inclusion_list(spec):
     payload_size = int(spec.config.MAX_BYTES_PER_INCLUSION_LIST)
-    transactions = spec.Transactions(data=[spec.Transaction(data=b"\x00" * payload_size)])
+    transactions = spec.Transactions(data=[spec.Transaction(data=list(b"\x00" * payload_size))])
     inclusion_list = spec.InclusionList(
         slot=spec.Slot(0),
         validator_index=spec.ValidatorIndex(0),
@@ -98,7 +98,7 @@ def build_max_size_signed_inclusion_list(spec):
 def build_max_size_signed_execution_proof(spec):
     return spec.SignedExecutionProof(
         message=spec.ExecutionProof(
-            proof_data=spec.ProofData(data=b"\x00" * int(spec.MAX_PROOF_SIZE)),
+            proof_data=spec.ProofData(data=list(b"\x00" * int(spec.MAX_PROOF_SIZE))),
             proof_type=spec.ProofType(0),
             public_input=spec.PublicInput(),
         ),

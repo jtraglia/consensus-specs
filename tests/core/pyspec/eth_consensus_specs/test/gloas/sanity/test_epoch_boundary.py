@@ -531,7 +531,7 @@ def test_switch_to_compounding_across_epoch_boundary(spec, state):
     for ptc_slice in state.ptc_window:
         assert len(ptc_slice) == int(spec.PTC_SIZE)
         for member_index in ptc_slice:
-            assert member_index < len(state.validators)
+            assert member_index < spec.ValidatorIndex(len(state.validators))
 
     # With EPOCHS_PER_SYNC_COMMITTEE_PERIOD = 8 in minimal, the 0 -> 1 epoch
     # transition must not rotate the committees, and they must not have been
@@ -543,7 +543,7 @@ def test_switch_to_compounding_across_epoch_boundary(spec, state):
 
     _assert_registry_integrity(spec, state, pre_state)
 
-    assert state.slot == last_slot + 1
+    assert state.slot == spec.Slot(last_slot) + spec.Slot(1)
 
 
 @with_gloas_and_later
