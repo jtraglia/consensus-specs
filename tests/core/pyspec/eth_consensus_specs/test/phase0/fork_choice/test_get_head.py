@@ -144,9 +144,8 @@ def test_split_tie_breaker_no_attestations(spec, state):
     signed_block_2 = state_transition_and_sign_block(spec, block_2_state, block_2)
 
     # Tick time past slot 1 so proposer score boost does not apply
-    time = (
-        store.genesis_time
-        + (block_2.slot + spec.Slot(1)) * int(spec.config.SLOT_DURATION_MS) // 1000
+    time = store.genesis_time + spec.Uint64(
+        int(block_2.slot + spec.Slot(1)) * int(spec.config.SLOT_DURATION_MS) // 1000
     )
     on_tick_and_append_step(spec, store, time, test_steps)
 
@@ -260,7 +259,7 @@ def test_filtered_block_tree(spec, state):
     next_epoch(spec, non_viable_state)
     attestations = []
     for i in range(spec.SLOTS_PER_EPOCH):
-        slot = rogue_block.slot + i
+        slot = rogue_block.slot + spec.Slot(i)
         for index in range(
             spec.get_committee_count_per_slot(non_viable_state, spec.compute_epoch_at_slot(slot))
         ):
@@ -268,9 +267,14 @@ def test_filtered_block_tree(spec, state):
             attestations.append(attestation)
 
     # tick time forward to be able to include up to the latest attestation
-    current_time = (attestations[-1].data.slot + spec.Slot(1)) * int(
-        spec.config.SLOT_DURATION_MS
-    ) // 1000 + store.genesis_time
+    current_time = (
+        spec.Uint64(
+            int(attestations[-1].data.slot + spec.Slot(1))
+            * int(spec.config.SLOT_DURATION_MS)
+            // 1000
+        )
+        + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
 
     # include rogue block and associated attestations in the store
@@ -336,9 +340,8 @@ def test_proposer_boost_correct_head(spec, state):
     check_head_against_root(spec, store, spec.hash_tree_root(block_1))
 
     # After block_1.slot, the head should revert to block_2
-    time = (
-        store.genesis_time
-        + (block_1.slot + spec.Slot(1)) * int(spec.config.SLOT_DURATION_MS) // 1000
+    time = store.genesis_time + spec.Uint64(
+        int(block_1.slot + spec.Slot(1)) * int(spec.config.SLOT_DURATION_MS) // 1000
     )
     on_tick_and_append_step(spec, store, time, test_steps)
     assert store.proposer_boost_root == spec.Root()
@@ -395,9 +398,8 @@ def test_discard_equivocations_on_attester_slashing(spec, state):
     assert spec.hash_tree_root(block_1) < spec.hash_tree_root(block_2)
 
     # Tick to (block_eqv.slot + spec.Slot(2)) slot time
-    time = (
-        store.genesis_time
-        + (block_eqv.slot + spec.Slot(2)) * int(spec.config.SLOT_DURATION_MS) // 1000
+    time = store.genesis_time + spec.Uint64(
+        int(block_eqv.slot + spec.Slot(2)) * int(spec.config.SLOT_DURATION_MS) // 1000
     )
     on_tick_and_append_step(spec, store, time, test_steps)
 
@@ -444,10 +446,10 @@ def test_discard_equivocations_slashed_validator_censoring(spec, state):
 
     # We will slash all validators voting at the 2nd slot of epoch 0
     current_slot = spec.get_current_slot(store)
-    eqv_slot = current_slot + 1
+    eqv_slot = current_slot + spec.Slot(1)
     eqv_epoch = spec.compute_epoch_at_slot(eqv_slot)
     assert eqv_slot % spec.SLOTS_PER_EPOCH == spec.Slot(1)
-    assert eqv_epoch == 0
+    assert eqv_epoch == spec.Epoch(0)
     slashed_validators = []
     comm_count = spec.get_committee_count_per_slot(state, eqv_epoch)
     for comm_index in range(comm_count):
@@ -483,7 +485,7 @@ def test_discard_equivocations_slashed_validator_censoring(spec, state):
 
     # Create two competing blocks at eqv_slot
     next_slots(spec, state, eqv_slot - state.slot - spec.Slot(1))
-    assert state.slot == eqv_slot - 1
+    assert state.slot == eqv_slot - spec.Slot(1)
 
     state_1 = copy(state)
     block_1 = build_empty_block_for_next_slot(spec, state_1)
@@ -512,9 +514,8 @@ def test_discard_equivocations_slashed_validator_censoring(spec, state):
     assert block_low_root < block_high_root
 
     # Tick to next slot so proposer boost does not apply
-    current_time = (
-        store.genesis_time
-        + (block_1.slot + spec.Slot(1)) * int(spec.config.SLOT_DURATION_MS) // 1000
+    current_time = store.genesis_time + spec.Uint64(
+        int(block_1.slot + spec.Slot(1)) * int(spec.config.SLOT_DURATION_MS) // 1000
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
 

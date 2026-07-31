@@ -90,9 +90,9 @@ def test_bls_change(spec, state):
 
     post_credentials = state.validators[index].withdrawal_credentials
     assert pre_credentials != post_credentials
-    assert post_credentials[:1] == spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX
+    assert spec.Bytes1(post_credentials[:1]) == spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX
     assert post_credentials[1:12] == b"\x00" * 11
-    assert post_credentials[12:] == signed_address_change.message.to_execution_address
+    assert post_credentials[12:] == bytes(signed_address_change.message.to_execution_address)
 
 
 @with_all_phases_from_to(CAPELLA, FULU)
@@ -113,7 +113,7 @@ def test_deposit_and_bls_change(spec, state):
     )
 
     deposit_credentials = deposit.data.withdrawal_credentials
-    assert deposit_credentials[:1] == spec.BLS_WITHDRAWAL_PREFIX
+    assert spec.Bytes1(deposit_credentials[:1]) == spec.BLS_WITHDRAWAL_PREFIX
 
     yield "pre", state
 
@@ -130,16 +130,16 @@ def test_deposit_and_bls_change(spec, state):
     assert len(state.balances) == initial_balances_len + 1
     validator_credentials = state.validators[validator_index].withdrawal_credentials
     assert deposit_credentials != validator_credentials
-    assert validator_credentials[:1] == spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX
+    assert spec.Bytes1(validator_credentials[:1]) == spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX
     assert validator_credentials[1:12] == b"\x00" * 11
-    assert validator_credentials[12:] == signed_address_change.message.to_execution_address
+    assert validator_credentials[12:] == bytes(signed_address_change.message.to_execution_address)
 
 
 @with_capella_and_later
 @spec_state_test
 def test_exit_and_bls_change(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     index = 0
     signed_address_change = get_signed_address_change(spec, state, validator_index=index)
@@ -231,7 +231,7 @@ def test_full_withdrawal_in_epoch_transition(spec, state):
     yield "blocks", [signed_block]
     yield "post", state
 
-    assert state.balances[index] == 0
+    assert state.balances[index] == spec.Gwei(0)
     assert len(get_expected_withdrawals(spec, state)) == 0
 
 
@@ -271,7 +271,7 @@ def test_many_partial_withdrawals_in_epoch_transition(spec, state):
     assert len(state.validators) > int(spec.MAX_WITHDRAWALS_PER_PAYLOAD)
 
     for i in range(spec.MAX_WITHDRAWALS_PER_PAYLOAD + spec.Uint64(1)):
-        index = (i + state.next_withdrawal_index) % len(state.validators)
+        index = (i + int(state.next_withdrawal_index)) % len(state.validators)
         if is_post_gloas(spec):
             # In Gloas, partial withdrawals must be explicitly added to pending_partial_withdrawals
             prepare_pending_withdrawal(spec, state, index, amount=1000000000000)
@@ -284,7 +284,7 @@ def test_many_partial_withdrawals_in_epoch_transition(spec, state):
             spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
             spec.MAX_WITHDRAWALS_PER_PAYLOAD - spec.Uint64(1),
         )
-        assert len(get_expected_withdrawals(spec, state)) == expected_count
+        assert len(get_expected_withdrawals(spec, state)) == int(expected_count)
         # Make parent block full in Gloas so withdrawals are processed
         state.latest_block_hash = state.latest_execution_payload_bid.block_hash
     else:
@@ -315,7 +315,7 @@ def test_many_partial_withdrawals_in_epoch_transition(spec, state):
                 if w.withdrawable_epoch <= spec.get_current_epoch(state)
             ]
         )
-        assert remaining_pending == expected_remaining
+        assert int(remaining_pending) == int(expected_remaining)
     else:
         assert len(get_expected_withdrawals(spec, state)) == 1
 
@@ -361,12 +361,13 @@ def _perform_valid_withdrawal(spec, state):
     # In Gloas, the withdrawal processing logic is different
     if is_post_gloas(spec):
         # In Gloas, only a limited number of withdrawals can be processed at a time
-        expected_processed = min(len(expected_withdrawals), spec.MAX_WITHDRAWALS_PER_PAYLOAD)
-        assert state.next_withdrawal_index == pre_next_withdrawal_index + expected_processed
+        expected_processed = min(len(expected_withdrawals), int(spec.MAX_WITHDRAWALS_PER_PAYLOAD))
+        assert state.next_withdrawal_index == pre_next_withdrawal_index + spec.WithdrawalIndex(
+            expected_processed
+        )
     else:
-        assert (
-            state.next_withdrawal_index
-            == pre_next_withdrawal_index + spec.MAX_WITHDRAWALS_PER_PAYLOAD
+        assert state.next_withdrawal_index == pre_next_withdrawal_index + spec.WithdrawalIndex(
+            spec.MAX_WITHDRAWALS_PER_PAYLOAD
         )
 
     withdrawn_indices = [withdrawal.validator_index for withdrawal in expected_withdrawals]
@@ -379,12 +380,13 @@ def _perform_valid_withdrawal(spec, state):
 
     # Repeat the same assertion logic
     if is_post_gloas(spec):
-        expected_processed = min(len(expected_withdrawals), spec.MAX_WITHDRAWALS_PER_PAYLOAD)
-        assert state.next_withdrawal_index == pre_next_withdrawal_index + expected_processed
+        expected_processed = min(len(expected_withdrawals), int(spec.MAX_WITHDRAWALS_PER_PAYLOAD))
+        assert state.next_withdrawal_index == pre_next_withdrawal_index + spec.WithdrawalIndex(
+            expected_processed
+        )
     else:
-        assert (
-            state.next_withdrawal_index
-            == pre_next_withdrawal_index + spec.MAX_WITHDRAWALS_PER_PAYLOAD
+        assert state.next_withdrawal_index == pre_next_withdrawal_index + spec.WithdrawalIndex(
+            spec.MAX_WITHDRAWALS_PER_PAYLOAD
         )
 
     return pre_state, signed_block_1, pre_next_withdrawal_index
@@ -406,10 +408,9 @@ def test_withdrawal_success_two_blocks(spec, state):
     if is_post_gloas(spec):
         pass  # The withdrawal index should remain the same as after block 1
     else:
-        assert (
-            state.next_withdrawal_index
-            == pre_next_withdrawal_index + spec.MAX_WITHDRAWALS_PER_PAYLOAD * spec.Uint64(2)
-        )
+        assert state.next_withdrawal_index == pre_next_withdrawal_index + spec.WithdrawalIndex(
+            spec.MAX_WITHDRAWALS_PER_PAYLOAD
+        ) * spec.WithdrawalIndex(2)
 
     yield "blocks", [signed_block_1, signed_block_2]
     yield "post", state
@@ -489,14 +490,14 @@ def test_top_up_to_fully_withdrawn_validator(spec, state):
 
     # Fully withdraw validator
     set_validator_fully_withdrawable(spec, state, validator_index)
-    assert state.balances[validator_index] > 0
+    assert state.balances[validator_index] > spec.Gwei(0)
 
     # Make parent block full in Gloas so withdrawals are processed
     if is_post_gloas(spec):
         state.latest_block_hash = state.latest_execution_payload_bid.block_hash
 
     next_epoch_via_block(spec, state)
-    assert state.balances[validator_index] == 0
+    assert state.balances[validator_index] == spec.Gwei(0)
     assert state.validators[validator_index].effective_balance > spec.Gwei(0)
     next_epoch_via_block(spec, state)
     assert state.validators[validator_index].effective_balance == spec.Gwei(0)

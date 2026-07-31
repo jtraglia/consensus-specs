@@ -89,7 +89,7 @@ def create_valid_signed_contribution_and_proof(
     contribution = spec.SyncCommitteeContribution(
         slot=slot,
         beacon_block_root=block_root,
-        subcommittee_index=subcommittee_index,
+        subcommittee_index=spec.Uint64(subcommittee_index),
         aggregation_bits=spec.SyncSubcommitteeBits(data=aggregation_bits),
         signature=aggregate_signature,
     )
@@ -151,7 +151,7 @@ def test_gossip_sync_committee_contribution_and_proof__valid(spec, state):
         seen=seen,
         state=state,
         signed_contribution_and_proof=signed_cap,
-        current_time_ms=current_time_ms + 500,
+        current_time_ms=current_time_ms + spec.Uint64(500),
     )
     assert result == "valid"
     assert reason is None
@@ -172,8 +172,8 @@ def test_gossip_sync_committee_contribution_and_proof__valid_at_period_boundary(
     yield "topic", "meta", "sync_committee_contribution_and_proof"
 
     # Advance to the last slot of the first sync committee period
-    period_length = spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
-    state.slot = period_length - 1
+    period_length = spec.Slot(spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
+    state.slot = period_length - spec.Slot(1)
 
     yield "state", state
 
@@ -201,7 +201,7 @@ def test_gossip_sync_committee_contribution_and_proof__valid_at_period_boundary(
         seen=seen,
         state=state,
         signed_contribution_and_proof=signed_cap,
-        current_time_ms=current_time_ms + 500,
+        current_time_ms=current_time_ms + spec.Uint64(500),
     )
     assert result == "valid"
     assert reason is None
@@ -357,7 +357,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_subcommitt
         seen=seen,
         state=state,
         signed_contribution_and_proof=signed_cap,
-        current_time_ms=current_time_ms + 500,
+        current_time_ms=current_time_ms + spec.Uint64(500),
     )
     assert result == "reject"
     assert reason == "subcommittee index out of range"
@@ -398,7 +398,9 @@ def test_gossip_sync_committee_contribution_and_proof__reject_no_participants(sp
 
     # Clear all aggregation bits
     subcommittee_size = spec.SYNC_COMMITTEE_SIZE // spec.SYNC_COMMITTEE_SUBNET_COUNT
-    signed_cap.message.contribution.aggregation_bits = [False] * subcommittee_size
+    signed_cap.message.contribution.aggregation_bits = spec.SyncSubcommitteeBits(
+        data=[False] * int(subcommittee_size)
+    )
 
     yield get_filename(signed_cap), signed_cap
 
@@ -411,7 +413,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_no_participants(sp
         seen=seen,
         state=state,
         signed_contribution_and_proof=signed_cap,
-        current_time_ms=current_time_ms + 500,
+        current_time_ms=current_time_ms + spec.Uint64(500),
     )
     assert result == "reject"
     assert reason == "contribution has no participants"
@@ -482,7 +484,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_not_aggregator(spe
         seen=seen,
         state=state,
         signed_contribution_and_proof=signed_cap,
-        current_time_ms=current_time_ms + 500,
+        current_time_ms=current_time_ms + spec.Uint64(500),
     )
     assert result == "reject"
     assert reason == "validator is not selected as aggregator"
@@ -540,7 +542,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_aggregator_not_in_
         seen=seen,
         state=state,
         signed_contribution_and_proof=signed_cap,
-        current_time_ms=current_time_ms + 500,
+        current_time_ms=current_time_ms + spec.Uint64(500),
     )
     assert result == "reject"
     assert reason == "aggregator not in subcommittee"
@@ -594,7 +596,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_aggregator_index_o
         seen=seen,
         state=state,
         signed_contribution_and_proof=signed_cap,
-        current_time_ms=current_time_ms + 500,
+        current_time_ms=current_time_ms + spec.Uint64(500),
     )
     assert result == "reject"
     assert reason == "aggregator index out of range"
@@ -639,7 +641,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_superset_contribut
         if pubkey == aggregator_pubkey:
             aggregator_bit = i
             break
-    second_bit = (aggregator_bit + 1) % subcommittee_size
+    second_bit = (aggregator_bit + 1) % int(subcommittee_size)
 
     second_pubkey = subcommittee_pubkeys[second_bit]
     second_validator_index = None
@@ -654,14 +656,14 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_superset_contribut
     sig1 = bls.Sign(privkeys[aggregator_index], signing_root)
     sig2 = bls.Sign(privkeys[second_validator_index], signing_root)
 
-    superset_bits = [False] * subcommittee_size
+    superset_bits = [False] * int(subcommittee_size)
     superset_bits[aggregator_bit] = True
     superset_bits[second_bit] = True
 
     superset_contribution = spec.SyncCommitteeContribution(
         slot=state.slot,
         beacon_block_root=block_root,
-        subcommittee_index=subcommittee_index,
+        subcommittee_index=spec.Uint64(subcommittee_index),
         aggregation_bits=spec.SyncSubcommitteeBits(data=superset_bits),
         signature=bls.Aggregate([sig1, sig2]),
     )
@@ -696,7 +698,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_superset_contribut
         seen=seen,
         state=state,
         signed_contribution_and_proof=signed_superset,
-        current_time_ms=current_time_ms + 500,
+        current_time_ms=current_time_ms + spec.Uint64(500),
     )
     assert result == "valid"
     assert reason is None
@@ -721,7 +723,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_superset_contribut
         seen=seen,
         state=state,
         signed_contribution_and_proof=signed_subset,
-        current_time_ms=current_time_ms + 600,
+        current_time_ms=current_time_ms + spec.Uint64(600),
     )
     assert result == "ignore"
     assert reason == "already seen contribution for this data"
@@ -763,7 +765,7 @@ def test_gossip_sync_committee_contribution_and_proof__valid_non_superset_contri
         if pubkey == aggregator_pubkey:
             aggregator_bit = i
             break
-    second_bit = (aggregator_bit + 1) % subcommittee_size
+    second_bit = (aggregator_bit + 1) % int(subcommittee_size)
 
     second_pubkey = subcommittee_pubkeys[second_bit]
     second_validator_index = None
@@ -793,7 +795,7 @@ def test_gossip_sync_committee_contribution_and_proof__valid_non_superset_contri
         seen=seen,
         state=state,
         signed_contribution_and_proof=signed_subset,
-        current_time_ms=current_time_ms + 500,
+        current_time_ms=current_time_ms + spec.Uint64(500),
     )
     assert result == "valid"
     assert reason is None
@@ -812,14 +814,14 @@ def test_gossip_sync_committee_contribution_and_proof__valid_non_superset_contri
     sig1 = bls.Sign(privkeys[aggregator_index], signing_root)
     sig2 = bls.Sign(privkeys[second_validator_index], signing_root)
 
-    superset_bits = [False] * subcommittee_size
+    superset_bits = [False] * int(subcommittee_size)
     superset_bits[aggregator_bit] = True
     superset_bits[second_bit] = True
 
     superset_contribution = spec.SyncCommitteeContribution(
         slot=state.slot,
         beacon_block_root=block_root,
-        subcommittee_index=subcommittee_index,
+        subcommittee_index=spec.Uint64(subcommittee_index),
         aggregation_bits=spec.SyncSubcommitteeBits(data=superset_bits),
         signature=bls.Aggregate([sig1, sig2]),
     )
@@ -845,7 +847,7 @@ def test_gossip_sync_committee_contribution_and_proof__valid_non_superset_contri
         seen=seen,
         state=state,
         signed_contribution_and_proof=signed_superset,
-        current_time_ms=current_time_ms + 600,
+        current_time_ms=current_time_ms + spec.Uint64(600),
     )
     assert result == "valid"
     assert reason is None
@@ -892,7 +894,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_duplicate_aggregat
         seen=seen,
         state=state,
         signed_contribution_and_proof=signed_cap1,
-        current_time_ms=current_time_ms + 500,
+        current_time_ms=current_time_ms + spec.Uint64(500),
     )
     assert result == "valid"
     assert reason is None
@@ -917,7 +919,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_duplicate_aggregat
         seen=seen,
         state=state,
         signed_contribution_and_proof=signed_cap2,
-        current_time_ms=current_time_ms + 600,
+        current_time_ms=current_time_ms + spec.Uint64(600),
     )
     assert result == "ignore"
     assert reason == "already seen contribution from this aggregator"
@@ -975,7 +977,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_selection_
         seen=seen,
         state=state,
         signed_contribution_and_proof=signed_cap,
-        current_time_ms=current_time_ms + 500,
+        current_time_ms=current_time_ms + spec.Uint64(500),
     )
     assert result == "reject"
     assert reason == "invalid selection proof signature"
@@ -1035,7 +1037,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_aggregator
         seen=seen,
         state=state,
         signed_contribution_and_proof=signed_cap,
-        current_time_ms=current_time_ms + 500,
+        current_time_ms=current_time_ms + spec.Uint64(500),
     )
     assert result == "reject"
     assert reason == "invalid aggregator signature"
@@ -1102,7 +1104,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_aggregate_
         seen=seen,
         state=state,
         signed_contribution_and_proof=signed_cap,
-        current_time_ms=current_time_ms + 500,
+        current_time_ms=current_time_ms + spec.Uint64(500),
     )
     assert result == "reject"
     assert reason == "invalid aggregate signature"

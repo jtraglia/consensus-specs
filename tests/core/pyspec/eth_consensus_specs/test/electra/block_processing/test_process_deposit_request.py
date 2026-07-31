@@ -207,7 +207,7 @@ def test_process_deposit_request_set_start_index_only_once(spec, state):
     amount = spec.MIN_ACTIVATION_BALANCE
     deposit_request = prepare_deposit_request(spec, validator_index, amount, signed=True)
 
-    assert initial_start_index != deposit_request.index
+    assert spec.Uint64(initial_start_index) != deposit_request.index
     state.deposit_requests_start_index = initial_start_index
 
     pre_state = copy(state)
@@ -282,7 +282,7 @@ def test_process_deposit_request_pending_deposit_slot_binding(spec, state):
     )
 
     expected_slot = state.slot
-    assert expected_slot > 0  # Ensure non-zero slot for meaningful test
+    assert expected_slot > spec.Slot(0)  # Ensure non-zero slot for meaningful test
 
     pre_state = copy(state)
 

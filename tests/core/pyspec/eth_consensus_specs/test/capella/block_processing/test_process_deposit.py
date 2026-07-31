@@ -22,9 +22,9 @@ def test_success_top_up_to_withdrawn_validator(spec, state):
 
     # Fully withdraw validator
     set_validator_fully_withdrawable(spec, state, validator_index)
-    assert state.balances[validator_index] > 0
+    assert state.balances[validator_index] > spec.Gwei(0)
     next_epoch_via_block(spec, state)
-    assert state.balances[validator_index] == 0
+    assert state.balances[validator_index] == spec.Gwei(0)
     assert state.validators[validator_index].effective_balance > spec.Gwei(0)
     next_epoch_via_block(spec, state)
     assert state.validators[validator_index].effective_balance == spec.Gwei(0)

@@ -1001,7 +1001,7 @@ def is_valid_indexed_attestation(
     if (
         len(indices) == 0
         # [New in Gloas:EIP7688]
-        or len(indices) > MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
+        or Uint64(len(indices)) > MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
         or list(indices) != sorted(set(indices))
     ):
         return False
@@ -1016,7 +1016,9 @@ def is_valid_indexed_attestation(
 
 ```python
 def is_builder_index(validator_index: ValidatorIndex) -> bool:
-    return (validator_index & ValidatorIndex(BUILDER_INDEX_FLAG)) != ValidatorIndex(0)
+    return (ValidatorIndex(validator_index) & ValidatorIndex(BUILDER_INDEX_FLAG)) != ValidatorIndex(
+        0
+    )
 ```
 
 #### New `is_active_builder`
@@ -1127,13 +1129,19 @@ def get_pending_balance_to_withdraw_for_builder(
     state: BeaconState, builder_index: BuilderIndex
 ) -> Gwei:
     return sum(
-        withdrawal.amount
-        for withdrawal in state.builder_pending_withdrawals
-        if withdrawal.builder_index == builder_index
+        (
+            withdrawal.amount
+            for withdrawal in state.builder_pending_withdrawals
+            if withdrawal.builder_index == BuilderIndex(builder_index)
+        ),
+        Gwei(0),
     ) + sum(
-        payment.withdrawal.amount
-        for payment in state.builder_pending_payments
-        if payment.withdrawal.builder_index == builder_index
+        (
+            payment.withdrawal.amount
+            for payment in state.builder_pending_payments
+            if payment.withdrawal.builder_index == BuilderIndex(builder_index)
+        ),
+        Gwei(0),
     )
 ```
 
@@ -1320,7 +1328,7 @@ def get_attestation_participation_flag_indices(
     else:
         slot_index = parent_slot % SLOTS_PER_HISTORICAL_ROOT
         payload_index = state.execution_payload_availability[slot_index]
-        payload_matches = data.index == payload_index
+        payload_matches = data.index == CommitteeIndex(payload_index)
 
     # Matching head
     head_root = get_block_root_at_slot(state, data.slot)
@@ -1373,7 +1381,7 @@ def get_indexed_payload_attestation(
     attesting_indices = [index for i, index in enumerate(ptc) if bits[i]]
 
     return IndexedPayloadAttestation(
-        attesting_indices=sorted(attesting_indices),
+        attesting_indices=PTCAttestingIndices(data=sorted(attesting_indices)),
         data=payload_attestation.data,
         signature=payload_attestation.signature,
     )
@@ -1434,7 +1442,7 @@ def get_consolidation_churn_limit(state: BeaconState) -> Gwei:
     Derived from total active balance and rounded to
     ``EFFECTIVE_BALANCE_INCREMENT``.
     """
-    churn = get_total_active_balance(state) // CONSOLIDATION_CHURN_LIMIT_QUOTIENT
+    churn = get_total_active_balance(state) // Gwei(CONSOLIDATION_CHURN_LIMIT_QUOTIENT)
     return churn - churn % EFFECTIVE_BALANCE_INCREMENT
 ```
 
@@ -1459,8 +1467,8 @@ def compute_exit_epoch_and_update_churn(state: BeaconState, exit_balance: Gwei) 
     # Exit doesn't fit in the current earliest epoch.
     if exit_balance > exit_balance_to_consume:
         balance_to_process = exit_balance - exit_balance_to_consume
-        additional_epochs = (balance_to_process - 1) // per_epoch_churn + 1
-        earliest_exit_epoch += additional_epochs
+        additional_epochs = (balance_to_process - Gwei(1)) // per_epoch_churn + Gwei(1)
+        earliest_exit_epoch += Epoch(additional_epochs)
         exit_balance_to_consume += additional_epochs * per_epoch_churn
 
     # Consume the balance and update state variables.
@@ -1488,7 +1496,7 @@ def initiate_builder_exit(state: BeaconState, builder_index: BuilderIndex) -> No
 
 ```python
 def settle_builder_payment(state: BeaconState, payment_index: Uint64) -> None:
-    assert payment_index < len(state.builder_pending_payments)
+    assert Uint64(payment_index) < Uint64(len(state.builder_pending_payments))
     payment = state.builder_pending_payments[payment_index]
     if payment.withdrawal.amount > Gwei(0):
         state.builder_pending_withdrawals.append(payment.withdrawal)
@@ -1699,10 +1707,10 @@ def apply_parent_execution_payload(
     parent_slot = parent_bid.slot
     parent_epoch = compute_epoch_at_slot(parent_slot)
 
-    assert len(requests.withdrawals) <= MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD
-    assert len(requests.consolidations) <= MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD
-    assert len(requests.builder_deposits) <= MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD
-    assert len(requests.builder_exits) <= MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD
+    assert Uint64(len(requests.withdrawals)) <= MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD
+    assert Uint64(len(requests.consolidations)) <= MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD
+    assert Uint64(len(requests.builder_deposits)) <= MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD
+    assert Uint64(len(requests.builder_exits)) <= MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD
 
     # Process execution requests from parent's payload. The execution
     # requests are processed at state.slot (child's slot), not the parent's slot.
@@ -1807,7 +1815,7 @@ def get_builders_sweep_withdrawals(
     prior_withdrawals: Sequence[Withdrawal],
 ) -> Tuple[Sequence[Withdrawal], WithdrawalIndex, Uint64]:
     epoch = get_current_epoch(state)
-    builders_limit = min(len(state.builders), MAX_BUILDERS_PER_WITHDRAWALS_SWEEP)
+    builders_limit = min(Uint64(len(state.builders)), MAX_BUILDERS_PER_WITHDRAWALS_SWEEP)
     withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD - Uint64(1)
     assert Uint64(len(prior_withdrawals)) <= withdrawals_limit
 
@@ -1902,7 +1910,7 @@ def apply_withdrawals(state: BeaconState, withdrawals: Sequence[Withdrawal]) -> 
 def update_payload_expected_withdrawals(
     state: BeaconState, withdrawals: Sequence[Withdrawal]
 ) -> None:
-    state.payload_expected_withdrawals = Withdrawals(withdrawals)
+    state.payload_expected_withdrawals = Withdrawals(data=withdrawals)
 ```
 
 ##### New `update_builder_pending_withdrawals`
@@ -1911,9 +1919,9 @@ def update_payload_expected_withdrawals(
 def update_builder_pending_withdrawals(
     state: BeaconState, processed_builder_withdrawals_count: Uint64
 ) -> None:
-    state.builder_pending_withdrawals = state.builder_pending_withdrawals[
-        processed_builder_withdrawals_count:
-    ]
+    state.builder_pending_withdrawals = BuilderPendingWithdrawals(
+        data=state.builder_pending_withdrawals[processed_builder_withdrawals_count:]
+    )
 ```
 
 ##### New `update_next_withdrawal_builder_index`
@@ -1924,8 +1932,10 @@ def update_next_withdrawal_builder_index(
 ) -> None:
     if len(state.builders) > 0:
         # Update the next builder index to start the next withdrawal sweep
-        next_index = state.next_withdrawal_builder_index + processed_builders_sweep_count
-        next_builder_index = BuilderIndex(next_index % len(state.builders))
+        next_index = state.next_withdrawal_builder_index + BuilderIndex(
+            processed_builders_sweep_count
+        )
+        next_builder_index = next_index % BuilderIndex(len(state.builders))
         state.next_withdrawal_builder_index = next_builder_index
 ```
 

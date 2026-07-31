@@ -110,7 +110,7 @@ def process_execution_proof(
     proof_engine: ProofEngine,
 ) -> None:
     proof_message = signed_proof.message
-    assert len(proof_message.proof_data) <= MAX_PROOF_SIZE
+    assert Uint64(len(proof_message.proof_data)) <= MAX_PROOF_SIZE
 
     # Verify prover is an active validator
     validator = state.validators[signed_proof.validator_index]

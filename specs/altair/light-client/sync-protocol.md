@@ -391,8 +391,8 @@ def initialize_light_client_store(
         next_sync_committee=SyncCommittee(),
         best_valid_update=None,
         optimistic_header=bootstrap.header,
-        previous_max_active_participants=0,
-        current_max_active_participants=0,
+        previous_max_active_participants=Uint64(0),
+        current_max_active_participants=Uint64(0),
     )
 ```
 
@@ -433,7 +433,7 @@ def validate_light_client_update(
     store_period = compute_sync_committee_period_at_slot(store.finalized_header.beacon.slot)
     update_signature_period = compute_sync_committee_period_at_slot(update.signature_slot)
     if is_next_sync_committee_known(store):
-        assert update_signature_period in (store_period, store_period + 1)
+        assert update_signature_period in (store_period, store_period + Epoch(1))
     else:
         assert update_signature_period == store_period
 
@@ -511,11 +511,11 @@ def apply_light_client_update(store: LightClientStore, update: LightClientUpdate
     if not is_next_sync_committee_known(store):
         assert update_finalized_period == store_period
         store.next_sync_committee = update.next_sync_committee
-    elif update_finalized_period == store_period + 1:
+    elif update_finalized_period == store_period + Epoch(1):
         store.current_sync_committee = store.next_sync_committee
         store.next_sync_committee = update.next_sync_committee
         store.previous_max_active_participants = store.current_max_active_participants
-        store.current_max_active_participants = 0
+        store.current_max_active_participants = Uint64(0)
     if update.finalized_header.beacon.slot > store.finalized_header.beacon.slot:
         store.finalized_header = update.finalized_header
         if store.finalized_header.beacon.slot > store.optimistic_header.beacon.slot:

@@ -281,7 +281,7 @@ def validate_partial_data_column_sidecar_gossip(
             raise GossipIgnore("header is not from a slot greater than the latest finalized slot")
 
         # [REJECT] The proposer index is a valid validator index
-        if block_header.proposer_index >= len(state.validators):
+        if block_header.proposer_index >= ValidatorIndex(len(state.validators)):
             raise GossipReject("proposer index out of range")
 
         # [REJECT] The proposer signature of signed_block_header is valid

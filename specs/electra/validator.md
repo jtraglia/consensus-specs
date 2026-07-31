@@ -132,8 +132,10 @@ def compute_on_chain_aggregate(network_aggregates: Sequence[Attestation]) -> Att
     signature = bls.Aggregate([a.signature for a in aggregates])
 
     committee_indices = [get_committee_indices(a.committee_bits)[0] for a in aggregates]
-    committee_flags = [(index in committee_indices) for index in range(MAX_COMMITTEES_PER_SLOT)]
-    committee_bits = CommitteeBits(committee_flags)
+    committee_flags = [
+        (CommitteeIndex(index) in committee_indices) for index in range(MAX_COMMITTEES_PER_SLOT)
+    ]
+    committee_bits = CommitteeBits(data=committee_flags)
 
     return Attestation(
         aggregation_bits=aggregation_bits,
@@ -265,7 +267,7 @@ def get_execution_requests(execution_requests_list: Sequence[bytes]) -> Executio
 
 ```python
 def compute_subnet_for_blob_sidecar(blob_index: BlobIndex) -> SubnetID:
-    return SubnetID(blob_index % BLOB_SIDECAR_SUBNET_COUNT_ELECTRA)
+    return SubnetID(blob_index % BlobIndex(BLOB_SIDECAR_SUBNET_COUNT_ELECTRA))
 ```
 
 ## Attesting

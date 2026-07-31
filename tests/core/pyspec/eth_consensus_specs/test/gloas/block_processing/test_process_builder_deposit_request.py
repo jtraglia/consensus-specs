@@ -110,7 +110,7 @@ def test_process_builder_deposit_request__new_builder_non_builder_withdrawal_pre
 def test_process_builder_deposit_request__new_builder_large_amount(spec, state):
     """Test fresh builder deposit with a large amount."""
     # 1000 ETH deposit
-    amount = spec.Gwei(1_000 * spec.ETH_TO_GWEI)
+    amount = spec.Gwei(1_000 * int(spec.ETH_TO_GWEI))
     builder_deposit_request = prepare_builder_deposit_request(spec, state, amount, signed=True)
 
     yield from run_builder_deposit_processing(spec, state, builder_deposit_request)
@@ -121,7 +121,7 @@ def test_process_builder_deposit_request__new_builder_large_amount(spec, state):
 def test_process_builder_deposit_request__new_builder_very_large_amount(spec, state):
     """Test fresh builder deposit with a very large amount."""
     # 10k ETH deposit
-    amount = spec.Gwei(10_000 * spec.ETH_TO_GWEI)
+    amount = spec.Gwei(10_000 * int(spec.ETH_TO_GWEI))
     builder_deposit_request = prepare_builder_deposit_request(spec, state, amount, signed=True)
 
     yield from run_builder_deposit_processing(spec, state, builder_deposit_request)
@@ -232,7 +232,7 @@ def test_process_builder_deposit_request__new_builder_pubkey_is_validator(spec, 
     registries are keyed independently, so one pubkey may be both.
     """
     validator_pubkey = state.validators[0].pubkey
-    assert validator_pubkey == pubkeys[0]
+    assert validator_pubkey == spec.BLSPubkey(pubkeys[0])
     amount = spec.MIN_DEPOSIT_AMOUNT
     pre_builder_count = len(state.builders)
 

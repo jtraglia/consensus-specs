@@ -66,12 +66,14 @@ def objects_to_spec(
     shared_types = shared_types or {}
 
     def gen_new_type_definitions(custom_types: dict[str, str]) -> str:
-        return "\n\n\n".join([
-            f"{key} = {shared_types[key]}.{key}"
-            if key in shared_types
-            else gen_new_type_definition(key, value)
-            for key, value in custom_types.items()
-        ])
+        return "\n\n\n".join(
+            [
+                f"{key} = {shared_types[key]}.{key}"
+                if key in shared_types
+                else gen_new_type_definition(key, value)
+                for key, value in custom_types.items()
+            ]
+        )
 
     new_type_definitions = gen_new_type_definitions(spec_object.custom_types)
 

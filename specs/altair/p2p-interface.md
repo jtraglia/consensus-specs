@@ -248,7 +248,7 @@ def validate_sync_committee_contribution_and_proof_gossip(
         raise GossipIgnore("contribution is not for the current slot")
 
     # [REJECT] The subcommittee index is in the allowed range
-    if contribution.subcommittee_index >= SYNC_COMMITTEE_SUBNET_COUNT:
+    if Uint64(contribution.subcommittee_index) >= SYNC_COMMITTEE_SUBNET_COUNT:
         raise GossipReject("subcommittee index out of range")
 
     # [REJECT] The contribution has participants
@@ -260,7 +260,7 @@ def validate_sync_committee_contribution_and_proof_gossip(
         raise GossipReject("validator is not selected as aggregator")
 
     # [REJECT] The aggregator index is valid
-    if contribution_and_proof.aggregator_index >= len(state.validators):
+    if contribution_and_proof.aggregator_index >= ValidatorIndex(len(state.validators)):
         raise GossipReject("aggregator index out of range")
 
     # [REJECT] The aggregator's validator index is in the declared subcommittee
@@ -363,7 +363,7 @@ def validate_sync_committee_message_gossip(
         raise GossipIgnore("message is not for the current slot")
 
     # [REJECT] The validator index is valid
-    if sync_committee_message.validator_index >= len(state.validators):
+    if sync_committee_message.validator_index >= ValidatorIndex(len(state.validators)):
         raise GossipReject("validator index out of range")
 
     # [REJECT] The subnet_id is valid for the given validator

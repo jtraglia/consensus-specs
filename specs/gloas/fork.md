@@ -235,7 +235,7 @@ upgraded to Gloas before creating the block.
 ```python
 def upgrade_attestation_to_gloas(pre: fulu.Attestation) -> Attestation:
     return Attestation(
-        aggregation_bits=AggregationBits(list(pre.aggregation_bits)),
+        aggregation_bits=AggregationBits(data=list(pre.aggregation_bits)),
         data=pre.data,
         signature=pre.signature,
         committee_bits=pre.committee_bits,
@@ -245,7 +245,7 @@ def upgrade_attestation_to_gloas(pre: fulu.Attestation) -> Attestation:
 ```python
 def upgrade_indexed_attestation_to_gloas(pre: fulu.IndexedAttestation) -> IndexedAttestation:
     return IndexedAttestation(
-        attesting_indices=AttestingIndices(list(pre.attesting_indices)),
+        attesting_indices=AttestingIndices(data=list(pre.attesting_indices)),
         data=pre.data,
         signature=pre.signature,
     )

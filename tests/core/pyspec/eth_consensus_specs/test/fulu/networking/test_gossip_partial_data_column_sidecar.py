@@ -175,7 +175,7 @@ def test_gossip_partial_data_column_sidecar__valid_header_and_cells(spec, state)
     # Sanity check: the BLOB_SCHEDULE override should be exercising the Fulu
     # code path (`get_blob_parameters`), not the Electra fallback. A client that
     # forgets EIP-7892 and uses MAX_BLOBS_PER_BLOCK_ELECTRA would reject this sidecar.
-    assert max_blobs > spec.config.MAX_BLOBS_PER_BLOCK_ELECTRA
+    assert max_blobs > spec.Uint64(spec.config.MAX_BLOBS_PER_BLOCK_ELECTRA)
     _, sidecars = build_signed_block_and_sidecars(spec, state, blob_count=max_blobs)
     sidecar = sidecars[0]
     partial = make_partial_sidecar(spec, sidecar, include_header=True)
@@ -499,8 +499,10 @@ def test_gossip_partial_data_column_sidecar__reject_prior_header_differs(spec, s
     # Build a second partial message whose header has a different inclusion
     # proof, with the cache populated by `good` so the equality check fires.
     diverging = make_partial_sidecar(spec, sidecar, blob_indices=[], include_header=True)
-    diverging.header[0].kzg_commitments_inclusion_proof = spec.compute_merkle_proof(
-        spec.BeaconBlockBody(), 0
+    proof = list(diverging.header[0].kzg_commitments_inclusion_proof)
+    proof[0] = spec.Bytes32(spec.hash(proof[0]))
+    diverging.header[0].kzg_commitments_inclusion_proof = spec.KZGCommitmentsInclusionProof(
+        data=proof
     )
 
     yield get_filename(good), good
@@ -1212,8 +1214,10 @@ def test_gossip_partial_data_column_sidecar__reject_invalid_inclusion_proof(spec
     _, sidecars = build_signed_block_and_sidecars(spec, state, blob_count=1)
     sidecar = sidecars[0]
     partial = make_partial_sidecar(spec, sidecar, blob_indices=[], include_header=True)
-    partial.header[0].kzg_commitments_inclusion_proof = spec.compute_merkle_proof(
-        spec.BeaconBlockBody(), 0
+    proof = list(partial.header[0].kzg_commitments_inclusion_proof)
+    proof[0] = spec.Bytes32(spec.hash(proof[0]))
+    partial.header[0].kzg_commitments_inclusion_proof = spec.KZGCommitmentsInclusionProof(
+        data=proof
     )
     block_root = block_root_of(spec, sidecar)
     group_id = spec.PartialDataColumnGroupID(beacon_block_root=block_root)
@@ -1414,7 +1418,7 @@ def test_gossip_partial_data_column_sidecar__ignore_cells_with_cached_header_fut
         store=store,
         state=state,
         sidecar=header_msg,
-        current_time_ms=current_time_ms + 1,
+        current_time_ms=current_time_ms + spec.Uint64(1),
         group_id=group_id,
         column_index=column_index,
     )
@@ -1576,9 +1580,8 @@ def test_gossip_partial_data_column_sidecar__reject_bitmap_length_mismatch(spec,
     header_msg = make_partial_sidecar(spec, sidecar, blob_indices=[], include_header=True)
     cells_msg = make_partial_sidecar(spec, sidecar, blob_indices=[0], include_header=False)
     # Stretch the bitmap so its length exceeds the corresponding header's commitments.
-    BitList = type(cells_msg.cells_present_bitmap)
     cells_msg.cells_present_bitmap = spec.CellsBitlist(
-        data=BitList(list(cells_msg.cells_present_bitmap) + [False, False])
+        data=list(cells_msg.cells_present_bitmap) + [False, False]
     )
 
     yield get_filename(header_msg), header_msg

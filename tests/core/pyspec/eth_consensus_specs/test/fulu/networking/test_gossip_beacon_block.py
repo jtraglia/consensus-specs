@@ -54,7 +54,7 @@ def test_gossip_beacon_block__valid_at_blob_parameters_limit(spec, state):
     # Sanity check: the BLOB_SCHEDULE override should be exercising the Fulu
     # code path (`get_blob_parameters`), not the Electra fallback. A client that
     # forgets EIP-7892 and uses MAX_BLOBS_PER_BLOCK_ELECTRA would reject this block.
-    assert max_blobs > spec.config.MAX_BLOBS_PER_BLOCK_ELECTRA
+    assert max_blobs > spec.Uint64(spec.config.MAX_BLOBS_PER_BLOCK_ELECTRA)
     block, _, _, _ = get_block_with_blob(spec, state, rng=rng, blob_count=max_blobs)
     signed_block = state_transition_and_sign_block(spec, state, block)
 

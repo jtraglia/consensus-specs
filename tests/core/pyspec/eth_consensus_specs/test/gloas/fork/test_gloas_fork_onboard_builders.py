@@ -113,7 +113,7 @@ def test_fork_single_builder_deposit(spec, phases, state):
 
     # One builder should be created
     assert len(post_state.builders) == 1
-    assert post_state.builders[0].pubkey == builder_pubkey
+    assert post_state.builders[0].pubkey == post_spec.BLSPubkey(builder_pubkey)
     assert post_state.builders[0].balance == amount
 
     # Pending deposit should be removed
@@ -140,7 +140,7 @@ def test_fork_builder_deposit_version(spec, phases, state):
 
     # The onboarded builder is registered with the payload builder version
     assert len(post_state.builders) == 1
-    assert post_state.builders[0].pubkey == builder_pubkey
+    assert post_state.builders[0].pubkey == post_spec.BLSPubkey(builder_pubkey)
     assert post_state.builders[0].version == post_spec.PAYLOAD_BUILDER_VERSION
 
 
@@ -197,7 +197,7 @@ def test_fork_multiple_builder_deposits(spec, phases, state):
     # Three builders should be created
     assert len(post_state.builders) == 3
     for i in range(3):
-        assert post_state.builders[i].pubkey == builder_pubkeys[i]
+        assert post_state.builders[i].pubkey == post_spec.BLSPubkey(builder_pubkeys[i])
         assert post_state.builders[i].balance == amount
 
     # All pending deposits should be removed
@@ -235,7 +235,7 @@ def test_fork_pending_deposit_for_existing_validator(spec, phases, state):
 
     # Pending deposit should remain (for existing validator)
     assert len(post_state.pending_deposits) == 1
-    assert post_state.pending_deposits[0].pubkey == validator_pubkey
+    assert post_state.pending_deposits[0].pubkey == post_spec.BLSPubkey(validator_pubkey)
 
 
 @with_phases(phases=[FULU], other_phases=[GLOAS])
@@ -262,7 +262,7 @@ def test_fork_pending_deposit_validator_credentials(spec, phases, state):
 
     # Pending deposit should remain (for new validator creation later)
     assert len(post_state.pending_deposits) == 1
-    assert post_state.pending_deposits[0].pubkey == pubkeys[new_validator_index]
+    assert post_state.pending_deposits[0].pubkey == spec.BLSPubkey(pubkeys[new_validator_index])
 
 
 @with_phases(phases=[FULU], other_phases=[GLOAS])
@@ -302,24 +302,26 @@ def test_fork_mixed_pending_deposits(spec, phases, state):
         post_spec, new_validator_index, amount
     )
 
-    state.pending_deposits = [
-        builder_deposit_1,
-        validator_topup,
-        builder_deposit_2,
-        new_validator_deposit,
-    ]
+    state.pending_deposits = spec.PendingDeposits(
+        data=[
+            builder_deposit_1,
+            validator_topup,
+            builder_deposit_2,
+            new_validator_deposit,
+        ]
+    )
 
     post_state = yield from run_fork_test(post_spec, state)
 
     # Two builders should be created
     assert len(post_state.builders) == 2
-    assert post_state.builders[0].pubkey == builder_pubkey_1
-    assert post_state.builders[1].pubkey == builder_pubkey_2
+    assert post_state.builders[0].pubkey == post_spec.BLSPubkey(builder_pubkey_1)
+    assert post_state.builders[1].pubkey == post_spec.BLSPubkey(builder_pubkey_2)
 
     # Two pending deposits should remain (validator top-up and new validator)
     assert len(post_state.pending_deposits) == 2
-    assert post_state.pending_deposits[0].pubkey == validator_pubkey
-    assert post_state.pending_deposits[1].pubkey == pubkeys[new_validator_index]
+    assert post_state.pending_deposits[0].pubkey == post_spec.BLSPubkey(validator_pubkey)
+    assert post_state.pending_deposits[1].pubkey == spec.BLSPubkey(pubkeys[new_validator_index])
 
 
 @with_phases(phases=[FULU], other_phases=[GLOAS])
@@ -347,10 +349,10 @@ def test_fork_multiple_deposits_same_builder(spec, phases, state):
 
     # Only one builder should be created (not three)
     assert len(post_state.builders) == 1
-    assert post_state.builders[0].pubkey == builder_pubkey
+    assert post_state.builders[0].pubkey == post_spec.BLSPubkey(builder_pubkey)
 
     # Balance should be the sum of all deposits
-    assert post_state.builders[0].balance == amount * 3
+    assert post_state.builders[0].balance == amount * post_spec.Gwei(3)
 
     # All pending deposits should be removed
     assert len(post_state.pending_deposits) == 0
@@ -388,7 +390,7 @@ def test_fork_builder_deposit_with_existing_validator_pubkey_builder_creds(spec,
 
     # Pending deposit should remain
     assert len(post_state.pending_deposits) == 1
-    assert post_state.pending_deposits[0].pubkey == validator_pubkey
+    assert post_state.pending_deposits[0].pubkey == post_spec.BLSPubkey(validator_pubkey)
 
 
 @with_phases(phases=[FULU], other_phases=[GLOAS])
@@ -437,10 +439,10 @@ def test_fork_builder_deposit_followed_by_non_builder_credentials(spec, phases, 
 
     # One builder should be created
     assert len(post_state.builders) == 1
-    assert post_state.builders[0].pubkey == builder_pubkey
+    assert post_state.builders[0].pubkey == post_spec.BLSPubkey(builder_pubkey)
 
     # Balance should be the sum of both deposits
-    assert post_state.builders[0].balance == amount * 2
+    assert post_state.builders[0].balance == amount * post_spec.Gwei(2)
 
     # Both pending deposits should be removed (applied to builder)
     assert len(post_state.pending_deposits) == 0
@@ -495,11 +497,11 @@ def test_fork_validator_deposit_followed_by_builder_credentials(spec, phases, st
 
     # Both deposits should remain in pending
     assert len(post_state.pending_deposits) == 2
-    assert post_state.pending_deposits[0].pubkey == builder_pubkey
-    assert (
-        post_state.pending_deposits[0].withdrawal_credentials == compounding_withdrawal_credentials
+    assert post_state.pending_deposits[0].pubkey == post_spec.BLSPubkey(builder_pubkey)
+    assert post_state.pending_deposits[0].withdrawal_credentials == post_spec.Bytes32(
+        compounding_withdrawal_credentials
     )
-    assert post_state.pending_deposits[1].pubkey == builder_pubkey
+    assert post_state.pending_deposits[1].pubkey == post_spec.BLSPubkey(builder_pubkey)
     assert (
         post_state.pending_deposits[1].withdrawal_credentials
         == builder_deposit.withdrawal_credentials
@@ -543,14 +545,14 @@ def test_fork_invalid_validator_deposit_followed_by_builder_credentials(spec, ph
 
     # Builder should be created (invalid validator deposit doesn't claim the pubkey)
     assert len(post_state.builders) == 1
-    assert post_state.builders[0].pubkey == builder_pubkey
+    assert post_state.builders[0].pubkey == post_spec.BLSPubkey(builder_pubkey)
     assert post_state.builders[0].balance == amount
 
     # Invalid validator deposit stays in pending queue
     assert len(post_state.pending_deposits) == 1
-    assert post_state.pending_deposits[0].pubkey == builder_pubkey
-    assert (
-        post_state.pending_deposits[0].withdrawal_credentials == compounding_withdrawal_credentials
+    assert post_state.pending_deposits[0].pubkey == post_spec.BLSPubkey(builder_pubkey)
+    assert post_state.pending_deposits[0].withdrawal_credentials == post_spec.Bytes32(
+        compounding_withdrawal_credentials
     )
 
 
@@ -591,7 +593,7 @@ def test_fork_invalid_builder_deposit_followed_by_valid_builder_deposit(spec, ph
 
     # Builder should be created from the valid second deposit
     assert len(post_state.builders) == 1
-    assert post_state.builders[0].pubkey == builder_pubkey
+    assert post_state.builders[0].pubkey == post_spec.BLSPubkey(builder_pubkey)
     # Only the valid deposit amount should be counted
     assert post_state.builders[0].balance == amount
 
@@ -636,9 +638,9 @@ def test_fork_valid_builder_deposit_followed_by_invalid_builder_deposit(spec, ph
 
     # Builder should be created from the valid first deposit
     assert len(post_state.builders) == 1
-    assert post_state.builders[0].pubkey == builder_pubkey
+    assert post_state.builders[0].pubkey == post_spec.BLSPubkey(builder_pubkey)
     # Both deposits should be applied (second is a top-up, no signature check needed)
-    assert post_state.builders[0].balance == amount * 2
+    assert post_state.builders[0].balance == amount * post_spec.Gwei(2)
 
     # No pending deposits should remain
     assert len(post_state.pending_deposits) == 0

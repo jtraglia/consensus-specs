@@ -89,9 +89,9 @@ def test_config_override_across_phases(spec, phases, state):
     assert not hasattr(spec.config, "BELLATRIX_FORK_EPOCH")
 
     assert spec.Version("0x11111111") == phases[ALTAIR].config.ALTAIR_FORK_VERSION
-    assert phases[ALTAIR].config.ALTAIR_FORK_EPOCH == 0
+    assert spec.Epoch(0) == phases[ALTAIR].config.ALTAIR_FORK_EPOCH
     assert not hasattr(phases[ALTAIR].config, "BELLATRIX_FORK_EPOCH")
 
     assert spec.Version("0x11111111") == phases[ALTAIR].config.ALTAIR_FORK_VERSION
-    assert phases[BELLATRIX].config.ALTAIR_FORK_EPOCH == 0
-    assert phases[BELLATRIX].config.BELLATRIX_FORK_EPOCH == 4
+    assert spec.Epoch(0) == phases[BELLATRIX].config.ALTAIR_FORK_EPOCH
+    assert spec.Epoch(4) == phases[BELLATRIX].config.BELLATRIX_FORK_EPOCH

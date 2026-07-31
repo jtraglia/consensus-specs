@@ -139,7 +139,7 @@ def validate_beacon_block_gossip(
         raise GossipIgnore("block is not the first valid block for this proposer and slot")
 
     # [REJECT] The proposer index is a valid validator index
-    if block.proposer_index >= len(state.validators):
+    if block.proposer_index >= ValidatorIndex(len(state.validators)):
         raise GossipReject("proposer index out of range")
 
     # [REJECT] The proposer signature is valid
@@ -230,13 +230,13 @@ def validate_bls_to_execution_change_gossip(
         raise GossipIgnore("already seen BLS to execution change for this validator")
 
     # [REJECT] The validator index is valid
-    if validator_index >= len(state.validators):
+    if validator_index >= ValidatorIndex(len(state.validators)):
         raise GossipReject("validator index out of range")
 
     validator = state.validators[validator_index]
 
     # [REJECT] The validator has BLS withdrawal credentials
-    if validator.withdrawal_credentials[:1] != BLS_WITHDRAWAL_PREFIX:
+    if Bytes1(validator.withdrawal_credentials[:1]) != BLS_WITHDRAWAL_PREFIX:
         raise GossipReject("validator does not have BLS withdrawal credentials")
 
     # [REJECT] The bls_to_execution_change is for the validator's withdrawal pubkey

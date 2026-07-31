@@ -263,7 +263,7 @@ def verify_data_column_sidecar(
     Verify if the data column sidecar is valid.
     """
     # The sidecar index must be within the valid range
-    if sidecar.index >= NUMBER_OF_COLUMNS:
+    if sidecar.index >= ColumnIndex(NUMBER_OF_COLUMNS):
         return False
 
     # [Modified in Gloas:EIP7732]

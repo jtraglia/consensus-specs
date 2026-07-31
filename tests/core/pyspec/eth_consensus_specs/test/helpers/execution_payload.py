@@ -381,7 +381,7 @@ def build_empty_execution_payload(
         # TODO: zeroed logs bloom for empty logs ok?
         logs_bloom=spec.LogsBloom(),
         prev_randao=randao_mix,
-        gas_used=0,  # empty block, 0 gas
+        gas_used=spec.Uint64(0),  # empty block, 0 gas
         gas_limit=gas_limit,
         timestamp=timestamp,
         extra_data=spec.ExtraData(),
@@ -396,10 +396,10 @@ def build_empty_execution_payload(
     if is_post_capella(spec):
         payload.withdrawals = get_expected_withdrawals(spec, state)
     if is_post_deneb(spec):
-        payload.blob_gas_used = 0
-        payload.excess_blob_gas = 0
+        payload.blob_gas_used = spec.Uint64(0)
+        payload.excess_blob_gas = spec.Uint64(0)
     if is_post_gloas(spec):
-        payload.block_access_list = spec.Transaction()
+        payload.block_access_list = spec.BlockAccessList()
         payload.slot_number = state.slot
 
     payload.block_hash = compute_el_block_hash(spec, payload, state, execution_requests)
@@ -412,7 +412,7 @@ def build_randomized_execution_payload(spec, state, rng):
     execution_payload.fee_recipient = spec.ExecutionAddress(get_random_bytes_list(rng, 20))
     execution_payload.state_root = spec.Bytes32(get_random_bytes_list(rng, 32))
     execution_payload.receipts_root = spec.Bytes32(get_random_bytes_list(rng, 32))
-    execution_payload.logs_bloom = spec.ByteVector[spec.BYTES_PER_LOGS_BLOOM](
+    execution_payload.logs_bloom = spec.LogsBloom(
         get_random_bytes_list(rng, spec.BYTES_PER_LOGS_BLOOM)
     )
     execution_payload.block_number = rng.randint(0, int(10e10))
@@ -426,7 +426,7 @@ def build_randomized_execution_payload(spec, state, rng):
 
     num_transactions = rng.randint(0, 100)
     execution_payload.transactions = spec.Transactions(
-        data=[get_random_tx(rng) for _ in range(num_transactions)]
+        data=[spec.Transaction(data=get_random_tx(rng)) for _ in range(num_transactions)]
     )
 
     execution_payload.block_hash = compute_el_block_hash(spec, execution_payload, state)

@@ -17,7 +17,7 @@ def test_process_ptc_window__shifts_all_epochs(spec, state):
     """
     spec.process_slots(state, state.slot + spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1))
 
-    SPE = spec.SLOTS_PER_EPOCH
+    SPE = int(spec.SLOTS_PER_EPOCH)
     # Save current and next epoch sections before the shift
     curr_epoch_ptc = list(state.ptc_window[SPE : 2 * SPE])
     next_epoch_ptc = list(state.ptc_window[2 * SPE : 3 * SPE])

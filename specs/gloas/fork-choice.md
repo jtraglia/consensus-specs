@@ -295,7 +295,9 @@ def payload_timeliness(store: Store, root: Root, timely: bool) -> bool:
         return not timely
 
     votes = store.payload_timeliness_vote[root]
-    return sum(vote == timely for vote in votes) > PAYLOAD_TIMELY_THRESHOLD
+    # An unset vote counts as neither timely nor untimely.
+    matching = sum(vote is not None and bool(vote) == timely for vote in votes)
+    return Uint64(matching) > PAYLOAD_TIMELY_THRESHOLD
 ```
 
 ### New `payload_data_availability`
@@ -316,7 +318,9 @@ def payload_data_availability(store: Store, root: Root, available: bool) -> bool
         return not available
 
     votes = store.payload_data_availability_vote[root]
-    return sum(vote == available for vote in votes) > DATA_AVAILABILITY_TIMELY_THRESHOLD
+    # An unset vote counts as neither available nor unavailable.
+    matching = sum(vote is not None and bool(vote) == available for vote in votes)
+    return Uint64(matching) > DATA_AVAILABILITY_TIMELY_THRESHOLD
 ```
 
 ### New `get_parent_payload_status`
@@ -754,7 +758,7 @@ def is_head_weak(store: Store, head_root: Root) -> bool:
         committee = get_beacon_committee(head_state, head_block.slot, CommitteeIndex(index))
         head_weight += Gwei(
             sum(
-                justified_state.validators[i].effective_balance
+                int(justified_state.validators[i].effective_balance)
                 for i in committee
                 if i in store.equivocating_indices
             )
@@ -870,12 +874,12 @@ def validate_on_attestation(store: Store, attestation: Attestation, is_from_bloc
     assert block_slot <= attestation.data.slot
 
     # [New in Gloas:EIP7732]
-    assert attestation.data.index in [0, 1]
+    assert attestation.data.index in (CommitteeIndex(0), CommitteeIndex(1))
     if block_slot == attestation.data.slot:
-        assert attestation.data.index == 0
+        assert attestation.data.index == CommitteeIndex(0)
     # [New in Gloas:EIP7732]
     # If attesting for a full node, the payload must be known
-    if attestation.data.index == 1:
+    if attestation.data.index == CommitteeIndex(1):
         assert is_payload_verified(store, attestation.data.beacon_block_root)
 
     # LMD vote must be consistent with FFG vote target
@@ -902,7 +906,7 @@ def update_latest_messages(
 ) -> None:
     slot = attestation.data.slot
     beacon_block_root = attestation.data.beacon_block_root
-    payload_present = attestation.data.index == 1
+    payload_present = attestation.data.index == CommitteeIndex(1)
     non_equivocating_attesting_indices = [
         i for i in attesting_indices if i not in store.equivocating_indices
     ]
@@ -949,7 +953,7 @@ def get_shuffling_dependent_root(store: Store, root: Root, epoch: Epoch) -> Root
         root=root,
         payload_status=PAYLOAD_STATUS_PENDING,
     )
-    dependent_slot = Slot(compute_start_slot_at_epoch(epoch - MIN_SEED_LOOKAHEAD) - 1)
+    dependent_slot = compute_start_slot_at_epoch(epoch - Epoch(MIN_SEED_LOOKAHEAD)) - Slot(1)
     return get_ancestor(store, node, dependent_slot).root
 ```
 
@@ -1023,8 +1027,8 @@ def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
     # Add new state for this block to the store
     store.block_states[block_root] = state
     # Add a new PTC voting for this block to the store
-    store.payload_timeliness_vote[block_root] = [None] * PTC_SIZE
-    store.payload_data_availability_vote[block_root] = [None] * PTC_SIZE
+    store.payload_timeliness_vote[block_root] = [None] * int(PTC_SIZE)
+    store.payload_data_availability_vote[block_root] = [None] * int(PTC_SIZE)
 
     # Notify the store about the payload_attestations in the block
     notify_ptc_messages(store, state, block.body.payload_attestations)
@@ -1106,7 +1110,7 @@ def on_payload_attestation_message(
         assert is_valid_indexed_payload_attestation(
             state,
             IndexedPayloadAttestation(
-                attesting_indices=[ptc_message.validator_index],
+                attesting_indices=PTCAttestingIndices(data=[ptc_message.validator_index]),
                 data=data,
                 signature=ptc_message.signature,
             ),

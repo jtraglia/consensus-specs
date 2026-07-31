@@ -124,7 +124,9 @@ def test_prepare_execution_payload(spec, state):
             _mock_terminal_block_hash_activation_epoch
         )
         if is_activation_epoch_reached:
-            state.slot = _mock_terminal_block_hash_activation_epoch * spec.SLOTS_PER_EPOCH
+            state.slot = (
+                spec.Slot(_mock_terminal_block_hash_activation_epoch) * spec.SLOTS_PER_EPOCH
+            )
         else:
             state.slot = (_mock_terminal_block_hash_activation_epoch - 1) * int(
                 spec.SLOTS_PER_EPOCH

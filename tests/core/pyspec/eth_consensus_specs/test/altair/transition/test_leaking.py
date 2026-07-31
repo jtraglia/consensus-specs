@@ -26,7 +26,7 @@ def test_transition_with_leaking_pre_fork(state, fork_epoch, spec, post_spec, pr
     transition_until_fork(spec, state, fork_epoch)
 
     assert spec.is_in_inactivity_leak(state)
-    assert spec.get_current_epoch(state) < fork_epoch
+    assert spec.get_current_epoch(state) < spec.Epoch(fork_epoch)
 
     yield "pre", state
 
@@ -61,7 +61,7 @@ def test_transition_with_leaking_at_fork(state, fork_epoch, spec, post_spec, pre
     transition_until_fork(spec, state, fork_epoch)
 
     assert not spec.is_in_inactivity_leak(state)
-    assert spec.get_current_epoch(state) < fork_epoch
+    assert spec.get_current_epoch(state) < spec.Epoch(fork_epoch)
 
     yield "pre", state
 

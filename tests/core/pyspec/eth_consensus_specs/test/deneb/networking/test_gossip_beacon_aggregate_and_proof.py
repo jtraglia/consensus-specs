@@ -72,7 +72,9 @@ def epoch_window_open_time(spec, state, attestation_epoch):
 
 def epoch_window_close_time(spec, state, attestation_epoch):
     return (
-        spec.compute_time_at_slot_ms(state, spec.compute_start_slot_at_epoch(attestation_epoch + 2))
+        spec.compute_time_at_slot_ms(
+            state, spec.compute_start_slot_at_epoch(attestation_epoch + spec.Epoch(2))
+        )
         + spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY
     )
 
@@ -170,7 +172,7 @@ def test_gossip_beacon_aggregate_and_proof__ignores_first_slot_before_epoch_wind
     yield "state", state
     yield get_filename(signed_agg), signed_agg
 
-    current_time_ms = epoch_window_open_time(spec, state, attestation_epoch) - 1
+    current_time_ms = epoch_window_open_time(spec, state, attestation_epoch) - spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     seen = get_seen(spec)
@@ -273,7 +275,7 @@ def test_gossip_beacon_aggregate_and_proof__ignores_first_slot_after_epoch_windo
     yield "state", state
     yield get_filename(signed_agg), signed_agg
 
-    current_time_ms = epoch_window_close_time(spec, state, attestation_epoch) + 1
+    current_time_ms = epoch_window_close_time(spec, state, attestation_epoch) + spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     seen = get_seen(spec)
@@ -426,7 +428,7 @@ def test_gossip_beacon_aggregate_and_proof__ignores_last_slot_after_epoch_window
     yield "state", state
     yield get_filename(signed_agg), signed_agg
 
-    current_time_ms = epoch_window_close_time(spec, state, attestation_epoch) + 1
+    current_time_ms = epoch_window_close_time(spec, state, attestation_epoch) + spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     seen = get_seen(spec)

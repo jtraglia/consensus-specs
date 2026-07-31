@@ -77,7 +77,7 @@ def test_gossip_beacon_aggregate_and_proof__accept_same_data_for_disjoint_commit
 
     next_slot(spec, state)
     committees_per_slot = spec.get_committee_count_per_slot(state, spec.get_current_epoch(state))
-    assert committees_per_slot >= 2, "need at least two committees in the current slot"
+    assert committees_per_slot >= spec.Uint64(2), "need at least two committees in the current slot"
 
     attestation_1 = get_valid_attestation(
         spec,

@@ -113,7 +113,7 @@ def test_validate_on_attestation_beacon_root_payload_check(spec, state):
 
     # Build across the epoch boundary
     target_slot = spec.compute_start_slot_at_epoch(spec.Epoch(1))
-    beacon_slot = spec.Slot(target_slot + 1)
+    beacon_slot = target_slot + spec.Slot(1)
     chain_state = copy(block_state)
     while chain_state.slot < target_slot:
         target_root, target_state, target_block = yield from add_signed_empty_block(
@@ -132,13 +132,13 @@ def test_validate_on_attestation_beacon_root_payload_check(spec, state):
     yield from add_execution_payload(spec, store, envelope, test_steps)
 
     # Build a full-node vote past the head
-    att_slot = spec.Slot(beacon_slot + 1)
+    att_slot = beacon_slot + spec.Slot(1)
     att_state = copy(beacon_state)
     transition_to(spec, att_state, att_slot)
     att = get_valid_attestation(spec, att_state, slot=att_slot, payload_index=1, signed=True)
     assert att.data.target.root == target_root
     assert att.data.beacon_block_root == beacon_root
 
-    tick_store_to_slot(spec, store, att_slot + 1, test_steps)
+    tick_store_to_slot(spec, store, att_slot + spec.Slot(1), test_steps)
     yield from add_attestation(spec, store, att, test_steps, valid=False)
     yield "steps", test_steps

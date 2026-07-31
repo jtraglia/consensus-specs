@@ -782,7 +782,7 @@ def test_high_proposer_index(spec, state):
     # disable a good amount of validators to make the active count lower, for a faster test
     current_epoch = spec.get_current_epoch(state)
     for i in range(len(state.validators) // 3):
-        if is_post_fulu(spec) and i in state.proposer_lookahead:
+        if is_post_fulu(spec) and spec.ValidatorIndex(i) in state.proposer_lookahead:
             continue
         state.validators[i].exit_epoch = current_epoch
 

@@ -79,9 +79,9 @@ def test_basic(spec, state):
     check_head_against_root(spec, store, hash_tree_root(signed_block.message))
 
     # On receiving a block of next epoch
-    store.time = current_time + spec.config.SLOT_DURATION_MS * spec.SLOTS_PER_EPOCH // spec.Slot(
-        1000
-    )
+    store.time = current_time + spec.config.SLOT_DURATION_MS * spec.Uint64(
+        spec.SLOTS_PER_EPOCH
+    ) // spec.Uint64(1000)
     block = build_empty_block(spec, state, state.slot + spec.SLOTS_PER_EPOCH)
     signed_block = state_transition_and_sign_block(spec, state, block)
     yield from tick_and_add_block(spec, store, signed_block, test_steps)
@@ -569,12 +569,12 @@ def test_proposer_boost(spec, state):
     # Process block on timely arrival just before end of boost interval
     # Round up to nearest second
     late_block_cutoff_ms = spec.get_attestation_due_ms()
-    late_block_cutoff = (late_block_cutoff_ms + 999) // 1000
+    late_block_cutoff = spec.Uint64((int(late_block_cutoff_ms) + 999) // 1000)
     time = (
         store.genesis_time
         + spec.Uint64(block.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
         + late_block_cutoff
-        - 1
+        - spec.Uint64(1)
     )
 
     on_tick_and_append_step(spec, store, time, test_steps)
@@ -650,7 +650,7 @@ def test_proposer_boost_root_same_slot_untimely_block(spec, state):
     # Process block on untimely arrival in the same slot
     # Round up to nearest second
     late_block_cutoff_ms = spec.get_attestation_due_ms()
-    late_block_cutoff = (late_block_cutoff_ms + 999) // 1000
+    late_block_cutoff = spec.Uint64((int(late_block_cutoff_ms) + 999) // 1000)
     time = (
         store.genesis_time
         + spec.Uint64(block.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
@@ -694,12 +694,12 @@ def test_proposer_boost_is_first_block(spec, state):
     # Process block on timely arrival just before end of boost interval
     # Round up to nearest second
     late_block_cutoff_ms = spec.get_attestation_due_ms()
-    late_block_cutoff = (late_block_cutoff_ms + 999) // 1000
+    late_block_cutoff = spec.Uint64((int(late_block_cutoff_ms) + 999) // 1000)
     time = (
         store.genesis_time
         + spec.Uint64(block_a.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
         + late_block_cutoff
-        - 1
+        - spec.Uint64(1)
     )
 
     on_tick_and_append_step(spec, store, time, test_steps)
@@ -992,7 +992,9 @@ def test_justification_update_beginning_of_epoch(spec, state):
 
     # Tick store to the start of the next epoch
     slot = spec.get_current_slot(store) + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH)
-    current_time = slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    current_time = (
+        spec.Uint64(slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(5)
 
@@ -1058,7 +1060,9 @@ def test_justification_update_end_of_epoch(spec, state):
     # Tick store to the last slot of the next epoch
     slot = spec.get_current_slot(store) + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH)
     slot = slot + spec.SLOTS_PER_EPOCH - spec.Slot(1)
-    current_time = slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    current_time = (
+        spec.Uint64(slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(5)
 
@@ -1152,7 +1156,9 @@ def test_incompatible_justification_update_start_of_epoch(spec, state):
 
     # Tick store to the last slot of the next epoch
     slot = another_state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH)
-    current_time = slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    current_time = (
+        spec.Uint64(slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(8)
 
@@ -1260,7 +1266,9 @@ def test_incompatible_justification_update_end_of_epoch(spec, state):
     # Tick store to the last slot of the next epoch
     slot = another_state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH)
     slot = slot + spec.SLOTS_PER_EPOCH - spec.Slot(1)
-    current_time = slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    current_time = (
+        spec.Uint64(slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(8)
 

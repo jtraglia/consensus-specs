@@ -65,8 +65,10 @@ def upgrade_to_electra(pre: deneb.BeaconState) -> BeaconState:
         eth1_data=pre.eth1_data,
         eth1_data_votes=pre.eth1_data_votes,
         eth1_deposit_index=pre.eth1_deposit_index,
-        validators=pre.validators,
-        balances=pre.balances,
+        # Copied: the loops below mutate these, and a field assignment shares the
+        # collection rather than copying it, so `pre` would change under the caller.
+        validators=copy(pre.validators),
+        balances=copy(pre.balances),
         randao_mixes=pre.randao_mixes,
         slashings=pre.slashings,
         previous_epoch_participation=pre.previous_epoch_participation,
@@ -118,7 +120,7 @@ def upgrade_to_electra(pre: deneb.BeaconState) -> BeaconState:
 
     for index in pre_activation:
         balance = post.balances[index]
-        post.balances[index] = 0
+        post.balances[index] = Gwei(0)
         validator = post.validators[index]
         validator.effective_balance = Gwei(0)
         validator.activation_eligibility_epoch = FAR_FUTURE_EPOCH

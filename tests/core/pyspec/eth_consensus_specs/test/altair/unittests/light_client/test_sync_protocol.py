@@ -68,7 +68,7 @@ def test_process_light_client_update_not_timeout(spec, state):
     assert store.finalized_header == pre_store.finalized_header
     assert store.best_valid_update == update
     assert store.optimistic_header == update.attested_header
-    assert store.current_max_active_participants > 0
+    assert store.current_max_active_participants > spec.Uint64(0)
 
 
 @with_light_client
@@ -110,7 +110,7 @@ def test_process_light_client_update_at_period_boundary(spec, state):
     assert store.finalized_header == pre_store.finalized_header
     assert store.best_valid_update == update
     assert store.optimistic_header == update.attested_header
-    assert store.current_max_active_participants > 0
+    assert store.current_max_active_participants > spec.Uint64(0)
 
 
 @with_light_client
@@ -128,7 +128,7 @@ def test_process_light_client_update_timeout(spec, state):
     next_slots(spec, state, spec.UPDATE_TIMEOUT)
     store_period = spec.compute_sync_committee_period_at_slot(store.optimistic_header.beacon.slot)
     update_period = spec.compute_sync_committee_period_at_slot(state.slot)
-    assert store_period + 1 == update_period
+    assert store_period + spec.Epoch(1) == update_period
 
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=False, fill_prev_epoch=False
@@ -152,7 +152,7 @@ def test_process_light_client_update_timeout(spec, state):
     assert store.finalized_header == pre_store.finalized_header
     assert store.best_valid_update == update
     assert store.optimistic_header == update.attested_header
-    assert store.current_max_active_participants > 0
+    assert store.current_max_active_participants > spec.Uint64(0)
 
 
 @with_light_client
@@ -206,4 +206,4 @@ def test_process_light_client_update_finality_updated(spec, state):
     assert store.finalized_header == update.finalized_header
     assert store.best_valid_update is None
     assert store.optimistic_header == update.attested_header
-    assert store.current_max_active_participants > 0
+    assert store.current_max_active_participants > spec.Uint64(0)

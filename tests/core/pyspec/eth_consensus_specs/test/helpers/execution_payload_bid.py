@@ -73,7 +73,7 @@ def prepare_signed_execution_payload_bid(
         value = spec.Gwei(0)
 
     # Validation: if builder index equals proposer index, value must be 0
-    if valid_amount and builder_index == spec.BUILDER_INDEX_SELF_BUILD and value != 0:
+    if valid_amount and builder_index == spec.BUILDER_INDEX_SELF_BUILD and value != spec.Gwei(0):
         raise ValueError(
             "Self-builder (builder_index == BUILDER_INDEX_SELF_BUILD) must use zero value"
         )

@@ -186,7 +186,7 @@ def verify_data_column_sidecar(sidecar: DataColumnSidecar) -> bool:
     Verify if the data column sidecar is valid.
     """
     # The sidecar index must be within the valid range
-    if sidecar.index >= NUMBER_OF_COLUMNS:
+    if sidecar.index >= ColumnIndex(NUMBER_OF_COLUMNS):
         return False
 
     # A sidecar for zero blobs is invalid
@@ -195,7 +195,7 @@ def verify_data_column_sidecar(sidecar: DataColumnSidecar) -> bool:
 
     # Check that the sidecar respects the blob limit
     epoch = compute_epoch_at_slot(sidecar.signed_block_header.message.slot)
-    if len(sidecar.kzg_commitments) > get_blob_parameters(epoch).max_blobs_per_block:
+    if Uint64(len(sidecar.kzg_commitments)) > get_blob_parameters(epoch).max_blobs_per_block:
         return False
 
     # The column length must be equal to the number of commitments/proofs
@@ -338,7 +338,7 @@ def validate_beacon_block_gossip(
         raise GossipIgnore("block is not the first valid block for this proposer and slot")
 
     # [REJECT] The proposer index is a valid validator index
-    if block.proposer_index >= len(state.validators):
+    if block.proposer_index >= ValidatorIndex(len(state.validators)):
         raise GossipReject("proposer index out of range")
 
     # [REJECT] The proposer signature is valid
@@ -387,7 +387,7 @@ def validate_beacon_block_gossip(
     # [Modified in Fulu:EIP7892]
     # [REJECT] The length of KZG commitments is less than or equal to the limit
     max_blobs = get_blob_parameters(get_current_epoch(state)).max_blobs_per_block
-    if len(block.body.blob_kzg_commitments) > max_blobs:
+    if Uint64(len(block.body.blob_kzg_commitments)) > max_blobs:
         raise GossipReject("too many blob kzg commitments")
 
     # [REJECT] The block is proposed by the expected proposer for the slot
@@ -454,7 +454,7 @@ def validate_data_column_sidecar_gossip(
         raise GossipIgnore("sidecar is not from a slot greater than the latest finalized slot")
 
     # [REJECT] The proposer index is a valid validator index
-    if block_header.proposer_index >= len(state.validators):
+    if block_header.proposer_index >= ValidatorIndex(len(state.validators)):
         raise GossipReject("proposer index out of range")
 
     # [REJECT] The proposer signature of sidecar.signed_block_header is valid

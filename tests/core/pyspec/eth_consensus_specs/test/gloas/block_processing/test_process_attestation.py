@@ -438,7 +438,7 @@ def test_old_attested_block_gets_head_flag(spec, state):
 
     attestation = get_valid_attestation(spec, state, slot=attestation_slot, signed=True)
 
-    assert attestation.data.index == 0
+    assert attestation.data.index == spec.CommitteeIndex(0)
     assert spec.is_attestation_same_slot(state, attestation.data) is False
     # The attested block (genesis) still matches the historical block roots
     assert attestation.data.beacon_block_root == spec.get_block_root_at_slot(
@@ -446,7 +446,7 @@ def test_old_attested_block_gets_head_flag(spec, state):
     )
     # The genesis payload was never revealed, which matches data.index == 0
     parent_slot = state.latest_execution_payload_bid.slot
-    assert parent_slot == 0
+    assert parent_slot == spec.Slot(0)
     assert not state.execution_payload_availability[parent_slot % spec.SLOTS_PER_HISTORICAL_ROOT]
 
     attesting_indices = spec.get_attesting_indices(state, attestation)

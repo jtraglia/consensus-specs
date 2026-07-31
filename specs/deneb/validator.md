@@ -222,7 +222,7 @@ The `subnet_id` for the `blob_sidecar` is calculated with:
 
 ```python
 def compute_subnet_for_blob_sidecar(blob_index: BlobIndex) -> SubnetID:
-    return SubnetID(blob_index % BLOB_SIDECAR_SUBNET_COUNT)
+    return SubnetID(blob_index % BlobIndex(BLOB_SIDECAR_SUBNET_COUNT))
 ```
 
 After publishing the peers on the network may request the sidecar through

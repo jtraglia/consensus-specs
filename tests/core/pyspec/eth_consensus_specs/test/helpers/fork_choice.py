@@ -232,8 +232,8 @@ def add_attestations(spec, store, attestations, test_steps, is_from_block=False)
 
 def tick_and_run_on_attestation(spec, store, attestation, test_steps, is_from_block=False):
     # Make get_current_slot(store) >= attestation.data.slot + spec.Slot(1)
-    min_time_to_include = (
-        (attestation.data.slot + spec.Slot(1)) * int(spec.config.SLOT_DURATION_MS) // 1000
+    min_time_to_include = spec.Uint64(
+        int(attestation.data.slot + spec.Slot(1)) * int(spec.config.SLOT_DURATION_MS) // 1000
     )
     if store.time < min_time_to_include:
         spec.on_tick(store, min_time_to_include)

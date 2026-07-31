@@ -88,9 +88,9 @@ def prepare_process_builder_deposit_request(
                 if epoch_value == "current_epoch":
                     epoch_value = current_epoch
                 elif epoch_value == "current_epoch-1":
-                    epoch_value = current_epoch - 1
+                    epoch_value = current_epoch - spec.Epoch(1)
                 elif epoch_value == "current_epoch+1":
-                    epoch_value = current_epoch + 1
+                    epoch_value = current_epoch + spec.Epoch(1)
                 state.builders[idx].withdrawable_epoch = epoch_value
             if "balance" in mods:
                 state.builders[idx].balance = spec.Gwei(mods["balance"])
@@ -195,7 +195,7 @@ def assert_process_builder_deposit_request(
 
     # Test-specific checks
     if expected_builder_balance is not None:
-        assert state.builders[builder_index].balance == expected_builder_balance
+        assert state.builders[builder_index].balance == spec.Gwei(expected_builder_balance)
 
     if expected_builder_balance_delta is not None:
         if pre_builder_index is not None:

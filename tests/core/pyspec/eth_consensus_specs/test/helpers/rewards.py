@@ -55,9 +55,9 @@ def has_enough_for_leak_penalty(spec, state, index):
     """
 
     if is_post_altair(spec):
-        return state.validators[index].effective_balance * state.inactivity_scores[index] > int(
-            spec.config.INACTIVITY_SCORE_BIAS
-        ) * int(get_inactivity_penalty_quotient(spec))
+        return int(state.validators[index].effective_balance) * int(
+            state.inactivity_scores[index]
+        ) > int(spec.config.INACTIVITY_SCORE_BIAS) * int(get_inactivity_penalty_quotient(spec))
     else:
         return state.validators[index].effective_balance * spec.Gwei(
             spec.get_finality_delay(state)
@@ -320,13 +320,13 @@ def run_get_inactivity_penalty_deltas(spec, state):
             assert penalties[index] == spec.Gwei(0)
         else:
             # copied from spec:
-            penalty_numerator = (
-                state.validators[index].effective_balance * state.inactivity_scores[index]
+            penalty_numerator = int(state.validators[index].effective_balance) * int(
+                state.inactivity_scores[index]
             )
-            penalty_denominator = (
-                spec.config.INACTIVITY_SCORE_BIAS * get_inactivity_penalty_quotient(spec)
+            penalty_denominator = int(spec.config.INACTIVITY_SCORE_BIAS) * int(
+                get_inactivity_penalty_quotient(spec)
             )
-            assert penalties[index] == penalty_numerator // penalty_denominator
+            assert penalties[index] == spec.Gwei(penalty_numerator // penalty_denominator)
 
 
 def transition_state_to_leak(spec, state, epochs=None):

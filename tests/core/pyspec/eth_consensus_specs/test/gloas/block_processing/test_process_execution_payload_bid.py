@@ -46,7 +46,7 @@ def prepare_block_with_non_proposer_builder(spec, state):
     """
     # Create block first (this advances state.slot)
     block = build_empty_block_for_next_slot(spec, state)
-    builder_index = block.proposer_index % len(state.builders)
+    builder_index = spec.BuilderIndex(int(block.proposer_index) % len(state.builders))
     return block, builder_index
 
 
@@ -357,7 +357,7 @@ def test_process_execution_payload_bid_insufficient_balance(spec, state):
 
     value = spec.Gwei(1000000)  # 0.001 ETH
     # Set balance too low
-    state.builders[builder_index].balance = value - 1
+    state.builders[builder_index].balance = value - spec.Gwei(1)
 
     # Create bid with this non-proposer builder
     signed_bid = prepare_signed_execution_payload_bid(
@@ -734,7 +734,7 @@ def test_process_execution_payload_bid_blob_kzg_commitments_over_limit(spec, sta
     # Construct list of commitments
     epoch = spec.compute_epoch_at_slot(block.slot)
     blob_limit = spec.get_blob_parameters(epoch).max_blobs_per_block
-    _, _, blob_kzg_commitments, _ = get_sample_blob_tx(spec, blob_count=blob_limit + 1)
+    _, _, blob_kzg_commitments, _ = get_sample_blob_tx(spec, blob_count=int(blob_limit) + 1)
 
     # Create bid with too many commitments
     signed_bid = prepare_signed_execution_payload_bid(

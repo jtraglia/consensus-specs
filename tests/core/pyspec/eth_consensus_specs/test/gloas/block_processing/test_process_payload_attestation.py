@@ -14,7 +14,6 @@ from eth_consensus_specs.test.helpers.constants import MINIMAL
 from eth_consensus_specs.test.helpers.gloas.state import initialize_ptc_window
 from eth_consensus_specs.test.helpers.keys import privkeys
 from eth_consensus_specs.test.helpers.state import next_epoch
-from eth_consensus_specs.utils.ssz.ssz_typing import BitVector
 
 
 def run_payload_attestation_processing(spec, state, payload_attestation, valid=True):
@@ -72,7 +71,7 @@ def prepare_signed_payload_attestation(
     # to deal with duplicates indices in the PTC.
     unset_indices = list(attesting_indices)
 
-    aggregation_bits = BitVector[spec.PTC_SIZE]()
+    aggregation_bits = spec.PTCBits()
     for i, validator_index in enumerate(ptc):
         if validator_index in unset_indices:
             aggregation_bits[i] = True
@@ -101,7 +100,7 @@ def prepare_signed_payload_attestation(
 
         signatures = []
         for validator_index in attesting_indices:
-            if validator_index < len(privkeys):
+            if int(validator_index) < len(privkeys):
                 signature = spec.bls.Sign(privkeys[validator_index], signing_root)
                 signatures.append(signature)
 
@@ -128,15 +127,15 @@ def _compute_selection_with_acceptance_iterations(spec, state, indices, seed, si
     accepted_at = []
     total = len(indices)
     i = 0
-    while len(selected) < size:
+    while len(selected) < int(size):
         offset = i % 16 * 2
         if offset == 0:
             random_bytes = spec.hash(seed + spec.uint_to_bytes(spec.Uint64(i // 16)))
         candidate_index = indices[i % total]
         effective_balance = state.validators[candidate_index].effective_balance
         random_value = spec.bytes_to_uint64(random_bytes[offset : offset + 2])
-        weight = effective_balance * MAX_RANDOM_VALUE
-        threshold = spec.MAX_EFFECTIVE_BALANCE_ELECTRA * random_value
+        weight = effective_balance * spec.Gwei(MAX_RANDOM_VALUE)
+        threshold = spec.MAX_EFFECTIVE_BALANCE_ELECTRA * spec.Gwei(random_value)
         if weight >= threshold:
             selected.append(candidate_index)
             accepted_at.append(i)
@@ -331,17 +330,17 @@ def test_process_payload_attestation_uses_multiple_committees(spec, state):
     from committee 0 alone must reject.
     """
     committees_per_slot = spec.get_committee_count_per_slot(state, spec.get_current_epoch(state))
-    assert committees_per_slot > 1
+    assert committees_per_slot > spec.Uint64(1)
 
     chosen_slot = None
     chosen_index = None
     for slot in map(spec.Slot, range(spec.SLOTS_PER_EPOCH)):
-        spec.process_slots(state, slot + 1)
+        spec.process_slots(state, slot + spec.Slot(1))
 
         committees_per_slot = spec.get_committee_count_per_slot(
             state, spec.compute_epoch_at_slot(slot)
         )
-        assert committees_per_slot > 1
+        assert committees_per_slot > spec.Uint64(1)
 
         indices_all = []
         for i in range(committees_per_slot):
@@ -382,7 +381,7 @@ def test_process_payload_attestation_sampling_not_capped(spec, state):
     """
     epoch = spec.get_current_epoch(state)
     active_validator_count = len(spec.get_active_validator_indices(state, epoch))
-    limit = active_validator_count // spec.SLOTS_PER_EPOCH
+    limit = active_validator_count // int(spec.SLOTS_PER_EPOCH)
     assert limit > 0
 
     low_balance = spec.EFFECTIVE_BALANCE_INCREMENT
@@ -394,7 +393,7 @@ def test_process_payload_attestation_sampling_not_capped(spec, state):
     chosen_slot = None
     chosen_index = None
     for slot in map(spec.Slot, range(spec.SLOTS_PER_EPOCH)):
-        spec.process_slots(state, slot + 1)
+        spec.process_slots(state, slot + spec.Slot(1))
 
         epoch = spec.compute_epoch_at_slot(slot)
         committees_per_slot = spec.get_committee_count_per_slot(state, epoch)

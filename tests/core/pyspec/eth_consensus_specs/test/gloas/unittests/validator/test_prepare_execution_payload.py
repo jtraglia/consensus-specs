@@ -47,7 +47,8 @@ def _add_block_to_store(spec, state, execution_requests=None):
     store, _ = get_genesis_forkchoice_store_and_block(spec, state)
 
     current_time = (
-        state.slot * (spec.config.SLOT_DURATION_MS // spec.Uint64(1000)) + store.genesis_time
+        spec.Uint64(state.slot) * (spec.config.SLOT_DURATION_MS // spec.Uint64(1000))
+        + store.genesis_time
     )
     spec.on_tick(store, current_time)
 
@@ -105,7 +106,9 @@ def test_prepare_execution_payload__extend_payload(spec, state):
     # not touch it.
     validator_index = 0
     consolidation_request = prepare_switch_to_compounding_request(spec, state, validator_index)
-    execution_requests = spec.ExecutionRequests(consolidations=[consolidation_request])
+    execution_requests = spec.ExecutionRequests(
+        consolidations=spec.ConsolidationRequests(data=[consolidation_request])
+    )
 
     # Build block_1 with a bid that commits to the requests we will deliver
     # in the envelope. The bid's execution_requests_root must match
@@ -258,7 +261,8 @@ def test_prepare_execution_payload__block_passes_state_transition(spec, state):
     store, _ = get_genesis_forkchoice_store_and_block(spec, state)
 
     current_time = (
-        state.slot * (spec.config.SLOT_DURATION_MS // spec.Uint64(1000)) + store.genesis_time
+        spec.Uint64(state.slot) * (spec.config.SLOT_DURATION_MS // spec.Uint64(1000))
+        + store.genesis_time
     )
     spec.on_tick(store, current_time)
 

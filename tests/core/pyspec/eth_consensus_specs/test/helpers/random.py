@@ -26,9 +26,11 @@ def set_some_activations(spec, state, rng, activation_epoch=None):
             continue
         # Set ~1/10 validators' activation_eligibility_epoch and activation_epoch
         if rng.randrange(num_validators) < num_validators // 10:
-            state.validators[index].activation_eligibility_epoch = max(
-                int(activation_epoch) - int(spec.MAX_SEED_LOOKAHEAD) - 1,
-                spec.GENESIS_EPOCH,
+            state.validators[index].activation_eligibility_epoch = spec.Epoch(
+                max(
+                    int(activation_epoch) - int(spec.MAX_SEED_LOOKAHEAD) - 1,
+                    int(spec.GENESIS_EPOCH),
+                )
             )
             state.validators[index].activation_epoch = activation_epoch
             selected_indices.append(index)
@@ -150,11 +152,11 @@ def randomize_epoch_participation(spec, state, epoch, rng):
 
             def set_flag(index, value):
                 nonlocal flags
-                flag = spec.ParticipationFlags(2**index)
+                flag = spec.ParticipationFlags(2 ** int(index))
                 if value:
                     flags |= flag
                 else:
-                    flags &= 0xFF ^ flag
+                    flags &= spec.ParticipationFlags(0xFF) ^ flag
 
             set_flag(spec.TIMELY_HEAD_FLAG_INDEX, is_timely_correct_head)
             if is_timely_correct_head:
@@ -178,9 +180,9 @@ def randomize_previous_epoch_participation(spec, state, rng=None):
     if not is_post_altair(spec):
         state.current_epoch_attestations = spec.PendingAttestations(data=[])
     else:
-        state.current_epoch_participation = [
-            spec.ParticipationFlags(0b0000_0000) for _ in range(len(state.validators))
-        ]
+        state.current_epoch_participation = spec.EpochParticipation(
+            data=[spec.ParticipationFlags(0b0000_0000) for _ in range(len(state.validators))]
+        )
 
 
 def randomize_attestation_participation(spec, state, rng=None):
@@ -204,7 +206,7 @@ def set_some_pending_deposits(spec, state, rng):
         # Set ~1/10 validators to have pending deposits
         if rng.randrange(num_validators) < num_validators // 10:
             validator = state.validators[index]
-            amount = spec.EFFECTIVE_BALANCE_INCREMENT * rng.randint(1, 4)
+            amount = spec.EFFECTIVE_BALANCE_INCREMENT * spec.Gwei(rng.randint(1, 4))
 
             pending_deposit = spec.PendingDeposit(
                 pubkey=validator.pubkey,
@@ -242,8 +244,8 @@ def set_some_pending_partial_withdrawals(spec, state, rng):
             )
 
             # Create pending partial withdrawal
-            amount = spec.EFFECTIVE_BALANCE_INCREMENT * rng.randint(1, 4)
-            withdrawable_epoch = current_epoch + rng.randint(0, 3)
+            amount = spec.EFFECTIVE_BALANCE_INCREMENT * spec.Gwei(rng.randint(1, 4))
+            withdrawable_epoch = current_epoch + spec.Epoch(rng.randint(0, 3))
 
             pending_withdrawal = spec.PendingPartialWithdrawal(
                 validator_index=index,

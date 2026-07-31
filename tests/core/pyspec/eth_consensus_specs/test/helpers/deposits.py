@@ -268,9 +268,9 @@ def prepare_builder_deposit_request(
     """
     if pubkey is None:
         # Find a pubkey that doesn't exist in state.builders
-        existing_pubkeys = {builder.pubkey for builder in state.builders}
+        existing_pubkeys = {bytes(builder.pubkey) for builder in state.builders}
         for pk in builder_pubkeys:
-            if pk not in existing_pubkeys:
+            if bytes(pk) not in existing_pubkeys:
                 pubkey = pk
                 break
         if pubkey is None:
@@ -379,7 +379,7 @@ def run_deposit_processing(spec, state, deposit, validator_index, valid=True, ef
         assert len(state.validators) == pre_validator_count
         assert len(state.balances) == pre_validator_count
         if is_top_up:
-            assert get_balance(state, validator_index) == pre_balance
+            assert get_balance(state, validator_index) == spec.Gwei(pre_balance)
         if is_post_electra(spec):
             assert len(state.pending_deposits) == pre_pending_deposits_count
     else:
@@ -394,7 +394,9 @@ def run_deposit_processing(spec, state, deposit, validator_index, valid=True, ef
         if not is_post_electra(spec):
             if is_top_up:
                 # Top-ups do not change effective balance
-                assert state.validators[validator_index].effective_balance == pre_effective_balance
+                assert state.validators[validator_index].effective_balance == spec.Gwei(
+                    pre_effective_balance
+                )
             else:
                 effective_balance = min(spec.MAX_EFFECTIVE_BALANCE, deposit.data.amount)
                 effective_balance -= effective_balance % spec.EFFECTIVE_BALANCE_INCREMENT
@@ -404,21 +406,29 @@ def run_deposit_processing(spec, state, deposit, validator_index, valid=True, ef
             )
         else:
             # no balance or effective balance changes on deposit processing post electra
-            assert get_balance(state, validator_index) == pre_balance
-            assert state.validators[validator_index].effective_balance == pre_effective_balance
+            assert get_balance(state, validator_index) == spec.Gwei(pre_balance)
+            assert state.validators[validator_index].effective_balance == spec.Gwei(
+                pre_effective_balance
+            )
             # new correct balance deposit queued up
-            assert len(state.pending_deposits) == pre_pending_deposits_count + 1
-            assert state.pending_deposits[pre_pending_deposits_count].pubkey == deposit.data.pubkey
+            assert len(state.pending_deposits) == int(pre_pending_deposits_count) + 1
             assert (
-                state.pending_deposits[pre_pending_deposits_count].withdrawal_credentials
+                state.pending_deposits[int(pre_pending_deposits_count)].pubkey
+                == deposit.data.pubkey
+            )
+            assert (
+                state.pending_deposits[int(pre_pending_deposits_count)].withdrawal_credentials
                 == deposit.data.withdrawal_credentials
             )
-            assert state.pending_deposits[pre_pending_deposits_count].amount == deposit.data.amount
             assert (
-                state.pending_deposits[pre_pending_deposits_count].signature
+                state.pending_deposits[int(pre_pending_deposits_count)].amount
+                == deposit.data.amount
+            )
+            assert (
+                state.pending_deposits[int(pre_pending_deposits_count)].signature
                 == deposit.data.signature
             )
-            assert state.pending_deposits[pre_pending_deposits_count].slot == spec.GENESIS_SLOT
+            assert state.pending_deposits[int(pre_pending_deposits_count)].slot == spec.GENESIS_SLOT
 
     assert state.eth1_deposit_index == state.eth1_data.deposit_count
 
@@ -484,7 +494,9 @@ def run_deposit_request_processing(spec, state, deposit_request, validator_index
     assert len(state.balances) == pre_validator_count
 
     if is_top_up:
-        assert state.validators[validator_index].effective_balance == pre_effective_balance
+        assert state.validators[validator_index].effective_balance == spec.Gwei(
+            pre_effective_balance
+        )
         assert state.balances[validator_index] == pre_balance
 
     pending_deposit = spec.PendingDeposit(
@@ -495,7 +507,7 @@ def run_deposit_request_processing(spec, state, deposit_request, validator_index
         slot=state.slot,
     )
 
-    assert state.pending_deposits == [pending_deposit]
+    assert list(state.pending_deposits) == [pending_deposit]
 
 
 def run_pending_deposit_applying(spec, state, pending_deposit, validator_index, effective=True):
@@ -548,7 +560,9 @@ def run_pending_deposit_applying(spec, state, pending_deposit, validator_index, 
             assert len(state.validators) == pre_validator_count
             assert len(state.balances) == pre_validator_count
             # Top-ups do not change effective balance
-            assert state.validators[validator_index].effective_balance == pre_effective_balance
+            assert state.validators[validator_index].effective_balance == spec.Gwei(
+                pre_effective_balance
+            )
         else:
             # new validator is added
             assert len(state.validators) == pre_validator_count + 1
@@ -558,11 +572,13 @@ def run_pending_deposit_applying(spec, state, pending_deposit, validator_index, 
             effective_balance = min(max_effective_balace, pending_deposit.amount)
             effective_balance -= effective_balance % spec.EFFECTIVE_BALANCE_INCREMENT
             assert state.validators[validator_index].effective_balance == effective_balance
-        assert get_balance(state, validator_index) == pre_balance + pending_deposit.amount
+        assert (
+            get_balance(state, validator_index) == spec.Gwei(pre_balance) + pending_deposit.amount
+        )
     else:
         assert len(state.validators) == pre_validator_count
         assert len(state.balances) == pre_validator_count
         if is_top_up:
-            assert get_balance(state, validator_index) == pre_balance
+            assert get_balance(state, validator_index) == spec.Gwei(pre_balance)
 
     assert len(state.pending_deposits) == 0

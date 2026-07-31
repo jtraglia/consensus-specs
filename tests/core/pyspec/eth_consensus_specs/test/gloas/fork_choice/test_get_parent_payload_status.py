@@ -29,7 +29,8 @@ def test_get_parent_payload_status__genesis_empty_block_hash(spec, state):
     yield "anchor_block", anchor_block
 
     current_time = (
-        state.slot * (spec.config.SLOT_DURATION_MS // spec.Uint64(1000)) + store.genesis_time
+        spec.Uint64(state.slot) * (spec.config.SLOT_DURATION_MS // spec.Uint64(1000))
+        + store.genesis_time
     )
     on_tick_and_append_step(spec, store, current_time, test_steps)
 

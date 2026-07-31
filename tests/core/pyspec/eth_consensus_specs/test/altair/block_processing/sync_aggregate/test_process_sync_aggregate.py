@@ -42,7 +42,7 @@ def test_invalid_signature_bad_domain(spec, state):
 
     block = build_empty_block_for_next_slot(spec, state)
     block.body.sync_aggregate = spec.SyncAggregate(
-        sync_committee_bits=[True] * len(committee_indices),
+        sync_committee_bits=spec.SyncCommitteeBits(data=[True] * len(committee_indices)),
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
@@ -87,7 +87,9 @@ def test_invalid_signature_no_participants(spec, state):
     block = build_empty_block_for_next_slot(spec, state)
     # No participants is an allowed case, but needs a specific signature, not the full-zeroed signature.
     block.body.sync_aggregate = spec.SyncAggregate(
-        sync_committee_bits=[False] * len(block.body.sync_aggregate.sync_committee_bits),
+        sync_committee_bits=spec.SyncCommitteeBits(
+            data=[False] * len(block.body.sync_aggregate.sync_committee_bits)
+        ),
         sync_committee_signature=b"\x00" * 96,
     )
     yield from run_sync_committee_processing(spec, state, block, expect_exception=True)
@@ -103,7 +105,9 @@ def test_invalid_signature_infinite_signature_with_all_participants(spec, state)
     block = build_empty_block_for_next_slot(spec, state)
     # Include all participants, try the special-case signature for no-participants
     block.body.sync_aggregate = spec.SyncAggregate(
-        sync_committee_bits=[True] * len(block.body.sync_aggregate.sync_committee_bits),
+        sync_committee_bits=spec.SyncCommitteeBits(
+            data=[True] * len(block.body.sync_aggregate.sync_committee_bits)
+        ),
         sync_committee_signature=spec.G2_POINT_AT_INFINITY,
     )
     yield from run_sync_committee_processing(spec, state, block, expect_exception=True)
@@ -116,8 +120,9 @@ def test_invalid_signature_infinite_signature_with_single_participant(spec, stat
     block = build_empty_block_for_next_slot(spec, state)
     # Try include a single participant with the special-case signature for no-participants.
     block.body.sync_aggregate = spec.SyncAggregate(
-        sync_committee_bits=[True]
-        + ([False] * (len(block.body.sync_aggregate.sync_committee_bits) - 1)),
+        sync_committee_bits=spec.SyncCommitteeBits(
+            data=[True] + ([False] * (len(block.body.sync_aggregate.sync_committee_bits) - 1))
+        ),
         sync_committee_signature=spec.G2_POINT_AT_INFINITY,
     )
     yield from run_sync_committee_processing(spec, state, block, expect_exception=True)
@@ -134,7 +139,7 @@ def test_invalid_signature_extra_participant(spec, state):
     block = build_empty_block_for_next_slot(spec, state)
     # Exclude one signature even though the block claims the entire committee participated.
     block.body.sync_aggregate = spec.SyncAggregate(
-        sync_committee_bits=[True] * len(committee_indices),
+        sync_committee_bits=spec.SyncCommitteeBits(data=[True] * len(committee_indices)),
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
@@ -272,7 +277,7 @@ def test_sync_committee_rewards_duplicate_committee_zero_balance_only_participat
     )
 
     # The validator gets reward first (balance > 0) and then gets the same amount of penalty (balance == 0)
-    assert state.balances[validator_index] == 0
+    assert state.balances[validator_index] == spec.Gwei(0)
 
 
 @with_altair_and_later
@@ -293,7 +298,7 @@ def test_sync_committee_rewards_duplicate_committee_zero_balance_only_participat
     )
 
     # The validator gets penalty first (balance is still 0) and then gets reward (balance > 0)
-    assert state.balances[validator_index] > 0
+    assert state.balances[validator_index] > spec.Gwei(0)
 
 
 @with_altair_and_later
@@ -362,7 +367,7 @@ def test_invalid_signature_past_block(spec, state):
         block = build_empty_block_for_next_slot(spec, state)
         # Valid sync committee signature here...
         block.body.sync_aggregate = spec.SyncAggregate(
-            sync_committee_bits=[True] * len(committee_indices),
+            sync_committee_bits=spec.SyncCommitteeBits(data=[True] * len(committee_indices)),
             sync_committee_signature=compute_aggregate_sync_committee_signature(
                 spec,
                 state,
@@ -377,7 +382,7 @@ def test_invalid_signature_past_block(spec, state):
     invalid_block = build_empty_block_for_next_slot(spec, state)
     # Invalid signature from a slot other than the previous
     invalid_block.body.sync_aggregate = spec.SyncAggregate(
-        sync_committee_bits=[True] * len(committee_indices),
+        sync_committee_bits=spec.SyncCommitteeBits(data=[True] * len(committee_indices)),
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
@@ -406,7 +411,7 @@ def test_invalid_signature_previous_committee(spec, state):
         current_epoch + spec.Epoch(2) * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
     )
     slot_in_future_sync_committee_period = (
-        epoch_in_future_sync_committee_period * spec.SLOTS_PER_EPOCH
+        spec.Slot(epoch_in_future_sync_committee_period) * spec.SLOTS_PER_EPOCH
     )
     transition_to(spec, state, slot_in_future_sync_committee_period)
 
@@ -417,7 +422,7 @@ def test_invalid_signature_previous_committee(spec, state):
 
     block = build_empty_block_for_next_slot(spec, state)
     block.body.sync_aggregate = spec.SyncAggregate(
-        sync_committee_bits=[True] * len(committee_indices),
+        sync_committee_bits=spec.SyncCommitteeBits(data=[True] * len(committee_indices)),
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
@@ -448,7 +453,7 @@ def test_valid_signature_future_committee(spec, state):
         current_epoch + spec.Epoch(2) * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
     )
     slot_in_future_sync_committee_period = (
-        epoch_in_future_sync_committee_period * spec.SLOTS_PER_EPOCH
+        spec.Slot(epoch_in_future_sync_committee_period) * spec.SLOTS_PER_EPOCH
     )
     transition_to(spec, state, slot_in_future_sync_committee_period)
 
@@ -463,7 +468,7 @@ def test_valid_signature_future_committee(spec, state):
 
     block = build_empty_block_for_next_slot(spec, state)
     block.body.sync_aggregate = spec.SyncAggregate(
-        sync_committee_bits=[True] * len(committee_indices),
+        sync_committee_bits=spec.SyncCommitteeBits(data=[True] * len(committee_indices)),
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
@@ -490,8 +495,8 @@ def test_proposer_in_committee_without_participation(spec, state):
         proposer_pubkey = state.validators[proposer_index].pubkey
         proposer_is_in_sync_committee = proposer_pubkey in state.current_sync_committee.pubkeys
         if proposer_is_in_sync_committee:
-            participation = [index != proposer_index for index in committee_indices]
-            participants = [index for index in committee_indices if index != proposer_index]
+            participation = [index != int(proposer_index) for index in committee_indices]
+            participants = [index for index in committee_indices if index != int(proposer_index)]
         else:
             participation = [True for _ in committee_indices]
             participants = committee_indices
@@ -609,7 +614,7 @@ def test_sync_committee_with_participating_exited_member(spec, state):
 
     block = build_empty_block_for_next_slot(spec, state)
     block.body.sync_aggregate = spec.SyncAggregate(
-        sync_committee_bits=[True] * len(committee_indices),
+        sync_committee_bits=spec.SyncCommitteeBits(data=[True] * len(committee_indices)),
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
@@ -647,7 +652,7 @@ def test_sync_committee_with_nonparticipating_exited_member(spec, state):
     current_epoch = spec.get_current_epoch(state)
     assert current_epoch < state.validators[exited_index].withdrawable_epoch
 
-    exited_committee_index = state.current_sync_committee.pubkeys.index(exited_pubkey)
+    exited_committee_index = list(state.current_sync_committee.pubkeys).index(exited_pubkey)
     block = build_empty_block_for_next_slot(spec, state)
     committee_bits = [i != exited_committee_index for i in committee_indices]
     committee_indices = [index for index in committee_indices if index != exited_committee_index]
@@ -691,7 +696,7 @@ def test_sync_committee_with_participating_withdrawable_member(spec, state):
 
     block = build_empty_block_for_next_slot(spec, state)
     block.body.sync_aggregate = spec.SyncAggregate(
-        sync_committee_bits=[True] * len(committee_indices),
+        sync_committee_bits=spec.SyncCommitteeBits(data=[True] * len(committee_indices)),
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
@@ -729,7 +734,7 @@ def test_sync_committee_with_nonparticipating_withdrawable_member(spec, state):
     current_epoch = spec.get_current_epoch(state)
     assert current_epoch > state.validators[exited_index].withdrawable_epoch
 
-    target_committee_index = state.current_sync_committee.pubkeys.index(exited_pubkey)
+    target_committee_index = list(state.current_sync_committee.pubkeys).index(exited_pubkey)
     block = build_empty_block_for_next_slot(spec, state)
     committee_bits = [i != target_committee_index for i in committee_indices]
     committee_indices = [index for index in committee_indices if index != target_committee_index]

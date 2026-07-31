@@ -73,6 +73,6 @@ def retrieve_column_sidecars_and_kzg_commitments(
 
 _get_parent_payload_status = get_parent_payload_status
 get_parent_payload_status = cache_this(
-    lambda store, block: block.hash_tree_root(),
+    lambda store, block: hash_tree_root(block),
     _get_parent_payload_status, lru_size=1024)
 """

@@ -9,7 +9,7 @@ from eth_consensus_specs.utils.ssz.ssz_impl import copy
 def test_proposer_lookahead_in_state_matches_computed_lookahead(spec, state):
     """Test that the proposer lookahead in the state matches the computed lookahead."""
     # Transition few epochs to past the MIN_SEED_LOOKAHEAD
-    for _ in range(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1)):
+    for _ in range(int(spec.MIN_SEED_LOOKAHEAD) + 1):
         next_epoch(spec, state)
 
     # Get initial lookahead
@@ -19,10 +19,9 @@ def test_proposer_lookahead_in_state_matches_computed_lookahead(spec, state):
     yield from run_epoch_processing_with(spec, state, "process_proposer_lookahead")
 
     # Verify lookahead was shifted correctly
-    assert (
-        state.proposer_lookahead[: spec.SLOTS_PER_EPOCH * spec.MIN_SEED_LOOKAHEAD]
-        == initial_lookahead[spec.SLOTS_PER_EPOCH :]
-    )
+    assert list(
+        state.proposer_lookahead[: int(spec.SLOTS_PER_EPOCH) * int(spec.MIN_SEED_LOOKAHEAD)]
+    ) == list(initial_lookahead[int(spec.SLOTS_PER_EPOCH) :])
 
 
 @with_fulu_and_later
@@ -32,7 +31,7 @@ def test_proposer_lookahead_does_not_contain_exited_validators(spec, state):
     Test proposer lookahead does not contain exited validators.
     """
     # Transition few epochs to past the MIN_SEED_LOOKAHEAD
-    for _ in range(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1)):
+    for _ in range(int(spec.MIN_SEED_LOOKAHEAD) + 1):
         next_epoch(spec, state)
 
     # Exit first half of active validators
@@ -48,7 +47,7 @@ def test_proposer_lookahead_does_not_contain_exited_validators(spec, state):
     min_exit_epoch = min(exit_epochs)
 
     # Progress epoch until we reach the epoch with the first validator exit
-    while spec.get_current_epoch(state) < min_exit_epoch - 1:
+    while spec.get_current_epoch(state) < min_exit_epoch - spec.Epoch(1):
         next_epoch(spec, state)
 
     # Run epoch processing, many validators will exit in this epoch

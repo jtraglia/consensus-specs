@@ -90,6 +90,7 @@ def build_empty_block(spec, state, slot=None, proposer_index=None):
     """
     if slot is None:
         slot = state.slot
+    slot = spec.Slot(slot)
     if slot < state.slot:
         raise Exception("build_empty_block cannot build blocks for past slots")
     if state.slot < slot:
@@ -142,6 +143,7 @@ def build_block_and_payload(
 
     if slot is None:
         slot = state.slot
+    slot = spec.Slot(slot)
     if slot < state.slot:
         raise Exception("build_block_and_payload cannot build blocks for past slots")
     if state.slot < slot:

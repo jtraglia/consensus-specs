@@ -114,7 +114,9 @@ def get_sample_transactions(spec, max_transaction_size=200, max_transaction_coun
     assert transaction_size >= 0
     assert transaction_count >= 0
 
-    transactions = [spec.Transaction(randbytes(transaction_size)) for _ in range(transaction_count)]
+    transactions = [
+        spec.Transaction(data=randbytes(transaction_size)) for _ in range(transaction_count)
+    ]
 
     return transactions
 

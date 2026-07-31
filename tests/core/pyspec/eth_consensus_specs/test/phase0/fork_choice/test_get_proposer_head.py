@@ -57,7 +57,9 @@ def test_basic_is_head_root(spec, state):
     next_slot(spec, state)
     slot = state.slot
 
-    current_time = slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    current_time = (
+        spec.Uint64(slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000) + store.genesis_time
+    )
     on_tick_and_append_step(spec, store, current_time, test_steps)
     proposer_head = spec.get_proposer_head(store, head, slot)
     assert proposer_head.root == head.root
@@ -125,17 +127,19 @@ def test_basic_is_parent_root(spec, state):
     # Fill a slot with attestations to its parent
     block = build_empty_block_for_next_slot(spec, state)
     parent_block_slot = block.slot - spec.Slot(1)
-    block.body.attestations = get_valid_attestations_at_slot(
-        state,
-        spec,
-        parent_block_slot,
+    block.body.attestations = spec.Attestations(
+        data=get_valid_attestations_at_slot(
+            state,
+            spec,
+            parent_block_slot,
+        )
     )
     signed_block = state_transition_and_sign_block(spec, state, block)
 
     # Make the head block late
     # Round up to nearest second
     attestation_due_ms = spec.get_attestation_due_ms()
-    attesting_cutoff = (attestation_due_ms + 999) // 1000
+    attesting_cutoff = spec.Uint64((int(attestation_due_ms) + 999) // 1000)
     current_time = (
         spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
         + store.genesis_time
@@ -161,7 +165,7 @@ def test_basic_is_parent_root(spec, state):
     attestations = get_valid_attestations_at_slot(
         state,
         spec,
-        slot_to_attest=slot - 1,
+        slot_to_attest=slot - spec.Slot(1),
         beacon_block_root=parent_root,
     )
     for attestation in attestations:

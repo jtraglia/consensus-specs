@@ -17,14 +17,13 @@ from eth_consensus_specs.test.helpers.state import transition_to
 from eth_consensus_specs.test.helpers.sync_committee import compute_sync_committee_signature
 from eth_consensus_specs.utils import bls
 from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
-from eth_consensus_specs.utils.ssz.ssz_typing import BitVector
 
 rng = random.Random(1337)
 
 
 def ensure_assignments_in_sync_committee(spec, state, epoch, sync_committee, active_pubkeys):
     assert len(sync_committee.pubkeys) >= 3
-    some_pubkeys = rng.sample(sync_committee.pubkeys, 3)
+    some_pubkeys = rng.sample(list(sync_committee.pubkeys), 3)
     for pubkey in some_pubkeys:
         validator_index = active_pubkeys.index(pubkey)
         assert spec.is_assigned_to_sync_committee(state, epoch, validator_index)
@@ -37,7 +36,7 @@ def test_is_assigned_to_sync_committee(spec, state):
     validator_indices = spec.get_active_validator_indices(state, epoch)
     validator_count = len(validator_indices)
 
-    query_epoch = epoch + 1
+    query_epoch = epoch + spec.Epoch(1)
     next_query_epoch = query_epoch + spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD
     active_pubkeys = [state.validators[index].pubkey for index in validator_indices]
 
@@ -76,7 +75,9 @@ def _get_sync_committee_signature(
     index_in_subcommittee,
 ):
     subcommittee_size = spec.SYNC_COMMITTEE_SIZE // spec.SYNC_COMMITTEE_SUBNET_COUNT
-    sync_committee_index = subcommittee_index * subcommittee_size + index_in_subcommittee
+    sync_committee_index = int(subcommittee_index) * int(subcommittee_size) + int(
+        index_in_subcommittee
+    )
     pubkey = state.current_sync_committee.pubkeys[sync_committee_index]
     privkey = pubkey_to_privkey[bytes(pubkey)]
 
@@ -98,7 +99,7 @@ def test_process_sync_committee_contributions(spec, state):
     block = build_empty_block(spec, state)
     previous_slot = state.slot - spec.Slot(1)
     target_block_root = spec.get_block_root_at_slot(state, previous_slot)
-    aggregation_bits = BitVector[spec.SYNC_COMMITTEE_SIZE // spec.SYNC_COMMITTEE_SUBNET_COUNT]()
+    aggregation_bits = spec.SyncSubcommitteeBits()
     aggregation_index = 0
     aggregation_bits[aggregation_index] = True
 
@@ -143,12 +144,12 @@ def test_get_sync_committee_message(spec, state):
     )
     assert sync_committee_message.slot == state.slot
     assert sync_committee_message.beacon_block_root == block_root
-    assert sync_committee_message.validator_index == validator_index
+    assert sync_committee_message.validator_index == spec.ValidatorIndex(validator_index)
     epoch = spec.get_current_epoch(state)
     domain = spec.get_domain(state, spec.DOMAIN_SYNC_COMMITTEE, epoch)
     signing_root = spec.compute_signing_root(block_root, domain)
     signature = bls.Sign(privkeys[validator_index], signing_root)
-    assert sync_committee_message.signature == signature
+    assert sync_committee_message.signature == spec.BLSSignature(signature)
 
 
 def _validator_index_for_pubkey(state, pubkey):
@@ -156,7 +157,7 @@ def _validator_index_for_pubkey(state, pubkey):
 
 
 def _subnet_for_sync_committee_index(spec, i):
-    return i // (spec.SYNC_COMMITTEE_SIZE // spec.SYNC_COMMITTEE_SUBNET_COUNT)
+    return int(i) // int(spec.SYNC_COMMITTEE_SIZE // spec.SYNC_COMMITTEE_SUBNET_COUNT)
 
 
 def _get_expected_subnets_by_pubkey(sync_committee_members):
@@ -172,7 +173,9 @@ def _get_expected_subnets_by_pubkey(sync_committee_members):
 @spec_state_test
 def test_compute_subnets_for_sync_committee(state, spec):
     # Transition to the head of the next period
-    transition_to(spec, state, spec.SLOTS_PER_EPOCH * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
+    transition_to(
+        spec, state, spec.SLOTS_PER_EPOCH * spec.Slot(spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
+    )
 
     next_slot_epoch = spec.compute_epoch_at_slot(state.slot + spec.Slot(1))
     assert spec.compute_sync_committee_period(
@@ -192,7 +195,7 @@ def test_compute_subnets_for_sync_committee(state, spec):
         validator_index = _validator_index_for_pubkey(state, pubkey)
         subnets = spec.compute_subnets_for_sync_committee(state, validator_index)
         expected_subnets = expected_subnets_by_pubkey[pubkey]
-        assert subnets == expected_subnets
+        assert {int(subnet) for subnet in subnets} == expected_subnets
 
 
 @with_altair_and_later
@@ -201,7 +204,9 @@ def test_compute_subnets_for_sync_committee(state, spec):
 def test_compute_subnets_for_sync_committee_slot_period_boundary(state, spec):
     # Transition to the end of the period
     transition_to(
-        spec, state, spec.SLOTS_PER_EPOCH * spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD - spec.Epoch(1)
+        spec,
+        state,
+        spec.SLOTS_PER_EPOCH * spec.Slot(spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD) - spec.Slot(1),
     )
 
     next_slot_epoch = spec.compute_epoch_at_slot(state.slot + spec.Slot(1))
@@ -222,14 +227,14 @@ def test_compute_subnets_for_sync_committee_slot_period_boundary(state, spec):
         validator_index = _validator_index_for_pubkey(state, pubkey)
         subnets = spec.compute_subnets_for_sync_committee(state, validator_index)
         expected_subnets = expected_subnets_by_pubkey[pubkey]
-        assert subnets == expected_subnets
+        assert {int(subnet) for subnet in subnets} == expected_subnets
 
 
 @with_altair_and_later
 @spec_state_test
 @always_bls
 def test_get_sync_committee_selection_proof(spec, state):
-    slot = 1
+    slot = spec.Slot(1)
     subcommittee_index = 0
     privkey = privkeys[1]
     sync_committee_selection_proof = spec.get_sync_committee_selection_proof(

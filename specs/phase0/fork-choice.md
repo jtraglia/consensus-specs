@@ -326,7 +326,7 @@ def get_attestation_score(store: Store, node: ForkChoiceNode, state: BeaconState
     ]
     return Gwei(
         sum(
-            state.validators[i].effective_balance
+            int(state.validators[i].effective_balance)
             for i in unslashed_and_active_indices
             if (
                 i in store.latest_messages
@@ -420,7 +420,7 @@ def filter_block_tree(store: Store, block_root: Root, blocks: Dict[Root, BeaconB
     correct_justified = (
         store.justified_checkpoint.epoch == GENESIS_EPOCH
         or voting_source.epoch == store.justified_checkpoint.epoch
-        or voting_source.epoch + 2 >= current_epoch
+        or voting_source.epoch + Epoch(2) >= current_epoch
     )
 
     finalized_checkpoint_block = get_checkpoint_block(
@@ -592,7 +592,7 @@ def is_head_late(store: Store, head_root: Root) -> bool:
 
 ```python
 def is_not_epoch_boundary(slot: Slot) -> bool:
-    return slot % SLOTS_PER_EPOCH != 0
+    return slot % SLOTS_PER_EPOCH != Slot(0)
 ```
 
 ##### `is_ffg_competitive`
@@ -646,7 +646,7 @@ def is_head_weak(store: Store, head_root: Root) -> bool:
         committee = get_beacon_committee(head_state, head_block.slot, CommitteeIndex(index))
         head_weight += Gwei(
             sum(
-                justified_state.validators[i].effective_balance
+                int(justified_state.validators[i].effective_balance)
                 for i in committee
                 if i in store.equivocating_indices
             )

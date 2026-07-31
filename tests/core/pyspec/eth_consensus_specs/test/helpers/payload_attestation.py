@@ -18,7 +18,7 @@ def get_random_payload_attestations(spec, state, rng):
     """Build random payload attestations for the parent block."""
     attested_slot = state.latest_block_header.slot
     # Don't generate payload attestation if we detect missed slots
-    if attested_slot != state.slot or attested_slot == 0:
+    if attested_slot != state.slot or attested_slot == spec.Slot(0):
         return []
 
     # Compute the beacon_block_root from the parent block header

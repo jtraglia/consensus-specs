@@ -72,7 +72,7 @@ def test_blob_sidecar_inclusion_proof_incorrect_wrong_proof(spec, state):
 
     for blob_sidecar in blob_sidecars:
         # wrong proof
-        blob_sidecar.kzg_commitment_inclusion_proof = spec.compute_merkle_proof(
-            spec.BeaconBlockBody(), 0
-        )
+        proof = list(blob_sidecar.kzg_commitment_inclusion_proof)
+        proof[0] = spec.Bytes32(spec.hash(proof[0]))
+        blob_sidecar.kzg_commitment_inclusion_proof = spec.KZGCommitmentInclusionProof(data=proof)
         assert not spec.verify_blob_sidecar_inclusion_proof(blob_sidecar)

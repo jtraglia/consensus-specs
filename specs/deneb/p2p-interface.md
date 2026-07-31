@@ -218,7 +218,7 @@ def is_within_epoch(
     return is_within_slot_range(
         state,
         compute_start_slot_at_epoch(epoch),
-        SLOTS_PER_EPOCH - 1,
+        SLOTS_PER_EPOCH - Slot(1),
         current_time_ms,
     )
 ```
@@ -236,7 +236,7 @@ def is_current_or_previous_epoch(
     (with MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
     """
     is_current = is_within_epoch(state, epoch, current_time_ms)
-    is_previous = is_within_epoch(state, Epoch(epoch + 1), current_time_ms)
+    is_previous = is_within_epoch(state, epoch + Epoch(1), current_time_ms)
     return is_current or is_previous
 ```
 
@@ -255,10 +255,10 @@ def compute_max_request_blob_sidecars() -> Uint64:
 ```python
 def verify_blob_sidecar_inclusion_proof(blob_sidecar: BlobSidecar) -> bool:
     gindex = get_subtree_index(
-        get_generalized_index(BeaconBlockBody, "blob_kzg_commitments", blob_sidecar.index)
+        get_generalized_index(BeaconBlockBody, "blob_kzg_commitments", int(blob_sidecar.index))
     )
     return is_valid_merkle_branch(
-        leaf=blob_sidecar.kzg_commitment.hash_tree_root(),
+        leaf=hash_tree_root(blob_sidecar.kzg_commitment),
         branch=blob_sidecar.kzg_commitment_inclusion_proof,
         depth=KZG_COMMITMENT_INCLUSION_PROOF_DEPTH,
         index=gindex,
@@ -337,7 +337,7 @@ def validate_beacon_block_gossip(
         raise GossipIgnore("block is not the first valid block for this proposer and slot")
 
     # [REJECT] The proposer index is a valid validator index
-    if block.proposer_index >= len(state.validators):
+    if block.proposer_index >= ValidatorIndex(len(state.validators)):
         raise GossipReject("proposer index out of range")
 
     # [REJECT] The proposer signature is valid
@@ -385,7 +385,7 @@ def validate_beacon_block_gossip(
 
     # [New in Deneb:EIP4844]
     # [REJECT] The length of KZG commitments is less than or equal to the limit
-    if len(block.body.blob_kzg_commitments) > MAX_BLOBS_PER_BLOCK:
+    if Uint64(len(block.body.blob_kzg_commitments)) > MAX_BLOBS_PER_BLOCK:
         raise GossipReject("too many blob kzg commitments")
 
     # [REJECT] The block is proposed by the expected proposer for the slot
@@ -545,7 +545,7 @@ def validate_voluntary_exit_gossip(
         raise GossipIgnore("already seen voluntary exit for this validator")
 
     # [REJECT] The validator index is valid
-    if validator_index >= len(state.validators):
+    if validator_index >= ValidatorIndex(len(state.validators)):
         raise GossipReject("validator index out of range")
 
     validator = state.validators[validator_index]
@@ -649,7 +649,7 @@ def validate_beacon_attestation_gossip(
         raise GossipReject("aggregation bits length does not match committee size")
 
     # [IGNORE] No other valid attestation seen for this validator and target epoch
-    participant_index = committee[aggregation_bits.index(True)]
+    participant_index = committee[next(i for i, bit in enumerate(aggregation_bits) if bit)]
     if (participant_index, target_epoch) in seen.attestation_validator_epochs:
         raise GossipIgnore("already seen attestation from this validator for this epoch")
 
@@ -709,7 +709,7 @@ def validate_blob_sidecar_gossip(
     block_header = blob_sidecar.signed_block_header.message
 
     # [REJECT] The sidecar's index is consistent with MAX_BLOBS_PER_BLOCK
-    if blob_sidecar.index >= MAX_BLOBS_PER_BLOCK:
+    if blob_sidecar.index >= BlobIndex(MAX_BLOBS_PER_BLOCK):
         raise GossipReject("blob index out of range")
 
     # [REJECT] The sidecar is for the correct subnet
@@ -727,7 +727,7 @@ def validate_blob_sidecar_gossip(
         raise GossipIgnore("blob sidecar is not from a slot greater than the latest finalized slot")
 
     # [REJECT] The proposer index is a valid validator index
-    if block_header.proposer_index >= len(state.validators):
+    if block_header.proposer_index >= ValidatorIndex(len(state.validators)):
         raise GossipReject("proposer index out of range")
 
     # [REJECT] The proposer signature of blob_sidecar.signed_block_header is valid

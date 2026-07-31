@@ -296,7 +296,11 @@ def run_lc_sync_test_single_fork(spec, phases, state, fork):
     assert test.store.optimistic_header.beacon.slot == attested_state.slot
 
     # Jump to next epoch
-    transition_to(spec, state, spec.compute_start_slot_at_epoch(fork_epoch + 1) - spec.Slot(2))
+    transition_to(
+        spec,
+        state,
+        spec.compute_start_slot_at_epoch(spec.Epoch(fork_epoch) + spec.Epoch(1)) - spec.Slot(2),
+    )
     attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )

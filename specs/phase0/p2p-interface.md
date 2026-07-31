@@ -400,7 +400,7 @@ def is_within_slot_range(
     start_time_ms = compute_time_at_slot_ms(state, slot)
     if current_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY < start_time_ms:
         return False
-    end_time_ms = compute_time_at_slot_ms(state, slot + slot_range + Slot(1))
+    end_time_ms = compute_time_at_slot_ms(state, slot + Slot(slot_range) + Slot(1))
     if end_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY < current_time_ms:
         return False
     return True

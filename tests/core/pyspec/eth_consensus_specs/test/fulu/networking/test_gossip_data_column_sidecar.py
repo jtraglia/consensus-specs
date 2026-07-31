@@ -88,7 +88,7 @@ def test_gossip_data_column_sidecar__valid(spec, state):
     # Sanity check: the BLOB_SCHEDULE override should be exercising the Fulu
     # code path (`get_blob_parameters`), not the Electra fallback. A client that
     # forgets EIP-7892 and uses MAX_BLOBS_PER_BLOCK_ELECTRA would reject this sidecar.
-    assert max_blobs > spec.config.MAX_BLOBS_PER_BLOCK_ELECTRA
+    assert max_blobs > spec.Uint64(spec.config.MAX_BLOBS_PER_BLOCK_ELECTRA)
     _, sidecars = build_signed_block_and_sidecars(spec, state, blob_count=max_blobs)
     sidecar = sidecars[0]
 
@@ -196,7 +196,7 @@ def test_gossip_data_column_sidecar__reject_too_many_commitments(spec, state):
     # Pad commitments past the blob limit. The verify_data_column_sidecar
     # check is independent of the inclusion proof, so we don't need a
     # consistent block here.
-    extra = get_max_blob_count(spec, state) + 1 - len(sidecar.kzg_commitments)
+    extra = int(get_max_blob_count(spec, state)) + 1 - len(sidecar.kzg_commitments)
     sidecar.kzg_commitments = spec.BlobKZGCommitments(
         data=list(sidecar.kzg_commitments) + [spec.KZGCommitment()] * extra
     )
@@ -259,7 +259,7 @@ def test_gossip_data_column_sidecar__reject_wrong_subnet(spec, state):
 
     expected_subnet = correct_subnet(spec, sidecar)
     wrong_subnet = spec.SubnetID(
-        (int(expected_subnet) + 1) % spec.config.DATA_COLUMN_SIDECAR_SUBNET_COUNT
+        (int(expected_subnet) + 1) % int(spec.config.DATA_COLUMN_SIDECAR_SUBNET_COUNT)
     )
     result, reason = run_validate_gossip(
         spec,
@@ -838,7 +838,9 @@ def test_gossip_data_column_sidecar__reject_invalid_inclusion_proof(spec, state)
     _, sidecars = build_signed_block_and_sidecars(spec, state, blob_count=1)
     sidecar = sidecars[0]
     # Corrupt the inclusion proof.
-    sidecar.kzg_commitments_inclusion_proof = spec.compute_merkle_proof(spec.BeaconBlockBody(), 0)
+    proof = list(sidecar.kzg_commitments_inclusion_proof)
+    proof[0] = spec.Bytes32(spec.hash(proof[0]))
+    sidecar.kzg_commitments_inclusion_proof = spec.KZGCommitmentsInclusionProof(data=proof)
 
     yield get_filename(sidecar), sidecar
 

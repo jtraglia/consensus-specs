@@ -39,7 +39,7 @@ def test_lookahead_consistency_at_fork(spec, phases, state):
     state = yield from run_fork_test(spec, state)
 
     # Check if the pre-fork simulation matches the post-fork `state.proposer_lookahead`
-    assert pre_fork_proposers == state.proposer_lookahead
+    assert pre_fork_proposers == list(state.proposer_lookahead)
 
 
 @with_phases(phases=[ELECTRA], other_phases=[FULU])
@@ -58,7 +58,7 @@ def test_proposer_lookahead_init_at_fork_only_contains_active_validators(spec, p
         validator = state.validators[validator_index]
         # Set exit_epoch to a future epoch within MIN_SEED_LOOKAHEAD + 1 range
         # This makes the validator active at current_epoch but exited in future epochs
-        validator.exit_epoch = current_epoch + 1
+        validator.exit_epoch = current_epoch + spec.Epoch(1)
 
     # Upgrade to Fulu
     spec = phases[FULU]
@@ -66,7 +66,7 @@ def test_proposer_lookahead_init_at_fork_only_contains_active_validators(spec, p
 
     # Check that the proposer lookahead does not contain inactive validators
     for slot_index, validator_index in enumerate(state.proposer_lookahead):
-        epoch_for_slot = current_epoch + (slot_index // spec.SLOTS_PER_EPOCH)
+        epoch_for_slot = current_epoch + spec.Epoch(slot_index // int(spec.SLOTS_PER_EPOCH))
         assert spec.is_active_validator(state.validators[validator_index], epoch_for_slot), (
             f"Validator {validator_index} in lookahead at slot {slot_index} (epoch {epoch_for_slot}) should be active"
         )
@@ -79,7 +79,8 @@ def test_proposer_lookahead_init_at_fork_only_contains_active_validators(spec, p
 def test_lookahead_consistency_with_effective_balance_change_at_fork(spec, phases, state):
     # Move to the last slot of the current epoch
     spec.process_slots(
-        state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
+        state,
+        state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - spec.Slot(1),
     )
     assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 

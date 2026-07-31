@@ -114,6 +114,13 @@ def build_spec(
     return objects_to_spec(preset_name, spec_object, fork, class_objects, shared_types)
 
 
+def _strip_prose(text: str) -> str:
+    """Drop string literals and comments, leaving only the code of a definition."""
+    text = re.sub(r'""".*?"""|\'\'\'.*?\'\'\'', "", text, flags=re.DOTALL)
+    text = re.sub(r'"[^"\n]*"|\'[^\'\n]*\'', "", text)
+    return re.sub(r"#[^\n]*", "", text)
+
+
 def collect_shared_types(
     fork: str,
     redefined: set[str],
@@ -141,7 +148,13 @@ def collect_shared_types(
     candidates -= redefined
 
     # A type built from a redefined type is itself redefined. Repeat until settled.
-    definitions = {**spec_object.custom_types, **class_objects}
+    # Only what a definition is built from counts, so docstrings and comments are
+    # dropped first -- a branch that merely says which container it proves against
+    # is not built from that container.
+    definitions = {
+        name: _strip_prose(text)
+        for name, text in {**spec_object.custom_types, **class_objects}.items()
+    }
     while True:
         newly_redefined = {
             name

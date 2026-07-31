@@ -30,7 +30,7 @@ def run_execution_payload_processing(
     """
 
     body = spec.BeaconBlockBody(
-        blob_kzg_commitments=blob_kzg_commitments,
+        blob_kzg_commitments=spec.BlobKZGCommitments(data=blob_kzg_commitments),
         execution_payload=execution_payload,
     )
     yield "body", body
@@ -300,7 +300,7 @@ def test_zeroed_commitment(spec, state):
     opaque_tx, _, blob_kzg_commitments, _ = get_sample_blob_tx(
         spec, blob_count=1, is_valid_blob=False
     )
-    assert all(commitment == b"\x00" * 48 for commitment in blob_kzg_commitments)
+    assert all(bytes(commitment) == b"\x00" * 48 for commitment in blob_kzg_commitments)
 
     execution_payload.transactions = spec.Transactions(data=[spec.Transaction(data=opaque_tx)])
     execution_payload.block_hash = compute_el_block_hash(spec, execution_payload, state)

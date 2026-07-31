@@ -8,7 +8,7 @@ def advance_past_finalization(spec, state):
     """Advance slots and finalize so that genesis-epoch builders become active."""
     epoch = spec.get_current_epoch(state)
     next_slots(spec, state, spec.SLOTS_PER_EPOCH * spec.Slot(3))
-    state.finalized_checkpoint.epoch = epoch + 1
+    state.finalized_checkpoint.epoch = epoch + spec.Epoch(1)
 
 
 def prepare_builder_exit_request(spec, state, builder_index, source_address=None):

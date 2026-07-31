@@ -26,11 +26,11 @@ def run_on_attestation(spec, state, store, attestation, valid=True):
 
     sample_index = indexed_attestation.attesting_indices[0]
     if is_post_gloas(spec):
-        assert attestation.data.index < 2
+        assert attestation.data.index < spec.CommitteeIndex(2)
         latest_message = spec.LatestMessage(
             slot=attestation.data.slot,
             root=attestation.data.beacon_block_root,
-            payload_present=attestation.data.index == 1,
+            payload_present=attestation.data.index == spec.CommitteeIndex(1),
         )
     else:
         latest_message = spec.LatestMessage(

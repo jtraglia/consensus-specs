@@ -512,7 +512,7 @@ def update_next_withdrawal_index(state: BeaconState, withdrawals: Sequence[Withd
     # Update the next withdrawal index if this block contained withdrawals
     if len(withdrawals) != 0:
         latest_withdrawal = withdrawals[-1]
-        state.next_withdrawal_index = WithdrawalIndex(latest_withdrawal.index + 1)
+        state.next_withdrawal_index = latest_withdrawal.index + WithdrawalIndex(1)
 ```
 
 #### New `update_next_withdrawal_validator_index`

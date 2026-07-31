@@ -59,8 +59,8 @@ def test_process_builder_pending_payments_below_quorum(spec, state):
 
     builder_index = 0
     amount = spec.MIN_ACTIVATION_BALANCE
-    quorum = spec.get_builder_payment_quorum_threshold(state)
-    weight = quorum - 1  # Below threshold
+    quorum = spec.Gwei(spec.get_builder_payment_quorum_threshold(state))
+    weight = quorum - spec.Gwei(1)  # Below threshold
 
     # Add pending payment with weight below quorum
     payment = create_builder_pending_payment(spec, builder_index, amount, weight)
@@ -87,7 +87,7 @@ def test_process_builder_pending_payments_equal_quorum(spec, state):
 
     builder_index = 0
     amount = spec.MIN_ACTIVATION_BALANCE
-    quorum = spec.get_builder_payment_quorum_threshold(state)
+    quorum = spec.Gwei(spec.get_builder_payment_quorum_threshold(state))
     weight = quorum  # Equal to threshold
     fee_recipient = b"\x41" * 20
 
@@ -104,9 +104,9 @@ def test_process_builder_pending_payments_equal_quorum(spec, state):
 
     # Check the withdrawal details
     withdrawal = state.builder_pending_withdrawals[len(state.builder_pending_withdrawals) - 1]
-    assert withdrawal.fee_recipient == fee_recipient
+    assert withdrawal.fee_recipient == spec.ExecutionAddress(fee_recipient)
     assert withdrawal.amount == amount
-    assert withdrawal.builder_index == builder_index
+    assert withdrawal.builder_index == spec.BuilderIndex(builder_index)
     # Payment should be rotated out
     assert state.builder_pending_payments[0].weight == spec.Gwei(0)
 
@@ -121,8 +121,8 @@ def test_process_builder_pending_payments_above_quorum(spec, state):
 
     builder_index = 0
     amount = spec.MIN_ACTIVATION_BALANCE
-    quorum = spec.get_builder_payment_quorum_threshold(state)
-    weight = quorum + 1  # Above threshold
+    quorum = spec.Gwei(spec.get_builder_payment_quorum_threshold(state))
+    weight = quorum + spec.Gwei(1)  # Above threshold
     fee_recipient = b"\x42" * 20
 
     # Add pending payment with weight above quorum
@@ -138,9 +138,9 @@ def test_process_builder_pending_payments_above_quorum(spec, state):
 
     # Check the withdrawal details
     withdrawal = state.builder_pending_withdrawals[len(state.builder_pending_withdrawals) - 1]
-    assert withdrawal.fee_recipient == fee_recipient
+    assert withdrawal.fee_recipient == spec.ExecutionAddress(fee_recipient)
     assert withdrawal.amount == amount
-    assert withdrawal.builder_index == builder_index
+    assert withdrawal.builder_index == spec.BuilderIndex(builder_index)
 
     # Payment should be rotated out
     assert state.builder_pending_payments[0].weight == spec.Gwei(0)
@@ -154,14 +154,14 @@ def test_process_builder_pending_payments_multiple_above_quorum(spec, state):
     next_epoch(spec, state)
     next_epoch(spec, state)
 
-    quorum = spec.get_builder_payment_quorum_threshold(state)
-    weight = quorum + 1
+    quorum = spec.Gwei(spec.get_builder_payment_quorum_threshold(state))
+    weight = quorum + spec.Gwei(1)
 
     # Add multiple payments above quorum
-    num_payments = min(3, spec.SLOTS_PER_EPOCH)
+    num_payments = min(3, int(spec.SLOTS_PER_EPOCH))
     for i in range(num_payments):
         builder_index = i
-        amount = spec.MIN_ACTIVATION_BALANCE + i * spec.EFFECTIVE_BALANCE_INCREMENT
+        amount = spec.MIN_ACTIVATION_BALANCE + spec.Gwei(i) * spec.EFFECTIVE_BALANCE_INCREMENT
         fee_recipient = bytes([0x10 + i]) + b"\x00" * 19
 
         payment = create_builder_pending_payment(spec, builder_index, amount, weight, fee_recipient)
@@ -177,7 +177,9 @@ def test_process_builder_pending_payments_multiple_above_quorum(spec, state):
     # Check each withdrawal
     for i in range(num_payments):
         withdrawal = state.builder_pending_withdrawals[pre_builder_pending_withdrawals + i]
-        expected_amount = spec.MIN_ACTIVATION_BALANCE + i * spec.EFFECTIVE_BALANCE_INCREMENT
+        expected_amount = (
+            spec.MIN_ACTIVATION_BALANCE + spec.Gwei(i) * spec.EFFECTIVE_BALANCE_INCREMENT
+        )
         expected_fee_recipient = bytes([0x10 + i]) + b"\x00" * 19
 
         assert withdrawal.amount == expected_amount
@@ -197,19 +199,19 @@ def test_process_builder_pending_payments_mixed_weights(spec, state):
     next_epoch(spec, state)
     next_epoch(spec, state)
 
-    quorum = spec.get_builder_payment_quorum_threshold(state)
+    quorum = spec.Gwei(spec.get_builder_payment_quorum_threshold(state))
 
     # Add payments with different weights ordered least to greatest
     payments_data = [
-        (0, spec.MIN_ACTIVATION_BALANCE, quorum // 2),  # Below threshold
-        (1, spec.MIN_ACTIVATION_BALANCE, quorum - 1),  # Below threshold
+        (0, spec.MIN_ACTIVATION_BALANCE, quorum // spec.Gwei(2)),  # Below threshold
+        (1, spec.MIN_ACTIVATION_BALANCE, quorum - spec.Gwei(1)),  # Below threshold
         (2, spec.MIN_ACTIVATION_BALANCE, quorum),  # Equal to threshold
-        (3, spec.MIN_ACTIVATION_BALANCE, quorum + 1),  # Above threshold
-        (4, spec.MIN_ACTIVATION_BALANCE, quorum + 100),  # Above threshold
+        (3, spec.MIN_ACTIVATION_BALANCE, quorum + spec.Gwei(1)),  # Above threshold
+        (4, spec.MIN_ACTIVATION_BALANCE, quorum + spec.Gwei(100)),  # Above threshold
     ]
 
     for i, (builder_index, amount, weight) in enumerate(payments_data):
-        if i >= spec.SLOTS_PER_EPOCH:
+        if i >= int(spec.SLOTS_PER_EPOCH):
             break
         payment = create_builder_pending_payment(spec, builder_index, amount, weight)
         state.builder_pending_payments[i] = payment
@@ -249,11 +251,13 @@ def test_process_builder_pending_payments_queue_rotation(spec, state):
     next_epoch(spec, state)
 
     # Fill both epochs of the queue with test data
-    test_weight = 12345
-    state.builder_pending_payments = [
-        create_builder_pending_payment(spec, i, spec.MIN_ACTIVATION_BALANCE, test_weight)
-        for i in range(spec.Slot(2) * spec.SLOTS_PER_EPOCH)
-    ]
+    test_weight = spec.Gwei(12345)
+    state.builder_pending_payments = spec.BuilderPendingPayments(
+        data=[
+            create_builder_pending_payment(spec, i, spec.MIN_ACTIVATION_BALANCE, test_weight)
+            for i in range(2 * int(spec.SLOTS_PER_EPOCH))
+        ]
+    )
 
     # Store the second epoch data for comparison
     second_epoch_payments = [

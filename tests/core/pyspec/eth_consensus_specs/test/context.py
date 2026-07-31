@@ -1,4 +1,5 @@
 import importlib
+import types
 from collections.abc import Callable, Sequence
 from copy import deepcopy
 from dataclasses import dataclass
@@ -773,6 +774,18 @@ def get_copy_of_spec(spec):
     module = importlib.util.module_from_spec(module_spec)
     module_spec.loader.exec_module(module)
 
+    # Re-executing the module re-declares every type the fork defines, along with
+    # every constant built from one, while the types it inherits still come from
+    # the cached module of the fork that declared them. The SSZ type system
+    # compares by exact type, so leaving the fresh declarations in place would
+    # make this copy's types incompatible with every other spec module. Point
+    # every name back at the original except the functions, which have to stay
+    # the copy's own so that they read the overridden config from its globals.
+    for name, original in vars(spec).items():
+        if name.startswith("__") or isinstance(original, types.FunctionType):
+            continue
+        setattr(module, name, original)
+
     # Preserve existing config overrides
     module.config = deepcopy(spec.config)
 
@@ -816,12 +829,6 @@ def with_config_overrides(config_overrides):
                     )
                 kw["phases"] = phases
 
-            # The copied module re-declares the types this fork defines, and the SSZ
-            # type system compares by exact type. A state built under the original
-            # module has to be rebuilt under the copy before the two can meet.
-            if "state" in kw:
-                kw["state"] = spec.BeaconState.decode_bytes(kw["state"].encode_bytes())
-
             # Run the function
             return fn(*args, spec=spec, **kw)
 
@@ -856,12 +863,6 @@ def _with_config_overrides_emit(config_overrides, emitted_fork=None):
                     if emitted_fork == fork:
                         output_config = output
                 kw["phases"] = phases
-
-            # The copied module re-declares the types this fork defines, and the SSZ
-            # type system compares by exact type. A state built under the original
-            # module has to be rebuilt under the copy before the two can meet.
-            if "state" in kw:
-                kw["state"] = spec.BeaconState.decode_bytes(kw["state"].encode_bytes())
 
             # Emit requested spec (with overrides)
             yield "config", "cfg", output_config

@@ -394,11 +394,11 @@ def prepare_process_proposer_slashing(
         payment_epoch = spec.compute_epoch_at_slot(payment_slot)
 
         # Calculate payment index based on what current_epoch will be after advance_epochs_after
-        effective_current_epoch = current_epoch + (advance_epochs_after or 0)
+        effective_current_epoch = current_epoch + spec.Epoch(advance_epochs_after or 0)
 
         if payment_epoch == effective_current_epoch:
-            payment_index = spec.SLOTS_PER_EPOCH + payment_slot % spec.SLOTS_PER_EPOCH
-        elif payment_epoch == effective_current_epoch - 1:
+            payment_index = spec.Uint64(spec.SLOTS_PER_EPOCH + payment_slot % spec.SLOTS_PER_EPOCH)
+        elif payment_epoch == effective_current_epoch - spec.Epoch(1):
             # Previous epoch
             payment_index = payment_slot % spec.SLOTS_PER_EPOCH
         else:

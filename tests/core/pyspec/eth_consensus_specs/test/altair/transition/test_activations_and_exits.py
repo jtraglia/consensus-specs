@@ -59,10 +59,10 @@ def test_transition_with_one_fourth_exiting_validators_exit_post_fork(
     for index in exited_indices:
         validator = state.validators[index]
         assert not validator.slashed
-        assert fork_epoch < validator.exit_epoch < spec.FAR_FUTURE_EPOCH
+        assert spec.Epoch(fork_epoch) < validator.exit_epoch < spec.FAR_FUTURE_EPOCH
         assert spec.is_active_validator(validator, spec.get_current_epoch(state))
     assert not spec.is_in_inactivity_leak(state)
-    assert spec.get_current_epoch(state) < fork_epoch
+    assert spec.get_current_epoch(state) < spec.Epoch(fork_epoch)
 
     yield "pre", state
 
@@ -121,10 +121,10 @@ def test_transition_with_one_fourth_exiting_validators_exit_at_fork(
     for index in exited_indices:
         validator = state.validators[index]
         assert not validator.slashed
-        assert fork_epoch == validator.exit_epoch < spec.FAR_FUTURE_EPOCH
+        assert spec.Epoch(fork_epoch) == validator.exit_epoch < spec.FAR_FUTURE_EPOCH
         assert spec.is_active_validator(validator, spec.get_current_epoch(state))
     assert not spec.is_in_inactivity_leak(state)
-    assert spec.get_current_epoch(state) < fork_epoch
+    assert spec.get_current_epoch(state) < spec.Epoch(fork_epoch)
 
     yield "pre", state
 
@@ -180,7 +180,7 @@ def test_transition_with_non_empty_activation_queue(
 
     deposited_indices = set_some_new_deposits(spec, state, rng=random.Random(5566))
 
-    assert spec.get_current_epoch(state) < fork_epoch
+    assert spec.get_current_epoch(state) < spec.Epoch(fork_epoch)
     assert len(deposited_indices) > 0
     for validator_index in deposited_indices:
         assert not spec.is_active_validator(
@@ -221,12 +221,12 @@ def test_transition_with_activation_at_fork_epoch(
         spec, state, rng=random.Random(5566), activation_epoch=fork_epoch
     )
 
-    assert spec.get_current_epoch(state) < fork_epoch
+    assert spec.get_current_epoch(state) < spec.Epoch(fork_epoch)
     assert len(selected_indices) > 0
     for validator_index in selected_indices:
         validator = state.validators[validator_index]
         assert not spec.is_active_validator(validator, spec.get_current_epoch(state))
-        assert validator.activation_epoch == fork_epoch
+        assert validator.activation_epoch == spec.Epoch(fork_epoch)
 
     yield "pre", state
 

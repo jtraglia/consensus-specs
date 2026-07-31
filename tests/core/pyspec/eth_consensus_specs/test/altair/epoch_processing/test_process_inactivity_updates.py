@@ -79,7 +79,7 @@ def test_all_zero_inactivity_scores_empty_participation(spec, state):
     yield from run_inactivity_scores_test(
         spec, state, set_empty_participation, zero_inactivity_scores
     )
-    assert set(state.inactivity_scores) == {0}
+    assert set(state.inactivity_scores) == {spec.Uint64(0)}
 
 
 @with_altair_and_later
@@ -94,7 +94,7 @@ def test_all_zero_inactivity_scores_empty_participation_leaking(spec, state):
     assert spec.is_in_inactivity_leak(state)
 
     for score in state.inactivity_scores:
-        assert score > 0
+        assert score > spec.Uint64(0)
 
 
 @with_altair_and_later
@@ -107,7 +107,7 @@ def test_all_zero_inactivity_scores_random_participation(spec, state):
         zero_inactivity_scores,
         rng=Random(5555),
     )
-    assert set(state.inactivity_scores) == {0}
+    assert set(state.inactivity_scores) == {spec.Uint64(0)}
 
 
 @with_altair_and_later
@@ -126,7 +126,7 @@ def test_all_zero_inactivity_scores_random_participation_leaking(spec, state):
     # Check still in leak
     assert spec.is_in_inactivity_leak(state)
 
-    assert 0 in state.inactivity_scores
+    assert spec.Uint64(0) in state.inactivity_scores
     assert len(set(state.inactivity_scores)) > 1
 
 
@@ -140,7 +140,7 @@ def test_all_zero_inactivity_scores_full_participation(spec, state):
         zero_inactivity_scores,
     )
 
-    assert set(state.inactivity_scores) == {0}
+    assert set(state.inactivity_scores) == {spec.Uint64(0)}
 
 
 @with_altair_and_later
@@ -158,7 +158,7 @@ def test_all_zero_inactivity_scores_full_participation_leaking(spec, state):
     # Check still in leak
     assert spec.is_in_inactivity_leak(state)
 
-    assert set(state.inactivity_scores) == {0}
+    assert set(state.inactivity_scores) == {spec.Uint64(0)}
 
 
 @with_altair_and_later
@@ -274,7 +274,7 @@ def test_some_slashed_zero_scores_full_participation(spec, state):
         zero_inactivity_scores,
     )
 
-    assert set(state.inactivity_scores) == {0}
+    assert set(state.inactivity_scores) == {spec.Uint64(0)}
 
 
 @with_altair_and_later
@@ -295,9 +295,9 @@ def test_some_slashed_zero_scores_full_participation_leaking(spec, state):
     # Ensure some zero scores (non-slashed values) and non-zero scores (slashed vals) in there
     for score, validator in zip(state.inactivity_scores, state.validators, strict=False):
         if validator.slashed:
-            assert score > 0
+            assert score > spec.Uint64(0)
         else:
-            assert score == 0
+            assert score == spec.Uint64(0)
 
 
 @with_altair_and_later
@@ -404,7 +404,7 @@ def _run_randomized_state_test_for_inactivity_updates(spec, state, rng=None):
 
     pre_score_for_exited_validator = state.inactivity_scores[some_exited_validator]
 
-    assert pre_score_for_exited_validator != 0
+    assert pre_score_for_exited_validator != spec.Uint64(0)
 
     assert len(set(state.inactivity_scores)) > 1
 

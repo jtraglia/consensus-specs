@@ -133,7 +133,7 @@ def prepare_state_and_block(
             keypair_index,
             # use min activation balance
             spec.MIN_ACTIVATION_BALANCE,
-            first_deposit_request_index + offset,
+            int(first_deposit_request_index) + offset,
             signed=True,
         )
         deposit_requests.append(deposit_request)
@@ -146,8 +146,8 @@ def prepare_state_and_block(
     block = build_empty_block_for_next_slot(spec, state)
 
     # Assign deposits and deposit requests
-    block.body.deposits = deposits
-    block.body.execution_requests.deposits = deposit_requests
+    block.body.deposits = spec.Deposits(data=deposits)
+    block.body.execution_requests.deposits = spec.DepositRequests(data=deposit_requests)
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
 
     return state, block

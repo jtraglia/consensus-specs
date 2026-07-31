@@ -464,7 +464,9 @@ def get_equivocation_score(
     ]
 
     return Gwei(
-        sum(balance_source.validators[i].effective_balance for i in active_equivocating_indices)
+        sum(
+            int(balance_source.validators[i].effective_balance) for i in active_equivocating_indices
+        )
     )
 ```
 
@@ -703,7 +705,7 @@ def get_current_target_score(store: Store) -> Gwei:
     ]
     return Gwei(
         sum(
-            state.validators[i].effective_balance
+            int(state.validators[i].effective_balance)
             for i in unslashed_and_active_indices
             if (
                 i in store.latest_messages

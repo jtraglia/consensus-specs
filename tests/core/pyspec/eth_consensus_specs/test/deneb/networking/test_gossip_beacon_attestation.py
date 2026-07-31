@@ -68,7 +68,9 @@ def epoch_window_open_time(spec, state, attestation_epoch):
 
 def epoch_window_close_time(spec, state, attestation_epoch):
     return (
-        spec.compute_time_at_slot_ms(state, spec.compute_start_slot_at_epoch(attestation_epoch + 2))
+        spec.compute_time_at_slot_ms(
+            state, spec.compute_start_slot_at_epoch(attestation_epoch + spec.Epoch(2))
+        )
         + spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY
     )
 
@@ -167,7 +169,7 @@ def test_gossip_beacon_attestation__ignores_first_slot_before_epoch_window_opens
     yield "state", state
     yield get_filename(attestation), attestation
 
-    current_time_ms = epoch_window_open_time(spec, state, attestation_epoch) - 1
+    current_time_ms = epoch_window_open_time(spec, state, attestation_epoch) - spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     subnet_id = get_correct_subnet_for_attestation(spec, state, attestation)
@@ -276,7 +278,7 @@ def test_gossip_beacon_attestation__ignores_first_slot_after_epoch_window_closes
     yield "state", state
     yield get_filename(attestation), attestation
 
-    current_time_ms = epoch_window_close_time(spec, state, attestation_epoch) + 1
+    current_time_ms = epoch_window_close_time(spec, state, attestation_epoch) + spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     subnet_id = get_correct_subnet_for_attestation(spec, state, attestation)
@@ -429,7 +431,7 @@ def test_gossip_beacon_attestation__ignores_last_slot_after_epoch_window_closes(
     yield "state", state
     yield get_filename(attestation), attestation
 
-    current_time_ms = epoch_window_close_time(spec, state, attestation_epoch) + 1
+    current_time_ms = epoch_window_close_time(spec, state, attestation_epoch) + spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     subnet_id = get_correct_subnet_for_attestation(spec, state, attestation)

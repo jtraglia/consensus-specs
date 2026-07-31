@@ -217,9 +217,9 @@ def get_random_sync_aggregate(
         block_root=block_root,
     )
     return spec.SyncAggregate(
-        sync_committee_bits=[
-            index in participant_indices for index in range(len(committee_indices))
-        ],
+        sync_committee_bits=spec.SyncCommitteeBits(
+            data=[index in participant_indices for index in range(len(committee_indices))]
+        ),
         sync_committee_signature=signature,
     )
 
@@ -230,7 +230,7 @@ def get_random_bls_to_execution_changes(spec, state, rng=None, num_address_chang
     bls_indices = [
         index
         for index, validator in enumerate(state.validators)
-        if validator.withdrawal_credentials[:1] == spec.BLS_WITHDRAWAL_PREFIX
+        if spec.Bytes1(validator.withdrawal_credentials[:1]) == spec.BLS_WITHDRAWAL_PREFIX
     ]
     assert len(bls_indices) > 0
 

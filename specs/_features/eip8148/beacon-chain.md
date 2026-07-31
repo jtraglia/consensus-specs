@@ -399,12 +399,12 @@ def apply_parent_execution_payload(
     parent_slot = parent_bid.slot
     parent_epoch = compute_epoch_at_slot(parent_slot)
 
-    assert len(requests.withdrawals) <= MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD
-    assert len(requests.consolidations) <= MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD
-    assert len(requests.builder_deposits) <= MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD
-    assert len(requests.builder_exits) <= MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD
+    assert Uint64(len(requests.withdrawals)) <= MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD
+    assert Uint64(len(requests.consolidations)) <= MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD
+    assert Uint64(len(requests.builder_deposits)) <= MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD
+    assert Uint64(len(requests.builder_exits)) <= MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD
     # [New in EIP8148]
-    assert len(requests.sweep_thresholds) <= MAX_SET_SWEEP_THRESHOLD_REQUESTS_PER_PAYLOAD
+    assert Uint64(len(requests.sweep_thresholds)) <= MAX_SET_SWEEP_THRESHOLD_REQUESTS_PER_PAYLOAD
 
     # Process execution requests from parent's payload. The execution
     # requests are processed at state.slot (child's slot), not the parent's slot.

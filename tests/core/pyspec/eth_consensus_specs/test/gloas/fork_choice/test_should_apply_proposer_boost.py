@@ -88,7 +88,7 @@ def _setup_boost_scenario(spec, state, adjacent, weak, sibling):
                 spec.Uint64(parent_block.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
                 + store.genesis_time
                 + ptc_due_s
-                + 1
+                + spec.Uint64(1)
             )
             on_tick_and_append_step(spec, store, late_time, test_steps)
             yield from add_block(spec, store, signed_sibling, test_steps)
@@ -135,8 +135,8 @@ def _assert_weight_reflects_boost(spec, store, block_root, boost_applied):
     boost_node = spec.ForkChoiceNode(root=block_root, payload_status=spec.PAYLOAD_STATUS_PENDING)
     attestation_score = spec.get_attestation_score(store, boost_node, justified_state)
     proposer_score = spec.get_proposer_score(store)
-    assert proposer_score > 0
-    expected = attestation_score + (proposer_score if boost_applied else 0)
+    assert proposer_score > spec.Gwei(0)
+    expected = attestation_score + (proposer_score if boost_applied else spec.Gwei(0))
     assert spec.get_weight(store, boost_node) == expected
 
 
