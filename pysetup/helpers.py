@@ -68,7 +68,7 @@ def objects_to_spec(
     def gen_new_type_definitions(custom_types: dict[str, str]) -> str:
         return "\n\n\n".join(
             [
-                f"{key} = {shared_types[key]}.{key}"
+                f"{key}: TypeAlias = {shared_types[key]}.{key}"
                 if key in shared_types
                 else gen_new_type_definition(key, value)
                 for key, value in custom_types.items()
@@ -119,7 +119,7 @@ def objects_to_spec(
         k: v for k, v in ordered_class_objects.items() if k not in deprecate_containers
     }
     ordered_class_objects_spec = "\n\n\n".join(
-        f"{k} = {shared_types[k]}.{k}" if k in shared_types else v
+        f"{k}: TypeAlias = {shared_types[k]}.{k}" if k in shared_types else v
         for k, v in ordered_class_objects.items()
     )
 
