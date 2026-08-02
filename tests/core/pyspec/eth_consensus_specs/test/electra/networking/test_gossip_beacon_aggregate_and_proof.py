@@ -80,7 +80,7 @@ def test_gossip_beacon_aggregate_and_proof__accept_same_data_for_disjoint_commit
 
     next_slot(spec, state)
     committees_per_slot = spec.get_committee_count_per_slot(state, spec.get_current_epoch(state))
-    assert committees_per_slot >= 2, "need at least two committees in the current slot"
+    assert committees_per_slot >= spec.Uint64(2), "need at least two committees in the current slot"
 
     attestation_1 = get_valid_attestation(
         spec,
@@ -216,7 +216,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_zero_committees(spec, state):
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     # Clear all committee bits.
-    signed_agg.message.aggregate.committee_bits = spec.BitVector[spec.MAX_COMMITTEES_PER_SLOT]()
+    signed_agg.message.aggregate.committee_bits = spec.CommitteeBits()
 
     yield get_filename(signed_agg), signed_agg
 
@@ -269,13 +269,11 @@ def test_gossip_beacon_aggregate_and_proof__reject_multiple_committees(spec, sta
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     # Set two committee bits.
-    assert spec.MAX_COMMITTEES_PER_SLOT >= 2
-    bits = [False] * spec.MAX_COMMITTEES_PER_SLOT
+    assert spec.Uint64(2) <= spec.MAX_COMMITTEES_PER_SLOT
+    bits = [False] * int(spec.MAX_COMMITTEES_PER_SLOT)
     bits[0] = True
     bits[1] = True
-    signed_agg.message.aggregate.committee_bits = spec.BitVector[spec.MAX_COMMITTEES_PER_SLOT](
-        *bits
-    )
+    signed_agg.message.aggregate.committee_bits = spec.CommitteeBits(data=bits)
 
     yield get_filename(signed_agg), signed_agg
 

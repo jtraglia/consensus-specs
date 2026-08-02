@@ -200,7 +200,9 @@ def test_gossip_blob_sidecar__reject_wrong_subnet(spec, state):
     yield "current_time_ms", "meta", int(block_time_ms)
 
     expected_subnet = correct_subnet(spec, blob_sidecar)
-    wrong_subnet = spec.SubnetID((int(expected_subnet) + 1) % spec.config.BLOB_SIDECAR_SUBNET_COUNT)
+    wrong_subnet = spec.SubnetID(
+        (int(expected_subnet) + 1) % int(spec.config.BLOB_SIDECAR_SUBNET_COUNT)
+    )
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -304,9 +306,9 @@ def test_gossip_blob_sidecar__reject_invalid_inclusion_proof(spec, state):
     _, sidecars = build_signed_block_and_sidecars(spec, state, blob_count=1)
     blob_sidecar = sidecars[0]
     # Corrupt the inclusion proof
-    blob_sidecar.kzg_commitment_inclusion_proof = spec.compute_merkle_proof(
-        spec.BeaconBlockBody(), 0
-    )
+    proof = list(blob_sidecar.kzg_commitment_inclusion_proof)
+    proof[0] = spec.Bytes32(spec.hash(proof[0]))
+    blob_sidecar.kzg_commitment_inclusion_proof = spec.KZGCommitmentInclusionProof(data=proof)
 
     yield get_filename(blob_sidecar), blob_sidecar
 
@@ -423,7 +425,7 @@ def test_gossip_blob_sidecar__ignore_future_slot(spec, state):
     slot_time_ms = spec.compute_time_at_slot_ms(
         store, blob_sidecar.signed_block_header.message.slot
     )
-    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - 1
+    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     subnet_id = correct_subnet(spec, blob_sidecar)

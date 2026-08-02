@@ -500,8 +500,10 @@ def test_gossip_partial_data_column_sidecar__reject_prior_header_differs(spec, s
     # Build a second partial message whose header has a different inclusion
     # proof, with the cache populated by `good` so the equality check fires.
     diverging = make_partial_sidecar(spec, sidecar, blob_indices=[], include_header=True)
-    diverging.header[0].kzg_commitments_inclusion_proof = spec.compute_merkle_proof(
-        spec.BeaconBlockBody(), 0
+    proof = list(diverging.header[0].kzg_commitments_inclusion_proof)
+    proof[0] = spec.Bytes32(spec.hash(proof[0]))
+    diverging.header[0].kzg_commitments_inclusion_proof = spec.KZGCommitmentsInclusionProof(
+        data=proof
     )
 
     yield get_filename(good), good
@@ -701,7 +703,7 @@ def test_gossip_partial_data_column_sidecar__ignore_future_slot(spec, state):
     yield get_filename(partial), partial
 
     slot_time_ms = spec.compute_time_at_slot_ms(store, sidecar.signed_block_header.message.slot)
-    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - 1
+    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     column_index = sidecar.index
@@ -1218,8 +1220,10 @@ def test_gossip_partial_data_column_sidecar__reject_invalid_inclusion_proof(spec
     _, sidecars = build_signed_block_and_sidecars(spec, state, blob_count=1)
     sidecar = sidecars[0]
     partial = make_partial_sidecar(spec, sidecar, blob_indices=[], include_header=True)
-    partial.header[0].kzg_commitments_inclusion_proof = spec.compute_merkle_proof(
-        spec.BeaconBlockBody(), 0
+    proof = list(partial.header[0].kzg_commitments_inclusion_proof)
+    proof[0] = spec.Bytes32(spec.hash(proof[0]))
+    partial.header[0].kzg_commitments_inclusion_proof = spec.KZGCommitmentsInclusionProof(
+        data=proof
     )
     group_id = make_partial_data_column_group_id(spec, sidecar)
     yield get_filename(group_id), group_id
@@ -1409,7 +1413,7 @@ def test_gossip_partial_data_column_sidecar__ignore_cells_with_cached_header_fut
     yield get_filename(cells_msg), cells_msg
 
     slot_time_ms = spec.compute_time_at_slot_ms(store, sidecar.signed_block_header.message.slot)
-    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - 1
+    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     column_index = sidecar.index

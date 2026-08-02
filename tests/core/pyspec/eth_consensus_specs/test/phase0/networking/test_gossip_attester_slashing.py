@@ -204,7 +204,7 @@ def test_gossip_attester_slashing__reject_attesting_index_out_of_range_1(spec, s
 
     attester_slashing = get_valid_attester_slashing(spec, state, signed_1=True, signed_2=True)
 
-    invalid_index = spec.ValidatorIndex(len(state.validators) + 1)
+    invalid_index = spec.ValidatorIndex(len(state.validators)) + spec.ValidatorIndex(1)
     attester_slashing.attestation_1.attesting_indices = spec.AttestingIndices(data=[invalid_index])
     attester_slashing.attestation_2.attesting_indices = spec.AttestingIndices(data=[invalid_index])
 
@@ -242,7 +242,7 @@ def test_gossip_attester_slashing__reject_attesting_index_out_of_range_2(spec, s
 
     attester_slashing = get_valid_attester_slashing(spec, state, signed_1=True, signed_2=True)
 
-    invalid_index = spec.ValidatorIndex(len(state.validators) + 1)
+    invalid_index = spec.ValidatorIndex(len(state.validators)) + spec.ValidatorIndex(1)
     valid_index = int(attester_slashing.attestation_1.attesting_indices[0])
     attester_slashing.attestation_2.attesting_indices = spec.AttestingIndices(
         data=[valid_index, invalid_index]

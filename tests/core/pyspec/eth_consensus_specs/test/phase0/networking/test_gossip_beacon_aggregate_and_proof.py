@@ -161,8 +161,8 @@ def test_gossip_beacon_aggregate_and_proof__reject_committee_index_out_of_range(
         # at the smallest position that is both out-of-range and inside the bitvector.
         assert committee_count < spec.MAX_COMMITTEES_PER_SLOT
         oob_index = committee_count
-        signed_agg.message.aggregate.committee_bits = spec.BitVector[spec.MAX_COMMITTEES_PER_SLOT](
-            *[i == oob_index for i in range(spec.MAX_COMMITTEES_PER_SLOT)]
+        signed_agg.message.aggregate.committee_bits = spec.CommitteeBits(
+            data=[i == int(oob_index) for i in range(int(spec.MAX_COMMITTEES_PER_SLOT))]
         )
     else:
         signed_agg.message.aggregate.data.index = spec.CommitteeIndex(

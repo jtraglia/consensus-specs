@@ -88,7 +88,7 @@ def test_gossip_data_column_sidecar__ignore_block_unseen(spec, state):
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -146,7 +146,7 @@ def test_gossip_data_column_sidecar__reject_block_failed_validation(spec, state)
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -199,7 +199,7 @@ def test_gossip_data_column_sidecar__ignore_already_seen(spec, state):
     messages = []
 
     # The first validation is fully valid and seeds the seen cache.
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -220,7 +220,7 @@ def test_gossip_data_column_sidecar__ignore_already_seen(spec, state):
     )
 
     # The same sidecar received again is ignored as already seen.
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -253,7 +253,7 @@ def test_gossip_data_column_sidecar__reject_slot_mismatch(spec, state):
 
     store, signed_anchor, signed_block, sidecar = setup_gloas_sidecar(spec, state)
     # Corrupt the sidecar's slot so it no longer matches the block.
-    sidecar.slot = spec.Slot(sidecar.slot + 1)
+    sidecar.slot = sidecar.slot + spec.Slot(1)
     yield "state", anchor_state
     yield get_filename(signed_anchor), signed_anchor
     yield get_filename(signed_block), signed_block
@@ -274,7 +274,7 @@ def test_gossip_data_column_sidecar__reject_slot_mismatch(spec, state):
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -308,9 +308,7 @@ def test_gossip_data_column_sidecar__reject_invalid_sidecar(spec, state):
     store, signed_anchor, signed_block, sidecar = setup_gloas_sidecar(spec, state)
     # Pad the column with an extra cell so its length no longer matches the
     # bid's blob commitments, causing verify_data_column_sidecar to fail.
-    sidecar.column = spec.List[spec.Cell, spec.MAX_BLOB_COMMITMENTS_PER_BLOCK](
-        *sidecar.column, spec.Cell()
-    )
+    sidecar.column = spec.DataColumn(data=[*sidecar.column, spec.Cell()])
     yield "state", anchor_state
     yield get_filename(signed_anchor), signed_anchor
     yield get_filename(signed_block), signed_block
@@ -331,7 +329,7 @@ def test_gossip_data_column_sidecar__reject_invalid_sidecar(spec, state):
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,

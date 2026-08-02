@@ -63,7 +63,7 @@ def test_gossip_proposer_preferences__valid(spec, state):
     anchor_state = copy(state)
     yield "topic", "meta", "proposer_preferences"
 
-    target_slot = spec.compute_start_slot_at_epoch(spec.Epoch(spec.MIN_SEED_LOOKAHEAD + 1))
+    target_slot = spec.compute_start_slot_at_epoch(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1))
     store, blocks = setup_store_with_advanced_state(spec, state, target_slot)
 
     yield "state", anchor_state
@@ -79,7 +79,7 @@ def test_gossip_proposer_preferences__valid(spec, state):
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -107,11 +107,11 @@ def setup_lookahead_window(spec, state):
     store, the blocks, that epoch's start slot, and the first slot past the
     lookahead window.
     """
-    epoch = spec.Epoch(spec.MIN_SEED_LOOKAHEAD + 2)
+    epoch = spec.MIN_SEED_LOOKAHEAD + spec.Epoch(2)
     epoch_start_slot = spec.compute_start_slot_at_epoch(epoch)
     store, blocks = setup_store_with_advanced_state(spec, state, epoch_start_slot)
     past_window_slot = spec.compute_start_slot_at_epoch(
-        spec.Epoch(epoch + spec.MIN_SEED_LOOKAHEAD + 1)
+        epoch + spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1)
     )
     return store, blocks, epoch_start_slot, past_window_slot
 
@@ -130,7 +130,7 @@ def test_gossip_proposer_preferences__ignore_slot_before_lookahead(spec, state):
     store, blocks, epoch_start_slot, _ = setup_lookahead_window(spec, state)
 
     proposal_block = blocks[-2].message
-    assert proposal_block.slot == epoch_start_slot - 1
+    assert proposal_block.slot == epoch_start_slot - spec.Slot(1)
 
     yield "state", anchor_state
     seen = get_seen(spec)
@@ -244,9 +244,9 @@ def test_gossip_proposer_preferences__valid_at_last_lookahead_slot(spec, state):
         yield get_filename(signed), signed
     yield "blocks", "meta", [{"block": get_filename(b)} for b in blocks]
 
-    proposal_slot = spec.Slot(past_window_slot - 1)
+    proposal_slot = past_window_slot - spec.Slot(1)
     lookahead_index = proposal_slot - epoch_start_slot
-    assert lookahead_index == len(state.proposer_lookahead) - 1
+    assert int(lookahead_index) == len(state.proposer_lookahead) - 1
     signed_prefs = build_signed_proposer_preferences(
         spec,
         state,
@@ -341,14 +341,14 @@ def setup_lookahead_boundary_preferences(spec, state):
     blocks, the preferences, and the epoch's start slot, whose start time is the
     lookahead lower bound for the proposal slot.
     """
-    lookahead_epoch = spec.Epoch(spec.MIN_SEED_LOOKAHEAD + 3)
+    lookahead_epoch = spec.MIN_SEED_LOOKAHEAD + spec.Epoch(3)
     lookahead_epoch_start_slot = spec.compute_start_slot_at_epoch(lookahead_epoch)
     store, blocks = setup_store_with_advanced_state(spec, state, lookahead_epoch_start_slot)
 
     # The dependent block is the last one before the epoch transition.
     dependent_root = hash_tree_root(blocks[-2].message)
     dependent_state = store.block_states[dependent_root]
-    assert spec.get_current_epoch(dependent_state) == spec.Epoch(lookahead_epoch - 1)
+    assert spec.get_current_epoch(dependent_state) == lookahead_epoch - spec.Epoch(1)
 
     lookahead_state = copy(dependent_state)
     spec.process_slots(lookahead_state, lookahead_epoch_start_slot)
@@ -390,7 +390,7 @@ def test_gossip_proposer_preferences__ignore_outside_lookahead_disparity(spec, s
     time_ms = (
         spec.compute_time_at_slot_ms(store, lookahead_epoch_start_slot)
         - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY
-        - 1
+        - spec.Uint64(1)
     )
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
@@ -476,7 +476,7 @@ def test_gossip_proposer_preferences__valid_at_slot_start_disparity_edge(spec, s
     anchor_state = copy(state)
     yield "topic", "meta", "proposer_preferences"
 
-    target_slot = spec.compute_start_slot_at_epoch(spec.Epoch(spec.MIN_SEED_LOOKAHEAD + 1))
+    target_slot = spec.compute_start_slot_at_epoch(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1))
     store, blocks = setup_store_with_advanced_state(spec, state, target_slot)
 
     yield "state", anchor_state
@@ -523,7 +523,7 @@ def test_gossip_proposer_preferences__ignore_outside_slot_start_disparity(spec, 
     anchor_state = copy(state)
     yield "topic", "meta", "proposer_preferences"
 
-    target_slot = spec.compute_start_slot_at_epoch(spec.Epoch(spec.MIN_SEED_LOOKAHEAD + 1))
+    target_slot = spec.compute_start_slot_at_epoch(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1))
     store, blocks = setup_store_with_advanced_state(spec, state, target_slot)
 
     yield "state", anchor_state
@@ -541,7 +541,7 @@ def test_gossip_proposer_preferences__ignore_outside_slot_start_disparity(spec, 
     time_ms = (
         spec.compute_time_at_slot_ms(store, proposal_slot)
         + spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY
-        + 1
+        + spec.Uint64(1)
     )
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
@@ -574,7 +574,7 @@ def test_gossip_proposer_preferences__ignore_dependent_root_unseen(spec, state):
     anchor_state = copy(state)
     yield "topic", "meta", "proposer_preferences"
 
-    target_slot = spec.compute_start_slot_at_epoch(spec.Epoch(spec.MIN_SEED_LOOKAHEAD + 1))
+    target_slot = spec.compute_start_slot_at_epoch(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1))
     store, blocks = setup_store_with_advanced_state(spec, state, target_slot)
 
     yield "state", anchor_state
@@ -593,7 +593,7 @@ def test_gossip_proposer_preferences__ignore_dependent_root_unseen(spec, state):
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -622,7 +622,7 @@ def test_gossip_proposer_preferences__ignore_duplicate(spec, state):
     anchor_state = copy(state)
     yield "topic", "meta", "proposer_preferences"
 
-    target_slot = spec.compute_start_slot_at_epoch(spec.Epoch(spec.MIN_SEED_LOOKAHEAD + 1))
+    target_slot = spec.compute_start_slot_at_epoch(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1))
     store, blocks = setup_store_with_advanced_state(spec, state, target_slot)
 
     yield "state", anchor_state
@@ -639,7 +639,7 @@ def test_gossip_proposer_preferences__ignore_duplicate(spec, state):
     messages = []
 
     # First validation populates seen.
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -658,7 +658,7 @@ def test_gossip_proposer_preferences__ignore_duplicate(spec, state):
     )
 
     # Replay should be ignored.
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -687,7 +687,7 @@ def test_gossip_proposer_preferences__reject_wrong_proposer(spec, state):
     anchor_state = copy(state)
     yield "topic", "meta", "proposer_preferences"
 
-    target_slot = spec.compute_start_slot_at_epoch(spec.Epoch(spec.MIN_SEED_LOOKAHEAD + 1))
+    target_slot = spec.compute_start_slot_at_epoch(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1))
     store, blocks = setup_store_with_advanced_state(spec, state, target_slot)
 
     yield "state", anchor_state
@@ -699,7 +699,7 @@ def test_gossip_proposer_preferences__reject_wrong_proposer(spec, state):
     proposal_slot, true_proposer = find_upcoming_proposal_slot(spec, state)
     # Pick a different validator that isn't the proposer for this slot.
     wrong_index = spec.ValidatorIndex(
-        next(i for i in range(len(state.validators)) if i != true_proposer)
+        next(i for i in range(len(state.validators)) if i != int(true_proposer))
     )
     signed_prefs = build_signed_proposer_preferences(
         spec, state, proposal_slot=proposal_slot, validator_index=wrong_index
@@ -710,7 +710,7 @@ def test_gossip_proposer_preferences__reject_wrong_proposer(spec, state):
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -739,7 +739,7 @@ def test_gossip_proposer_preferences__reject_invalid_signature(spec, state):
     anchor_state = copy(state)
     yield "topic", "meta", "proposer_preferences"
 
-    target_slot = spec.compute_start_slot_at_epoch(spec.Epoch(spec.MIN_SEED_LOOKAHEAD + 1))
+    target_slot = spec.compute_start_slot_at_epoch(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1))
     store, blocks = setup_store_with_advanced_state(spec, state, target_slot)
 
     yield "state", anchor_state
@@ -755,7 +755,7 @@ def test_gossip_proposer_preferences__reject_invalid_signature(spec, state):
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -789,7 +789,7 @@ def test_gossip_proposer_preferences__ignore_slot_from_past_epoch(spec, state):
     anchor_state = copy(state)
     yield "topic", "meta", "proposer_preferences"
 
-    target_slot = spec.compute_start_slot_at_epoch(spec.Epoch(spec.MIN_SEED_LOOKAHEAD + 1))
+    target_slot = spec.compute_start_slot_at_epoch(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1))
     store, blocks = setup_store_with_advanced_state(spec, state, target_slot)
 
     yield "state", anchor_state
@@ -816,7 +816,7 @@ def test_gossip_proposer_preferences__ignore_slot_from_past_epoch(spec, state):
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -845,7 +845,7 @@ def test_gossip_proposer_preferences__ignore_dependent_root_state_unavailable(sp
     anchor_state = copy(state)
     yield "topic", "meta", "proposer_preferences"
 
-    target_slot = spec.compute_start_slot_at_epoch(spec.Epoch(spec.MIN_SEED_LOOKAHEAD + 1))
+    target_slot = spec.compute_start_slot_at_epoch(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1))
     store, blocks = setup_store_with_advanced_state(spec, state, target_slot)
 
     # Build a fork block off the head that has been seen but not yet imported,
@@ -877,7 +877,7 @@ def test_gossip_proposer_preferences__ignore_dependent_root_state_unavailable(sp
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -911,7 +911,7 @@ def test_gossip_proposer_preferences__reject_dependent_root_at_lookahead_epoch_s
     anchor_state = copy(state)
     yield "topic", "meta", "proposer_preferences"
 
-    target_slot = spec.compute_start_slot_at_epoch(spec.Epoch(spec.MIN_SEED_LOOKAHEAD + 1))
+    target_slot = spec.compute_start_slot_at_epoch(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1))
     store, blocks = setup_store_with_advanced_state(spec, state, target_slot)
 
     yield "state", anchor_state
@@ -949,7 +949,7 @@ def test_gossip_proposer_preferences__reject_dependent_root_at_lookahead_epoch_s
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -983,7 +983,7 @@ def test_gossip_proposer_preferences__ignore_dependent_root_not_possible(spec, s
     anchor_state = copy(state)
     yield "topic", "meta", "proposer_preferences"
 
-    target_slot = spec.compute_start_slot_at_epoch(spec.Epoch(spec.MIN_SEED_LOOKAHEAD + 1))
+    target_slot = spec.compute_start_slot_at_epoch(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1))
     store, blocks = setup_store_with_advanced_state(spec, state, target_slot)
 
     yield "state", anchor_state
@@ -999,7 +999,7 @@ def test_gossip_proposer_preferences__ignore_dependent_root_not_possible(spec, s
     proposal_slot, validator_index = find_upcoming_proposal_slot(spec, state)
     proposal_epoch = spec.compute_epoch_at_slot(proposal_slot)
     lookahead_epoch = spec.Epoch(proposal_epoch - spec.MIN_SEED_LOOKAHEAD)
-    superseded_slot = spec.Slot(spec.compute_start_slot_at_epoch(lookahead_epoch) - 2)
+    superseded_slot = spec.compute_start_slot_at_epoch(lookahead_epoch) - spec.Slot(2)
     signed_prefs = build_signed_proposer_preferences(
         spec,
         state,
@@ -1013,7 +1013,7 @@ def test_gossip_proposer_preferences__ignore_dependent_root_not_possible(spec, s
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -1047,7 +1047,7 @@ def test_gossip_proposer_preferences__valid_dependent_root_on_fork(spec, state):
     anchor_state = copy(state)
     yield "topic", "meta", "proposer_preferences"
 
-    target_slot = spec.compute_start_slot_at_epoch(spec.Epoch(spec.MIN_SEED_LOOKAHEAD + 1))
+    target_slot = spec.compute_start_slot_at_epoch(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1))
     store, blocks = setup_store_with_advanced_state(spec, state, target_slot)
 
     proposal_slot, validator_index = find_upcoming_proposal_slot(spec, state)
@@ -1058,7 +1058,7 @@ def test_gossip_proposer_preferences__valid_dependent_root_on_fork(spec, state):
     # Fork off two slots before the lookahead epoch start and build a branch
     # whose first block stays before the epoch start and whose second block
     # crosses it.
-    fork_parent_root = spec.get_block_root_at_slot(state, spec.Slot(lookahead_epoch_start_slot - 2))
+    fork_parent_root = spec.get_block_root_at_slot(state, lookahead_epoch_start_slot - spec.Slot(2))
     fork_state = copy(store.block_states[fork_parent_root])
     fork_blocks = []
     for _ in range(2):
@@ -1070,7 +1070,7 @@ def test_gossip_proposer_preferences__valid_dependent_root_on_fork(spec, state):
         store.block_states[block_root] = copy(fork_state)
         fork_blocks.append(signed_fork_block)
     dependent_root = hash_tree_root(fork_blocks[0].message)
-    assert store.blocks[dependent_root].slot == lookahead_epoch_start_slot - 1
+    assert store.blocks[dependent_root].slot == lookahead_epoch_start_slot - spec.Slot(1)
     assert fork_blocks[1].message.slot == lookahead_epoch_start_slot
 
     yield "state", anchor_state
@@ -1092,7 +1092,7 @@ def test_gossip_proposer_preferences__valid_dependent_root_on_fork(spec, state):
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -1123,12 +1123,12 @@ def test_gossip_proposer_preferences__valid_dependent_root_across_empty_epochs(s
     anchor_state = copy(state)
     yield "topic", "meta", "proposer_preferences"
 
-    current_epoch = spec.Epoch(spec.MIN_SEED_LOOKAHEAD + 2)
+    current_epoch = spec.MIN_SEED_LOOKAHEAD + spec.Epoch(2)
     lookahead_epoch_start_slot = spec.compute_start_slot_at_epoch(current_epoch)
 
     # Build the canonical chain to the slot before two fully empty epochs.
-    first_empty_epoch = spec.Epoch(current_epoch - 2)
-    dependent_block_slot = spec.Slot(spec.compute_start_slot_at_epoch(first_empty_epoch) - 1)
+    first_empty_epoch = current_epoch - spec.Epoch(2)
+    dependent_block_slot = spec.compute_start_slot_at_epoch(first_empty_epoch) - spec.Slot(1)
     store, blocks = setup_store_with_advanced_state(spec, state, dependent_block_slot)
     dependent_root = hash_tree_root(blocks[-1].message)
     dependent_state = copy(state)
@@ -1142,7 +1142,7 @@ def test_gossip_proposer_preferences__valid_dependent_root_across_empty_epochs(s
     blocks.append(signed_boundary_block)
     validation_state = copy(state)
 
-    proposal_epoch = spec.Epoch(current_epoch + 1)
+    proposal_epoch = current_epoch + spec.Epoch(1)
     assert spec.get_shuffling_dependent_root(store, boundary_root, current_epoch) == dependent_root
     assert spec.get_shuffling_dependent_root(store, boundary_root, proposal_epoch) == dependent_root
 
@@ -1151,7 +1151,7 @@ def test_gossip_proposer_preferences__valid_dependent_root_across_empty_epochs(s
     # Pick a slot that distinguishes the advanced lookahead from the stale
     # lookahead in the dependent block's post-state.
     for slot_offset in range(spec.SLOTS_PER_EPOCH):
-        lookahead_index = spec.MIN_SEED_LOOKAHEAD * spec.SLOTS_PER_EPOCH + slot_offset
+        lookahead_index = int(spec.MIN_SEED_LOOKAHEAD) * int(spec.SLOTS_PER_EPOCH) + slot_offset
         validator_index = lookahead_state.proposer_lookahead[lookahead_index]
         stale_validator_index = dependent_state.proposer_lookahead[lookahead_index]
         if validator_index != stale_validator_index:
@@ -1176,7 +1176,7 @@ def test_gossip_proposer_preferences__valid_dependent_root_across_empty_epochs(s
 
     time_ms = spec.compute_time_at_slot_ms(store, validation_state.slot)
     yield "current_time_ms", "meta", int(time_ms)
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=get_seen(spec),

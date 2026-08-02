@@ -66,7 +66,7 @@ def test_gossip_beacon_attestation__reject_data_index_too_high(spec, state):
     messages = []
 
     subnet_id = get_correct_subnet(spec, state, attestation)
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -146,7 +146,7 @@ def test_gossip_beacon_attestation__reject_same_slot_with_payload(spec, state):
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -200,7 +200,7 @@ def test_gossip_beacon_attestation__valid_same_slot_index_zero(spec, state):
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -292,7 +292,7 @@ def test_gossip_beacon_attestation__ignore_payload_envelope_unseen(spec, state):
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -351,7 +351,7 @@ def test_gossip_beacon_attestation__ignore_payload_pending_el_validation(spec, s
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -412,7 +412,7 @@ def test_gossip_beacon_attestation__reject_payload_failed_el_validation(spec, st
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -473,7 +473,7 @@ def test_gossip_beacon_attestation__valid_payload_validated(spec, state):
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -538,7 +538,7 @@ def test_gossip_beacon_attestation__ignore_payload_status_without_envelope(spec,
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,

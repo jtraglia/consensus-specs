@@ -46,8 +46,8 @@ def record_block_in_store(spec, store, signed_block, post_state):
     block_root = hash_tree_root(signed_block.message)
     store.blocks[block_root] = signed_block.message
     store.block_states[block_root] = post_state
-    store.payload_timeliness_vote[block_root] = [None] * spec.PTC_SIZE
-    store.payload_data_availability_vote[block_root] = [None] * spec.PTC_SIZE
+    store.payload_timeliness_vote[block_root] = [None] * int(spec.PTC_SIZE)
+    store.payload_data_availability_vote[block_root] = [None] * int(spec.PTC_SIZE)
     return block_root
 
 
@@ -91,7 +91,7 @@ def setup_store_advanced_for_bid(spec, state):
     return _build_store_advanced_to(
         spec,
         state,
-        spec.compute_start_slot_at_epoch(spec.Epoch(spec.MIN_SEED_LOOKAHEAD + 1)),
+        spec.compute_start_slot_at_epoch(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1)),
     )
 
 
@@ -103,7 +103,7 @@ def setup_store_advanced_to_epoch_end(spec, state):
     boundary. Returns (store, blocks, parent_block_root).
     """
     target_slot = spec.Slot(
-        spec.compute_start_slot_at_epoch(spec.Epoch(spec.MIN_SEED_LOOKAHEAD + 2)) - 1
+        spec.compute_start_slot_at_epoch(spec.MIN_SEED_LOOKAHEAD + spec.Epoch(2)) - 1
     )
     return _build_store_advanced_to(spec, state, target_slot)
 
@@ -147,7 +147,7 @@ def setup_store_finalized_with_pending_payment(spec, state):
 
     # Finalize organically: builders activate once their deposit epoch (0)
     # is strictly before the finalized epoch.
-    while state.finalized_checkpoint.epoch < 1:
+    while state.finalized_checkpoint.epoch < spec.Epoch(1):
         record(
             state_transition_with_full_block(spec, state, fill_cur_epoch=True, fill_prev_epoch=True)
         )
@@ -155,9 +155,9 @@ def setup_store_finalized_with_pending_payment(spec, state):
 
     # Empty blocks up to the last slot before the payment's epoch.
     bid_block_slot = spec.compute_start_slot_at_epoch(
-        spec.Epoch(spec.compute_epoch_at_slot(state.slot) + 1)
+        spec.compute_epoch_at_slot(state.slot) + spec.Epoch(1)
     )
-    while state.slot < bid_block_slot - 1:
+    while state.slot < bid_block_slot - spec.Slot(1):
         record(
             state_transition_and_sign_block(
                 spec, state, build_empty_block_for_next_slot(spec, state)
@@ -215,7 +215,7 @@ def build_signed_bid(
         # The field's own (progressive) type. Constructing it as a bounded
         # List would change the hash tree root and invalidate the signature
         # for consumers decoding the vector.
-        blob_kzg_commitments = spec.ProgressiveList[spec.KZGCommitment]()
+        blob_kzg_commitments = spec.BlobKZGCommitments()
     bid = spec.ExecutionPayloadBid(
         parent_block_hash=parent_block_hash,
         parent_block_root=parent_block_root,
@@ -234,7 +234,7 @@ def build_signed_bid(
         blob_kzg_commitments=blob_kzg_commitments,
         execution_requests_root=spec.hash_tree_root(spec.ExecutionRequests()),
     )
-    if valid_signature and builder_index < len(builder_privkeys):
+    if valid_signature and int(builder_index) < len(builder_privkeys):
         privkey = builder_privkeys[builder_index]
         signature = spec.get_execution_payload_bid_signature(state, bid, privkey)
     else:

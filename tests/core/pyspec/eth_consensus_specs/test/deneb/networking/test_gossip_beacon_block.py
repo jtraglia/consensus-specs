@@ -96,7 +96,7 @@ def test_gossip_beacon_block__reject_too_many_kzg_commitments(spec, state):
 
     rng = random.Random(1234)
     block, _, _, _ = get_block_with_blob(
-        spec, state, rng=rng, blob_count=get_max_blob_count(spec, state) + 1
+        spec, state, rng=rng, blob_count=int(get_max_blob_count(spec, state)) + 1
     )
     signed_block = sign_block(spec, state, block, proposer_index=block.proposer_index)
 

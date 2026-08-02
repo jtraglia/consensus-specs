@@ -8,7 +8,7 @@ def find_upcoming_proposal_slot(spec, state):
     """
     current_epoch_start = spec.compute_start_slot_at_epoch(spec.get_current_epoch(state))
     for offset, validator_index in enumerate(state.proposer_lookahead):
-        slot = spec.Slot(current_epoch_start + offset)
+        slot = current_epoch_start + spec.Slot(offset)
         if slot <= state.slot:
             continue
         return slot, validator_index
@@ -32,7 +32,7 @@ def build_signed_proposer_preferences(
     if dependent_root is None:
         proposal_epoch = spec.compute_epoch_at_slot(proposal_slot)
         lookahead_epoch = spec.Epoch(proposal_epoch - spec.MIN_SEED_LOOKAHEAD)
-        dependent_slot = spec.Slot(spec.compute_start_slot_at_epoch(lookahead_epoch) - 1)
+        dependent_slot = spec.compute_start_slot_at_epoch(lookahead_epoch) - spec.Slot(1)
         dependent_root = spec.get_block_root_at_slot(state, dependent_slot)
 
     if fee_recipient is None:

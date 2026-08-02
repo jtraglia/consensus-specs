@@ -138,7 +138,7 @@ def test_gossip_partial_data_column_sidecar__reject_slot_mismatch(spec, state):
         setup_gloas_partial_sidecar(spec, state)
     )
     # Bump the slot so it no longer matches.
-    group_id.slot = spec.Slot(group_id.slot + 1)
+    group_id.slot = group_id.slot + spec.Slot(1)
 
     yield "state", anchor_state
     yield get_filename(signed_anchor), signed_anchor

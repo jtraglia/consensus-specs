@@ -72,7 +72,7 @@ def test_is_one_confirmed_passes_with_full_participation(spec, state):
     maximum_support = spec.estimate_committee_weight_between_slots(
         total_active_balance,
         spec.Slot(parent_block.slot + spec.Slot(1)),
-        spec.Slot(current_slot - 1),
+        current_slot - spec.Slot(1),
     )
     support_discount = spec.get_support_discount(store, balance_source, block_b)
     adversarial_weight = spec.get_adversarial_weight(store, balance_source, block_b)
@@ -140,7 +140,7 @@ def test_is_one_confirmed_fails_with_low_participation(spec, state):
     maximum_support = spec.estimate_committee_weight_between_slots(
         total_active_balance,
         spec.Slot(parent_block.slot + spec.Slot(1)),
-        spec.Slot(current_slot - 1),
+        current_slot - spec.Slot(1),
     )
     support_discount = spec.get_support_discount(store, balance_source, block_b)
     adversarial_weight = spec.get_adversarial_weight(store, balance_source, block_b)
@@ -408,7 +408,7 @@ def test_is_one_confirmed_empty_slot_discount(spec, state):
         spec.estimate_committee_weight_between_slots(
             total_active_balance,
             spec.Slot(parent_b.slot + spec.Slot(1)),
-            spec.Slot(current_slot - 1),
+            current_slot - spec.Slot(1),
         )
     )
     adv_b = int(spec.get_adversarial_weight(store, balance_source, block_b))
@@ -542,14 +542,14 @@ def test_is_one_confirmed_epoch_crossing_block(spec, state):
     # Adversarial weight with epoch start (what the code does for epoch-crossing)
     adv_from_epoch_start = int(
         spec.compute_adversarial_weight(
-            store, balance_source, epoch_start, spec.Slot(current_slot - 1)
+            store, balance_source, epoch_start, current_slot - spec.Slot(1)
         )
     )
 
     # Adversarial weight with block slot (what the code would do without epoch-crossing logic)
     adv_from_block_slot = int(
         spec.compute_adversarial_weight(
-            store, balance_source, block.slot, spec.Slot(current_slot - 1)
+            store, balance_source, block.slot, current_slot - spec.Slot(1)
         )
     )
 
@@ -824,12 +824,12 @@ def test_is_one_confirmed_epoch_crossing_adversarial_range_matters(spec, state):
     # compute margins with correct vs wrong adversarial range
     adv_correct = int(
         spec.compute_adversarial_weight(
-            store, balance_source, epoch_start, spec.Slot(current_slot - 1)
+            store, balance_source, epoch_start, current_slot - spec.Slot(1)
         )
     )
     adv_wrong = int(
         spec.compute_adversarial_weight(
-            store, balance_source, block.slot, spec.Slot(current_slot - 1)
+            store, balance_source, block.slot, current_slot - spec.Slot(1)
         )
     )
 
@@ -839,7 +839,7 @@ def test_is_one_confirmed_epoch_crossing_adversarial_range_matters(spec, state):
         spec.estimate_committee_weight_between_slots(
             total_active_balance,
             spec.Slot(parent_block.slot + spec.Slot(1)),
-            spec.Slot(current_slot - 1),
+            current_slot - spec.Slot(1),
         )
     )
     proposer = int(spec.compute_proposer_score(balance_source))
@@ -1207,7 +1207,7 @@ def test_is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slo
         balance_source,
         p_root,
         spec.get_block_slot(store, p_root) + spec.Slot(1),
-        spec.Slot(fcr.current_slot() - 1),
+        fcr.current_slot() - spec.Slot(1),
     )
     # New validator's balance does not contribute to parent_support_in_empty_slots
     # as it's yet inactive in the view of the balance source
@@ -1251,7 +1251,7 @@ def test_is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slo
         balance_source,
         p_root,
         spec.get_block_slot(store, p_root) + spec.Slot(1),
-        spec.Slot(fcr.current_slot() - 1),
+        fcr.current_slot() - spec.Slot(1),
     )
     # New validator's balance now does contribute to parent_support_in_empty_slots
     assert (

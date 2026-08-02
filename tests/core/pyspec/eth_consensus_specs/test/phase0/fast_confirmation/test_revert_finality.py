@@ -699,7 +699,7 @@ def test_fcr_resets_when_bcand_not_descendant_of_gu_via_first_received_uj(spec, 
 
     # Last slot of epoch 3
     assert fcr.current_slot() == epoch4_start - 1
-    assert spec.is_start_slot_at_epoch(spec.Slot(fcr.current_slot() + 1))
+    assert spec.is_start_slot_at_epoch(fcr.current_slot() + spec.Slot(1))
 
     # Check GU snapshot = (C, 2) — use the snapshot field, not current_observed
     # (rotation hasn't happened yet, it happens at epoch 4 start inside FCR)

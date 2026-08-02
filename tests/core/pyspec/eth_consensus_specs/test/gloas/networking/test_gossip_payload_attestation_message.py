@@ -86,7 +86,7 @@ def test_gossip_payload_attestation_message__valid(spec, state):
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -130,7 +130,7 @@ def test_gossip_payload_attestation_message__ignore_not_current_slot(spec, state
     yield get_filename(message), message
 
     # Use a current_time well past the message's slot.
-    time_ms = spec.compute_time_at_slot_ms(store, state.slot) + 1000 * 1000
+    time_ms = spec.compute_time_at_slot_ms(store, state.slot) + spec.Uint64(1000 * 1000)
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
@@ -230,7 +230,7 @@ def test_gossip_payload_attestation_message__ignore_slot_outside_lower_disparity
     time_ms = (
         spec.compute_time_at_slot_ms(store, state.slot)
         - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY
-        - 1
+        - spec.Uint64(1)
     )
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
@@ -332,7 +332,7 @@ def test_gossip_payload_attestation_message__ignore_slot_outside_upper_disparity
     time_ms = (
         spec.compute_time_at_slot_ms(store, spec.Slot(state.slot + spec.Slot(1)))
         + spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY
-        + 1
+        + spec.Uint64(1)
     )
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
@@ -384,7 +384,7 @@ def test_gossip_payload_attestation_message__ignore_duplicate(spec, state):
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -403,7 +403,7 @@ def test_gossip_payload_attestation_message__ignore_duplicate(spec, state):
         }
     )
 
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -452,7 +452,7 @@ def test_gossip_payload_attestation_message__ignore_block_unseen(spec, state):
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -498,7 +498,7 @@ def test_gossip_payload_attestation_message__reject_validator_not_in_ptc(spec, s
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -546,7 +546,7 @@ def test_gossip_payload_attestation_message__reject_invalid_signature(spec, stat
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -602,7 +602,7 @@ def test_gossip_payload_attestation_message__reject_block_failed_validation(spec
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -659,7 +659,7 @@ def test_gossip_payload_attestation_message__reject_validator_index_out_of_range
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -694,7 +694,7 @@ def test_gossip_payload_attestation_message__ignore_block_not_at_assigned_slot(s
     # which the gossip rule must ignore because slot 2 was empty.
     store, blocks, block_1_root = setup_store_with_one_block(spec, state)
     next_slot(spec, state)
-    assert state.slot == 2
+    assert state.slot == spec.Slot(2)
     yield "state", anchor_state
     for signed in blocks:
         yield get_filename(signed), signed
@@ -712,7 +712,7 @@ def test_gossip_payload_attestation_message__ignore_block_not_at_assigned_slot(s
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 100
+    time_ms += spec.Uint64(100)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,

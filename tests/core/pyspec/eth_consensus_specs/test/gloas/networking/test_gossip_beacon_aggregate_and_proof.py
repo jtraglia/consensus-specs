@@ -83,7 +83,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_data_index_too_high(spec, sta
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -197,7 +197,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_same_slot_with_payload(spec, 
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -249,7 +249,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_payload_envelope_unseen(spec,
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -306,7 +306,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_payload_pending_el_validation
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -365,7 +365,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_payload_failed_el_validation(
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -424,7 +424,7 @@ def test_gossip_beacon_aggregate_and_proof__valid_payload_validated(spec, state)
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -487,7 +487,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_payload_status_without_envelo
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,

@@ -317,7 +317,7 @@ def is_current_or_next_slot(
     (with MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
     """
     is_current = is_current_slot(store, slot, current_time_ms)
-    is_next = is_current_slot(store, Slot(slot - 1), current_time_ms)
+    is_next = is_current_slot(store, slot - Slot(1), current_time_ms)
     return is_current or is_next
 ```
 
@@ -421,10 +421,10 @@ def verify_attestation_payload_status(
     block = store.blocks[block_root]
 
     # [REJECT] For same-slot attestations, the payload cannot yet be present
-    if block.slot == data.slot and data.index != 0:
+    if block.slot == data.slot and data.index != CommitteeIndex(0):
         raise GossipReject("same-slot attestation must attest with index 0")
 
-    if data.index != 1:
+    if data.index != CommitteeIndex(1):
         return
 
     # [IGNORE] The corresponding execution payload envelope has been seen and verified
@@ -453,15 +453,15 @@ def verify_block_body_operation_limits(body: BeaconBlockBody) -> None:
     Raises GossipReject on validation failure.
     """
     # [REJECT] The proposer slashing count is within the limit
-    if len(body.proposer_slashings) > MAX_PROPOSER_SLASHINGS:
+    if Uint64(len(body.proposer_slashings)) > MAX_PROPOSER_SLASHINGS:
         raise GossipReject("too many proposer slashings")
 
     # [REJECT] The attester slashing count is within the limit
-    if len(body.attester_slashings) > MAX_ATTESTER_SLASHINGS_ELECTRA:
+    if Uint64(len(body.attester_slashings)) > MAX_ATTESTER_SLASHINGS_ELECTRA:
         raise GossipReject("too many attester slashings")
 
     # [REJECT] The attestation count is within the limit
-    if len(body.attestations) > MAX_ATTESTATIONS_ELECTRA:
+    if Uint64(len(body.attestations)) > MAX_ATTESTATIONS_ELECTRA:
         raise GossipReject("too many attestations")
 
     # [REJECT] The block contains no deposits
@@ -469,15 +469,15 @@ def verify_block_body_operation_limits(body: BeaconBlockBody) -> None:
         raise GossipReject("block must not contain deposits")
 
     # [REJECT] The voluntary exit count is within the limit
-    if len(body.voluntary_exits) > MAX_VOLUNTARY_EXITS:
+    if Uint64(len(body.voluntary_exits)) > MAX_VOLUNTARY_EXITS:
         raise GossipReject("too many voluntary exits")
 
     # [REJECT] The BLS to execution change count is within the limit
-    if len(body.bls_to_execution_changes) > MAX_BLS_TO_EXECUTION_CHANGES:
+    if Uint64(len(body.bls_to_execution_changes)) > MAX_BLS_TO_EXECUTION_CHANGES:
         raise GossipReject("too many bls to execution changes")
 
     # [REJECT] The payload attestation count is within the limit
-    if len(body.payload_attestations) > MAX_PAYLOAD_ATTESTATIONS:
+    if Uint64(len(body.payload_attestations)) > MAX_PAYLOAD_ATTESTATIONS:
         raise GossipReject("too many payload attestations")
 ```
 
@@ -490,19 +490,19 @@ def verify_execution_requests_limits(execution_requests: ExecutionRequests) -> N
     Raises GossipReject on validation failure.
     """
     # [REJECT] The withdrawal request count is within the limit
-    if len(execution_requests.withdrawals) > MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD:
+    if Uint64(len(execution_requests.withdrawals)) > MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD:
         raise GossipReject("too many withdrawal requests")
 
     # [REJECT] The consolidation request count is within the limit
-    if len(execution_requests.consolidations) > MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD:
+    if Uint64(len(execution_requests.consolidations)) > MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD:
         raise GossipReject("too many consolidation requests")
 
     # [REJECT] The builder deposit request count is within the limit
-    if len(execution_requests.builder_deposits) > MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD:
+    if Uint64(len(execution_requests.builder_deposits)) > MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD:
         raise GossipReject("too many builder deposit requests")
 
     # [REJECT] The builder exit request count is within the limit
-    if len(execution_requests.builder_exits) > MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD:
+    if Uint64(len(execution_requests.builder_exits)) > MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD:
         raise GossipReject("too many builder exit requests")
 ```
 
@@ -582,7 +582,7 @@ def validate_beacon_block_gossip(
     verify_execution_requests_limits(block.body.parent_execution_requests)
 
     # [REJECT] The proposer index is a valid validator index
-    if block.proposer_index >= len(state.validators):
+    if block.proposer_index >= ValidatorIndex(len(state.validators)):
         raise GossipReject("proposer index out of range")
 
     # [REJECT] The proposer signature is valid
@@ -617,7 +617,7 @@ def validate_beacon_block_gossip(
     # [Modified in Gloas:EIP7732]
     # [REJECT] The bid's blob KZG commitment count is within the per-epoch limit
     max_blobs = get_blob_parameters(get_current_epoch(state)).max_blobs_per_block
-    if len(bid.blob_kzg_commitments) > max_blobs:
+    if Uint64(len(bid.blob_kzg_commitments)) > max_blobs:
         raise GossipReject("too many blob kzg commitments")
 
     # [Modified in Gloas:EIP7732]
@@ -674,7 +674,7 @@ def validate_beacon_aggregate_and_proof_gossip(
 
     # [New in Gloas:EIP7732]
     # [REJECT] The aggregate attestation's data index is 0 or 1
-    if aggregate.data.index > 1:
+    if aggregate.data.index > CommitteeIndex(1):
         raise GossipReject("aggregate data index must be 0 or 1")
 
     # [REJECT] Exactly one committee is specified by the committee bits
@@ -685,7 +685,7 @@ def validate_beacon_aggregate_and_proof_gossip(
 
     # [REJECT] The committee index is within the expected range
     committee_count = get_committee_count_per_slot(state, aggregate.data.target.epoch)
-    if index >= committee_count:
+    if index >= CommitteeIndex(committee_count):
         raise GossipReject("committee index out of range")
 
     # [IGNORE] The aggregate attestation's slot is not from a future slot
@@ -820,7 +820,7 @@ def validate_execution_payload_envelope_gossip(
 
     # [IGNORE] The envelope is from a slot greater than or equal to the latest finalized slot
     finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
-    if payload.slot_number < finalized_slot:
+    if payload.slot_number < Uint64(finalized_slot):
         raise GossipIgnore("envelope is from a slot before the latest finalized slot")
 
     block = store.blocks[block_root]
@@ -846,7 +846,7 @@ def validate_execution_payload_envelope_gossip(
     verify_execution_requests_limits(envelope.execution_requests)
 
     # [REJECT] The number of withdrawals is within the limit
-    if len(payload.withdrawals) > MAX_WITHDRAWALS_PER_PAYLOAD:
+    if Uint64(len(payload.withdrawals)) > MAX_WITHDRAWALS_PER_PAYLOAD:
         raise GossipReject("too many withdrawals")
 
     # [REJECT] The envelope signature is valid
@@ -900,7 +900,7 @@ def validate_payload_attestation_message_gossip(
         raise GossipIgnore("payload attestation's block is not at the assigned slot")
 
     # [REJECT] The validator index is valid
-    if validator_index >= len(state.validators):
+    if validator_index >= ValidatorIndex(len(state.validators)):
         raise GossipReject("validator index out of range")
 
     # [REJECT] The validator is a member of the payload timeliness committee
@@ -967,7 +967,7 @@ def validate_execution_payload_bid_gossip(
     # [REJECT] The bid's blob KZG commitment count is within the per-epoch limit
     proposal_epoch = compute_epoch_at_slot(bid.slot)
     max_blobs = get_blob_parameters(proposal_epoch).max_blobs_per_block
-    if len(bid.blob_kzg_commitments) > max_blobs:
+    if Uint64(len(bid.blob_kzg_commitments)) > max_blobs:
         raise GossipReject("too many blob kzg commitments")
 
     # [IGNORE] The bid's parent block root is a known beacon block
@@ -1158,12 +1158,12 @@ def validate_beacon_attestation_gossip(
 
     # [New in Gloas:EIP7732]
     # [REJECT] The attestation's data index is 0 or 1
-    if data.index > 1:
+    if data.index > CommitteeIndex(1):
         raise GossipReject("attestation data index must be 0 or 1")
 
     # [REJECT] The committee index is within the expected range
     committees_per_slot = get_committee_count_per_slot(state, target_epoch)
-    if committee_index >= committees_per_slot:
+    if committee_index >= CommitteeIndex(committees_per_slot):
         raise GossipReject("committee index out of range")
 
     # [REJECT] The attestation is for the correct subnet

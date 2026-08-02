@@ -215,7 +215,7 @@ def test_gossip_data_column_sidecar__reject_too_many_commitments(spec, state):
     # Pad commitments past the blob limit. The verify_data_column_sidecar
     # check is independent of the inclusion proof, so we don't need a
     # consistent block here.
-    extra = get_max_blob_count(spec, state) + 1 - len(sidecar.kzg_commitments)
+    extra = int(get_max_blob_count(spec, state)) + 1 - len(sidecar.kzg_commitments)
     sidecar.kzg_commitments = list(sidecar.kzg_commitments) + [spec.KZGCommitment()] * extra
 
     yield get_filename(sidecar), sidecar
@@ -287,7 +287,7 @@ def test_gossip_data_column_sidecar__reject_wrong_subnet(spec, state):
 
     expected_subnet = correct_subnet(spec, sidecar)
     wrong_subnet = spec.SubnetID(
-        (int(expected_subnet) + 1) % spec.config.DATA_COLUMN_SIDECAR_SUBNET_COUNT
+        (int(expected_subnet) + 1) % int(spec.config.DATA_COLUMN_SIDECAR_SUBNET_COUNT)
     )
     kwargs = {}
     if not is_post_gloas(spec):
@@ -343,7 +343,7 @@ def test_gossip_data_column_sidecar__ignore_future_slot(spec, state):
 
     sidecar_slot = sidecar.slot if is_post_gloas(spec) else sidecar.signed_block_header.message.slot
     slot_time_ms = spec.compute_time_at_slot_ms(store, sidecar_slot)
-    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - 1
+    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     subnet_id = correct_subnet(spec, sidecar)
@@ -898,7 +898,9 @@ def test_gossip_data_column_sidecar__reject_invalid_inclusion_proof(spec, state)
     _, sidecars = build_signed_block_and_sidecars(spec, state, blob_count=1)
     sidecar = sidecars[0]
     # Corrupt the inclusion proof.
-    sidecar.kzg_commitments_inclusion_proof = spec.compute_merkle_proof(spec.BeaconBlockBody(), 0)
+    proof = list(sidecar.kzg_commitments_inclusion_proof)
+    proof[0] = spec.Bytes32(spec.hash(proof[0]))
+    sidecar.kzg_commitments_inclusion_proof = spec.KZGCommitmentsInclusionProof(data=proof)
 
     yield get_filename(sidecar), sidecar
 
@@ -954,7 +956,7 @@ def test_gossip_data_column_sidecar__reject_invalid_kzg_proofs(spec, state):
     # Corrupt every KZG proof to the point at infinity, which won't verify
     # against the real commitments.
     bad_proof = spec.KZGProof(b"\xc0" + b"\x00" * 47)
-    sidecar.kzg_proofs = [bad_proof for _ in sidecar.kzg_proofs]
+    sidecar.kzg_proofs = spec.KZGProofs(data=[bad_proof for _ in sidecar.kzg_proofs])
 
     blocks_meta = [{"block": get_filename(signed_anchor)}]
     if is_post_gloas(spec):

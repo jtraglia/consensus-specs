@@ -103,9 +103,9 @@ def test_gossip_beacon_aggregate_and_proof__accepts_one_millisecond_before_slot_
     yield "state", anchor_state
     yield get_filename(signed_agg), signed_agg
 
-    current_time_ms = (
-        spec.compute_time_at_slot_ms(store, signed_agg.message.aggregate.data.slot) - 1
-    )
+    current_time_ms = spec.compute_time_at_slot_ms(
+        store, signed_agg.message.aggregate.data.slot
+    ) - spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     seen = get_seen(spec)
@@ -347,9 +347,9 @@ def test_gossip_beacon_aggregate_and_proof__accepts_last_slot_one_millisecond_be
     yield "state", anchor_state
     yield get_filename(signed_agg), signed_agg
 
-    current_time_ms = (
-        spec.compute_time_at_slot_ms(store, signed_agg.message.aggregate.data.slot) - 1
-    )
+    current_time_ms = spec.compute_time_at_slot_ms(
+        store, signed_agg.message.aggregate.data.slot
+    ) - spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     seen = get_seen(spec)

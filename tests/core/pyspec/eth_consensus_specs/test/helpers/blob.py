@@ -204,16 +204,16 @@ def make_partial_sidecar(spec, sidecar, blob_indices=None, include_header=True):
     proofs = [sidecar.kzg_proofs[i] for i in blob_indices]
     if is_post_gloas(spec):
         return spec.PartialDataColumnSidecar(
-            cells_present_bitmap=bitmap,
-            partial_column=cells,
-            kzg_proofs=proofs,
+            cells_present_bitmap=spec.CellsBitlist(data=bitmap),
+            partial_column=spec.DataColumn(data=cells),
+            kzg_proofs=spec.KZGProofs(data=proofs),
         )
     header = [make_partial_header(spec, sidecar)] if include_header else []
     return spec.PartialDataColumnSidecar(
-        cells_present_bitmap=bitmap,
-        partial_column=cells,
-        kzg_proofs=proofs,
-        header=header,
+        cells_present_bitmap=spec.CellsBitlist(data=bitmap),
+        partial_column=spec.DataColumn(data=cells),
+        kzg_proofs=spec.KZGProofs(data=proofs),
+        header=spec.OptionalPartialDataColumnHeader(data=header),
     )
 
 

@@ -210,6 +210,12 @@ def get_seen(spec):
     return spec.Seen(**{name: get_origin(t)() for name, t in get_type_hints(spec.Seen).items()})
 
 
-def make_progressive_list(spec, element_type, count):
-    """A progressive list of ``count`` default ``element_type`` values."""
-    return spec.ProgressiveList[element_type](*([element_type()] * count))
+def set_list_field(container, field, element_type, count):
+    """
+    Set ``container.field`` to ``count`` default ``element_type`` values.
+
+    The collection type is taken from the field's declaration: a container only
+    accepts an instance of the exact type its field declares.
+    """
+    collection_type = type(container).model_fields[field].annotation
+    setattr(container, field, collection_type(data=[element_type()] * count))

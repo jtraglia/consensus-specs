@@ -99,7 +99,7 @@ def test_gossip_beacon_attestation__accepts_one_millisecond_before_slot_start(sp
     yield "state", anchor_state
     yield get_filename(attestation), attestation
 
-    current_time_ms = spec.compute_time_at_slot_ms(store, attestation.data.slot) - 1
+    current_time_ms = spec.compute_time_at_slot_ms(store, attestation.data.slot) - spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     subnet_id = get_correct_subnet_for_attestation(spec, state, attestation)
@@ -353,7 +353,7 @@ def test_gossip_beacon_attestation__accepts_last_slot_one_millisecond_before_slo
     yield "state", anchor_state
     yield get_filename(attestation), attestation
 
-    current_time_ms = spec.compute_time_at_slot_ms(store, attestation.data.slot) - 1
+    current_time_ms = spec.compute_time_at_slot_ms(store, attestation.data.slot) - spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     subnet_id = get_correct_subnet_for_attestation(spec, state, attestation)
