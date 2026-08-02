@@ -131,7 +131,7 @@ def test_min_balance_exits_above_churn(spec, state):
         num_to_exit
     ].withdrawable_epoch == expected_withdrawable_epoch + spec.Epoch(1)
     # Check exit balance to consume is set correctly
-    remainder = int(num_to_exit) + spec.Gwei(1) * single_validator_balance % churn_limit
+    remainder = spec.Gwei(int(num_to_exit) + 1) * single_validator_balance % churn_limit
     assert state.exit_balance_to_consume == churn_limit - remainder
     # Check earliest_exit_epoch
     assert state.earliest_exit_epoch == expected_exit_epoch + spec.Epoch(1)

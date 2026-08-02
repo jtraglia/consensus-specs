@@ -216,7 +216,9 @@ def test_gossip_data_column_sidecar__reject_too_many_commitments(spec, state):
     # check is independent of the inclusion proof, so we don't need a
     # consistent block here.
     extra = int(get_max_blob_count(spec, state)) + 1 - len(sidecar.kzg_commitments)
-    sidecar.kzg_commitments = list(sidecar.kzg_commitments) + [spec.KZGCommitment()] * extra
+    sidecar.kzg_commitments = spec.BlobKZGCommitments(
+        data=list(sidecar.kzg_commitments) + [spec.KZGCommitment()] * extra
+    )
 
     yield get_filename(sidecar), sidecar
 
