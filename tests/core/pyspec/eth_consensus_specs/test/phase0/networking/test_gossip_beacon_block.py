@@ -105,7 +105,7 @@ def test_gossip_beacon_block__ignore_future_slot(spec, state):
     yield get_filename(signed_block), signed_block
 
     block_time_ms = spec.compute_time_at_slot_ms(store, signed_block.message.slot)
-    current_time_ms = block_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - 1
+    current_time_ms = block_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - spec.Uint64(1)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
@@ -462,7 +462,7 @@ def test_gossip_beacon_block__reject_parent_failed_validation(spec, state):
     )
 
     # Get the correct proposer for the child block's slot
-    child_slot = signed_block.message.slot + 1
+    child_slot = signed_block.message.slot + spec.Slot(1)
     temp_state = copy(state)
     spec.process_slots(temp_state, child_slot)
     proposer_index = spec.get_beacon_proposer_index(temp_state)
@@ -821,7 +821,7 @@ def test_gossip_beacon_block__reject_wrong_proposer_index(spec, state):
 
     # Change proposer_index to wrong value
     correct_proposer = block.proposer_index
-    wrong_proposer = (correct_proposer + 1) % len(state.validators)
+    wrong_proposer = spec.ValidatorIndex((int(correct_proposer) + 1) % len(state.validators))
     block.proposer_index = wrong_proposer
 
     # Sign with the wrong proposer's key (matching the claimed proposer_index)

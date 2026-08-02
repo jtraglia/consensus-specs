@@ -476,7 +476,7 @@ def test_get_aggregate_signature(spec, state):
         attestations.append(
             spec.Attestation(
                 data=attestation_data,
-                aggregation_bits=spec.SyncSubcommitteeBits(data=bits),
+                aggregation_bits=bits,
                 signature=spec.get_attestation_signature(
                     state, attestation_data, privkeys[validator_index]
                 ),
