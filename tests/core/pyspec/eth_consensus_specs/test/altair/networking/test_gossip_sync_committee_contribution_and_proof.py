@@ -1104,7 +1104,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_aggregator
     )
 
     # Replace the outer signature with one signed by a different key
-    wrong_key = privkeys[(aggregator_index + 1) % len(privkeys)]
+    wrong_key = privkeys[(int(aggregator_index) + 1) % len(privkeys)]
     epoch = spec.compute_epoch_at_slot(state.slot)
     domain = spec.get_domain(state, spec.DOMAIN_CONTRIBUTION_AND_PROOF, epoch)
     signing_root = spec.compute_signing_root(signed_cap.message, domain)
@@ -1169,7 +1169,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_aggregate_
     )
 
     # Replace the aggregate signature with one signed by a different key
-    wrong_key = privkeys[(aggregator_index + 1) % len(privkeys)]
+    wrong_key = privkeys[(int(aggregator_index) + 1) % len(privkeys)]
     epoch = spec.compute_epoch_at_slot(state.slot)
     domain = spec.get_domain(state, spec.DOMAIN_SYNC_COMMITTEE, epoch)
     signing_root = spec.compute_signing_root(

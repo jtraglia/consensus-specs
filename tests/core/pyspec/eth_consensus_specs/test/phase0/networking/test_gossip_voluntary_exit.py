@@ -307,7 +307,7 @@ def test_gossip_voluntary_exit__reject_invalid_signature(spec, state):
         validator_index=validator_index,
     )
     # Sign with a different validator's key
-    wrong_key = privkeys[validator_index + 1]
+    wrong_key = privkeys[int(validator_index) + 1]
     signed_exit = sign_voluntary_exit(spec, state, voluntary_exit, wrong_key)
 
     yield get_filename(signed_exit), signed_exit

@@ -394,7 +394,7 @@ def test_gossip_sync_committee_message__reject_invalid_signature(spec, state):
     domain = spec.get_domain(state, spec.DOMAIN_SYNC_COMMITTEE, epoch)
     signing_root = spec.compute_signing_root(block_root, domain)
     # Sign with a different validator's key
-    wrong_key = privkeys[(validator_index + 1) % len(privkeys)]
+    wrong_key = privkeys[(int(validator_index) + 1) % len(privkeys)]
     signature = bls.Sign(wrong_key, signing_root)
 
     message = spec.SyncCommitteeMessage(
