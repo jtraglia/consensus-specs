@@ -347,7 +347,7 @@ def is_gas_limit_target_compatible(
     Check if ``gas_limit`` is compatible with ``target_gas_limit`` under the
     EIP-1559 transition rule from ``parent_gas_limit``.
     """
-    max_gas_limit_difference = max(parent_gas_limit // 1024, 1) - 1
+    max_gas_limit_difference = max(parent_gas_limit // Uint64(1024), Uint64(1)) - Uint64(1)
     min_gas_limit = parent_gas_limit - max_gas_limit_difference
     max_gas_limit = parent_gas_limit + max_gas_limit_difference
 
@@ -820,14 +820,14 @@ def validate_execution_payload_envelope_gossip(
 
     # [IGNORE] The envelope is from a slot greater than or equal to the latest finalized slot
     finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
-    if payload.slot_number < Uint64(finalized_slot):
+    if Uint64(payload.slot_number) < Uint64(finalized_slot):
         raise GossipIgnore("envelope is from a slot before the latest finalized slot")
 
     block = store.blocks[block_root]
     bid = block.body.signed_execution_payload_bid.message
 
     # [REJECT] The block's slot matches the payload's slot number
-    if block.slot != payload.slot_number:
+    if block.slot != Slot(payload.slot_number):
         raise GossipReject("block's slot does not match payload's slot number")
 
     # [REJECT] The envelope is from the builder committed to by the bid
@@ -961,7 +961,7 @@ def validate_execution_payload_bid_gossip(
         raise GossipReject("bid's slot is not higher than its parent's slot")
 
     # [REJECT] The bid's execution payment is zero
-    if bid.execution_payment != 0:
+    if bid.execution_payment != Gwei(0):
         raise GossipReject("bid's execution payment must be zero")
 
     # [REJECT] The bid's blob KZG commitment count is within the per-epoch limit
@@ -1022,7 +1022,7 @@ def validate_execution_payload_bid_gossip(
     process_slots(state, bid.slot)
 
     # [REJECT] The builder index is valid
-    if bid.builder_index >= len(state.builders):
+    if bid.builder_index >= BuilderIndex(len(state.builders)):
         raise GossipReject("builder index out of range")
 
     # [IGNORE] The builder can cover the bid

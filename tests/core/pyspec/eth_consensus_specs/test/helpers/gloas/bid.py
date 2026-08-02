@@ -176,10 +176,9 @@ def setup_store_finalized_with_pending_payment(spec, state):
 
     # Empty blocks to the last slot of the following epoch: the payment has
     # then shifted into the previous-epoch half of the queue.
-    head_slot = spec.Slot(
-        spec.compute_start_slot_at_epoch(spec.Epoch(spec.compute_epoch_at_slot(bid_block_slot) + 2))
-        - 1
-    )
+    head_slot = spec.compute_start_slot_at_epoch(
+        spec.compute_epoch_at_slot(bid_block_slot) + spec.Epoch(2)
+    ) - spec.Slot(1)
     while state.slot < head_slot:
         record(
             state_transition_and_sign_block(

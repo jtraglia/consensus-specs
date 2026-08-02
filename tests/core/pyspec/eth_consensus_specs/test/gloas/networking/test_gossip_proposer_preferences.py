@@ -1159,7 +1159,7 @@ def test_gossip_proposer_preferences__valid_dependent_root_across_empty_epochs(s
     else:
         raise AssertionError("expected advanced proposer lookahead to differ")
 
-    proposal_slot = spec.Slot(spec.compute_start_slot_at_epoch(proposal_epoch) + slot_offset)
+    proposal_slot = spec.compute_start_slot_at_epoch(proposal_epoch) + spec.Slot(slot_offset)
     signed_prefs = build_signed_proposer_preferences(
         spec,
         validation_state,

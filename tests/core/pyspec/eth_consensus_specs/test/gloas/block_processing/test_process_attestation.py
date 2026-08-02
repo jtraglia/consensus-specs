@@ -241,7 +241,7 @@ def test_invalid_same_slot_attestation_index_one_head_not_matching(spec, state):
     assert attestation.data.source == state.current_justified_checkpoint
     assert attestation.data.target.root == spec.get_block_root(state, attestation.data.target.epoch)
     assert attestation.data.beacon_block_root != spec.get_block_root_at_slot(
-        state, attestation_slot
+        state, spec.Slot(attestation_slot)
     )
     assert spec.is_attestation_same_slot(state, attestation.data) is True
 

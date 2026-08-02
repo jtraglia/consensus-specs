@@ -52,7 +52,7 @@ def run_exit_at_churn_boundary(spec, state):
     assert state.validators[validator_index].withdrawable_epoch == expected_withdrawable_epoch
     assert (
         state.exit_balance_to_consume
-        == int(additional_epochs) + spec.Gwei(1) * exit_churn - to_exit
+        == spec.Gwei(int(additional_epochs) + 1) * exit_churn - to_exit
     )
     assert state.earliest_exit_epoch == expected_exit_epoch
 

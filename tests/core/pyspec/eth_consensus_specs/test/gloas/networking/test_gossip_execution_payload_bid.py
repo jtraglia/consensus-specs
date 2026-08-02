@@ -2649,7 +2649,7 @@ def test_gossip_execution_payload_bid__valid_requires_state_advanced_across_epoc
     # The bid claims the builder's entire coverable balance: coverable only
     # once the pending payment is dropped at the epoch transition.
     bid_value = spec.Gwei(state.builders[builder_index].balance - spec.MIN_DEPOSIT_AMOUNT)
-    assert pending_value > 0
+    assert pending_value > spec.Gwei(0)
     assert not spec.can_builder_cover_bid(state, builder_index, bid_value)
     advanced_state = copy(state)
     spec.process_slots(advanced_state, spec.Slot(state.slot + spec.Slot(1)))
@@ -2667,7 +2667,9 @@ def test_gossip_execution_payload_bid__valid_requires_state_advanced_across_epoc
     # epoch, so validating the bid must advance the state across the boundary.
     time_ms += spec.Uint64(50)
     proposal_slot, validator_index = find_upcoming_proposal_slot(spec, state)
-    assert spec.compute_epoch_at_slot(proposal_slot) == spec.compute_epoch_at_slot(state.slot) + 1
+    assert spec.compute_epoch_at_slot(proposal_slot) == spec.compute_epoch_at_slot(
+        state.slot
+    ) + spec.Epoch(1)
     signed_prefs = build_signed_proposer_preferences(
         spec,
         state,

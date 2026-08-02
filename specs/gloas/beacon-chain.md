@@ -2118,7 +2118,9 @@ def process_execution_payload_bid(
     parent_slot = state.latest_execution_payload_bid.slot
 
     # Cache the signed execution payload bid
-    state.latest_execution_payload_bid = bid
+    # Copied: a field assignment shares the object, so later edits to the cached
+    # bid would also change the block it came from.
+    state.latest_execution_payload_bid = copy(bid)
 
     return parent_slot
 ```
