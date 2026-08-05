@@ -62,7 +62,7 @@ class CellKZGProofs(List[KZGProof]):
     The KZG cell proofs for every blob in a block, one proof per cell.
     """
 
-    LIMIT = Uint64(FIELD_ELEMENTS_PER_EXT_BLOB) * MAX_BLOB_COMMITMENTS_PER_BLOCK
+    LIMIT = FIELD_ELEMENTS_PER_EXT_BLOB * MAX_BLOB_COMMITMENTS_PER_BLOCK
 ```
 
 ## Helpers
@@ -217,7 +217,7 @@ following signature:
 <!-- eth_consensus_specs: skip -->
 
 ```python
-def compute_cells(blob: Blob) -> Vector[Cell, CELLS_PER_EXT_BLOB]:
+def compute_cells(blob: Blob) -> Cells:
     """
     Extend ``blob`` and return all the cells of the extended blob.
     """

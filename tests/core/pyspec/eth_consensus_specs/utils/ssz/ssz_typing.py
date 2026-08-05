@@ -41,19 +41,10 @@ class BytesN(ByteVector):
     """
     Base for the specs' fixed-width byte arrays.
 
-    The library hashes a byte array by class as well as by content, while it
-    compares two byte arrays by content alone. That splits the hash/equality
-    contract as soon as a fork declares its own name for a width: a ``Root`` and
-    the ``Bytes32`` a hash tree root comes back as are equal, yet land in
-    different buckets, so a store keyed by one silently misses the other.
-
-    Hashing by content alone restores the contract across every width declared
-    here and every spec type built on one.
+    The widths below are the only thing this adds. The library hashes a byte
+    array by content, matching how it compares them, so a ``Root`` and the
+    ``Bytes32`` a hash tree root comes back as land in the same bucket.
     """
-
-    def __hash__(self) -> int:
-        """Hash by content, so equal byte arrays of any width hash alike."""
-        return hash((BytesN, bytes(self)))
 
 
 class Bytes1(BytesN):

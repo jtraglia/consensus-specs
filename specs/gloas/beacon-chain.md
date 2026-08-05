@@ -217,8 +217,7 @@ class AttesterSlashings(ProgressiveList[AttesterSlashing]):
 # [Modified in Gloas:EIP7688]
 class AttestingIndices(ProgressiveList[ValidatorIndex]):
     """
-    The indices of the validators participating in an attestation, sorted and
-    without duplicates.
+    The indices of the validators participating in an attestation.
     """
 ```
 
@@ -228,8 +227,7 @@ class AttestingIndices(ProgressiveList[ValidatorIndex]):
 # [Modified in Gloas:EIP7688]
 class Balances(ProgressiveList[Gwei]):
     """
-    The balances of all validators, in Gwei. The list is aligned with
-    ``state.validators``, one entry per validator.
+    The balances of all validators.
     """
 ```
 
@@ -290,8 +288,7 @@ class Deposits(ProgressiveList[Deposit]):
 # [Modified in Gloas:EIP7688]
 class EpochParticipation(ProgressiveList[ParticipationFlags]):
     """
-    Participation flags tracked over an epoch. The list is aligned with
-    ``state.validators``, one entry per validator.
+    The participation flags of each validator for an epoch.
     """
 ```
 
@@ -301,9 +298,7 @@ class EpochParticipation(ProgressiveList[ParticipationFlags]):
 # [Modified in Gloas:EIP7688]
 class InactivityScores(ProgressiveList[Uint64]):
     """
-    Inactivity scores, which grow during inactivity leaks and determine the
-    associated penalties. The list is aligned with ``state.validators``, one
-    entry per validator.
+    Each validator's inactivity score, tracking missed timely target votes.
     """
 ```
 
@@ -313,7 +308,7 @@ class InactivityScores(ProgressiveList[Uint64]):
 # [Modified in Gloas:EIP7688]
 class PendingConsolidations(ProgressiveList[PendingConsolidation]):
     """
-    The queue of consolidations awaiting processing at epoch boundaries.
+    The queue of consolidations awaiting processing.
     """
 ```
 
@@ -323,7 +318,7 @@ class PendingConsolidations(ProgressiveList[PendingConsolidation]):
 # [Modified in Gloas:EIP7688]
 class PendingDeposits(ProgressiveList[PendingDeposit]):
     """
-    The queue of deposits awaiting processing at epoch boundaries.
+    The queue of deposits awaiting processing.
     """
 ```
 
@@ -333,7 +328,7 @@ class PendingDeposits(ProgressiveList[PendingDeposit]):
 # [Modified in Gloas:EIP7688]
 class PendingPartialWithdrawals(ProgressiveList[PendingPartialWithdrawal]):
     """
-    The queue of partial withdrawals awaiting processing at epoch boundaries.
+    The queue of partial withdrawals awaiting processing.
     """
 ```
 
@@ -364,7 +359,7 @@ class Transaction(ProgressiveList[Byte]):
 # [Modified in Gloas:EIP7688]
 class Transactions(ProgressiveList[Transaction]):
     """
-    The transactions included in an execution payload.
+    A list of execution-layer transactions.
     """
 ```
 
@@ -374,8 +369,7 @@ class Transactions(ProgressiveList[Transaction]):
 # [Modified in Gloas:EIP7688]
 class Validators(ProgressiveList[Validator]):
     """
-    The validator registry. Validators are appended on deposit and are never
-    removed.
+    The validator registry.
     """
 ```
 
@@ -405,7 +399,7 @@ class WithdrawalRequests(ProgressiveList[WithdrawalRequest]):
 # [Modified in Gloas:EIP7688]
 class Withdrawals(ProgressiveList[Withdrawal]):
     """
-    The withdrawals included in an execution payload.
+    A list of withdrawals.
     """
 ```
 
@@ -450,11 +444,10 @@ class BuilderIndex(Uint64):
 ```python
 class BuilderPendingPayments(Vector[BuilderPendingPayment]):
     """
-    A rolling window of pending builder payments, indexed by slot modulo two
-    epochs of slots.
+    The pending builder payments of the previous and current epoch.
     """
 
-    LENGTH = Uint64(2) * Uint64(SLOTS_PER_EPOCH)
+    LENGTH = 2 * SLOTS_PER_EPOCH
 ```
 
 ### New `BuilderPendingWithdrawals`
@@ -471,8 +464,7 @@ class BuilderPendingWithdrawals(ProgressiveList[BuilderPendingWithdrawal]):
 ```python
 class Builders(ProgressiveList[Builder]):
     """
-    The builder registry. Builders are appended on deposit and are never
-    removed.
+    The builder registry.
     """
 ```
 
@@ -502,7 +494,7 @@ class PayloadAttestations(ProgressiveList[PayloadAttestation]):
 ```python
 class PTC(Vector[ValidatorIndex]):
     """
-    The payload timeliness committee of a slot, with possible duplicates.
+    The payload timeliness committee of a slot.
     """
 
     LENGTH = PTC_SIZE
@@ -513,8 +505,7 @@ class PTC(Vector[ValidatorIndex]):
 ```python
 class PTCAttestingIndices(List[ValidatorIndex]):
     """
-    The indices of the PTC members participating in a payload attestation,
-    sorted and without duplicates.
+    The indices of the PTC members participating in a payload attestation.
     """
 
     LIMIT = PTC_SIZE
@@ -541,7 +532,7 @@ class PTCWindow(Vector[PTC]):
     current, and lookahead epochs.
     """
 
-    LENGTH = (Uint64(2) + Uint64(MIN_SEED_LOOKAHEAD)) * Uint64(SLOTS_PER_EPOCH)
+    LENGTH = (2 + Uint64(MIN_SEED_LOOKAHEAD)) * SLOTS_PER_EPOCH
 ```
 
 ## Constants
@@ -1180,7 +1171,7 @@ def compute_balance_weighted_selection(
     total = Uint64(len(indices))
     assert total > Uint64(0)
     effective_balances = [state.validators[index].effective_balance for index in indices]
-    selected: List[ValidatorIndex] = []
+    selected: list[ValidatorIndex] = []
     i = Uint64(0)
     while Uint64(len(selected)) < size:
         offset = i % Uint64(16) * Uint64(2)
@@ -1233,7 +1224,7 @@ def compute_ptc(state: BeaconState, slot: Slot) -> PTC:
     """
     epoch = compute_epoch_at_slot(slot)
     seed = hash(get_seed(state, epoch, DOMAIN_PTC_ATTESTER) + uint_to_bytes(slot))
-    indices: List[ValidatorIndex] = []
+    indices: list[ValidatorIndex] = []
     # Concatenate all committees for this slot in order
     committees_per_slot = get_committee_count_per_slot(state, epoch)
     for i in range(committees_per_slot):
@@ -1785,10 +1776,10 @@ def get_builder_withdrawals(
     assert Uint64(len(prior_withdrawals)) <= withdrawals_limit
 
     processed_count: Uint64 = 0
-    withdrawals: List[Withdrawal] = []
+    withdrawals: list[Withdrawal] = []
     for withdrawal in state.builder_pending_withdrawals:
-        all_withdrawals = prior_withdrawals + withdrawals
-        has_reached_limit = Uint64(len(all_withdrawals)) >= withdrawals_limit
+        all_withdrawals = list(prior_withdrawals) + withdrawals
+        has_reached_limit = len(all_withdrawals) >= withdrawals_limit
         if has_reached_limit:
             break
 
@@ -1821,11 +1812,11 @@ def get_builders_sweep_withdrawals(
     assert Uint64(len(prior_withdrawals)) <= withdrawals_limit
 
     processed_count: Uint64 = 0
-    withdrawals: List[Withdrawal] = []
+    withdrawals: list[Withdrawal] = []
     builder_index = state.next_withdrawal_builder_index
     for _ in range(builders_limit):
-        all_withdrawals = prior_withdrawals + withdrawals
-        has_reached_limit = Uint64(len(all_withdrawals)) >= withdrawals_limit
+        all_withdrawals = list(prior_withdrawals) + withdrawals
+        has_reached_limit = len(all_withdrawals) >= withdrawals_limit
         if has_reached_limit:
             break
 
@@ -1852,7 +1843,7 @@ def get_builders_sweep_withdrawals(
 ```python
 def get_expected_withdrawals(state: BeaconState) -> ExpectedWithdrawals:
     withdrawal_index = state.next_withdrawal_index
-    withdrawals: List[Withdrawal] = []
+    withdrawals: list[Withdrawal] = []
 
     # [New in Gloas:EIP7732]
     # Get builder withdrawals

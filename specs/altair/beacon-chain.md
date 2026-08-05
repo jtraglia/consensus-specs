@@ -73,8 +73,7 @@ Altair is the first beacon-chain upgrade. Its main features are:
 ```python
 class EpochParticipation(List[ParticipationFlags]):
     """
-    Participation flags tracked over an epoch. The list is aligned with
-    ``state.validators``, one entry per validator.
+    The participation flags of each validator for an epoch.
     """
 
     LIMIT = VALIDATOR_REGISTRY_LIMIT
@@ -85,9 +84,7 @@ class EpochParticipation(List[ParticipationFlags]):
 ```python
 class InactivityScores(List[Uint64]):
     """
-    Inactivity scores, which grow during inactivity leaks and determine the
-    associated penalties. The list is aligned with ``state.validators``, one
-    entry per validator.
+    Each validator's inactivity score, tracking missed timely target votes.
     """
 
     LIMIT = VALIDATOR_REGISTRY_LIMIT
@@ -119,8 +116,7 @@ class SyncCommitteeBits(BitVector):
 ```python
 class SyncCommitteePubkeys(Vector[BLSPubkey]):
     """
-    The public keys of the sync committee members, in committee order. Keys
-    repeat when a validator is selected more than once.
+    The public keys of the sync committee members, in committee order.
     """
 
     LENGTH = SYNC_COMMITTEE_SIZE
@@ -332,9 +328,9 @@ def get_next_sync_committee_indices(state: BeaconState) -> Sequence[ValidatorInd
     active_validator_indices = get_active_validator_indices(state, epoch)
     active_validator_count = Uint64(len(active_validator_indices))
     seed = get_seed(state, epoch, DOMAIN_SYNC_COMMITTEE)
-    i = Uint64(0)
-    sync_committee_indices: List[ValidatorIndex] = []
-    while Uint64(len(sync_committee_indices)) < SYNC_COMMITTEE_SIZE:
+    i = 0
+    sync_committee_indices: list[ValidatorIndex] = []
+    while len(sync_committee_indices) < SYNC_COMMITTEE_SIZE:
         shuffled_index = compute_shuffled_index(
             i % active_validator_count, active_validator_count, seed
         )

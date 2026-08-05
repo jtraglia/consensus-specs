@@ -259,8 +259,7 @@ class ErrorMessage(List[Byte]):
 ```python
 class NodeID(Uint256):
     """
-    A node identifier on the discovery network, derived from the node's
-    identity key.
+    A node identifier on the discovery network.
     """
 ```
 
@@ -1277,21 +1276,18 @@ unsigned byte:
   expected message schema and encoding specified in the request.
 - 1: **InvalidRequest** -- the contents of the request are semantically invalid,
   or the payload is malformed, or could not be understood. The response payload
-  adheres to the `ErrorMessage` schema (described below).
+  adheres to the schema (described below).
 - 2: **ServerError** -- the responder encountered an error while processing the
-  request. The response payload adheres to the `ErrorMessage` schema (described
-  below).
+  request. The response payload adheres to the schema (described below).
 - 3: **ResourceUnavailable** -- the responder does not have requested resource.
-  The response payload adheres to the `ErrorMessage` schema (described below).
-  *Note*: This response code is only valid as a response where specified.
+  The response payload adheres to the schema (described below). *Note*: This
+  response code is only valid as a response where specified.
 
 Clients MAY use response codes above `128` to indicate alternative, erroneous
 request-specific responses.
 
 The range `[4, 127]` is RESERVED for future usages, and should be treated as
 error if not recognized expressly.
-
-The `ErrorMessage` schema is:
 
 ```
 (
@@ -1384,11 +1380,10 @@ In case of an invalid input (header or payload), a reader MUST:
 All messages that contain only a single field MUST be encoded directly as the
 type of that field and MUST NOT be encoded as an SSZ container.
 
-Responses that are SSZ-lists (for example `List[SignedBeaconBlock, ...]`) send
-their constituents individually as `response_chunk`s. For example, the
-`List[SignedBeaconBlock, ...]` response type sends zero or more
-`response_chunk`s. Each _successful_ `response_chunk` contains a single
-`SignedBeaconBlock` payload.
+Responses that are SSZ-lists (for example `SignedBeaconBlocks`) send their
+constituents individually as `response_chunk`s. For example, the
+`SignedBeaconBlocks` response type sends zero or more `response_chunk`s. Each
+_successful_ `response_chunk` contains a single `SignedBeaconBlock` payload.
 
 #### Messages
 
@@ -1727,9 +1722,9 @@ The ENR `attnets` entry signifies the attestation subnet bitfield with the
 following form to more easily discover peers participating in particular
 attestation gossip subnets.
 
-| Key       | Value                                     |
-| --------- | ----------------------------------------- |
-| `attnets` | SSZ `BitVector[ATTESTATION_SUBNET_COUNT]` |
+| Key       | Value     |
+| --------- | --------- |
+| `attnets` | `Attnets` |
 
 If a node's `MetaData.attnets` has any non-zero bit, the ENR MUST include the
 `attnets` entry with the same value as `MetaData.attnets`.
@@ -1743,9 +1738,9 @@ ENRs MUST carry a generic `eth2` key with an 16-byte value of the node's current
 fork digest, next fork version, and next fork epoch to ensure connections are
 made with peers on the intended Ethereum network.
 
-| Key    | Value           |
-| ------ | --------------- |
-| `eth2` | SSZ `ENRForkID` |
+| Key    | Value       |
+| ------ | ----------- |
+| `eth2` | `ENRForkID` |
 
 Specifically, the value of the `eth2` key MUST be the following SSZ encoded
 object (`ENRForkID`)

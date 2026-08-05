@@ -58,7 +58,7 @@ class InclusionListBits(BitVector):
 ```python
 class InclusionListCommittee(Vector[ValidatorIndex]):
     """
-    The inclusion list committee of a slot, with possible duplicates.
+    The inclusion list committee of a slot.
     """
 
     LENGTH = INCLUSION_LIST_COMMITTEE_SIZE
@@ -221,13 +221,13 @@ def get_inclusion_list_committee(state: BeaconState, slot: Slot) -> InclusionLis
     Get the inclusion list committee for the given ``slot``.
     """
     epoch = compute_epoch_at_slot(slot)
-    indices: List[ValidatorIndex] = []
+    indices: list[ValidatorIndex] = []
     # Concatenate all committees for this slot in order
     committees_per_slot = get_committee_count_per_slot(state, epoch)
     for i in range(int(committees_per_slot)):
         committee = get_beacon_committee(state, slot, CommitteeIndex(i))
         indices.extend(committee)
     return InclusionListCommittee(
-        data=[indices[i % len(indices)] for i in range(int(INCLUSION_LIST_COMMITTEE_SIZE))]
+        data=[indices[i % len(indices)] for i in range(INCLUSION_LIST_COMMITTEE_SIZE)]
     )
 ```

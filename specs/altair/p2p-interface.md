@@ -4,13 +4,13 @@
 
 - [Introduction](#introduction)
 - [Modifications in Altair](#modifications-in-altair)
+  - [Types](#types)
+    - [New `Syncnets`](#new-syncnets)
   - [Helpers](#helpers)
     - [Modified `Seen`](#modified-seen)
     - [Modified `compute_fork_version`](#modified-compute_fork_version)
     - [New `is_current_slot`](#new-is_current_slot)
     - [New `get_sync_subcommittee_pubkeys`](#new-get_sync_subcommittee_pubkeys)
-  - [Types](#types)
-    - [New `Syncnets`](#new-syncnets)
   - [MetaData](#metadata)
   - [The gossip domain: gossipsub](#the-gossip-domain-gossipsub)
     - [Topics and messages](#topics-and-messages)
@@ -47,6 +47,19 @@ Altair adds new messages, topics and data to the Req-Resp, Gossip and Discovery
 domain. Some Phase 0 features will be deprecated, but not removed immediately.
 
 ## Modifications in Altair
+
+### Types
+
+#### New `Syncnets`
+
+```python
+class Syncnets(BitVector):
+    """
+    The sync committee subnets a node is subscribed to, one bit per subnet.
+    """
+
+    LENGTH = SYNC_COMMITTEE_SUBNET_COUNT
+```
 
 ### Helpers
 
@@ -117,19 +130,6 @@ def get_sync_subcommittee_pubkeys(
     sync_subcommittee_size = SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT
     i = Uint64(subcommittee_index) * sync_subcommittee_size
     return sync_committee.pubkeys[i : i + sync_subcommittee_size]
-```
-
-### Types
-
-#### New `Syncnets`
-
-```python
-class Syncnets(BitVector):
-    """
-    The sync committee subnets a node is subscribed to, one bit per subnet.
-    """
-
-    LENGTH = SYNC_COMMITTEE_SUBNET_COUNT
 ```
 
 ### MetaData
@@ -561,9 +561,9 @@ facilitate sync committee subnet discovery. The length of this bitfield is
 bitfield if the validator is currently subscribed to the `sync_committee_{i}`
 topic.
 
-| Key        | Value                                        |
-| ---------- | -------------------------------------------- |
-| `syncnets` | SSZ `BitVector[SYNC_COMMITTEE_SUBNET_COUNT]` |
+| Key        | Value      |
+| ---------- | ---------- |
+| `syncnets` | `Syncnets` |
 
 See the [validator document](./validator.md#sync-committee-subnet-stability) for
 further details on how the new bits are used.

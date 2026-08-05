@@ -49,7 +49,7 @@
 ```python
 class Cell(ByteVector):
     """
-    The unit of blob data that can be verified with its own KZG proof.
+    The unit of extended blob data that has its own ``KZGProof``.
     """
 
     LENGTH = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL
@@ -89,7 +89,7 @@ class ColumnIndex(Uint64):
 ```python
 class CustodyIndex(Uint64):
     """
-    The index of a custody group, a unit of column custody assigned to nodes.
+    The index of a custody group.
     """
 ```
 
@@ -98,7 +98,7 @@ class CustodyIndex(Uint64):
 ```python
 class DataColumn(List[Cell]):
     """
-    A column of the extended blob data matrix, holding one cell per blob.
+    A column of the extended blob data matrix, with at most one cell per blob.
     """
 
     LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
@@ -121,7 +121,7 @@ class KZGCommitmentsInclusionProof(Vector[Bytes32]):
 ```python
 class Proofs(Vector[KZGProof]):
     """
-    One KZG proof per cell of a single extended blob.
+    The KZG proofs for the cells of a single extended blob.
     """
 
     LENGTH = CELLS_PER_EXT_BLOB
@@ -210,8 +210,8 @@ def get_custody_groups(node_id: NodeID, custody_group_count: Uint64) -> Sequence
         return [CustodyIndex(i) for i in range(NUMBER_OF_CUSTODY_GROUPS)]
 
     current_id = Uint256(node_id)
-    custody_groups: List[CustodyIndex] = []
-    while Uint64(len(custody_groups)) < custody_group_count:
+    custody_groups: list[CustodyIndex] = []
+    while len(custody_groups) < custody_group_count:
         custody_group = CustodyIndex(
             bytes_to_uint64(hash(uint_to_bytes(current_id))[0:8]) % NUMBER_OF_CUSTODY_GROUPS
         )
@@ -271,9 +271,7 @@ following signature:
 <!-- eth_consensus_specs: skip -->
 
 ```python
-def compute_cells_and_kzg_proofs(
-    blob: Blob,
-) -> Tuple[Vector[Cell, CELLS_PER_EXT_BLOB], Vector[KZGProof, CELLS_PER_EXT_BLOB]]:
+def compute_cells_and_kzg_proofs(blob: Blob) -> Tuple[Cells, Proofs]:
     """
     Extend ``blob`` and return all the cells and proofs of the extended blob.
     """
@@ -320,7 +318,7 @@ following signature:
 ```python
 def recover_cells_and_kzg_proofs(
     cell_indices: Sequence[CellIndex], cells: Sequence[Cell]
-) -> Tuple[Vector[Cell, CELLS_PER_EXT_BLOB], Vector[KZGProof, CELLS_PER_EXT_BLOB]]:
+) -> Tuple[Cells, Proofs]:
     """
     Recover all the cells and proofs of an extended blob given at least half of
     its cells.

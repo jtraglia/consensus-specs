@@ -38,9 +38,9 @@ def initialize_proposer_lookahead(
     Used to initialize the ``proposer_lookahead`` field in the beacon state at genesis and after forks.
     """
     current_epoch = get_current_epoch(state)
-    lookahead: List[ValidatorIndex] = []
-    for i in range(int(MIN_SEED_LOOKAHEAD) + 1):
-        lookahead.extend(get_beacon_proposer_indices(state, current_epoch + Epoch(i)))
+    lookahead: list[ValidatorIndex] = []
+    for i in range(MIN_SEED_LOOKAHEAD + 1):
+        lookahead.extend(get_beacon_proposer_indices(state, Epoch(current_epoch + i)))
     return ProposerLookahead(data=lookahead)
 ```
 

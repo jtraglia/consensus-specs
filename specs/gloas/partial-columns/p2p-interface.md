@@ -8,9 +8,10 @@
 - [Preset](#preset)
   - [Type-specific SSZ bounds](#type-specific-ssz-bounds)
 - [Types](#types)
-  - [Modified `CellsBitlist`](#modified-cellsbitlist)
+  - [Modified `CellsBitList`](#modified-cellsbitlist)
 - [Containers](#containers)
   - [Modified `PartialDataColumnSidecar`](#modified-partialdatacolumnsidecar)
+  - [Modified `PartialDataColumnPartsMetadata`](#modified-partialdatacolumnpartsmetadata)
   - [Modified `PartialDataColumnGroupID`](#modified-partialdatacolumngroupid)
 - [The gossip domain: gossipsub](#the-gossip-domain-gossipsub)
   - [Blob subnets](#blob-subnets)
@@ -41,11 +42,11 @@ and the [Gloas networking specification](../p2p-interface.md).
 
 ## Types
 
-### Modified `CellsBitlist`
+### Modified `CellsBitList`
 
 ```python
 # [Modified in Gloas:EIP7688]
-class CellsBitlist(ProgressiveBitList):
+class CellsBitList(ProgressiveBitList):
     """
     A bitfield over the cells of a column, one bit per blob.
     """
@@ -57,11 +58,21 @@ class CellsBitlist(ProgressiveBitList):
 
 ```python
 class PartialDataColumnSidecar(Container):
-    cells_present_bitmap: CellsBitlist
+    cells_present_bitmap: CellsBitList
     partial_column: DataColumn
     kzg_proofs: KZGProofs
     # [Modified in Gloas:EIP7732]
     # Removed `header`
+```
+
+### Modified `PartialDataColumnPartsMetadata`
+
+```python
+class PartialDataColumnPartsMetadata(Container):
+    # [Modified in Gloas:EIP7688]
+    available: CellsBitList
+    # [Modified in Gloas:EIP7688]
+    requests: CellsBitList
 ```
 
 ### Modified `PartialDataColumnGroupID`

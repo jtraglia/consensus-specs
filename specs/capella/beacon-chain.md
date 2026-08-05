@@ -89,9 +89,7 @@ class BLSToExecutionChanges(List[SignedBLSToExecutionChange]):
 ```python
 class HistoricalSummaries(List[HistoricalSummary]):
     """
-    ``HistoricalSummary`` objects appended every
-    ``SLOTS_PER_HISTORICAL_ROOT`` slots, continuing the frozen
-    ``historical_roots``.
+    Summaries of the chain's block and state root history.
     """
 
     LIMIT = HISTORICAL_ROOTS_LIMIT
@@ -111,7 +109,7 @@ class WithdrawalIndex(Uint64):
 ```python
 class Withdrawals(List[Withdrawal]):
     """
-    The withdrawals included in an execution payload.
+    A list of withdrawals.
     """
 
     LIMIT = MAX_WITHDRAWALS_PER_PAYLOAD
@@ -441,11 +439,11 @@ def get_validators_sweep_withdrawals(
     assert Uint64(len(prior_withdrawals)) < withdrawals_limit
 
     processed_count: Uint64 = 0
-    withdrawals: List[Withdrawal] = []
+    withdrawals: list[Withdrawal] = []
     validator_index = state.next_withdrawal_validator_index
     for _ in range(validators_limit):
-        all_withdrawals = prior_withdrawals + withdrawals
-        has_reached_limit = Uint64(len(all_withdrawals)) >= withdrawals_limit
+        all_withdrawals = list(prior_withdrawals) + withdrawals
+        has_reached_limit = len(all_withdrawals) >= withdrawals_limit
         if has_reached_limit:
             break
 
@@ -483,7 +481,7 @@ def get_validators_sweep_withdrawals(
 ```python
 def get_expected_withdrawals(state: BeaconState) -> ExpectedWithdrawals:
     withdrawal_index = state.next_withdrawal_index
-    withdrawals: List[Withdrawal] = []
+    withdrawals: list[Withdrawal] = []
 
     # Get validators sweep withdrawals
     validators_sweep_withdrawals, withdrawal_index, processed_validators_sweep_count = (

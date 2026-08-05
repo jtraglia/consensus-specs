@@ -71,7 +71,7 @@ class ProofByRootIdentifiers(List[ProofByRootIdentifier]):
 ```python
 class ProofTypes(List[ProofType]):
     """
-    The proof types requested for a single beacon block.
+    A selection of execution proof types.
     """
 
     LIMIT = MAX_EXECUTION_PROOFS_PER_PAYLOAD

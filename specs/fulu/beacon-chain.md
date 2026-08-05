@@ -68,7 +68,7 @@ class ProposerLookahead(Vector[ValidatorIndex]):
     ``MIN_SEED_LOOKAHEAD`` epochs.
     """
 
-    LENGTH = (Uint64(MIN_SEED_LOOKAHEAD) + Uint64(1)) * Uint64(SLOTS_PER_EPOCH)
+    LENGTH = (Uint64(MIN_SEED_LOOKAHEAD) + 1) * SLOTS_PER_EPOCH
 ```
 
 ## Configuration
@@ -349,7 +349,7 @@ def compute_proposer_indices(
     Return the proposer indices for the given ``epoch``.
     """
     start_slot = compute_start_slot_at_epoch(epoch)
-    seeds = [hash(seed + uint_to_bytes(start_slot + Slot(i))) for i in range(int(SLOTS_PER_EPOCH))]
+    seeds = [hash(seed + uint_to_bytes(Slot(start_slot + i))) for i in range(SLOTS_PER_EPOCH)]
     return ProposerIndices(data=[compute_proposer_index(state, indices, seed) for seed in seeds])
 ```
 

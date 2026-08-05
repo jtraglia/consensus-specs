@@ -82,9 +82,9 @@ class LogsBloom(ByteVector):
 
 *Note*: The `Transaction` type is a stub which is not final.
 
-*Note*: The `Transaction` is a \[typed transaction
-envelope\](https://eips.ethereum.org/EIPS/eip-2
-718#opaque-byte-array-rather-than-an-rlp-array) or a legacy transaction.
+*Note*: A `Transaction` is either a
+[typed transaction envelope](https://eips.ethereum.org/EIPS/eip-2718#opaque-byte-array-rather-than-an-rlp-array)
+or a legacy transaction.
 
 ```python
 class Transaction(ByteList):
@@ -101,7 +101,7 @@ class Transaction(ByteList):
 ```python
 class Transactions(List[Transaction]):
     """
-    The transactions included in an execution payload.
+    A list of execution-layer transactions.
     """
 
     LIMIT = MAX_TRANSACTIONS_PER_PAYLOAD

@@ -70,8 +70,7 @@ Deneb is a consensus-layer upgrade containing a number of features. Including:
 ```python
 class Blob(ByteVector):
     """
-    A blob of ``FIELD_ELEMENTS_PER_BLOB`` field elements, the unit of data
-    committed to with a KZG commitment.
+    A blob of data, encoded as a sequence of BLS scalar field elements.
     """
 
     LENGTH = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB
@@ -102,7 +101,7 @@ class BlobKZGCommitments(List[KZGCommitment]):
 ```python
 class KZGCommitment(Bytes48):
     """
-    A KZG commitment to a blob, a compressed ``G1`` point.
+    A commitment to the polynomial defined by the field elements of a blob.
     """
 ```
 
@@ -111,7 +110,8 @@ class KZGCommitment(Bytes48):
 ```python
 class KZGProof(Bytes48):
     """
-    A KZG proof of a polynomial evaluation, a compressed ``G1`` point.
+    A proof that the polynomial committed to by a ``KZGCommitment`` evaluates
+    to expected values at one or more points.
     """
 ```
 
@@ -120,8 +120,7 @@ class KZGProof(Bytes48):
 ```python
 class VersionedHash(Bytes32):
     """
-    A hash prefixed with a version byte, used on the execution layer to
-    reference blob KZG commitments.
+    A versioned hash of a blob's KZG commitment.
     """
 ```
 

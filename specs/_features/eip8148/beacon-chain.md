@@ -69,8 +69,7 @@ class SweepThresholdRequests(ProgressiveList[SetSweepThresholdRequest]):
 ```python
 class SweepThresholds(ProgressiveList[Gwei]):
     """
-    Per-validator withdrawal sweep thresholds. The list is aligned with
-    ``state.validators``, one entry per validator.
+    Per-validator withdrawal sweep thresholds.
     """
 ```
 
@@ -299,11 +298,11 @@ def get_validators_sweep_withdrawals(
     assert Uint64(len(prior_withdrawals)) < withdrawals_limit
 
     processed_count: Uint64 = 0
-    withdrawals: List[Withdrawal] = []
+    withdrawals: list[Withdrawal] = []
     validator_index = state.next_withdrawal_validator_index
     for _ in range(validators_limit):
-        all_withdrawals = prior_withdrawals + withdrawals
-        has_reached_limit = Uint64(len(all_withdrawals)) >= withdrawals_limit
+        all_withdrawals = list(prior_withdrawals) + withdrawals
+        has_reached_limit = len(all_withdrawals) >= withdrawals_limit
         if has_reached_limit:
             break
 

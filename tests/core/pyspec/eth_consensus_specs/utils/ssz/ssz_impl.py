@@ -1,6 +1,5 @@
 from ssz.merkleization import hash_tree_root as ssz_hash_tree_root
 from ssz.proofs import build_proof
-from ssz.ssz_base import SSZModel
 
 from eth_consensus_specs.utils.ssz.ssz_typing import Bytes32, SSZType, Uint
 from ssz import get_generalized_index
@@ -47,8 +46,6 @@ def uint_to_bytes(n: Uint) -> bytes:
 
 # Helper method for typing copies, and avoiding a example_input.copy() method call, instead of copy(example_input)
 def copy[V: SSZType](obj: V) -> V:
-    # Containers and collections are mutable models, so they need a deep copy.
-    # Uints, booleans, and byte vectors are immutable and can be shared.
-    if isinstance(obj, SSZModel):
-        return obj.model_copy(deep=True)
-    return obj
+    # The library duplicates down to the immutable leaves and hands an immutable
+    # value straight back, so every SSZ type answers this the same way.
+    return obj.copy()

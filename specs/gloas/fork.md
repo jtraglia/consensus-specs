@@ -42,8 +42,7 @@ def initialize_ptc_window(
     Used to initialize the ``ptc_window`` field in the beacon state at genesis and after forks.
     """
     empty_previous_epoch = [
-        PTC(data=[ValidatorIndex(0) for _ in range(int(PTC_SIZE))])
-        for _ in range(int(SLOTS_PER_EPOCH))
+        PTC(data=[ValidatorIndex(0) for _ in range(PTC_SIZE)]) for _ in range(SLOTS_PER_EPOCH)
     ]
 
     ptcs = []
