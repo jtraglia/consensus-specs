@@ -285,7 +285,8 @@ def convert_test_vector_to_events(test_vector):
     events = []
     current_time = None
     for time, (event_kind, data) in test_vector:
-        if time != current_time:
+        # A uint refuses a comparison against None, so the first tick is its own case.
+        if current_time is None or time != current_time:
             current_time = time
             events.append(("tick", time, None))
         events.append((event_kind, data, None))
