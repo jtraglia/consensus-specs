@@ -48,7 +48,7 @@ def test_new_validator_deposit_with_multiple_epoch_transitions(spec, state):
         spec, len(state.validators), spec.MIN_ACTIVATION_BALANCE, signed=True
     )
     deposit_block = build_empty_block_for_next_slot(spec, state)
-    deposit_block.body.execution_requests.deposits = spec.DepositRequests(data=[deposit_request])
+    deposit_block.body.execution_requests.deposits = spec.DepositRequests.of(deposit_request)
     deposit_block.body.execution_payload.block_hash = compute_el_block_hash_for_block(
         spec, deposit_block
     )

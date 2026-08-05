@@ -145,9 +145,9 @@ def test_on_block_peerdas__invalid_zero_blobs(spec, state):
     """
 
     def invalid_zero_blobs(sidecars):
-        sidecars[0].column = spec.DataColumn(data=[])
-        sidecars[0].kzg_commitments = spec.BlobKZGCommitments(data=[])
-        sidecars[0].kzg_proofs = spec.KZGProofs(data=[])
+        sidecars[0].column = spec.DataColumn()
+        sidecars[0].kzg_commitments = spec.BlobKZGCommitments()
+        sidecars[0].kzg_proofs = spec.KZGProofs()
         return sidecars
 
     yield from run_on_block_peerdas_invalid_test(spec, state, invalid_zero_blobs)

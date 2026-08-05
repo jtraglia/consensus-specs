@@ -503,7 +503,7 @@ def test_non_empty_historical_roots(state, fork_epoch, spec, post_spec, pre_tag,
     Therefore, we need to fill in `historical_roots` with non-empty value.
     """
     # fill in historical_roots with non-empty values
-    state.historical_roots = spec.HistoricalRoots(data=[b"\x56" * 32])
+    state.historical_roots = spec.HistoricalRoots.of(b"\x56" * 32)
     pre_historical_roots = list(state.historical_roots)
 
     transition_until_fork(spec, state, fork_epoch)

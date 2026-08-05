@@ -360,16 +360,14 @@ def test_voluntary_exit_with_pending_deposit(spec, state):
     signed_voluntary_exit = sign_voluntary_exit(spec, state, voluntary_exit, privkey)
 
     # A pending deposit will not prevent an exit
-    state.pending_deposits = spec.PendingDeposits(
-        data=[
-            spec.PendingDeposit(
-                pubkey=validator.pubkey,
-                withdrawal_credentials=validator.withdrawal_credentials,
-                amount=spec.EFFECTIVE_BALANCE_INCREMENT,
-                signature=spec.bls.G2_POINT_AT_INFINITY,
-                slot=spec.GENESIS_SLOT,
-            )
-        ]
+    state.pending_deposits = spec.PendingDeposits.of(
+        spec.PendingDeposit(
+            pubkey=validator.pubkey,
+            withdrawal_credentials=validator.withdrawal_credentials,
+            amount=spec.EFFECTIVE_BALANCE_INCREMENT,
+            signature=spec.bls.G2_POINT_AT_INFINITY,
+            slot=spec.GENESIS_SLOT,
+        )
     )
 
     yield from run_voluntary_exit_processing(spec, state, signed_voluntary_exit)

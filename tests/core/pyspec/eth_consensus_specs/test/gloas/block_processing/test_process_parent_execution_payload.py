@@ -245,34 +245,28 @@ def test_process_parent_execution_payload__full_parent_with_execution_requests(s
     unknown pubkeys are no-ops.
     """
     requests = spec.ExecutionRequests(
-        deposits=spec.DepositRequests(
-            data=[
-                spec.DepositRequest(
-                    pubkey=spec.BLSPubkey(b"\x01" * 48),
-                    withdrawal_credentials=spec.Bytes32(b"\x02" * 32),
-                    amount=spec.Gwei(32_000_000_000),
-                    signature=spec.BLSSignature(b"\x03" * 96),
-                    index=spec.Uint64(0),
-                )
-            ]
+        deposits=spec.DepositRequests.of(
+            spec.DepositRequest(
+                pubkey=spec.BLSPubkey(b"\x01" * 48),
+                withdrawal_credentials=spec.Bytes32(b"\x02" * 32),
+                amount=spec.Gwei(32_000_000_000),
+                signature=spec.BLSSignature(b"\x03" * 96),
+                index=spec.Uint64(0),
+            )
         ),
-        withdrawals=spec.WithdrawalRequests(
-            data=[
-                spec.WithdrawalRequest(
-                    source_address=spec.ExecutionAddress(b"\x04" * 20),
-                    validator_pubkey=spec.BLSPubkey(b"\x05" * 48),
-                    amount=spec.Gwei(16_000_000_000),
-                )
-            ]
+        withdrawals=spec.WithdrawalRequests.of(
+            spec.WithdrawalRequest(
+                source_address=spec.ExecutionAddress(b"\x04" * 20),
+                validator_pubkey=spec.BLSPubkey(b"\x05" * 48),
+                amount=spec.Gwei(16_000_000_000),
+            )
         ),
-        consolidations=spec.ConsolidationRequests(
-            data=[
-                spec.ConsolidationRequest(
-                    source_address=spec.ExecutionAddress(b"\x06" * 20),
-                    source_pubkey=spec.BLSPubkey(b"\x07" * 48),
-                    target_pubkey=spec.BLSPubkey(b"\x08" * 48),
-                )
-            ]
+        consolidations=spec.ConsolidationRequests.of(
+            spec.ConsolidationRequest(
+                source_address=spec.ExecutionAddress(b"\x06" * 20),
+                source_pubkey=spec.BLSPubkey(b"\x07" * 48),
+                target_pubkey=spec.BLSPubkey(b"\x08" * 48),
+            )
         ),
     )
 
@@ -347,7 +341,7 @@ def test_process_parent_execution_payload__builder_credential_deposits_queued(sp
     )
 
     requests = spec.ExecutionRequests(
-        deposits=spec.DepositRequests(data=[deposit_request_1, deposit_request_2]),
+        deposits=spec.DepositRequests.of(deposit_request_1, deposit_request_2),
         withdrawals=spec.WithdrawalRequests(),
         consolidations=spec.ConsolidationRequests(),
     )
@@ -487,8 +481,8 @@ def test_process_parent_execution_payload__new_builder_does_not_reuse_topped_up_
     )
 
     requests = spec.ExecutionRequests(
-        builder_deposits=spec.BuilderDepositRequests(
-            data=[builder_deposit_request_1, builder_deposit_request_2]
+        builder_deposits=spec.BuilderDepositRequests.of(
+            builder_deposit_request_1, builder_deposit_request_2
         ),
     )
 
@@ -534,13 +528,11 @@ def test_process_parent_execution_payload__builder_exit_request(spec, state):
 
     builder = state.builders[builder_index]
     requests = spec.ExecutionRequests(
-        builder_exits=spec.BuilderExitRequests(
-            data=[
-                spec.BuilderExitRequest(
-                    source_address=builder.execution_address,
-                    pubkey=builder.pubkey,
-                )
-            ]
+        builder_exits=spec.BuilderExitRequests.of(
+            spec.BuilderExitRequest(
+                source_address=builder.execution_address,
+                pubkey=builder.pubkey,
+            )
         ),
     )
 

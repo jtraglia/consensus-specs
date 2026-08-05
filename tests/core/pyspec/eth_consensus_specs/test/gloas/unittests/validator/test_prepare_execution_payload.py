@@ -107,7 +107,7 @@ def test_prepare_execution_payload__extend_payload(spec, state):
     validator_index = 0
     consolidation_request = prepare_switch_to_compounding_request(spec, state, validator_index)
     execution_requests = spec.ExecutionRequests(
-        consolidations=spec.ConsolidationRequests(data=[consolidation_request])
+        consolidations=spec.ConsolidationRequests.of(consolidation_request)
     )
 
     # Build block_1 with a bid that commits to the requests we will deliver

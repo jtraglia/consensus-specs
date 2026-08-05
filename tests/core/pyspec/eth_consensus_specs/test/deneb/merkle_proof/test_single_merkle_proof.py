@@ -40,8 +40,8 @@ def _run_blob_kzg_commitment_merkle_proof_test(spec, state, rng=None):
             chaos=True,
         )
     block.body.blob_kzg_commitments = spec.BlobKZGCommitments(data=blob_kzg_commitments)
-    block.body.execution_payload.transactions = spec.Transactions(
-        data=[spec.Transaction(data=opaque_tx)]
+    block.body.execution_payload.transactions = spec.Transactions.of(
+        spec.Transaction(data=opaque_tx)
     )
     block.body.execution_payload.block_hash = compute_el_block_hash(
         spec, block.body.execution_payload, state

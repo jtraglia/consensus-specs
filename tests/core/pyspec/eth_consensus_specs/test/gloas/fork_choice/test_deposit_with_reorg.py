@@ -48,7 +48,7 @@ def test_new_validator_deposit_with_multiple_epoch_transitions(spec, state):
         spec, len(state.validators), spec.MIN_ACTIVATION_BALANCE, signed=True
     )
     execution_requests = spec.ExecutionRequests(
-        deposits=spec.DepositRequests(data=[deposit_request]),
+        deposits=spec.DepositRequests.of(deposit_request),
     )
 
     # Build the deposit block

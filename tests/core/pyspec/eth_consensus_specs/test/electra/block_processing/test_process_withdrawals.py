@@ -895,9 +895,7 @@ def test_pending_withdrawals_two_partial_withdrawals_same_validator_1(spec, stat
         amount=spec.Gwei(1_000_000_000),
         withdrawable_epoch=spec.get_current_epoch(state),
     )
-    state.pending_partial_withdrawals = spec.PendingPartialWithdrawals(
-        data=[withdrawal, withdrawal]
-    )
+    state.pending_partial_withdrawals = spec.PendingPartialWithdrawals.of(withdrawal, withdrawal)
 
     # Ensure our two pending withdrawals are there
     assert len(state.pending_partial_withdrawals) == 2
@@ -940,9 +938,7 @@ def test_pending_withdrawals_two_partial_withdrawals_same_validator_2(spec, stat
         amount=spec.Gwei(1008_000_000_000),
         withdrawable_epoch=spec.get_current_epoch(state),
     )
-    state.pending_partial_withdrawals = spec.PendingPartialWithdrawals(
-        data=[withdrawal, withdrawal]
-    )
+    state.pending_partial_withdrawals = spec.PendingPartialWithdrawals.of(withdrawal, withdrawal)
 
     # Ensure our two pending withdrawals are there
     assert len(state.pending_partial_withdrawals) == 2

@@ -515,9 +515,7 @@ def test_invalid_duplicate_proposer_slashings_same_block(spec, state):
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.proposer_slashings = spec.ProposerSlashings(
-        data=[proposer_slashing, proposer_slashing]
-    )
+    block.body.proposer_slashings = spec.ProposerSlashings.of(proposer_slashing, proposer_slashing)
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 
     yield "blocks", [signed_block]
@@ -551,8 +549,8 @@ def test_invalid_similar_proposer_slashings_same_block(spec, state):
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.proposer_slashings = spec.ProposerSlashings(
-        data=[proposer_slashing_1, proposer_slashing_2]
+    block.body.proposer_slashings = spec.ProposerSlashings.of(
+        proposer_slashing_1, proposer_slashing_2
     )
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 

@@ -322,7 +322,7 @@ def run_zero_length_transaction_test(spec, state):
     next_slot(spec, state)
 
     execution_payload = build_empty_execution_payload(spec, state)
-    execution_payload.transactions = spec.Transactions(data=[spec.Transaction(data=b"")])
+    execution_payload.transactions = spec.Transactions.of(spec.Transaction())
     assert len(execution_payload.transactions[0]) == 0
     execution_payload.block_hash = compute_el_block_hash(spec, execution_payload, state)
 

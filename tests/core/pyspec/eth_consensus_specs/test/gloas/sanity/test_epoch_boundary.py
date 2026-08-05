@@ -81,8 +81,8 @@ def _build_multi_request_execution_requests(
     )
 
     return spec.ExecutionRequests(
-        consolidations=spec.ConsolidationRequests(data=[consolidation_request]),
-        deposits=spec.DepositRequests(data=[deposit_request]),
+        consolidations=spec.ConsolidationRequests.of(consolidation_request),
+        deposits=spec.DepositRequests.of(deposit_request),
     )
 
 
@@ -128,9 +128,9 @@ def _build_all_requests_execution_requests(
     )
 
     return spec.ExecutionRequests(
-        deposits=spec.DepositRequests(data=[deposit_request]),
+        deposits=spec.DepositRequests.of(deposit_request),
         withdrawals=spec.WithdrawalRequests(data=withdrawal_requests),
-        consolidations=spec.ConsolidationRequests(data=[consolidation_request]),
+        consolidations=spec.ConsolidationRequests.of(consolidation_request),
     )
 
 
@@ -459,7 +459,7 @@ def test_switch_to_compounding_across_epoch_boundary(spec, state):
     )
 
     execution_requests = spec.ExecutionRequests(
-        consolidations=spec.ConsolidationRequests(data=[consolidation_request]),
+        consolidations=spec.ConsolidationRequests.of(consolidation_request),
     )
 
     # 0x01 credentials cap effective balance at MIN_ACTIVATION_BALANCE.

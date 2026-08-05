@@ -690,8 +690,8 @@ def test_incorrect_not_enough_consolidation_churn_available(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for consolidation
     state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
-    state.pending_consolidations = spec.PendingConsolidations(
-        data=[spec.PendingConsolidation(source_index=0, target_index=1)]
+    state.pending_consolidations = spec.PendingConsolidations.of(
+        spec.PendingConsolidation(source_index=0, target_index=1)
     )
 
     # Set up an otherwise correct consolidation

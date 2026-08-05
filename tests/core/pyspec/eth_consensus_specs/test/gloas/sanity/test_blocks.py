@@ -402,7 +402,7 @@ def test_invalid_payload_attestation_wrong_beacon_block_root(spec, state):
         payload_present=True,
         attesting_indices=ptc,
     )
-    block.body.payload_attestations = spec.PayloadAttestations(data=[payload_attestation])
+    block.body.payload_attestations = spec.PayloadAttestations.of(payload_attestation)
 
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 
@@ -493,7 +493,7 @@ def test_invalid_payload_attestation_too_old_slot(spec, state):
         payload_present=True,
         attesting_indices=ptc,
     )
-    block.body.payload_attestations = spec.PayloadAttestations(data=[payload_attestation])
+    block.body.payload_attestations = spec.PayloadAttestations.of(payload_attestation)
 
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 
@@ -599,7 +599,7 @@ def test_max_deposits(spec, state):
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.deposits = spec.Deposits(data=[])
+    block.body.deposits = spec.Deposits()
     signed_block = state_transition_and_sign_block(spec, state, block)
 
     yield "blocks", [signed_block]
@@ -612,7 +612,7 @@ def test_invalid_too_many_deposits(spec, state):
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.deposits = spec.Deposits(data=[spec.Deposit()])
+    block.body.deposits = spec.Deposits.of(spec.Deposit())
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 
     yield "blocks", [signed_block]
@@ -769,7 +769,7 @@ def test_invalid_payload_attestation_invalid_signature(spec, state):
         attesting_indices=ptc,
         valid_signature=False,
     )
-    block.body.payload_attestations = spec.PayloadAttestations(data=[payload_attestation])
+    block.body.payload_attestations = spec.PayloadAttestations.of(payload_attestation)
 
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 
@@ -917,9 +917,7 @@ def test_attestations_after_missed_slot_use_applied_parent_payload_availability(
     child_slot = attestation_slot + spec.MIN_ATTESTATION_INCLUSION_DELAY
     block_2 = build_empty_block(spec, state, slot=child_slot)
     block_2.body.signed_execution_payload_bid.message.parent_block_hash = parent_block_hash
-    block_2.body.attestations = spec.Attestations(
-        data=[matching_attestation, mismatching_attestation]
-    )
+    block_2.body.attestations = spec.Attestations.of(matching_attestation, mismatching_attestation)
     signed_block_2 = state_transition_and_sign_block(spec, state, block_2)
 
     yield "blocks", [signed_block_1, signed_block_2]
@@ -960,7 +958,7 @@ def test_voluntary_exit_fails_after_parent_payload_withdrawal_request(spec, stat
     set_parent_block_full(spec, state)
     withdrawal_request = prepare_withdrawal_request(spec, state, validator_index)
     requests = spec.ExecutionRequests(
-        withdrawals=spec.WithdrawalRequests(data=[withdrawal_request]),
+        withdrawals=spec.WithdrawalRequests.of(withdrawal_request),
     )
     state.latest_execution_payload_bid.execution_requests_root = spec.hash_tree_root(requests)
 

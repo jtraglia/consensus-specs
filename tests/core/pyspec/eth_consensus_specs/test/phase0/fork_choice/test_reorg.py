@@ -123,7 +123,7 @@ def test_simple_attempted_reorg_without_enough_ffg_votes(spec, state):
     # add one block on chain z, which is not enough to justify c4
     attestation = get_valid_attestation(spec, state, slot=state.slot, signed=True)
     block_z = build_empty_block_for_next_slot(spec, state)
-    block_z.body.attestations = spec.Attestations(data=[attestation])
+    block_z.body.attestations = spec.Attestations.of(attestation)
     signed_block_z = state_transition_and_sign_block(spec, state, block_z)
     signed_blocks_of_z.append(signed_block_z)
 

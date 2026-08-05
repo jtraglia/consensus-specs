@@ -52,8 +52,8 @@ def compute_data_column_sidecar(spec, state):
         )
     else:
         block.body.blob_kzg_commitments = spec.BlobKZGCommitments(data=blob_kzg_commitments)
-        block.body.execution_payload.transactions = spec.Transactions(
-            data=[spec.Transaction(data=opaque_tx)]
+        block.body.execution_payload.transactions = spec.Transactions.of(
+            spec.Transaction(data=opaque_tx)
         )
         block.body.execution_payload.block_hash = compute_el_block_hash(
             spec, block.body.execution_payload, state
@@ -92,12 +92,12 @@ def test_verify_data_column_sidecar__valid(spec, state):
 @single_phase
 def test_verify_data_column_sidecar__invalid_zero_blobs(spec, state):
     sidecar, blob_kzg_commitments = compute_data_column_sidecar(spec, state)
-    sidecar.column = spec.DataColumn(data=[])
-    sidecar.kzg_proofs = spec.KZGProofs(data=[])
+    sidecar.column = spec.DataColumn()
+    sidecar.kzg_proofs = spec.KZGProofs()
     if is_post_gloas(spec):
         blob_kzg_commitments = []
     else:
-        sidecar.kzg_commitments = spec.BlobKZGCommitments(data=[])
+        sidecar.kzg_commitments = spec.BlobKZGCommitments()
     assert not _verify_data_column_sidecar(spec, sidecar, blob_kzg_commitments)
 
 

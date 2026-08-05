@@ -68,7 +68,7 @@ def get_random_ssz_object(
     if issubclass(typ, ByteList):
         # ByteList array
         if mode == RandomizationMode.mode_nil_count:
-            return typ(data=b"")
+            return typ()
         elif mode == RandomizationMode.mode_max_count:
             return typ(data=get_random_bytes_list(rng, min(max_bytes_length, typ.LIMIT)))
         elif mode == RandomizationMode.mode_one_count:

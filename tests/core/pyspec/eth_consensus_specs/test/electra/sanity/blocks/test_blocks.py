@@ -58,7 +58,7 @@ def test_basic_el_withdrawal_request(spec, state):
         validator_pubkey=validator_pubkey,
     )
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.execution_requests.withdrawals = spec.WithdrawalRequests(data=[withdrawal_request])
+    block.body.execution_requests.withdrawals = spec.WithdrawalRequests.of(withdrawal_request)
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -88,14 +88,14 @@ def test_basic_btec_and_el_withdrawal_request_in_same_block(spec, state):
         validator_index=validator_index,
         to_execution_address=address,
     )
-    block.body.bls_to_execution_changes = spec.BLSToExecutionChanges(data=[signed_address_change])
+    block.body.bls_to_execution_changes = spec.BLSToExecutionChanges.of(signed_address_change)
 
     validator_pubkey = state.validators[validator_index].pubkey
     withdrawal_request = spec.WithdrawalRequest(
         source_address=address,
         validator_pubkey=validator_pubkey,
     )
-    block.body.execution_requests.withdrawals = spec.WithdrawalRequests(data=[withdrawal_request])
+    block.body.execution_requests.withdrawals = spec.WithdrawalRequests.of(withdrawal_request)
 
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
     signed_block = state_transition_and_sign_block(spec, state, block)
@@ -134,7 +134,7 @@ def test_basic_btec_before_el_withdrawal_request(spec, state):
         to_execution_address=address,
     )
     block_1 = build_empty_block_for_next_slot(spec, state)
-    block_1.body.bls_to_execution_changes = spec.BLSToExecutionChanges(data=[signed_address_change])
+    block_1.body.bls_to_execution_changes = spec.BLSToExecutionChanges.of(signed_address_change)
     signed_block_1 = state_transition_and_sign_block(spec, state, block_1)
 
     validator = state.validators[validator_index]
@@ -154,7 +154,7 @@ def test_basic_btec_before_el_withdrawal_request(spec, state):
         validator_pubkey=validator_pubkey,
     )
     block_2 = build_empty_block_for_next_slot(spec, state)
-    block_2.body.execution_requests.withdrawals = spec.WithdrawalRequests(data=[withdrawal_request])
+    block_2.body.execution_requests.withdrawals = spec.WithdrawalRequests.of(withdrawal_request)
     block_2.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block_2)
     signed_block_2 = state_transition_and_sign_block(spec, state, block_2)
 
@@ -187,7 +187,7 @@ def test_cl_exit_and_el_withdrawal_request_in_same_block(spec, state):
     )
     block = build_empty_block_for_next_slot(spec, state)
     block.body.voluntary_exits = spec.VoluntaryExits(data=signed_voluntary_exits)
-    block.body.execution_requests.withdrawals = spec.WithdrawalRequests(data=[withdrawal_request])
+    block.body.execution_requests.withdrawals = spec.WithdrawalRequests.of(withdrawal_request)
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -226,8 +226,8 @@ def test_multiple_el_partial_withdrawal_requests_same_validator(spec, state):
         amount=spec.Gwei(2),
     )
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.execution_requests.withdrawals = spec.WithdrawalRequests(
-        data=[withdrawal_request_1, withdrawal_request_2]
+    block.body.execution_requests.withdrawals = spec.WithdrawalRequests.of(
+        withdrawal_request_1, withdrawal_request_2
     )
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
     signed_block = state_transition_and_sign_block(spec, state, block)
@@ -319,7 +319,7 @@ def test_withdrawal_and_withdrawal_request_same_validator(spec, state):
     )
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.execution_requests.withdrawals = spec.WithdrawalRequests(data=[withdrawal_request])
+    block.body.execution_requests.withdrawals = spec.WithdrawalRequests.of(withdrawal_request)
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -363,8 +363,8 @@ def test_withdrawal_and_switch_to_compounding_request_same_validator(spec, state
     )
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.execution_requests.consolidations = spec.ConsolidationRequests(
-        data=[consolidation_request]
+    block.body.execution_requests.consolidations = spec.ConsolidationRequests.of(
+        consolidation_request
     )
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
     signed_block = state_transition_and_sign_block(spec, state, block)
@@ -413,8 +413,8 @@ def test_deposit_request_with_same_pubkey_different_withdrawal_credentials(spec,
 
     # build a block with deposit requests
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.execution_requests.deposits = spec.DepositRequests(
-        data=[deposit_request_0, deposit_request_1, deposit_request_2]
+    block.body.execution_requests.deposits = spec.DepositRequests.of(
+        deposit_request_0, deposit_request_1, deposit_request_2
     )
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
 
@@ -538,19 +538,17 @@ def test_withdrawal_and_consolidation_effective_balance_updates(spec, state):
         state, state.validators[a_index].effective_balance
     )
     state.validators[a_index].withdrawable_epoch = current_epoch + spec.Epoch(1)
-    state.pending_consolidations = spec.PendingConsolidations(
-        data=[spec.PendingConsolidation(source_index=a_index, target_index=b_index)]
+    state.pending_consolidations = spec.PendingConsolidations.of(
+        spec.PendingConsolidation(source_index=a_index, target_index=b_index)
     )
 
     # Add a pending partial withdrawal for 32 ETH from B
-    state.pending_partial_withdrawals = spec.PendingPartialWithdrawals(
-        data=[
-            spec.PendingPartialWithdrawal(
-                validator_index=b_index,
-                amount=spec.MIN_ACTIVATION_BALANCE,
-                withdrawable_epoch=current_epoch,
-            )
-        ]
+    state.pending_partial_withdrawals = spec.PendingPartialWithdrawals.of(
+        spec.PendingPartialWithdrawal(
+            validator_index=b_index,
+            amount=spec.MIN_ACTIVATION_BALANCE,
+            withdrawable_epoch=current_epoch,
+        )
     )
 
     yield "pre", state
@@ -845,8 +843,8 @@ def test_withdrawal_requests_when_pending_withdrawal_queue_is_full(spec, state):
     )
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.execution_requests.withdrawals = spec.WithdrawalRequests(
-        data=[withdrawal_request_1, withdrawal_request_2]
+    block.body.execution_requests.withdrawals = spec.WithdrawalRequests.of(
+        withdrawal_request_1, withdrawal_request_2
     )
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
     signed_block = state_transition_and_sign_block(spec, state, block)

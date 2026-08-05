@@ -1056,7 +1056,7 @@ def test_full_builder_payload_reserves_sweep_slot(spec, state):
 
     # Setup: Create MAX builder pending withdrawals manually
     withdrawal_amount = spec.Gwei(1_000_000_000)
-    state.builder_pending_withdrawals = spec.BuilderPendingWithdrawals(data=[])
+    state.builder_pending_withdrawals = spec.BuilderPendingWithdrawals()
     for builder_index in range(spec.MAX_WITHDRAWALS_PER_PAYLOAD):
         state.builders[builder_index].balance = withdrawal_amount + spec.MIN_DEPOSIT_AMOUNT
         state.builder_pending_withdrawals.append(
