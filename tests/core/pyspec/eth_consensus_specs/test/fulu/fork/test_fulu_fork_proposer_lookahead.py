@@ -39,7 +39,7 @@ def test_lookahead_consistency_at_fork(spec, phases, state):
     state = yield from run_fork_test(spec, state)
 
     # Check if the pre-fork simulation matches the post-fork `state.proposer_lookahead`
-    assert pre_fork_proposers == state.proposer_lookahead
+    assert pre_fork_proposers == list(state.proposer_lookahead)
 
 
 @with_phases(phases=[ELECTRA], other_phases=[FULU])

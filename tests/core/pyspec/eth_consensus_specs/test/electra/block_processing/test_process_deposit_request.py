@@ -12,6 +12,7 @@ from eth_consensus_specs.test.helpers.deposit_requests import (
 from eth_consensus_specs.test.helpers.deposits import (
     prepare_deposit_request,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 @with_electra_and_later
@@ -23,7 +24,7 @@ def test_process_deposit_request_min_activation(spec, state):
     amount = spec.MIN_ACTIVATION_BALANCE
     deposit_request = prepare_deposit_request(spec, validator_index, amount, signed=True)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
     yield from run_deposit_request_processing(spec, state, deposit_request)
     assert_process_deposit_request(spec, state, pre_state, deposit_request=deposit_request)
 
@@ -37,7 +38,7 @@ def test_process_deposit_request_extra_gwei(spec, state):
     amount = spec.EFFECTIVE_BALANCE_INCREMENT + spec.Gwei(1)
     deposit_request = prepare_deposit_request(spec, validator_index, amount, signed=True)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
     yield from run_deposit_request_processing(spec, state, deposit_request)
     assert_process_deposit_request(spec, state, pre_state, deposit_request=deposit_request)
 
@@ -58,7 +59,7 @@ def test_process_deposit_request_max_effective_balance_compounding(spec, state):
         spec, validator_index, amount, signed=True, withdrawal_credentials=withdrawal_credentials
     )
 
-    pre_state = state.copy()
+    pre_state = copy(state)
     yield from run_deposit_request_processing(spec, state, deposit_request)
     assert_process_deposit_request(spec, state, pre_state, deposit_request=deposit_request)
 
@@ -81,7 +82,7 @@ def test_process_deposit_request_greater_than_max_effective_balance_compounding(
         withdrawal_credentials=withdrawal_credentials,
     )
 
-    pre_state = state.copy()
+    pre_state = copy(state)
     yield from run_deposit_request_processing(spec, state, deposit_request)
     assert_process_deposit_request(spec, state, pre_state, deposit_request=deposit_request)
 
@@ -96,7 +97,7 @@ def test_process_deposit_request_top_up_min_activation(spec, state):
     state.balances[validator_index] = spec.MIN_ACTIVATION_BALANCE
     state.validators[validator_index].effective_balance = spec.MIN_ACTIVATION_BALANCE
 
-    pre_state = state.copy()
+    pre_state = copy(state)
     yield from run_deposit_request_processing(spec, state, deposit_request)
     assert_process_deposit_request(spec, state, pre_state, deposit_request=deposit_request)
 
@@ -113,7 +114,7 @@ def test_process_deposit_request_top_up_still_less_than_min_activation(spec, sta
     state.balances[validator_index] = balance
     state.validators[validator_index].effective_balance = balance
 
-    pre_state = state.copy()
+    pre_state = copy(state)
     yield from run_deposit_request_processing(spec, state, deposit_request)
     assert_process_deposit_request(spec, state, pre_state, deposit_request=deposit_request)
 
@@ -137,7 +138,7 @@ def test_process_deposit_request_top_up_max_effective_balance_compounding(spec, 
         spec, validator_index, amount, signed=True, withdrawal_credentials=withdrawal_credentials
     )
 
-    pre_state = state.copy()
+    pre_state = copy(state)
     yield from run_deposit_request_processing(spec, state, deposit_request)
     assert_process_deposit_request(spec, state, pre_state, deposit_request=deposit_request)
 
@@ -152,7 +153,7 @@ def test_process_deposit_request_invalid_sig(spec, state):
     amount = spec.MIN_ACTIVATION_BALANCE
     deposit_request = prepare_deposit_request(spec, validator_index, amount)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
     yield from run_deposit_request_processing(spec, state, deposit_request)
     assert_process_deposit_request(spec, state, pre_state, deposit_request=deposit_request)
 
@@ -168,7 +169,7 @@ def test_process_deposit_request_top_up_invalid_sig(spec, state):
     state.balances[validator_index] = spec.MIN_ACTIVATION_BALANCE
     state.validators[validator_index].effective_balance = spec.MIN_ACTIVATION_BALANCE
 
-    pre_state = state.copy()
+    pre_state = copy(state)
     yield from run_deposit_request_processing(spec, state, deposit_request)
     assert_process_deposit_request(spec, state, pre_state, deposit_request=deposit_request)
 
@@ -184,7 +185,7 @@ def test_process_deposit_request_set_start_index(spec, state):
     amount = spec.MIN_ACTIVATION_BALANCE
     deposit_request = prepare_deposit_request(spec, validator_index, amount, signed=True)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
     yield from run_deposit_request_processing(spec, state, deposit_request)
     assert_process_deposit_request(
         spec,
@@ -206,10 +207,10 @@ def test_process_deposit_request_set_start_index_only_once(spec, state):
     amount = spec.MIN_ACTIVATION_BALANCE
     deposit_request = prepare_deposit_request(spec, validator_index, amount, signed=True)
 
-    assert initial_start_index != deposit_request.index
+    assert spec.Uint64(initial_start_index) != deposit_request.index
     state.deposit_requests_start_index = initial_start_index
 
-    pre_state = state.copy()
+    pre_state = copy(state)
     yield from run_deposit_request_processing(spec, state, deposit_request)
     assert_process_deposit_request(
         spec,
@@ -247,7 +248,7 @@ def test_process_deposit_request_eth1_credentials(spec, state):
         signed=True,
         withdrawal_credentials=withdrawal_credentials,
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_deposit_request_processing(spec, state, deposit_request)
 
@@ -281,9 +282,9 @@ def test_process_deposit_request_pending_deposit_slot_binding(spec, state):
     )
 
     expected_slot = state.slot
-    assert expected_slot > 0  # Ensure non-zero slot for meaningful test
+    assert expected_slot > spec.Slot(0)  # Ensure non-zero slot for meaningful test
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_deposit_request_processing(spec, state, deposit_request)
 
@@ -327,7 +328,7 @@ def test_process_deposit_request_undefined_credential_prefix(spec, state):
         signed=True,
         withdrawal_credentials=withdrawal_credentials,
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_deposit_request_processing(spec, state, deposit_request)
 

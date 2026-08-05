@@ -17,15 +17,14 @@ def test_integer_squareroot(spec):
     values = [0, 100, 2**64 - 2, 2**64 - 1]
     for n in values:
         uint64_n = spec.Uint64(n)
-        assert spec.integer_squareroot(uint64_n) == isqrt(n)
+        assert spec.integer_squareroot(uint64_n) == spec.Uint64(isqrt(n))
 
     rng = random.Random(5566)
     for _ in range(10):
         n = rng.randint(0, 2**64 - 1)
         uint64_n = spec.Uint64(n)
-        assert spec.integer_squareroot(uint64_n) == isqrt(n)
+        assert spec.integer_squareroot(uint64_n) == spec.Uint64(isqrt(n))
 
-    # An out-of-range value cannot even be constructed as a Uint64.
     bad = False
     try:
         spec.integer_squareroot(spec.Uint64(2**64))

@@ -8,13 +8,14 @@ actions of a "validator" participating in the Ethereum proof-of-stake protocol.
 
 - [Introduction](#introduction)
 - [Prerequisites](#prerequisites)
+- [Types](#types)
+  - [`SyncSubcommitteeBits`](#syncsubcommitteebits)
 - [Constants](#constants)
   - [Misc](#misc)
 - [Configuration](#configuration)
   - [Time parameters](#time-parameters)
 - [Containers](#containers)
   - [`SyncCommitteeMessage`](#synccommitteemessage)
-  - [`SyncSubcommitteeBits`](#syncsubcommitteebits)
   - [`SyncCommitteeContribution`](#synccommitteecontribution)
   - [`ContributionAndProof`](#contributionandproof)
   - [`SignedContributionAndProof`](#signedcontributionandproof)
@@ -71,23 +72,37 @@ All terminology, constants, functions, and protocol mechanics defined in the
 this document and used throughout. Please see this document before continuing
 and use as a reference throughout.
 
+## Types
+
+### `SyncSubcommitteeBits`
+
+```python
+class SyncSubcommitteeBits(BitVector):
+    """
+    The participation bits of a single sync subcommittee, one bit per member
+    in subcommittee order.
+    """
+
+    LENGTH = SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT
+```
+
 ## Constants
 
 ### Misc
 
-| Name                                       | Value                 | Unit       |
-| ------------------------------------------ | --------------------- | ---------- |
-| `TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE` | `Uint64(2**4)` (= 16) | validators |
-| `SYNC_COMMITTEE_SUBNET_COUNT`              | `Uint64(2**2)` (= 4)  | subnets    |
+| Name                                       | Value                 |
+| ------------------------------------------ | --------------------- |
+| `TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE` | `Uint64(2**4)` (= 16) |
+| `SYNC_COMMITTEE_SUBNET_COUNT`              | `Uint64(2**2)` (= 4)  |
 
 ## Configuration
 
 ### Time parameters
 
-| Name                   | Value          | Unit         | Duration                   |
-| ---------------------- | -------------- | ------------ | -------------------------- |
-| `SYNC_MESSAGE_DUE_BPS` | `Uint64(3333)` | basis points | ~33% of `SLOT_DURATION_MS` |
-| `CONTRIBUTION_DUE_BPS` | `Uint64(6667)` | basis points | ~67% of `SLOT_DURATION_MS` |
+| Name                   | Value          | Duration                   |
+| ---------------------- | -------------- | -------------------------- |
+| `SYNC_MESSAGE_DUE_BPS` | `Uint64(3333)` | ~33% of `SLOT_DURATION_MS` |
+| `CONTRIBUTION_DUE_BPS` | `Uint64(6667)` | ~67% of `SLOT_DURATION_MS` |
 
 ## Containers
 
@@ -99,13 +114,6 @@ class SyncCommitteeMessage(Container):
     beacon_block_root: Root
     validator_index: ValidatorIndex
     signature: BLSSignature
-```
-
-### `SyncSubcommitteeBits`
-
-```python
-class SyncSubcommitteeBits(Bitvector):
-    LENGTH = SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT
 ```
 
 ### `SyncCommitteeContribution`
@@ -265,7 +273,7 @@ select the best contribution seen across all aggregators for each
 subnet/subcommittee. A contribution with more valid signatures is better than a
 contribution with fewer signatures.
 
-Recall `block.body.sync_aggregate.sync_committee_bits` is a `Bitvector` where
+Recall `block.body.sync_aggregate.sync_committee_bits` is a `BitVector` where
 the `i`th bit is `True` if the corresponding validator in the sync committee has
 produced a valid signature, and that
 `block.body.sync_aggregate.sync_committee_signature` is the aggregate BLS
@@ -484,19 +492,18 @@ the `subnet_id` used to derive the topic name.
 
 ###### Aggregation bits
 
-Let `contribution.aggregation_bits` be a
-`Bitvector[SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT]`, where the
-`index`th bit is set in the `Bitvector` for each corresponding validator
-included in this aggregate from the corresponding subcommittee. An aggregator
-finds the index in the sync committee (as determined by a reverse pubkey lookup
-on `state.current_sync_committee.pubkeys`) for a given validator referenced by
+Let `contribution.aggregation_bits` be a `SyncSubcommitteeBits`, where the
+`index`th bit is set for each corresponding validator included in this aggregate
+from the corresponding subcommittee. An aggregator finds the index in the sync
+committee (as determined by a reverse pubkey lookup on
+`state.current_sync_committee.pubkeys`) for a given validator referenced by
 `sync_committee_message.validator_index` and maps the sync committee index to an
 index in the subcommittee (along with the prior `subcommittee_index`). This
 index within the subcommittee is set in `contribution.aggregation_bits`.
 
 For example, if a validator with index `2044` is pseudo-randomly sampled to sync
 committee index `135`. This sync committee index maps to `subcommittee_index`
-`1` with position `7` in the `Bitvector` for the contribution.
+`1` with position `7` in the `BitVector` for the contribution.
 
 *Note*: A validator **could be included multiple times** in a given subcommittee
 such that multiple bits are set for a single `SyncCommitteeMessage`.

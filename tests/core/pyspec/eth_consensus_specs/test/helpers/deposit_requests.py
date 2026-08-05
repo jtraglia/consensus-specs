@@ -210,12 +210,14 @@ def assert_process_deposit_request(
         assert new_pending_deposit.slot == expected_pending_deposit_slot
 
     if expected_pending_deposit_credentials is not None:
-        assert new_pending_deposit.withdrawal_credentials == spec.Bytes32(
+        assert bytes(new_pending_deposit.withdrawal_credentials) == bytes(
             expected_pending_deposit_credentials
         )
 
     if expected_deposit_requests_start_index is not None:
-        assert state.deposit_requests_start_index == expected_deposit_requests_start_index, (
+        assert state.deposit_requests_start_index == spec.Uint64(
+            expected_deposit_requests_start_index
+        ), (
             f"deposit_requests_start_index: expected={expected_deposit_requests_start_index}, "
             f"got={state.deposit_requests_start_index}"
         )

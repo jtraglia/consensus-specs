@@ -4,16 +4,21 @@
 
 - [Introduction](#introduction)
 - [Types](#types)
+  - [New `Blob`](#new-blob)
+  - [New `BlobIndex`](#new-blobindex)
+  - [New `BlobKZGCommitments`](#new-blobkzgcommitments)
+  - [New `KZGCommitment`](#new-kzgcommitment)
+  - [New `KZGProof`](#new-kzgproof)
+  - [New `VersionedHash`](#new-versionedhash)
 - [Constants](#constants)
   - [Blob](#blob)
 - [Preset](#preset)
+  - [Blob](#blob-1)
   - [Execution](#execution)
 - [Configuration](#configuration)
   - [Execution](#execution-1)
   - [Validator cycle](#validator-cycle)
 - [Containers](#containers)
-  - [New containers](#new-containers)
-    - [`BlobKZGCommitments`](#blobkzgcommitments)
   - [Modified containers](#modified-containers)
     - [`BeaconBlockBody`](#beaconblockbody)
     - [`ExecutionPayload`](#executionpayload)
@@ -60,20 +65,81 @@ Deneb is a consensus-layer upgrade containing a number of features. Including:
 
 ## Types
 
-| Name            | SSZ equivalent | Description        |
-| --------------- | -------------- | ------------------ |
-| `VersionedHash` | `Bytes32`      | A versioned hash   |
-| `BlobIndex`     | `Uint64`       | An index of a blob |
+### New `Blob`
+
+```python
+class Blob(ByteVector):
+    """
+    A blob of data, encoded as a sequence of BLS scalar field elements.
+    """
+
+    LENGTH = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB
+```
+
+### New `BlobIndex`
+
+```python
+class BlobIndex(Uint64):
+    """
+    The index of a blob within a block.
+    """
+```
+
+### New `BlobKZGCommitments`
+
+```python
+class BlobKZGCommitments(List[KZGCommitment]):
+    """
+    The KZG commitments to the blobs of a beacon block.
+    """
+
+    LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
+```
+
+### New `KZGCommitment`
+
+```python
+class KZGCommitment(Bytes48):
+    """
+    A commitment to the polynomial defined by the field elements of a blob.
+    """
+```
+
+### New `KZGProof`
+
+```python
+class KZGProof(Bytes48):
+    """
+    A proof that the polynomial committed to by a ``KZGCommitment`` evaluates
+    to expected values at one or more points.
+    """
+```
+
+### New `VersionedHash`
+
+```python
+class VersionedHash(Bytes32):
+    """
+    A versioned hash of a blob's KZG commitment.
+    """
+```
 
 ## Constants
 
 ### Blob
 
-| Name                         | Value            |
-| ---------------------------- | ---------------- |
-| `VERSIONED_HASH_VERSION_KZG` | `Bytes1('0x01')` |
+| Name                         | Value            | Description                                     |
+| ---------------------------- | ---------------- | ----------------------------------------------- |
+| `VERSIONED_HASH_VERSION_KZG` | `Bytes1('0x01')` | Version byte of a blob's versioned hash         |
+| `BYTES_PER_FIELD_ELEMENT`    | `Uint64(32)`     | Bytes used to encode a BLS scalar field element |
 
 ## Preset
+
+### Blob
+
+| Name                      | Value          | Description                        |
+| ------------------------- | -------------- | ---------------------------------- |
+| `FIELD_ELEMENTS_PER_BLOB` | `Uint64(4096)` | Number of field elements in a blob |
 
 ### Execution
 
@@ -101,15 +167,6 @@ independently defined by `MAX_BLOBS_PER_BLOCK`.
 | `MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT` | `Uint64(2**3)` (= 8) |
 
 ## Containers
-
-### New containers
-
-#### `BlobKZGCommitments`
-
-```python
-class BlobKZGCommitments(List[KZGCommitment]):
-    LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
-```
 
 ### Modified containers
 

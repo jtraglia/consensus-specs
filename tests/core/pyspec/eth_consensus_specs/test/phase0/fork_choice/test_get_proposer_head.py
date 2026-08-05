@@ -106,9 +106,13 @@ def test_basic_is_parent_root(spec, state):
             spec, state, store, fill_cur_epoch=True, fill_prev_epoch=True, test_steps=test_steps
         )
 
-    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == 4
-    assert state.current_justified_checkpoint.epoch == store.justified_checkpoint.epoch == 3
-    assert state.finalized_checkpoint.epoch == store.finalized_checkpoint.epoch == 2
+    assert spec.compute_epoch_at_slot(spec.get_current_slot(store)) == spec.Epoch(4)
+    assert (
+        state.current_justified_checkpoint.epoch
+        == store.justified_checkpoint.epoch
+        == spec.Epoch(3)
+    )
+    assert state.finalized_checkpoint.epoch == store.finalized_checkpoint.epoch == spec.Epoch(2)
 
     # Make an empty block
     block = build_empty_block_for_next_slot(spec, state)
@@ -123,17 +127,19 @@ def test_basic_is_parent_root(spec, state):
     # Fill a slot with attestations to its parent
     block = build_empty_block_for_next_slot(spec, state)
     parent_block_slot = block.slot - spec.Slot(1)
-    block.body.attestations = get_valid_attestations_at_slot(
-        state,
-        spec,
-        parent_block_slot,
+    block.body.attestations = spec.Attestations(
+        data=get_valid_attestations_at_slot(
+            state,
+            spec,
+            parent_block_slot,
+        )
     )
     signed_block = state_transition_and_sign_block(spec, state, block)
 
     # Make the head block late
     # Round up to nearest second
     attestation_due_ms = spec.get_attestation_due_ms()
-    attesting_cutoff = (attestation_due_ms + spec.Uint64(999)) // spec.Uint64(1000)
+    attesting_cutoff = spec.Uint64((int(attestation_due_ms) + 999) // 1000)
     current_time = (
         spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
         + store.genesis_time

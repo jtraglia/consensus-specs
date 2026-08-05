@@ -3,6 +3,9 @@
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
+- [Types](#types)
+  - [New `ProposerIndices`](#new-proposerindices)
+  - [New `ProposerLookahead`](#new-proposerlookahead)
 - [Configuration](#configuration)
   - [Blob schedule](#blob-schedule)
 - [Beacon chain state transition function](#beacon-chain-state-transition-function)
@@ -14,8 +17,6 @@
       - [Deposit requests](#deposit-requests)
         - [Modified `process_deposit_request`](#modified-process_deposit_request)
 - [Containers](#containers)
-  - [New containers](#new-containers)
-    - [`ProposerLookahead`](#proposerlookahead)
   - [Modified containers](#modified-containers)
     - [`BeaconState`](#beaconstate)
 - [Helpers](#helpers)
@@ -44,6 +45,31 @@ Fulu is a consensus-layer upgrade containing a number of features. Including:
   lookahead
 - [EIP-7892](https://eips.ethereum.org/EIPS/eip-7892): Blob Parameter Only
   Hardforks
+
+## Types
+
+### New `ProposerIndices`
+
+```python
+class ProposerIndices(Vector[ValidatorIndex]):
+    """
+    The proposer indices for every slot of a single epoch.
+    """
+
+    LENGTH = SLOTS_PER_EPOCH
+```
+
+### New `ProposerLookahead`
+
+```python
+class ProposerLookahead(Vector[ValidatorIndex]):
+    """
+    The precomputed proposer indices for the current and next
+    ``MIN_SEED_LOOKAHEAD`` epochs.
+    """
+
+    LENGTH = (Uint64(MIN_SEED_LOOKAHEAD) + Uint64(1)) * Uint64(SLOTS_PER_EPOCH)
+```
 
 ## Configuration
 
@@ -191,15 +217,6 @@ def process_deposit_request(state: BeaconState, deposit_request: DepositRequest)
 
 ## Containers
 
-### New containers
-
-#### `ProposerLookahead`
-
-```python
-class ProposerLookahead(Vector[ValidatorIndex]):
-    LENGTH = (Uint64(MIN_SEED_LOOKAHEAD) + Uint64(1)) * Uint64(SLOTS_PER_EPOCH)
-```
-
 ### Modified containers
 
 #### `BeaconState`
@@ -327,13 +344,13 @@ def compute_fork_digest(
 ```python
 def compute_proposer_indices(
     state: BeaconState, epoch: Epoch, seed: Bytes32, indices: Sequence[ValidatorIndex]
-) -> Sequence[ValidatorIndex]:
+) -> ProposerIndices:
     """
     Return the proposer indices for the given ``epoch``.
     """
     start_slot = compute_start_slot_at_epoch(epoch)
     seeds = [hash(seed + uint_to_bytes(start_slot + Slot(i))) for i in range(SLOTS_PER_EPOCH)]
-    return [compute_proposer_index(state, indices, seed) for seed in seeds]
+    return ProposerIndices(data=[compute_proposer_index(state, indices, seed) for seed in seeds])
 ```
 
 ### Beacon state accessors
@@ -354,7 +371,7 @@ def get_beacon_proposer_index(state: BeaconState) -> ValidatorIndex:
 #### New `get_beacon_proposer_indices`
 
 ```python
-def get_beacon_proposer_indices(state: BeaconState, epoch: Epoch) -> Sequence[ValidatorIndex]:
+def get_beacon_proposer_indices(state: BeaconState, epoch: Epoch) -> ProposerIndices:
     """
     Return the proposer indices for the given ``epoch``.
     """

@@ -146,9 +146,11 @@ def test_top_up__less_effective_balance(spec, state):
     yield from run_deposit_processing(spec, state, deposit, validator_index)
 
     if not is_post_electra(spec):
-        assert state.balances[validator_index] == initial_balance + amount
+        assert state.balances[validator_index] == spec.Gwei(initial_balance) + spec.Gwei(amount)
         # unchanged effective balance
-        assert state.validators[validator_index].effective_balance == initial_effective_balance
+        assert state.validators[validator_index].effective_balance == spec.Gwei(
+            initial_effective_balance
+        )
 
 
 @with_all_phases_from_to(PHASE0, FULU)
@@ -158,7 +160,7 @@ def test_top_up__zero_balance(spec, state):
     amount = spec.MAX_EFFECTIVE_BALANCE // spec.Gwei(4)
     deposit = prepare_state_and_deposit(spec, state, validator_index, amount, signed=True)
 
-    initial_balance = spec.Gwei(0)
+    initial_balance = 0
     initial_effective_balance = 0
     state.balances[validator_index] = initial_balance
     state.validators[validator_index].effective_balance = initial_effective_balance
@@ -166,9 +168,11 @@ def test_top_up__zero_balance(spec, state):
     yield from run_deposit_processing(spec, state, deposit, validator_index)
 
     if not is_post_electra(spec):
-        assert state.balances[validator_index] == initial_balance + amount
+        assert state.balances[validator_index] == spec.Gwei(initial_balance) + spec.Gwei(amount)
         # unchanged effective balance
-        assert state.validators[validator_index].effective_balance == initial_effective_balance
+        assert state.validators[validator_index].effective_balance == spec.Gwei(
+            initial_effective_balance
+        )
 
 
 @with_all_phases_from_to(PHASE0, FULU)

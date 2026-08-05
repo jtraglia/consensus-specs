@@ -27,6 +27,7 @@ from eth_consensus_specs.test.helpers.multi_operations import (
     get_random_sync_aggregate,
     prepare_state_and_get_random_deposits,
 )
+from eth_consensus_specs.test.helpers.payload_attestation import get_random_payload_attestations
 from eth_consensus_specs.test.helpers.random import (
     patch_state_to_non_leaking,
     randomize_state as randomize_state_helper,
@@ -37,6 +38,7 @@ from eth_consensus_specs.test.helpers.state import (
     next_slot,
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 # primitives:
 # state
@@ -148,7 +150,7 @@ def epochs_until_leak(spec):
     State is "leaking" if the current epoch is at least
     this value after the last finalized epoch.
     """
-    return spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY + 1
+    return spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY + spec.Epoch(1)
 
 
 def epochs_for_shard_committee_period(spec):
@@ -159,17 +161,17 @@ def epochs_for_shard_committee_period(spec):
 
 
 def last_slot_in_epoch(spec):
-    return spec.SLOTS_PER_EPOCH - 1
+    return spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
 
 def random_slot_in_epoch(spec, rng=None):
     if rng is None:
         rng = Random(1336)
-    return rng.randrange(1, spec.SLOTS_PER_EPOCH - 2)
+    return rng.randrange(1, spec.SLOTS_PER_EPOCH - spec.Slot(2))
 
 
 def penultimate_slot_in_epoch(spec):
-    return spec.SLOTS_PER_EPOCH - 2
+    return spec.SLOTS_PER_EPOCH - spec.Slot(2)
 
 
 # blocks
@@ -224,7 +226,7 @@ def random_block(spec, state, signed_blocks, scenario_state):
     # after this function returns.
     # Using a copy of the state for proposer sampling is also sound as any inputs used for the
     # shuffling are fixed a few epochs prior to ``spec.get_current_epoch(state)``.
-    temp_state = state.copy()
+    temp_state = copy(state)
     next_slot(spec, temp_state)
     for _ in range(BLOCK_ATTEMPTS):
         proposer_index = spec.get_beacon_proposer_index(temp_state)
@@ -258,7 +260,7 @@ def random_block_altair_with_cycling_sync_committee_participation(
     block.body.sync_aggregate = get_random_sync_aggregate(
         spec,
         state,
-        block.slot - 1,
+        block.slot - spec.Slot(1),
         block_root=previous_root,
         fraction_participated=fraction_participated,
     )
@@ -272,7 +274,7 @@ def random_block_bellatrix(spec, state, signed_blocks, scenario_state, rng=None)
         spec, state, signed_blocks, scenario_state
     )
     # build execution_payload at the next slot
-    state = state.copy()
+    state = copy(state)
     next_slot(spec, state)
     block.body.execution_payload = build_randomized_execution_payload(spec, state, rng=rng)
     return block
@@ -299,7 +301,7 @@ def random_block_deneb(spec, state, signed_blocks, scenario_state, rng=None):
     )
     block.body.execution_payload.transactions.append(opaque_tx)
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
-    block.body.blob_kzg_commitments = blob_kzg_commitments
+    block.body.blob_kzg_commitments = spec.BlobKZGCommitments(data=blob_kzg_commitments)
 
     return block
 
@@ -340,13 +342,9 @@ def random_block_gloas(spec, state, signed_blocks, scenario_state, rng=None):
     block.body.signed_execution_payload_bid = _build_random_signed_bid(spec, state, block, rng)
 
     # Add payload_attestations
-    # Deferred import: the payload attestation helpers pull in gloas test modules,
-    # which are not importable until that fork is migrated.
-    from eth_consensus_specs.test.helpers.payload_attestation import (  # noqa: PLC0415
-        get_random_payload_attestations,
+    block.body.payload_attestations = spec.PayloadAttestations(
+        data=get_random_payload_attestations(spec, state, rng)
     )
-
-    block.body.payload_attestations = get_random_payload_attestations(spec, state, rng)
 
     return block
 
@@ -426,7 +424,9 @@ def _add_random_builders(spec, state, rng=None):
     num_builders = rng.randint(0, 8)
 
     for i in range(num_builders):
-        balance = spec.MIN_DEPOSIT_AMOUNT + rng.randint(0, 10) * spec.EFFECTIVE_BALANCE_INCREMENT
+        balance = spec.MIN_DEPOSIT_AMOUNT + rng.randint(0, 10) * int(
+            spec.EFFECTIVE_BALANCE_INCREMENT
+        )
         builder = build_mock_builder(spec, i, balance)
         state.builders.append(builder)
 
@@ -475,7 +475,7 @@ def _build_random_signed_bid(spec, state, block, rng):
         slot=block.slot,
         value=value,
         execution_payment=spec.Gwei(0),
-        blob_kzg_commitments=spec.ProgressiveList[spec.KZGCommitment].of(*blob_kzg_commitments),
+        blob_kzg_commitments=spec.BlobKZGCommitments(data=blob_kzg_commitments),
         execution_requests_root=spec.hash_tree_root(spec.ExecutionRequests()),
     )
 

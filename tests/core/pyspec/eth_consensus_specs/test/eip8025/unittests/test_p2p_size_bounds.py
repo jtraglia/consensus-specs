@@ -14,5 +14,5 @@ from eth_consensus_specs.test.helpers.p2p_size_bounds import (
 @single_phase
 def test_max_signed_execution_proof_size(spec):
     encoded = build_max_size_signed_execution_proof(spec).encode_bytes()
-    assert len(encoded) == get_max_signed_execution_proof_size(spec)
-    assert len(encoded) <= spec.config.MAX_PAYLOAD_SIZE
+    assert len(encoded) == int(get_max_signed_execution_proof_size(spec))
+    assert len(encoded) <= int(spec.config.MAX_PAYLOAD_SIZE)

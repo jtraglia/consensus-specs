@@ -100,20 +100,17 @@ def test_fork_pre_activation(spec, phases, state):
     index = 0
     post_spec = phases[ELECTRA]
     state.validators[index].activation_epoch = spec.FAR_FUTURE_EPOCH
-    # upgrade_to_electra moves the pre-activation balance into a pending deposit and
-    # zeroes the source balance, mutating the pre-state, so capture it beforehand.
-    pre_balance = state.balances[index]
     post_state = yield from run_fork_test(post_spec, state)
 
     validator = post_state.validators[index]
-    assert post_state.balances[index] == 0
-    assert validator.effective_balance == 0
+    assert post_state.balances[index] == spec.Gwei(0)
+    assert validator.effective_balance == spec.Gwei(0)
     assert validator.activation_eligibility_epoch == spec.FAR_FUTURE_EPOCH
-    assert post_state.pending_deposits == [
+    assert list(post_state.pending_deposits) == [
         post_spec.PendingDeposit(
             pubkey=validator.pubkey,
             withdrawal_credentials=validator.withdrawal_credentials,
-            amount=pre_balance,
+            amount=state.balances[index],
             signature=spec.bls.G2_POINT_AT_INFINITY,
             slot=spec.GENESIS_SLOT,
         )
@@ -152,21 +149,18 @@ def test_fork_has_compounding_withdrawal_credential(spec, phases, state):
     index = 0
     post_spec = phases[ELECTRA]
     validator = state.validators[index]
-    state.balances[index] = post_spec.MIN_ACTIVATION_BALANCE + post_spec.Gwei(1)
+    state.balances[index] = post_spec.MIN_ACTIVATION_BALANCE + spec.Gwei(1)
     validator.withdrawal_credentials = (
         post_spec.COMPOUNDING_WITHDRAWAL_PREFIX + validator.withdrawal_credentials[1:]
     )
-    # upgrade_to_electra queues the excess balance as a pending deposit and lowers the
-    # source balance, mutating the pre-state, so capture the balance beforehand.
-    pre_balance = state.balances[index]
     post_state = yield from run_fork_test(post_spec, state)
 
     assert post_state.balances[index] == post_spec.MIN_ACTIVATION_BALANCE
-    assert post_state.pending_deposits == [
+    assert list(post_state.pending_deposits) == [
         post_spec.PendingDeposit(
             pubkey=validator.pubkey,
             withdrawal_credentials=validator.withdrawal_credentials,
-            amount=pre_balance - post_spec.MIN_ACTIVATION_BALANCE,
+            amount=state.balances[index] - post_spec.MIN_ACTIVATION_BALANCE,
             signature=spec.bls.G2_POINT_AT_INFINITY,
             slot=spec.GENESIS_SLOT,
         )
@@ -183,7 +177,7 @@ def test_fork_inactive_compounding_validator_with_excess_balance(spec, phases, s
     validator = state.validators[index]
 
     # set validator balance greater than min_activation_balance
-    state.balances[index] = post_spec.MIN_ACTIVATION_BALANCE + post_spec.Gwei(1)
+    state.balances[index] = post_spec.MIN_ACTIVATION_BALANCE + spec.Gwei(1)
     # set validator as not active yet
     validator.activation_epoch = spec.FAR_FUTURE_EPOCH
     # set validator activation eligibility epoch to the latest finalized epoch
@@ -193,21 +187,18 @@ def test_fork_inactive_compounding_validator_with_excess_balance(spec, phases, s
         post_spec.COMPOUNDING_WITHDRAWAL_PREFIX + validator.withdrawal_credentials[1:]
     )
 
-    # upgrade_to_electra moves the inactive validator's balance into a pending deposit
-    # and zeroes the source balance, mutating the pre-state, so capture it beforehand.
-    pre_balance = state.balances[index]
     post_state = yield from run_fork_test(post_spec, state)
 
     # the validator cannot be activated again
     assert post_state.validators[index].activation_eligibility_epoch == spec.FAR_FUTURE_EPOCH
     # the validator should now have a zero balance
-    assert post_state.balances[index] == 0
+    assert post_state.balances[index] == spec.Gwei(0)
     # there should be a single pending deposit for this validator
-    assert post_state.pending_deposits == [
+    assert list(post_state.pending_deposits) == [
         post_spec.PendingDeposit(
             pubkey=validator.pubkey,
             withdrawal_credentials=validator.withdrawal_credentials,
-            amount=pre_balance,
+            amount=state.balances[index],
             signature=spec.bls.G2_POINT_AT_INFINITY,
             slot=spec.GENESIS_SLOT,
         )
@@ -231,7 +222,7 @@ def test_fork_earliest_exit_epoch_no_validator_exits(spec, phases, state):
     current_epoch = post_spec.compute_epoch_at_slot(post_state.slot)
     expected_earliest_exit_epoch = post_spec.compute_activation_exit_epoch(
         current_epoch
-    ) + post_spec.Epoch(1)
+    ) + spec.Epoch(1)
     assert post_state.earliest_exit_epoch == expected_earliest_exit_epoch
 
 
@@ -272,5 +263,5 @@ def test_fork_earliest_exit_epoch_less_than_current_epoch(spec, phases, state):
     current_epoch = post_spec.compute_epoch_at_slot(post_state.slot)
     expected_earliest_exit_epoch = post_spec.compute_activation_exit_epoch(
         current_epoch
-    ) + post_spec.Epoch(1)
+    ) + spec.Epoch(1)
     assert post_state.earliest_exit_epoch == expected_earliest_exit_epoch

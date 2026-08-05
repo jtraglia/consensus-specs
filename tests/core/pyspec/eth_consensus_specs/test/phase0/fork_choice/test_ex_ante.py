@@ -28,7 +28,7 @@ from eth_consensus_specs.test.helpers.fork_choice import (
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def _apply_base_block_a(spec, state, store, test_steps):
@@ -70,15 +70,15 @@ def test_ex_ante_vanilla(spec, state):
 
     # On receiving block A at slot `N`
     yield from _apply_base_block_a(spec, state, store, test_steps)
-    state_a = state.copy()
+    state_a = copy(state)
 
     # Block B at slot `N + 1`, parent is A
-    state_b = state_a.copy()
+    state_b = copy(state_a)
     block = build_empty_block(spec, state_a, slot=state_a.slot + spec.Slot(1))
     signed_block_b = state_transition_and_sign_block(spec, state_b, block)
 
     # Block C at slot `N + 2`, parent is A
-    state_c = state_a.copy()
+    state_c = copy(state_a)
     block = build_empty_block(spec, state_c, slot=state_a.slot + spec.Slot(2))
     signed_block_c = state_transition_and_sign_block(spec, state_c, block)
 
@@ -94,7 +94,7 @@ def test_ex_ante_vanilla(spec, state):
         filter_participant_set=_filter_participant_set,
     )
     attestation.data.beacon_block_root = hash_tree_root(signed_block_b.message)
-    assert len([i for i in attestation.aggregation_bits if i == 1]) == 1
+    assert len([i for i in attestation.aggregation_bits if i]) == 1
     sign_attestation(spec, state_b, attestation)
 
     # Block C received at N+2 — C is head
@@ -173,15 +173,15 @@ def test_ex_ante_attestations_is_greater_than_proposer_boost_with_boost(spec, st
 
     # On receiving block A at slot `N`
     yield from _apply_base_block_a(spec, state, store, test_steps)
-    state_a = state.copy()
+    state_a = copy(state)
 
     # Block B at slot `N + 1`, parent is A
-    state_b = state_a.copy()
+    state_b = copy(state_a)
     block = build_empty_block(spec, state_a, slot=state_a.slot + spec.Slot(1))
     signed_block_b = state_transition_and_sign_block(spec, state_b, block)
 
     # Block C at slot `N + 2`, parent is A
-    state_c = state_a.copy()
+    state_c = copy(state_a)
     block = build_empty_block(spec, state_c, slot=state_a.slot + spec.Slot(2))
     signed_block_c = state_transition_and_sign_block(spec, state_c, block)
 
@@ -216,7 +216,7 @@ def test_ex_ante_attestations_is_greater_than_proposer_boost_with_boost(spec, st
         filter_participant_set=_filter_participant_set,
     )
     attestation.data.beacon_block_root = hash_tree_root(signed_block_b.message)
-    assert len([i for i in attestation.aggregation_bits if i == 1]) == participant_num
+    assert len([i for i in attestation.aggregation_bits if i]) == participant_num
     sign_attestation(spec, state_b, attestation)
 
     # Attestation_set_1 received at N+2 — B is head because B's attestation_score > C's proposer_score.
@@ -257,20 +257,20 @@ def test_ex_ante_sandwich_without_attestations(spec, state):
 
     # On receiving block A at slot `N`
     yield from _apply_base_block_a(spec, state, store, test_steps)
-    state_a = state.copy()
+    state_a = copy(state)
 
     # Block B at slot `N + 1`, parent is A
-    state_b = state_a.copy()
+    state_b = copy(state_a)
     block = build_empty_block(spec, state_a, slot=state_a.slot + spec.Slot(1))
     signed_block_b = state_transition_and_sign_block(spec, state_b, block)
 
     # Block C at slot `N + 2`, parent is A
-    state_c = state_a.copy()
+    state_c = copy(state_a)
     block = build_empty_block(spec, state_c, slot=state_a.slot + spec.Slot(2))
     signed_block_c = state_transition_and_sign_block(spec, state_c, block)
 
     # Block D at slot `N + 3`, parent is B
-    state_d = state_b.copy()
+    state_d = copy(state_b)
     block = build_empty_block(spec, state_d, slot=state_a.slot + spec.Slot(3))
     signed_block_d = state_transition_and_sign_block(spec, state_d, block)
 
@@ -332,15 +332,15 @@ def test_ex_ante_sandwich_with_honest_attestation(spec, state):
 
     # On receiving block A at slot `N`
     yield from _apply_base_block_a(spec, state, store, test_steps)
-    state_a = state.copy()
+    state_a = copy(state)
 
     # Block B at slot `N + 1`, parent is A
-    state_b = state_a.copy()
+    state_b = copy(state_a)
     block = build_empty_block(spec, state_a, slot=state_a.slot + spec.Slot(1))
     signed_block_b = state_transition_and_sign_block(spec, state_b, block)
 
     # Block C at slot `N + 2`, parent is A
-    state_c = state_a.copy()
+    state_c = copy(state_a)
     block = build_empty_block(spec, state_c, slot=state_a.slot + spec.Slot(2))
     signed_block_c = state_transition_and_sign_block(spec, state_c, block)
 
@@ -356,11 +356,11 @@ def test_ex_ante_sandwich_with_honest_attestation(spec, state):
         filter_participant_set=_filter_participant_set,
     )
     attestation.data.beacon_block_root = hash_tree_root(signed_block_c.message)
-    assert len([i for i in attestation.aggregation_bits if i == 1]) == 1
+    assert len([i for i in attestation.aggregation_bits if i]) == 1
     sign_attestation(spec, state_c, attestation)
 
     # Block D at slot `N + 3`, parent is B
-    state_d = state_b.copy()
+    state_d = copy(state_b)
     block = build_empty_block(spec, state_d, slot=state_a.slot + spec.Slot(3))
     signed_block_d = state_transition_and_sign_block(spec, state_d, block)
 
@@ -427,20 +427,20 @@ def test_ex_ante_sandwich_with_boost_not_sufficient(spec, state):
 
     # On receiving block A at slot `N`
     yield from _apply_base_block_a(spec, state, store, test_steps)
-    state_a = state.copy()
+    state_a = copy(state)
 
     # Block B at slot `N + 1`, parent is A
-    state_b = state_a.copy()
+    state_b = copy(state_a)
     block = build_empty_block(spec, state_a, slot=state_a.slot + spec.Slot(1))
     signed_block_b = state_transition_and_sign_block(spec, state_b, block)
 
     # Block C at slot `N + 2`, parent is A
-    state_c = state_a.copy()
+    state_c = copy(state_a)
     block = build_empty_block(spec, state_c, slot=state_a.slot + spec.Slot(2))
     signed_block_c = state_transition_and_sign_block(spec, state_c, block)
 
     # Block D at slot `N + 3`, parent is B
-    state_d = state_b.copy()
+    state_d = copy(state_b)
     block = build_empty_block(spec, state_d, slot=state_a.slot + spec.Slot(3))
     signed_block_d = state_transition_and_sign_block(spec, state_d, block)
 
@@ -475,7 +475,7 @@ def test_ex_ante_sandwich_with_boost_not_sufficient(spec, state):
         filter_participant_set=_filter_participant_set,
     )
     attestation.data.beacon_block_root = hash_tree_root(signed_block_c.message)
-    assert len([i for i in attestation.aggregation_bits if i == 1]) == participant_num
+    assert len([i for i in attestation.aggregation_bits if i]) == participant_num
     sign_attestation(spec, state_c, attestation)
 
     # Attestation_1 received at N+3 — B is head because B's attestation_score > C's proposer_score.

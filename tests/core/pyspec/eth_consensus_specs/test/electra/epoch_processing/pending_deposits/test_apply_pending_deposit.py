@@ -496,17 +496,17 @@ def test_apply_pending_deposit_success_top_up_to_withdrawn_validator(spec, state
 
     # Fully withdraw validator
     set_validator_fully_withdrawable(spec, state, validator_index)
-    assert state.balances[validator_index] > 0
+    assert state.balances[validator_index] > spec.Gwei(0)
 
     # Make parent block full in Gloas so withdrawals are processed
     if is_post_gloas(spec):
         state.latest_block_hash = state.latest_execution_payload_bid.block_hash
 
     next_epoch_via_block(spec, state)
-    assert state.balances[validator_index] == 0
-    assert state.validators[validator_index].effective_balance > 0
+    assert state.balances[validator_index] == spec.Gwei(0)
+    assert state.validators[validator_index].effective_balance > spec.Gwei(0)
     next_epoch_via_block(spec, state)
-    assert state.validators[validator_index].effective_balance == 0
+    assert state.validators[validator_index].effective_balance == spec.Gwei(0)
 
     # Make a top-up balance to validator
     amount = spec.MIN_ACTIVATION_BALANCE // spec.Gwei(4)
@@ -515,7 +515,7 @@ def test_apply_pending_deposit_success_top_up_to_withdrawn_validator(spec, state
     yield from run_pending_deposit_applying(spec, state, pending_deposit, validator_index)
 
     assert state.balances[validator_index] == amount
-    assert state.validators[validator_index].effective_balance == 0
+    assert state.validators[validator_index].effective_balance == spec.Gwei(0)
 
     validator = state.validators[validator_index]
     balance = state.balances[validator_index]

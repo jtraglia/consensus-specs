@@ -17,7 +17,7 @@ from eth_consensus_specs.test.helpers.fork_choice import (
     on_tick_and_append_step,
     tick_and_add_block_with_data,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def flip_one_bit_in_bytes(data: bytes, index: int = 0) -> bytes:
@@ -38,7 +38,7 @@ def get_alt_sidecars(spec, state):
     Get alternative sidecars for negative test cases.
     """
     rng = Random(4321)
-    state_copy = state.copy()
+    state_copy = copy(state)
     _, _, _, _, alt_sidecars, _ = get_block_with_blob_and_sidecars(
         spec, state_copy, rng=rng, blob_count=2
     )
@@ -145,9 +145,9 @@ def test_on_block_peerdas__invalid_zero_blobs(spec, state):
     """
 
     def invalid_zero_blobs(sidecars):
-        sidecars[0].column = []
-        sidecars[0].kzg_commitments = []
-        sidecars[0].kzg_proofs = []
+        sidecars[0].column = spec.DataColumn(data=[])
+        sidecars[0].kzg_commitments = spec.BlobKZGCommitments(data=[])
+        sidecars[0].kzg_proofs = spec.KZGProofs(data=[])
         return sidecars
 
     yield from run_on_block_peerdas_invalid_test(spec, state, invalid_zero_blobs)
@@ -189,7 +189,7 @@ def test_on_block_peerdas__invalid_mismatch_len_column_1(spec, state):
     """
 
     def invalid_mismatch_len_column(sidecars):
-        sidecars[0].column = sidecars[0].column[1:]
+        sidecars[0].column = spec.DataColumn(data=sidecars[0].column[1:])
         return sidecars
 
     yield from run_on_block_peerdas_invalid_test(spec, state, invalid_mismatch_len_column)
@@ -203,7 +203,7 @@ def test_on_block_peerdas__invalid_mismatch_len_column_2(spec, state):
     """
 
     def invalid_mismatch_len_column(sidecars):
-        sidecars[1].column = sidecars[1].column[1:]
+        sidecars[1].column = spec.DataColumn(data=sidecars[1].column[1:])
         return sidecars
 
     yield from run_on_block_peerdas_invalid_test(spec, state, invalid_mismatch_len_column)
@@ -217,7 +217,7 @@ def test_on_block_peerdas__invalid_mismatch_len_kzg_commitments_1(spec, state):
     """
 
     def invalid_mismatch_len_kzg_commitments(sidecars):
-        sidecars[0].kzg_commitments = sidecars[0].kzg_commitments[1:]
+        sidecars[0].kzg_commitments = spec.BlobKZGCommitments(data=sidecars[0].kzg_commitments[1:])
         return sidecars
 
     yield from run_on_block_peerdas_invalid_test(spec, state, invalid_mismatch_len_kzg_commitments)
@@ -231,7 +231,7 @@ def test_on_block_peerdas__invalid_mismatch_len_kzg_commitments_2(spec, state):
     """
 
     def invalid_mismatch_len_kzg_commitments(sidecars):
-        sidecars[1].kzg_commitments = sidecars[1].kzg_commitments[1:]
+        sidecars[1].kzg_commitments = spec.BlobKZGCommitments(data=sidecars[1].kzg_commitments[1:])
         return sidecars
 
     yield from run_on_block_peerdas_invalid_test(spec, state, invalid_mismatch_len_kzg_commitments)
@@ -245,7 +245,7 @@ def test_on_block_peerdas__invalid_mismatch_len_kzg_proofs_1(spec, state):
     """
 
     def invalid_mismatch_len_kzg_proofs(sidecars):
-        sidecars[0].kzg_proofs = sidecars[0].kzg_proofs[1:]
+        sidecars[0].kzg_proofs = spec.KZGProofs(data=sidecars[0].kzg_proofs[1:])
         return sidecars
 
     yield from run_on_block_peerdas_invalid_test(spec, state, invalid_mismatch_len_kzg_proofs)
@@ -259,7 +259,7 @@ def test_on_block_peerdas__invalid_mismatch_len_kzg_proofs_2(spec, state):
     """
 
     def invalid_mismatch_len_kzg_proofs(sidecars):
-        sidecars[1].kzg_proofs = sidecars[1].kzg_proofs[1:]
+        sidecars[1].kzg_proofs = spec.KZGProofs(data=sidecars[1].kzg_proofs[1:])
         return sidecars
 
     yield from run_on_block_peerdas_invalid_test(spec, state, invalid_mismatch_len_kzg_proofs)

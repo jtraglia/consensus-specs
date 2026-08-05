@@ -23,7 +23,7 @@ from eth_consensus_specs.test.helpers.fast_confirmation import (
 @dataclass
 class CurrentEpochTestSpecification:
     head_uj_fresh: bool = (
-        False  # <-> store.unrealized_justifications[head].epoch + 1 >= current_epoch
+        False  # <-> store.unrealized_justifications[head].epoch + spec.Epoch(1) >= current_epoch
     )
     second_slot_call: bool = False  # <-> algorithm is called in the second slot of an epoch, this is the first slot when a block from the current epoch can possibly be confirmed
     first_block_in_epoch: bool = False  # <-> confirm the first block in the current epoch
@@ -41,13 +41,13 @@ class CurrentEpochTestSpecification:
         canonical_roots = spec.get_ancestor_roots(store, head, fcr_store.confirmed_root)
 
         assert confirmed_epoch + 1 >= current_epoch
-        assert current_slot % spec.SLOTS_PER_EPOCH > 0
+        assert current_slot % spec.SLOTS_PER_EPOCH > spec.Slot(0)
         assert len(canonical_roots) > 0
 
-        assert self.second_slot_call == (current_slot % spec.SLOTS_PER_EPOCH == 1)
+        assert self.second_slot_call == (current_slot % spec.SLOTS_PER_EPOCH == spec.Slot(1))
         assert self.first_block_in_epoch == (confirmed_epoch + 1 == current_epoch)
         assert self.head_uj_fresh == (
-            store.unrealized_justifications[head].epoch + 1 >= current_epoch
+            store.unrealized_justifications[head].epoch + spec.Epoch(1) >= current_epoch
         )
         assert self.target_will_be_justified == spec.will_current_target_be_justified(store)
         if self.is_one_confirmed:
@@ -120,7 +120,7 @@ class CurrentEpochTestBuilder:
                 SlotSequence(number_of_slots=self.spec.SLOTS_PER_EPOCH),
                 # Slots with full inclusion at the beginning
                 SlotSequence(
-                    number_of_slots=self.spec.SLOTS_PER_EPOCH * 2 // 3,
+                    number_of_slots=self.spec.SLOTS_PER_EPOCH * self.spec.Slot(2) // 3,
                     proposal=Proposal(atts_in_block=True),
                 ),
                 # Up to the next epoch start with zero enclusion
@@ -145,7 +145,7 @@ class CurrentEpochTestBuilder:
         # but not enough to justify
         return [
             SlotSequence(
-                end_slot=end_epoch * self.spec.SLOTS_PER_EPOCH - 2,
+                end_slot=end_epoch * self.spec.SLOTS_PER_EPOCH - self.spec.Slot(2),
                 proposal=Proposal(enabled=False),
                 attesting=Attesting(participation_rate=75),
             ),

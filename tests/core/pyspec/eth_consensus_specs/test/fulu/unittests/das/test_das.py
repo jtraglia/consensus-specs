@@ -16,6 +16,7 @@ from eth_consensus_specs.test.helpers.fork_choice import BlobData, with_blob_dat
 from eth_consensus_specs.test.helpers.forks import (
     is_post_gloas,
 )
+from eth_consensus_specs.utils import kzg
 
 
 def chunks(lst, n):
@@ -32,20 +33,18 @@ def test_compute_matrix(spec):
     blob_count = 2
     input_blobs = [get_sample_blob(spec, rng=rng) for _ in range(blob_count)]
     matrix = spec.compute_matrix(input_blobs)
-    assert len(matrix) == spec.CELLS_PER_EXT_BLOB * blob_count
+    assert len(matrix) == int(spec.CELLS_PER_EXT_BLOB * blob_count)
 
     rows = chunks(matrix, spec.CELLS_PER_EXT_BLOB)
     assert len(rows) == blob_count
     for row in rows:
-        assert len(row) == spec.CELLS_PER_EXT_BLOB
+        assert len(row) == int(spec.CELLS_PER_EXT_BLOB)
 
     for blob_index, row in enumerate(rows):
-        extended_blob = []
-        for entry in row:
-            extended_blob.extend(spec.cell_to_coset_evals(entry.cell))
-        blob_part = extended_blob[0 : len(extended_blob) // 2]
-        blob = b"".join([spec.bls_field_to_bytes(x) for x in blob_part])
-        assert spec.Blob(blob) == input_blobs[blob_index]
+        # The first half of a row's cells holds the original (un-extended) blob data
+        extended_blob = b"".join(bytes(entry.cell) for entry in row)
+        blob = extended_blob[: len(extended_blob) // 2]
+        assert blob == bytes(input_blobs[blob_index])
 
 
 @with_fulu_and_later
@@ -107,14 +106,14 @@ def test_get_data_column_sidecars(spec, state):
     if is_post_gloas(spec):
         sidecars_result = spec.get_data_column_sidecars_from_block(
             signed_block,
-            [spec.compute_cells_and_kzg_proofs(blob) for blob in blobs],
+            [kzg.compute_cells_and_kzg_proofs(blob) for blob in blobs],
         )
     else:
         sidecars_result = spec.get_data_column_sidecars(
             signed_block_header=spec.compute_signed_block_header(signed_block),
             kzg_commitments=sidecars[0].kzg_commitments,
             kzg_commitments_inclusion_proof=sidecars[0].kzg_commitments_inclusion_proof,
-            cells_and_kzg_proofs=[spec.compute_cells_and_kzg_proofs(blob) for blob in blobs],
+            cells_and_kzg_proofs=[kzg.compute_cells_and_kzg_proofs(blob) for blob in blobs],
         )
 
     assert len(sidecars_result) == len(sidecars), (
@@ -133,7 +132,7 @@ def test_get_data_column_sidecars_from_column_sidecar(spec, state):
 
     sidecars_result = spec.get_data_column_sidecars_from_column_sidecar(
         sidecar=sidecars[0],
-        cells_and_kzg_proofs=[spec.compute_cells_and_kzg_proofs(blob) for blob in blobs],
+        cells_and_kzg_proofs=[kzg.compute_cells_and_kzg_proofs(blob) for blob in blobs],
     )
 
     assert len(sidecars_result) == len(sidecars), (

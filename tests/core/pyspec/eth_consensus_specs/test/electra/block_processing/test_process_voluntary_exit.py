@@ -131,7 +131,7 @@ def test_min_balance_exits_above_churn(spec, state):
         num_to_exit
     ].withdrawable_epoch == expected_withdrawable_epoch + spec.Epoch(1)
     # Check exit balance to consume is set correctly
-    remainder = (num_to_exit + spec.Gwei(1)) * single_validator_balance % churn_limit
+    remainder = spec.Gwei(int(num_to_exit) + 1) * single_validator_balance % churn_limit
     assert state.exit_balance_to_consume == churn_limit - remainder
     # Check earliest_exit_epoch
     assert state.earliest_exit_epoch == expected_exit_epoch + spec.Epoch(1)
@@ -164,17 +164,15 @@ def test_max_balance_exit(spec, state):
 
     # Check exit epoch and withdrawable epoch
     earliest_exit_epoch = spec.compute_activation_exit_epoch(spec.get_current_epoch(state))
-    additional_epochs = (to_exit - spec.Gwei(1)) // churn_limit
-    expected_exit_epoch = earliest_exit_epoch + spec.Epoch(additional_epochs)
+    additional_epochs = (to_exit - 1) // churn_limit
+    expected_exit_epoch = earliest_exit_epoch + additional_epochs
     expected_withdrawable_epoch = (
         expected_exit_epoch + spec.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
     )
     assert state.validators[validator_index].exit_epoch == expected_exit_epoch
     assert state.validators[validator_index].withdrawable_epoch == expected_withdrawable_epoch
     # Check exit_balance_to_consume
-    assert (
-        state.exit_balance_to_consume == (additional_epochs + spec.Gwei(1)) * churn_limit - to_exit
-    )
+    assert state.exit_balance_to_consume == (additional_epochs + 1) * churn_limit - to_exit
     # Check earliest_exit_epoch
     assert state.earliest_exit_epoch == expected_exit_epoch
 
@@ -210,7 +208,7 @@ def test_exit_with_balance_equal_to_churn_limit(spec, state):
     assert state.validators[validator_index].exit_epoch == expected_exit_epoch
     assert state.validators[validator_index].withdrawable_epoch == expected_withdrawable_epoch
     # Check exit_balance_to_consume
-    assert state.exit_balance_to_consume == 0
+    assert state.exit_balance_to_consume == spec.Gwei(0)
     # Check earliest_exit_epoch
     assert state.earliest_exit_epoch == expected_exit_epoch
 
@@ -228,7 +226,7 @@ def test_exit_with_balance_multiple_of_churn_limit(spec, state):
     validator_index = spec.get_active_validator_indices(state, current_epoch)[0]
     # Set validator effective balance to a multiple of churn_limit
     epochs_to_consume = 3
-    state.validators[validator_index].effective_balance = spec.Gwei(epochs_to_consume) * churn_limit
+    state.validators[validator_index].effective_balance = epochs_to_consume * churn_limit
 
     privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
     signed_voluntary_exit = sign_voluntary_exit(
@@ -240,16 +238,16 @@ def test_exit_with_balance_multiple_of_churn_limit(spec, state):
     yield from run_voluntary_exit_processing(spec, state, signed_voluntary_exit)
 
     # Validator consumes churn limit fully in epochs_to_consume epochs
-    expected_exit_epoch = spec.compute_activation_exit_epoch(
-        spec.get_current_epoch(state)
-    ) + spec.Epoch(epochs_to_consume - 1)
+    expected_exit_epoch = (
+        spec.compute_activation_exit_epoch(spec.get_current_epoch(state)) + epochs_to_consume - 1
+    )
     expected_withdrawable_epoch = (
         expected_exit_epoch + spec.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
     )
     assert state.validators[validator_index].exit_epoch == expected_exit_epoch
     assert state.validators[validator_index].withdrawable_epoch == expected_withdrawable_epoch
     # Check exit_balance_to_consume
-    assert state.exit_balance_to_consume == 0
+    assert state.exit_balance_to_consume == spec.Gwei(0)
     # Check earliest_exit_epoch
     assert state.earliest_exit_epoch == expected_exit_epoch
 
@@ -285,7 +283,7 @@ def test_exit_existing_churn_and_churn_limit_balance(spec, state):
     )
     yield from run_voluntary_exit_processing(spec, state, signed_voluntary_exit)
 
-    expected_exit_epoch = earliest_exit_epoch + spec.Epoch(1)
+    expected_exit_epoch = earliest_exit_epoch + 1
     expected_withdrawable_epoch = (
         expected_exit_epoch + spec.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
     )
@@ -320,7 +318,7 @@ def test_exit_existing_churn_and_balance_multiple_of_churn_limit(spec, state):
 
     # Set validator effective balance to a multiple of churn_limit
     epochs_to_consume = 3
-    state.validators[validator_index].effective_balance = spec.Gwei(epochs_to_consume) * churn_limit
+    state.validators[validator_index].effective_balance = epochs_to_consume * churn_limit
 
     privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
     signed_voluntary_exit = sign_voluntary_exit(
@@ -332,7 +330,7 @@ def test_exit_existing_churn_and_balance_multiple_of_churn_limit(spec, state):
     yield from run_voluntary_exit_processing(spec, state, signed_voluntary_exit)
 
     # Validator fully consumes epochs_to_consume and gets into the next one
-    expected_exit_epoch = earliest_exit_epoch + spec.Epoch(epochs_to_consume)
+    expected_exit_epoch = earliest_exit_epoch + epochs_to_consume
     expected_withdrawable_epoch = (
         expected_exit_epoch + spec.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
     )
@@ -362,15 +360,17 @@ def test_voluntary_exit_with_pending_deposit(spec, state):
     signed_voluntary_exit = sign_voluntary_exit(spec, state, voluntary_exit, privkey)
 
     # A pending deposit will not prevent an exit
-    state.pending_deposits = [
-        spec.PendingDeposit(
-            pubkey=validator.pubkey,
-            withdrawal_credentials=validator.withdrawal_credentials,
-            amount=spec.EFFECTIVE_BALANCE_INCREMENT,
-            signature=spec.bls.G2_POINT_AT_INFINITY,
-            slot=spec.GENESIS_SLOT,
-        )
-    ]
+    state.pending_deposits = spec.PendingDeposits(
+        data=[
+            spec.PendingDeposit(
+                pubkey=validator.pubkey,
+                withdrawal_credentials=validator.withdrawal_credentials,
+                amount=spec.EFFECTIVE_BALANCE_INCREMENT,
+                signature=spec.bls.G2_POINT_AT_INFINITY,
+                slot=spec.GENESIS_SLOT,
+            )
+        ]
+    )
 
     yield from run_voluntary_exit_processing(spec, state, signed_voluntary_exit)
 

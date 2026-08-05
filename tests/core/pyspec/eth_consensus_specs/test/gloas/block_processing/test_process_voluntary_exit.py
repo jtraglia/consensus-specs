@@ -19,12 +19,12 @@ def test_voluntary_exit__invalid__builder_index(spec, state):
     """
     builder_index = 0
     pubkey = state.builders[builder_index].pubkey
-    privkey = builder_pubkey_to_privkey[pubkey]
+    privkey = builder_pubkey_to_privkey[bytes(pubkey)]
 
     # Advance slots and finalize so that genesis-epoch builders become active
     epoch = spec.get_current_epoch(state)
-    next_slots(spec, state, spec.SLOTS_PER_EPOCH * 3)
-    state.finalized_checkpoint.epoch = epoch + 1
+    next_slots(spec, state, spec.SLOTS_PER_EPOCH * spec.Slot(3))
+    state.finalized_checkpoint.epoch = epoch + spec.Epoch(1)
     assert spec.is_active_builder(state, builder_index)
 
     validator_index = spec.convert_builder_index_to_validator_index(builder_index)

@@ -28,6 +28,7 @@ from eth_consensus_specs.test.helpers.state import (
     next_epoch,
     next_slot,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def run_process_rewards_and_penalties(spec, state):
@@ -36,10 +37,13 @@ def run_process_rewards_and_penalties(spec, state):
 
 def _get_unslashed_attesting_indices(spec, state, attestations):
     if is_post_altair(spec):
-        return spec.get_unslashed_participating_indices(
-            state, spec.TIMELY_TARGET_FLAG_INDEX, spec.get_previous_epoch(state)
-        )
-    return spec.get_unslashed_attesting_indices(state, attestations)
+        return {
+            int(i)
+            for i in spec.get_unslashed_participating_indices(
+                state, spec.TIMELY_TARGET_FLAG_INDEX, spec.get_previous_epoch(state)
+            )
+        }
+    return {int(i) for i in spec.get_unslashed_attesting_indices(state, attestations)}
 
 
 def validate_resulting_balances(spec, pre_state, post_state, attestations):
@@ -50,7 +54,9 @@ def validate_resulting_balances(spec, pre_state, post_state, attestations):
         if not spec.is_active_validator(pre_state.validators[index], current_epoch):
             assert post_state.balances[index] == pre_state.balances[index]
         elif not is_post_altair(spec):
-            proposer_indices = [a.proposer_index for a in post_state.previous_epoch_attestations]
+            proposer_indices = [
+                int(a.proposer_index) for a in post_state.previous_epoch_attestations
+            ]
             if spec.is_in_inactivity_leak(post_state):
                 # Proposers can still make money during a leak before LIGHTCLIENT_PATCH
                 if index in proposer_indices and index in attesting_indices:
@@ -79,7 +85,7 @@ def validate_resulting_balances(spec, pre_state, post_state, attestations):
 @with_all_phases
 @spec_state_test
 def test_genesis_epoch_no_attestations_no_penalties(spec, state):
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     assert spec.compute_epoch_at_slot(state.slot) == spec.GENESIS_EPOCH
 
@@ -95,11 +101,11 @@ def test_genesis_epoch_full_attestations_no_rewards(spec, state):
     attestations = []
     for slot in range(spec.SLOTS_PER_EPOCH - spec.Slot(1)):
         # create an attestation for each slot
-        if slot < spec.SLOTS_PER_EPOCH:
+        if slot < int(spec.SLOTS_PER_EPOCH):
             attestation = get_valid_attestation(spec, state, signed=True)
             attestations.append(attestation)
         # fill each created slot in state after inclusion delay
-        if slot >= spec.MIN_ATTESTATION_INCLUSION_DELAY:
+        if slot >= int(spec.MIN_ATTESTATION_INCLUSION_DELAY):
             include_att = attestations[slot - int(spec.MIN_ATTESTATION_INCLUSION_DELAY)]
             add_attestations_to_state(spec, state, [include_att], state.slot)
         next_slot(spec, state)
@@ -107,7 +113,7 @@ def test_genesis_epoch_full_attestations_no_rewards(spec, state):
     # ensure has not cross the epoch boundary
     assert spec.compute_epoch_at_slot(state.slot) == spec.GENESIS_EPOCH
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_process_rewards_and_penalties(spec, state)
 
@@ -147,7 +153,7 @@ def test_full_attestations_random_incorrect_fields(spec, state):
 def test_full_attestations_misc_balances(spec, state):
     attestations = prepare_state_with_attestations(spec, state)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_process_rewards_and_penalties(spec, state)
 
@@ -184,7 +190,7 @@ def test_full_attestations_default_balances_except_a_validator_with_one_gwei(spe
 def test_no_attestations_all_penalties(spec, state):
     # Move to next epoch to ensure rewards/penalties are processed
     next_epoch(spec, state)
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     assert spec.compute_epoch_at_slot(state.slot) == spec.GENESIS_EPOCH + spec.Epoch(1)
 
@@ -204,7 +210,7 @@ def run_with_participation(spec, state, participation_fn):
     attestations = prepare_state_with_attestations(
         spec, state, participation_fn=participation_tracker
     )
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_process_rewards_and_penalties(spec, state)
 
@@ -312,8 +318,8 @@ def test_duplicate_attestation(spec, state):
 
     assert len(participants) > 0
 
-    single_state = state.copy()
-    dup_state = state.copy()
+    single_state = copy(state)
+    dup_state = copy(state)
 
     inclusion_slot = state.slot + spec.MIN_ATTESTATION_INCLUSION_DELAY
     add_attestations_to_state(spec, single_state, [attestation], inclusion_slot)
@@ -343,7 +349,7 @@ def test_duplicate_participants_different_attestation_1(spec, state):
     Note: although these are slashable, they can validly be included
     """
     correct_attestation = get_valid_attestation(spec, state, signed=True)
-    incorrect_attestation = correct_attestation.copy()
+    incorrect_attestation = copy(correct_attestation)
     incorrect_attestation.data.beacon_block_root = b"\x42" * 32
     sign_attestation(spec, state, incorrect_attestation)
 
@@ -352,8 +358,8 @@ def test_duplicate_participants_different_attestation_1(spec, state):
 
     assert len(participants) > 0
 
-    single_correct_state = state.copy()
-    dup_state = state.copy()
+    single_correct_state = copy(state)
+    dup_state = copy(state)
 
     inclusion_slot = state.slot + spec.MIN_ATTESTATION_INCLUSION_DELAY
     add_attestations_to_state(spec, single_correct_state, [correct_attestation], inclusion_slot)
@@ -385,7 +391,7 @@ def test_duplicate_participants_different_attestation_2(spec, state):
     Note: although these are slashable, they can validly be included
     """
     correct_attestation = get_valid_attestation(spec, state, signed=True)
-    incorrect_attestation = correct_attestation.copy()
+    incorrect_attestation = copy(correct_attestation)
     incorrect_attestation.data.beacon_block_root = b"\x42" * 32
     sign_attestation(spec, state, incorrect_attestation)
 
@@ -394,8 +400,8 @@ def test_duplicate_participants_different_attestation_2(spec, state):
 
     assert len(participants) > 0
 
-    single_correct_state = state.copy()
-    dup_state = state.copy()
+    single_correct_state = copy(state)
+    dup_state = copy(state)
 
     inclusion_slot = state.slot + spec.MIN_ATTESTATION_INCLUSION_DELAY
     add_attestations_to_state(spec, single_correct_state, [correct_attestation], inclusion_slot)
@@ -428,7 +434,7 @@ def test_duplicate_participants_different_attestation_3(spec, state):
     Note: although these are slashable, they can validly be included
     """
     correct_attestation = get_valid_attestation(spec, state, signed=True)
-    incorrect_attestation = correct_attestation.copy()
+    incorrect_attestation = copy(correct_attestation)
     incorrect_attestation.data.beacon_block_root = b"\x42" * 32
     sign_attestation(spec, state, incorrect_attestation)
 
@@ -437,8 +443,8 @@ def test_duplicate_participants_different_attestation_3(spec, state):
 
     assert len(participants) > 0
 
-    single_correct_state = state.copy()
-    dup_state = state.copy()
+    single_correct_state = copy(state)
+    dup_state = copy(state)
 
     inclusion_slot = state.slot + spec.MIN_ATTESTATION_INCLUSION_DELAY
     add_attestations_to_state(spec, single_correct_state, [correct_attestation], inclusion_slot)
@@ -477,14 +483,13 @@ def test_attestations_some_slashed(spec, state):
     if not is_post_altair(spec):
         assert len(state.previous_epoch_attestations) == len(attestations)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_process_rewards_and_penalties(spec, state)
 
     attesting_indices = _get_unslashed_attesting_indices(spec, state, attestations)
     assert len(attesting_indices) > 0
-    assert (
-        len(attesting_indices_before_slashings) - len(attesting_indices)
-        == spec.config.MIN_PER_EPOCH_CHURN_LIMIT
+    assert len(attesting_indices_before_slashings) - len(attesting_indices) == int(
+        spec.config.MIN_PER_EPOCH_CHURN_LIMIT
     )
     validate_resulting_balances(spec, pre_state, state, attestations)

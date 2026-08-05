@@ -4,6 +4,11 @@
 
 - [Introduction](#introduction)
 - [Types](#types)
+  - [New `EpochParticipation`](#new-epochparticipation)
+  - [New `InactivityScores`](#new-inactivityscores)
+  - [New `ParticipationFlags`](#new-participationflags)
+  - [New `SyncCommitteeBits`](#new-synccommitteebits)
+  - [New `SyncCommitteePubkeys`](#new-synccommitteepubkeys)
 - [Constants](#constants)
   - [Participation flag indices](#participation-flag-indices)
   - [Incentivization weights](#incentivization-weights)
@@ -19,11 +24,6 @@
     - [`BeaconBlockBody`](#beaconblockbody)
     - [`BeaconState`](#beaconstate)
   - [New containers](#new-containers)
-    - [Misc dependencies](#misc-dependencies)
-      - [`EpochParticipation`](#epochparticipation)
-      - [`InactivityScores`](#inactivityscores)
-      - [`SyncCommitteeBits`](#synccommitteebits)
-      - [`SyncCommitteePubkeys`](#synccommitteepubkeys)
     - [`SyncAggregate`](#syncaggregate)
     - [`SyncCommittee`](#synccommittee)
 - [Helpers](#helpers)
@@ -68,19 +68,69 @@ Altair is the first beacon-chain upgrade. Its main features are:
 
 ## Types
 
-| Name                 | SSZ equivalent | Description                                                |
-| -------------------- | -------------- | ---------------------------------------------------------- |
-| `ParticipationFlags` | `Uint8`        | A succinct representation of 8 boolean participation flags |
+### New `EpochParticipation`
+
+```python
+class EpochParticipation(List[ParticipationFlags]):
+    """
+    The participation flags of each validator for an epoch.
+    """
+
+    LIMIT = VALIDATOR_REGISTRY_LIMIT
+```
+
+### New `InactivityScores`
+
+```python
+class InactivityScores(List[Uint64]):
+    """
+    Each validator's inactivity score, tracking missed timely target votes.
+    """
+
+    LIMIT = VALIDATOR_REGISTRY_LIMIT
+```
+
+### New `ParticipationFlags`
+
+```python
+class ParticipationFlags(Uint8):
+    """
+    A validator's participation flags for an epoch, one bit per timely duty.
+    """
+```
+
+### New `SyncCommitteeBits`
+
+```python
+class SyncCommitteeBits(BitVector):
+    """
+    The participation bits of the sync committee, one bit per member in
+    committee order.
+    """
+
+    LENGTH = SYNC_COMMITTEE_SIZE
+```
+
+### New `SyncCommitteePubkeys`
+
+```python
+class SyncCommitteePubkeys(Vector[BLSPubkey]):
+    """
+    The public keys of the sync committee members, in committee order.
+    """
+
+    LENGTH = SYNC_COMMITTEE_SIZE
+```
 
 ## Constants
 
 ### Participation flag indices
 
-| Name                       | Value |
-| -------------------------- | ----- |
-| `TIMELY_SOURCE_FLAG_INDEX` | `0`   |
-| `TIMELY_TARGET_FLAG_INDEX` | `1`   |
-| `TIMELY_HEAD_FLAG_INDEX`   | `2`   |
+| Name                       | Value       |
+| -------------------------- | ----------- |
+| `TIMELY_SOURCE_FLAG_INDEX` | `Uint64(0)` |
+| `TIMELY_TARGET_FLAG_INDEX` | `Uint64(1)` |
+| `TIMELY_HEAD_FLAG_INDEX`   | `Uint64(2)` |
 
 ### Incentivization weights
 
@@ -124,10 +174,10 @@ to their final, maximum security values.
 
 ### Sync committee
 
-| Name                               | Value                  | Unit       |
-| ---------------------------------- | ---------------------- | ---------- |
-| `SYNC_COMMITTEE_SIZE`              | `Uint64(2**9)` (= 512) | validators |
-| `EPOCHS_PER_SYNC_COMMITTEE_PERIOD` | `Epoch(2**8)` (= 256)  | epochs     |
+| Name                               | Value                  |
+| ---------------------------------- | ---------------------- |
+| `SYNC_COMMITTEE_SIZE`              | `Uint64(2**9)` (= 512) |
+| `EPOCHS_PER_SYNC_COMMITTEE_PERIOD` | `Epoch(2**8)` (= 256)  |
 
 ## Configuration
 
@@ -194,36 +244,6 @@ class BeaconState(Container):
 ```
 
 ### New containers
-
-#### Misc dependencies
-
-##### `EpochParticipation`
-
-```python
-class EpochParticipation(List[ParticipationFlags]):
-    LIMIT = VALIDATOR_REGISTRY_LIMIT
-```
-
-##### `InactivityScores`
-
-```python
-class InactivityScores(List[Uint64]):
-    LIMIT = VALIDATOR_REGISTRY_LIMIT
-```
-
-##### `SyncCommitteeBits`
-
-```python
-class SyncCommitteeBits(Bitvector):
-    LENGTH = SYNC_COMMITTEE_SIZE
-```
-
-##### `SyncCommitteePubkeys`
-
-```python
-class SyncCommitteePubkeys(Vector[BLSPubkey]):
-    LENGTH = SYNC_COMMITTEE_SIZE
-```
 
 #### `SyncAggregate`
 
@@ -308,7 +328,7 @@ def get_next_sync_committee_indices(state: BeaconState) -> Sequence[ValidatorInd
     active_validator_count = Uint64(len(active_validator_indices))
     seed = get_seed(state, epoch, DOMAIN_SYNC_COMMITTEE)
     i = Uint64(0)
-    sync_committee_indices: List[ValidatorIndex] = []
+    sync_committee_indices: list[ValidatorIndex] = []
     while len(sync_committee_indices) < SYNC_COMMITTEE_SIZE:
         shuffled_index = compute_shuffled_index(
             i % active_validator_count, active_validator_count, seed
@@ -334,7 +354,7 @@ def get_next_sync_committee(state: BeaconState) -> SyncCommittee:
     Return the next sync committee, with possible pubkey duplicates.
     """
     indices = get_next_sync_committee_indices(state)
-    pubkeys = [state.validators[index].pubkey for index in indices]
+    pubkeys = SyncCommitteePubkeys(data=[state.validators[index].pubkey for index in indices])
     aggregate_pubkey = eth_aggregate_pubkeys(pubkeys)
     return SyncCommittee(pubkeys=pubkeys, aggregate_pubkey=aggregate_pubkey)
 ```
@@ -812,9 +832,9 @@ def process_slashings(state: BeaconState) -> None:
 ```python
 def process_participation_flag_updates(state: BeaconState) -> None:
     state.previous_epoch_participation = state.current_epoch_participation
-    state.current_epoch_participation = [
+    state.current_epoch_participation = EpochParticipation(data=[
         ParticipationFlags(0b0000_0000) for _ in range(len(state.validators))
-    ]
+    ])
 ```
 
 #### Sync committee updates

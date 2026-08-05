@@ -23,8 +23,8 @@ from eth_consensus_specs.test.helpers.withdrawals import (
 @with_electra_and_later
 @spec_state_test
 def test_success_mixed_fully_and_partial_withdrawable_compounding(spec, state):
-    num_full_withdrawals = int(spec.MAX_WITHDRAWALS_PER_PAYLOAD) // 2
-    num_partial_withdrawals = int(spec.MAX_WITHDRAWALS_PER_PAYLOAD) - num_full_withdrawals
+    num_full_withdrawals = spec.MAX_WITHDRAWALS_PER_PAYLOAD // spec.Uint64(2)
+    num_partial_withdrawals = spec.MAX_WITHDRAWALS_PER_PAYLOAD - num_full_withdrawals
     fully_withdrawable_indices, partial_withdrawals_indices = prepare_expected_withdrawals(
         spec,
         state,
@@ -132,7 +132,7 @@ def test_pending_withdrawals_one_skipped_one_effective(spec, state):
     if is_post_gloas(spec):
         state.latest_block_hash = state.latest_execution_payload_bid.block_hash
 
-    assert state.pending_partial_withdrawals == [pending_withdrawal_0, pending_withdrawal_1]
+    assert list(state.pending_partial_withdrawals) == [pending_withdrawal_0, pending_withdrawal_1]
     yield from run_withdrawals_processing(
         spec,
         state,
@@ -141,7 +141,7 @@ def test_pending_withdrawals_one_skipped_one_effective(spec, state):
         pending_withdrawal_requests=[pending_withdrawal_1],
     )
 
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
 
 
 @with_electra_and_later
@@ -164,15 +164,15 @@ def test_pending_withdrawals_next_epoch(spec, state):
         spec, state, execution_payload, num_expected_withdrawals=0
     )
 
-    assert state.pending_partial_withdrawals == [pending_withdrawal]
+    assert list(state.pending_partial_withdrawals) == [pending_withdrawal]
 
 
 @with_electra_and_later
 @spec_state_test
 def test_pending_withdrawals_at_max(spec, state):
     pending_withdrawal_requests = []
-    # Create spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP + 1 partial withdrawals
-    for i in range(int(spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP) + 1):
+    # Create spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP + spec.Uint64(1) partial withdrawals
+    for i in range(spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP + spec.Uint64(1)):
         pending_withdrawal = prepare_pending_withdrawal(spec, state, i)
         pending_withdrawal_requests.append(pending_withdrawal)
 
@@ -198,9 +198,9 @@ def test_pending_withdrawals_at_max(spec, state):
     )
 
     withdrawals_exceeding_max = pending_withdrawal_requests[
-        spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP :
+        int(spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP) :
     ]
-    assert state.pending_partial_withdrawals == withdrawals_exceeding_max
+    assert list(state.pending_partial_withdrawals) == list(withdrawals_exceeding_max)
 
 
 @with_electra_and_later
@@ -221,14 +221,14 @@ def test_pending_withdrawals_exiting_validator(spec, state):
         spec, state, execution_payload, num_expected_withdrawals=0
     )
 
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
 
 
 @with_electra_and_later
 @spec_state_test
 def test_full_pending_withdrawals_but_first_skipped_exiting_validator(spec, state):
     # Fill the pending withdrawals, plus one which will be skipped
-    for index in range(int(spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP) + 1):
+    for index in range(spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP + spec.Uint64(1)):
         # Note, this adds the pending withdrawal to the state
         prepare_pending_withdrawal(spec, state, index)
 
@@ -256,7 +256,7 @@ def test_full_pending_withdrawals_but_first_skipped_exiting_validator(spec, stat
     )
 
     # Ensure all pending withdrawals were processed and the first one was skipped
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
 
 
 @with_electra_and_later
@@ -279,14 +279,14 @@ def test_pending_withdrawals_low_effective_balance(spec, state):
         spec, state, execution_payload, num_expected_withdrawals=0
     )
 
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
 
 
 @with_electra_and_later
 @spec_state_test
 def test_full_pending_withdrawals_but_first_skipped_low_effective_balance(spec, state):
     # Fill the pending withdrawals, plus one which will be skipped
-    for index in range(int(spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP) + 1):
+    for index in range(spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP + spec.Uint64(1)):
         # Note, this adds the pending withdrawal to the state
         prepare_pending_withdrawal(spec, state, index)
 
@@ -315,7 +315,7 @@ def test_full_pending_withdrawals_but_first_skipped_low_effective_balance(spec, 
     )
 
     # Ensure all pending withdrawals were processed and the first one was skipped
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
 
 
 @with_electra_and_later
@@ -336,14 +336,14 @@ def test_pending_withdrawals_no_excess_balance(spec, state):
         spec, state, execution_payload, num_expected_withdrawals=0
     )
 
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
 
 
 @with_electra_and_later
 @spec_state_test
 def test_full_pending_withdrawals_but_first_skipped_no_excess_balance(spec, state):
     # Fill the pending withdrawals, plus one which will be skipped
-    for index in range(int(spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP) + 1):
+    for index in range(spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP + spec.Uint64(1)):
         # Note, this adds the pending withdrawal to the state
         prepare_pending_withdrawal(spec, state, index)
 
@@ -371,7 +371,7 @@ def test_full_pending_withdrawals_but_first_skipped_no_excess_balance(spec, stat
     )
 
     # Ensure all pending withdrawals were processed and the first one was skipped
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
 
 
 @with_electra_and_later
@@ -416,7 +416,7 @@ def test_pending_withdrawals_with_ineffective_sweep_on_top(spec, state):
         pending_withdrawal_requests=[pending_withdrawal],
     )
 
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
 
 
 @with_electra_and_later
@@ -480,7 +480,7 @@ def test_pending_withdrawals_with_ineffective_sweep_on_top_2(spec, state):
         pending_withdrawal_requests=[pending_withdrawal_0, pending_withdrawal_1],
     )
 
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
 
 
 @with_electra_and_later
@@ -538,7 +538,7 @@ def test_pending_withdrawals_with_effective_sweep_on_top(spec, state):
         pending_withdrawal_requests=[pending_withdrawal_0, pending_withdrawal_1],
     )
 
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
 
 
 @with_electra_and_later
@@ -589,17 +589,19 @@ def test_pending_withdrawals_with_sweep_different_validator(spec, state):
         pending_withdrawal_requests=[pending_withdrawal_0],
     )
 
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
 
 
 @with_electra_and_later
 @spec_state_test
 def test_pending_withdrawals_mixed_with_sweep_and_fully_withdrawable(spec, state):
-    num_full_withdrawals = int(spec.MAX_WITHDRAWALS_PER_PAYLOAD) // 4
-    num_partial_withdrawals = int(spec.MAX_WITHDRAWALS_PER_PAYLOAD) // 4
-    num_full_withdrawals_comp = int(spec.MAX_WITHDRAWALS_PER_PAYLOAD) // 4
-    num_partial_withdrawals_comp = int(spec.MAX_WITHDRAWALS_PER_PAYLOAD) // 4
-    num_pending_withdrawal_requests = int(spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP) // 2
+    num_full_withdrawals = spec.MAX_WITHDRAWALS_PER_PAYLOAD // spec.Uint64(4)
+    num_partial_withdrawals = spec.MAX_WITHDRAWALS_PER_PAYLOAD // spec.Uint64(4)
+    num_full_withdrawals_comp = spec.MAX_WITHDRAWALS_PER_PAYLOAD // spec.Uint64(4)
+    num_partial_withdrawals_comp = spec.MAX_WITHDRAWALS_PER_PAYLOAD // spec.Uint64(4)
+    num_pending_withdrawal_requests = (
+        spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP // spec.Uint64(2)
+    )
 
     fully_withdrawable_indices, partial_withdrawals_indices = prepare_expected_withdrawals(
         spec,
@@ -613,7 +615,7 @@ def test_pending_withdrawals_mixed_with_sweep_and_fully_withdrawable(spec, state
 
     pending_withdrawal_requests = []
     for index in range(len(state.validators)):
-        if len(pending_withdrawal_requests) >= num_pending_withdrawal_requests:
+        if len(pending_withdrawal_requests) >= int(num_pending_withdrawal_requests):
             break
         if index in (fully_withdrawable_indices + partial_withdrawals_indices):
             continue
@@ -638,17 +640,19 @@ def test_pending_withdrawals_mixed_with_sweep_and_fully_withdrawable(spec, state
         pending_withdrawal_requests=pending_withdrawal_requests,
     )
 
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
 
 
 @with_electra_and_later
 @spec_state_test
 def test_pending_withdrawals_at_max_mixed_with_sweep_and_fully_withdrawable(spec, state):
-    num_full_withdrawals = int(spec.MAX_WITHDRAWALS_PER_PAYLOAD) // 4
-    num_partial_withdrawals = int(spec.MAX_WITHDRAWALS_PER_PAYLOAD) // 4
-    num_full_withdrawals_comp = int(spec.MAX_WITHDRAWALS_PER_PAYLOAD) // 4
-    num_partial_withdrawals_comp = int(spec.MAX_WITHDRAWALS_PER_PAYLOAD) // 4
-    num_pending_withdrawal_requests = int(spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP) + 1
+    num_full_withdrawals = spec.MAX_WITHDRAWALS_PER_PAYLOAD // spec.Uint64(4)
+    num_partial_withdrawals = spec.MAX_WITHDRAWALS_PER_PAYLOAD // spec.Uint64(4)
+    num_full_withdrawals_comp = spec.MAX_WITHDRAWALS_PER_PAYLOAD // spec.Uint64(4)
+    num_partial_withdrawals_comp = spec.MAX_WITHDRAWALS_PER_PAYLOAD // spec.Uint64(4)
+    num_pending_withdrawal_requests = spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP + spec.Uint64(
+        1
+    )
 
     fully_withdrawable_indices, partial_withdrawals_indices = prepare_expected_withdrawals(
         spec,
@@ -662,7 +666,7 @@ def test_pending_withdrawals_at_max_mixed_with_sweep_and_fully_withdrawable(spec
 
     pending_withdrawal_requests = []
     for index in range(len(state.validators)):
-        if len(pending_withdrawal_requests) >= num_pending_withdrawal_requests:
+        if len(pending_withdrawal_requests) >= int(num_pending_withdrawal_requests):
             break
         if index in (fully_withdrawable_indices + partial_withdrawals_indices):
             continue
@@ -690,9 +694,9 @@ def test_pending_withdrawals_at_max_mixed_with_sweep_and_fully_withdrawable(spec
     )
 
     withdrawals_exceeding_max = pending_withdrawal_requests[
-        spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP :
+        int(spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP) :
     ]
-    assert state.pending_partial_withdrawals == withdrawals_exceeding_max
+    assert list(state.pending_partial_withdrawals) == list(withdrawals_exceeding_max)
 
 
 @with_electra_and_later
@@ -719,7 +723,7 @@ def test_partially_withdrawable_validator_compounding_max_plus_one(spec, state):
         fully_withdrawable_indices=[],
         partial_withdrawals_indices=[validator_index],
     )
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
 
 
 @with_electra_and_later
@@ -744,7 +748,7 @@ def test_partially_withdrawable_validator_compounding_exact_max(spec, state):
         fully_withdrawable_indices=[],
         partial_withdrawals_indices=[],
     )
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
 
 
 @with_electra_and_later
@@ -775,7 +779,7 @@ def test_partially_withdrawable_validator_compounding_max_minus_one(spec, state)
         fully_withdrawable_indices=[],
         partial_withdrawals_indices=[],
     )
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
 
 
 @with_electra_and_later
@@ -806,7 +810,7 @@ def test_partially_withdrawable_validator_compounding_min_plus_one(spec, state):
         fully_withdrawable_indices=[],
         partial_withdrawals_indices=[],
     )
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
 
 
 @with_electra_and_later
@@ -837,7 +841,7 @@ def test_partially_withdrawable_validator_compounding_exact_min(spec, state):
         fully_withdrawable_indices=[],
         partial_withdrawals_indices=[],
     )
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
 
 
 @with_electra_and_later
@@ -868,7 +872,7 @@ def test_partially_withdrawable_validator_compounding_min_minus_one(spec, state)
         fully_withdrawable_indices=[],
         partial_withdrawals_indices=[],
     )
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
 
 
 @with_electra_and_later
@@ -891,7 +895,9 @@ def test_pending_withdrawals_two_partial_withdrawals_same_validator_1(spec, stat
         amount=spec.Gwei(1_000_000_000),
         withdrawable_epoch=spec.get_current_epoch(state),
     )
-    state.pending_partial_withdrawals = [withdrawal, withdrawal]
+    state.pending_partial_withdrawals = spec.PendingPartialWithdrawals(
+        data=[withdrawal, withdrawal]
+    )
 
     # Ensure our two pending withdrawals are there
     assert len(state.pending_partial_withdrawals) == 2
@@ -909,7 +915,7 @@ def test_pending_withdrawals_two_partial_withdrawals_same_validator_1(spec, stat
     )
 
     # Ensure our two pending withdrawals were processed
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
     # Ensure the validator's balance is the minimum
     assert state.balances[validator_index] == spec.MIN_ACTIVATION_BALANCE
 
@@ -934,7 +940,9 @@ def test_pending_withdrawals_two_partial_withdrawals_same_validator_2(spec, stat
         amount=spec.Gwei(1008_000_000_000),
         withdrawable_epoch=spec.get_current_epoch(state),
     )
-    state.pending_partial_withdrawals = [withdrawal, withdrawal]
+    state.pending_partial_withdrawals = spec.PendingPartialWithdrawals(
+        data=[withdrawal, withdrawal]
+    )
 
     # Ensure our two pending withdrawals are there
     assert len(state.pending_partial_withdrawals) == 2
@@ -952,6 +960,6 @@ def test_pending_withdrawals_two_partial_withdrawals_same_validator_2(spec, stat
     )
 
     # Ensure our two pending withdrawals were processed
-    assert state.pending_partial_withdrawals == []
+    assert list(state.pending_partial_withdrawals) == []
     # Ensure the validator's balance is the minimum
     assert state.balances[validator_index] == spec.MIN_ACTIVATION_BALANCE

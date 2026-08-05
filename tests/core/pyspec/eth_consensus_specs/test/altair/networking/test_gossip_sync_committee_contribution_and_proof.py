@@ -5,9 +5,19 @@ from eth_consensus_specs.test.context import (
     with_presets,
 )
 from eth_consensus_specs.test.helpers.constants import MAINNET
-from eth_consensus_specs.test.helpers.gossip import get_filename, get_seen, run_validate_gossip
+from eth_consensus_specs.test.helpers.fork_choice import (
+    get_genesis_forkchoice_store_and_block,
+)
+from eth_consensus_specs.test.helpers.gossip import (
+    get_filename,
+    get_seen,
+    run_validate_gossip,
+    wrap_genesis_block,
+)
 from eth_consensus_specs.test.helpers.keys import privkeys
+from eth_consensus_specs.test.helpers.state import transition_to
 from eth_consensus_specs.utils import bls
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def get_sync_committee_aggregator(spec, state):
@@ -89,8 +99,8 @@ def create_valid_signed_contribution_and_proof(
     contribution = spec.SyncCommitteeContribution(
         slot=slot,
         beacon_block_root=block_root,
-        subcommittee_index=subcommittee_index,
-        aggregation_bits=aggregation_bits,
+        subcommittee_index=spec.Uint64(subcommittee_index),
+        aggregation_bits=spec.SyncSubcommitteeBits(data=aggregation_bits),
         signature=aggregate_signature,
     )
 
@@ -126,6 +136,10 @@ def test_gossip_sync_committee_contribution_and_proof__valid(spec, state):
     """Test that a valid contribution passes gossip validation."""
     yield "topic", "meta", "sync_committee_contribution_and_proof"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     seen = get_seen(spec)
     aggregator_index, subcommittee_index, subcommittee_pubkeys = get_sync_committee_aggregator(
@@ -142,13 +156,14 @@ def test_gossip_sync_committee_contribution_and_proof__valid(spec, state):
 
     yield get_filename(signed_cap), signed_cap
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         signed_contribution_and_proof=signed_cap,
         current_time_ms=current_time_ms + spec.Uint64(500),
@@ -171,11 +186,16 @@ def test_gossip_sync_committee_contribution_and_proof__valid_at_period_boundary(
     exercising the next_sync_committee path in get_sync_subcommittee_pubkeys."""
     yield "topic", "meta", "sync_committee_contribution_and_proof"
 
+    anchor_state = copy(state)
+    yield "state", anchor_state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
+
     # Advance to the last slot of the first sync committee period
     period_length = spec.Slot(spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
-    state.slot = period_length - spec.Slot(1)
-
-    yield "state", state
+    transition_to(spec, state, period_length - spec.Slot(1))
 
     seen = get_seen(spec)
     aggregator_index, subcommittee_index, subcommittee_pubkeys = get_sync_committee_aggregator(
@@ -192,13 +212,14 @@ def test_gossip_sync_committee_contribution_and_proof__valid_at_period_boundary(
 
     yield get_filename(signed_cap), signed_cap
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         signed_contribution_and_proof=signed_cap,
         current_time_ms=current_time_ms + spec.Uint64(500),
@@ -219,6 +240,10 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_future_slot(spec, 
     """Test that a contribution from a future slot is ignored."""
     yield "topic", "meta", "sync_committee_contribution_and_proof"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     seen = get_seen(spec)
     aggregator_index, subcommittee_index, subcommittee_pubkeys = get_sync_committee_aggregator(
@@ -237,13 +262,14 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_future_slot(spec, 
 
     yield get_filename(signed_cap), signed_cap
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         signed_contribution_and_proof=signed_cap,
         current_time_ms=current_time_ms,
@@ -271,15 +297,20 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_past_slot(spec, st
     """Test that a contribution from a past slot is ignored."""
     yield "topic", "meta", "sync_committee_contribution_and_proof"
 
+    anchor_state = copy(state)
+    yield "state", anchor_state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
+
     seen = get_seen(spec)
     aggregator_index, subcommittee_index, subcommittee_pubkeys = get_sync_committee_aggregator(
         spec, state
     )
 
     # Advance state so there's a past slot (gap >= 2 needed to exceed MAXIMUM_GOSSIP_CLOCK_DISPARITY)
-    state.slot += spec.Slot(3)
-
-    yield "state", state
+    transition_to(spec, state, state.slot + spec.Slot(3))
 
     past_slot = state.slot - spec.Slot(2)
     signed_cap = create_valid_signed_contribution_and_proof(
@@ -293,13 +324,14 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_past_slot(spec, st
 
     yield get_filename(signed_cap), signed_cap
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         signed_contribution_and_proof=signed_cap,
         current_time_ms=current_time_ms,
@@ -329,6 +361,10 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_subcommitt
     """Test that a contribution with subcommittee index out of range is rejected."""
     yield "topic", "meta", "sync_committee_contribution_and_proof"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     seen = get_seen(spec)
     aggregator_index, subcommittee_index, subcommittee_pubkeys = get_sync_committee_aggregator(
@@ -348,13 +384,14 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_subcommitt
 
     yield get_filename(signed_cap), signed_cap
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         signed_contribution_and_proof=signed_cap,
         current_time_ms=current_time_ms + spec.Uint64(500),
@@ -382,6 +419,10 @@ def test_gossip_sync_committee_contribution_and_proof__reject_no_participants(sp
     """Test that a contribution with no participants is rejected."""
     yield "topic", "meta", "sync_committee_contribution_and_proof"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     seen = get_seen(spec)
     aggregator_index, subcommittee_index, subcommittee_pubkeys = get_sync_committee_aggregator(
@@ -398,17 +439,20 @@ def test_gossip_sync_committee_contribution_and_proof__reject_no_participants(sp
 
     # Clear all aggregation bits
     subcommittee_size = spec.SYNC_COMMITTEE_SIZE // spec.SYNC_COMMITTEE_SUBNET_COUNT
-    signed_cap.message.contribution.aggregation_bits = [False] * int(subcommittee_size)
+    signed_cap.message.contribution.aggregation_bits = spec.SyncSubcommitteeBits(
+        data=[False] * int(subcommittee_size)
+    )
 
     yield get_filename(signed_cap), signed_cap
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         signed_contribution_and_proof=signed_cap,
         current_time_ms=current_time_ms + spec.Uint64(500),
@@ -437,6 +481,10 @@ def test_gossip_sync_committee_contribution_and_proof__reject_not_aggregator(spe
     """Test that a contribution from a non-aggregator is rejected."""
     yield "topic", "meta", "sync_committee_contribution_and_proof"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     seen = get_seen(spec)
 
@@ -473,13 +521,14 @@ def test_gossip_sync_committee_contribution_and_proof__reject_not_aggregator(spe
 
     yield get_filename(signed_cap), signed_cap
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         signed_contribution_and_proof=signed_cap,
         current_time_ms=current_time_ms + spec.Uint64(500),
@@ -509,6 +558,10 @@ def test_gossip_sync_committee_contribution_and_proof__reject_aggregator_not_in_
     """Test that a contribution where the aggregator is not in the subcommittee is rejected."""
     yield "topic", "meta", "sync_committee_contribution_and_proof"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     seen = get_seen(spec)
     aggregator_index, subcommittee_index, subcommittee_pubkeys = get_sync_committee_aggregator(
@@ -531,13 +584,14 @@ def test_gossip_sync_committee_contribution_and_proof__reject_aggregator_not_in_
 
     yield get_filename(signed_cap), signed_cap
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         signed_contribution_and_proof=signed_cap,
         current_time_ms=current_time_ms + spec.Uint64(500),
@@ -567,6 +621,10 @@ def test_gossip_sync_committee_contribution_and_proof__reject_aggregator_index_o
     """Test that a contribution with aggregator index out of range is rejected."""
     yield "topic", "meta", "sync_committee_contribution_and_proof"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     seen = get_seen(spec)
     aggregator_index, subcommittee_index, subcommittee_pubkeys = get_sync_committee_aggregator(
@@ -585,13 +643,14 @@ def test_gossip_sync_committee_contribution_and_proof__reject_aggregator_index_o
 
     yield get_filename(signed_cap), signed_cap
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         signed_contribution_and_proof=signed_cap,
         current_time_ms=current_time_ms + spec.Uint64(500),
@@ -621,6 +680,10 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_superset_contribut
     Sends superset first, then subset — the subset is ignored."""
     yield "topic", "meta", "sync_committee_contribution_and_proof"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     messages = []
     seen = get_seen(spec)
@@ -661,8 +724,8 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_superset_contribut
     superset_contribution = spec.SyncCommitteeContribution(
         slot=state.slot,
         beacon_block_root=block_root,
-        subcommittee_index=subcommittee_index,
-        aggregation_bits=superset_bits,
+        subcommittee_index=spec.Uint64(subcommittee_index),
+        aggregation_bits=spec.SyncSubcommitteeBits(data=superset_bits),
         signature=bls.Aggregate([sig1, sig2]),
     )
     selection_proof = spec.get_sync_committee_selection_proof(
@@ -686,7 +749,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_superset_contribut
 
     yield get_filename(signed_superset), signed_superset
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
@@ -694,6 +757,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_superset_contribut
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         signed_contribution_and_proof=signed_superset,
         current_time_ms=current_time_ms + spec.Uint64(500),
@@ -719,6 +783,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_superset_contribut
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         signed_contribution_and_proof=signed_subset,
         current_time_ms=current_time_ms + spec.Uint64(600),
@@ -745,6 +810,10 @@ def test_gossip_sync_committee_contribution_and_proof__valid_non_superset_contri
     Sends subset first, then superset — exercises the is_non_strict_superset=False path."""
     yield "topic", "meta", "sync_committee_contribution_and_proof"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     messages = []
     seen = get_seen(spec)
@@ -772,7 +841,7 @@ def test_gossip_sync_committee_contribution_and_proof__valid_non_superset_contri
             second_validator_index = vi
             break
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
@@ -791,6 +860,7 @@ def test_gossip_sync_committee_contribution_and_proof__valid_non_superset_contri
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         signed_contribution_and_proof=signed_subset,
         current_time_ms=current_time_ms + spec.Uint64(500),
@@ -819,8 +889,8 @@ def test_gossip_sync_committee_contribution_and_proof__valid_non_superset_contri
     superset_contribution = spec.SyncCommitteeContribution(
         slot=state.slot,
         beacon_block_root=block_root,
-        subcommittee_index=subcommittee_index,
-        aggregation_bits=superset_bits,
+        subcommittee_index=spec.Uint64(subcommittee_index),
+        aggregation_bits=spec.SyncSubcommitteeBits(data=superset_bits),
         signature=bls.Aggregate([sig1, sig2]),
     )
     superset_cap = spec.ContributionAndProof(
@@ -843,6 +913,7 @@ def test_gossip_sync_committee_contribution_and_proof__valid_non_superset_contri
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         signed_contribution_and_proof=signed_superset,
         current_time_ms=current_time_ms + spec.Uint64(600),
@@ -864,6 +935,10 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_duplicate_aggregat
     even with a different beacon_block_root (bypassing the superset check)."""
     yield "topic", "meta", "sync_committee_contribution_and_proof"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     messages = []
     seen = get_seen(spec)
@@ -882,7 +957,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_duplicate_aggregat
 
     yield get_filename(signed_cap1), signed_cap1
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
@@ -890,6 +965,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_duplicate_aggregat
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         signed_contribution_and_proof=signed_cap1,
         current_time_ms=current_time_ms + spec.Uint64(500),
@@ -915,6 +991,7 @@ def test_gossip_sync_committee_contribution_and_proof__ignore_duplicate_aggregat
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         signed_contribution_and_proof=signed_cap2,
         current_time_ms=current_time_ms + spec.Uint64(600),
@@ -940,6 +1017,10 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_selection_
     """Test that a contribution with invalid selection proof is rejected."""
     yield "topic", "meta", "sync_committee_contribution_and_proof"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     seen = get_seen(spec)
     aggregator_index, subcommittee_index, subcommittee_pubkeys = get_sync_committee_aggregator(
@@ -966,13 +1047,14 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_selection_
 
     yield get_filename(signed_cap), signed_cap
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         signed_contribution_and_proof=signed_cap,
         current_time_ms=current_time_ms + spec.Uint64(500),
@@ -1003,6 +1085,10 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_aggregator
     """Test that a contribution with invalid aggregator signature is rejected."""
     yield "topic", "meta", "sync_committee_contribution_and_proof"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     seen = get_seen(spec)
     aggregator_index, subcommittee_index, subcommittee_pubkeys = get_sync_committee_aggregator(
@@ -1018,7 +1104,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_aggregator
     )
 
     # Replace the outer signature with one signed by a different key
-    wrong_key = privkeys[(aggregator_index + 1) % len(privkeys)]
+    wrong_key = privkeys[(int(aggregator_index) + 1) % len(privkeys)]
     epoch = spec.compute_epoch_at_slot(state.slot)
     domain = spec.get_domain(state, spec.DOMAIN_CONTRIBUTION_AND_PROOF, epoch)
     signing_root = spec.compute_signing_root(signed_cap.message, domain)
@@ -1026,13 +1112,14 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_aggregator
 
     yield get_filename(signed_cap), signed_cap
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         signed_contribution_and_proof=signed_cap,
         current_time_ms=current_time_ms + spec.Uint64(500),
@@ -1063,6 +1150,10 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_aggregate_
     """Test that a contribution with invalid aggregate signature is rejected."""
     yield "topic", "meta", "sync_committee_contribution_and_proof"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     seen = get_seen(spec)
     aggregator_index, subcommittee_index, subcommittee_pubkeys = get_sync_committee_aggregator(
@@ -1078,7 +1169,7 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_aggregate_
     )
 
     # Replace the aggregate signature with one signed by a different key
-    wrong_key = privkeys[(aggregator_index + 1) % len(privkeys)]
+    wrong_key = privkeys[(int(aggregator_index) + 1) % len(privkeys)]
     epoch = spec.compute_epoch_at_slot(state.slot)
     domain = spec.get_domain(state, spec.DOMAIN_SYNC_COMMITTEE, epoch)
     signing_root = spec.compute_signing_root(
@@ -1093,13 +1184,14 @@ def test_gossip_sync_committee_contribution_and_proof__reject_invalid_aggregate_
 
     yield get_filename(signed_cap), signed_cap
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         signed_contribution_and_proof=signed_cap,
         current_time_ms=current_time_ms + spec.Uint64(500),

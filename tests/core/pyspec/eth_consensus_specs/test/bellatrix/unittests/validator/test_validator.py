@@ -128,9 +128,9 @@ def test_prepare_execution_payload(spec, state):
                 spec.Slot(_mock_terminal_block_hash_activation_epoch) * spec.SLOTS_PER_EPOCH
             )
         else:
-            state.slot = (
-                spec.Slot(_mock_terminal_block_hash_activation_epoch) - spec.Slot(1)
-            ) * spec.SLOTS_PER_EPOCH
+            state.slot = (_mock_terminal_block_hash_activation_epoch - 1) * int(
+                spec.SLOTS_PER_EPOCH
+            )
 
         # Logic from `with_config_overrides`
         old_config = spec.config

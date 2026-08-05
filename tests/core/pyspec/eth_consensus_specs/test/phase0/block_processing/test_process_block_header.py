@@ -13,7 +13,7 @@ from eth_consensus_specs.test.helpers.execution_payload import (
 )
 from eth_consensus_specs.test.helpers.forks import is_post_bellatrix, is_post_gloas
 from eth_consensus_specs.test.helpers.state import next_slot
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def prepare_state_for_header_processing(spec, state):
@@ -97,7 +97,7 @@ def test_invalid_multiple_blocks_single_slot(spec, state):
 
     assert state.latest_block_header.slot == state.slot
 
-    child_block = block.copy()
+    child_block = copy(block)
     child_block.parent_root = hash_tree_root(block)
     if is_post_gloas(spec):
         payload = build_empty_execution_payload(spec, state)

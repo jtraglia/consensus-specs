@@ -36,6 +36,7 @@ from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
     transition_to,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 DEBUG = False
 
@@ -172,7 +173,10 @@ class FCRTest:
 
     def tick(self, slot):
         assert slot > self.current_slot() or slot == self.spec.GENESIS_SLOT
-        new_time = slot * self.spec.config.SLOT_DURATION_MS // 1000 + self.store.genesis_time
+        new_time = (
+            slot * self.spec.config.SLOT_DURATION_MS // self.spec.Uint64(1000)
+            + self.store.genesis_time
+        )
         self.spec.on_tick(self.store, new_time)
         self.test_steps.append({"tick": int(new_time)})
 
@@ -180,11 +184,12 @@ class FCRTest:
         self.tick(self.current_slot() + 1)
 
         # Discard outdated attestations from the pool
-        if self.current_slot() % self.spec.SLOTS_PER_EPOCH == 0:
+        if self.current_slot() % self.spec.SLOTS_PER_EPOCH == self.spec.Slot(0):
             self.attestation_pool = [
                 a
                 for a in self.attestation_pool
-                if self.spec.compute_epoch_at_slot(a.data.slot) + 1 >= self.current_epoch()
+                if self.spec.compute_epoch_at_slot(a.data.slot) + self.spec.Epoch(1)
+                >= self.current_epoch()
             ]
 
         # Apply recent attestations
@@ -240,7 +245,7 @@ class FCRTest:
         if current_slot == self.spec.GENESIS_SLOT:
             return self.store.finalized_checkpoint.root
 
-        parent_state = self.store.block_states[parent_root].copy()
+        parent_state = copy(self.store.block_states[parent_root])
         assert parent_state.slot < current_slot
 
         # Obtain parent payload or its header
@@ -255,7 +260,7 @@ class FCRTest:
             execution_requests = self.spec.ExecutionRequests()
             if deposit_requests is not None:
                 if not is_post_gloas(self.spec):
-                    assert len(deposit_requests) <= self.spec.MAX_DEPOSIT_REQUESTS_PER_PAYLOAD
+                    assert len(deposit_requests) <= int(self.spec.MAX_DEPOSIT_REQUESTS_PER_PAYLOAD)
                 for d in deposit_requests:
                     execution_requests.deposits.append(d)
 
@@ -283,9 +288,9 @@ class FCRTest:
                     continue
 
                 if is_post_electra(self.spec):
-                    if self.spec.compute_epoch_at_slot(
-                        att.data.slot
-                    ) + 1 < self.spec.compute_epoch_at_slot(block.slot):
+                    if self.spec.compute_epoch_at_slot(att.data.slot) + self.spec.Epoch(
+                        1
+                    ) < self.spec.compute_epoch_at_slot(block.slot):
                         continue
                 elif att.data.slot + self.spec.SLOTS_PER_EPOCH < block.slot:
                     continue
@@ -305,7 +310,7 @@ class FCRTest:
 
         # Beacon operations
         if exits is not None:
-            assert len(exits) <= self.spec.MAX_VOLUNTARY_EXITS
+            assert len(exits) <= int(self.spec.MAX_VOLUNTARY_EXITS)
             for e in exits:
                 block.body.voluntary_exits.append(e)
 
@@ -354,7 +359,7 @@ class FCRTest:
         if slot is None:
             slot = self.current_slot()
 
-        att_state = self.store.block_states[block_root].copy()
+        att_state = copy(self.store.block_states[block_root])
 
         # Advance state if needed
         transition_to(self.spec, att_state, slot)
@@ -469,7 +474,9 @@ class FCRTest:
         committee: list[self.spec.ValidatorIndex] = []
         for i in range(committees_count):
             committee.extend(
-                self.spec.get_beacon_committee(shuffling_source, slot, self.spec.CommitteeIndex(i))
+                self.spec.get_beacon_committee(
+                    shuffling_source, self.spec.Slot(slot), self.spec.CommitteeIndex(i)
+                )
             )
         return committee
 
@@ -487,7 +494,7 @@ class FCRTest:
     ) -> list[object]:
         if slot is None:
             slot = self.current_slot()
-        state = self.store.block_states[self.head_root()].copy()
+        state = copy(self.store.block_states[self.head_root()])
         if slashing_indices is None:
             assert slashing_percentage is not None
             slashing_count = len(state.validators) * slashing_percentage // 100

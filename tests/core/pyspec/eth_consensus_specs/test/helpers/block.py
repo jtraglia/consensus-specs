@@ -12,7 +12,7 @@ from eth_consensus_specs.test.helpers.forks import (
 from eth_consensus_specs.test.helpers.keys import privkeys
 from eth_consensus_specs.utils import bls
 from eth_consensus_specs.utils.bls import only_with_bls
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def get_proposer_index_maybe(spec, state, slot, proposer_index=None):
@@ -22,7 +22,7 @@ def get_proposer_index_maybe(spec, state, slot, proposer_index=None):
             proposer_index = spec.get_beacon_proposer_index(state)
         else:
             # use stub state to get proposer index of future slot
-            stub_state = state.copy()
+            stub_state = copy(state)
             if stub_state.slot < slot:
                 spec.process_slots(stub_state, slot)
             proposer_index = spec.get_beacon_proposer_index(stub_state)
@@ -90,11 +90,12 @@ def build_empty_block(spec, state, slot=None, proposer_index=None):
     """
     if slot is None:
         slot = state.slot
+    slot = spec.Slot(slot)
     if slot < state.slot:
         raise Exception("build_empty_block cannot build blocks for past slots")
     if state.slot < slot:
-        # transition forward in a copied state to grab relevant data from state
-        state = state.copy()
+        # transition forward in copied state to grab relevant data from state
+        state = copy(state)
         spec.process_slots(state, slot)
 
     state, parent_block_root = get_state_and_beacon_parent_root_at_slot(spec, state, slot)
@@ -123,9 +124,9 @@ def build_empty_block(spec, state, slot=None, proposer_index=None):
         empty_block.body.execution_payload = build_empty_execution_payload(spec, state)
 
     if is_post_electra(spec):
-        empty_block.body.execution_requests.deposits = []
-        empty_block.body.execution_requests.withdrawals = []
-        empty_block.body.execution_requests.consolidations = []
+        empty_block.body.execution_requests.deposits = spec.DepositRequests()
+        empty_block.body.execution_requests.withdrawals = spec.WithdrawalRequests()
+        empty_block.body.execution_requests.consolidations = spec.ConsolidationRequests(data=[])
 
     return empty_block
 
@@ -142,11 +143,12 @@ def build_block_and_payload(
 
     if slot is None:
         slot = state.slot
+    slot = spec.Slot(slot)
     if slot < state.slot:
         raise Exception("build_block_and_payload cannot build blocks for past slots")
     if state.slot < slot:
         # transition forward in copied state to grab relevant data from state
-        state = state.copy()
+        state = copy(state)
         spec.process_slots(state, slot)
 
     state, parent_block_root = get_state_and_beacon_parent_root_at_slot(spec, state, slot)
@@ -201,11 +203,11 @@ def get_state_and_beacon_parent_root_at_slot(spec, state, slot):
     if slot < state.slot:
         raise Exception("Cannot build blocks for past slots")
     if slot > state.slot:
-        # transition forward in a copied state to grab relevant data from state
-        state = state.copy()
+        # transition forward in copied state to grab relevant data from state
+        state = copy(state)
         spec.process_slots(state, slot)
 
-    previous_block_header = state.latest_block_header.copy()
+    previous_block_header = copy(state.latest_block_header)
     if previous_block_header.state_root == spec.Root():
         previous_block_header.state_root = hash_tree_root(state)
     beacon_parent_root = hash_tree_root(previous_block_header)

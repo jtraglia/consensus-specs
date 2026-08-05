@@ -6,6 +6,7 @@ from eth_consensus_specs.test.context import (
 from eth_consensus_specs.test.helpers.attestations import (
     state_transition_with_full_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 @with_test_suite_name("BeaconBlockBody")
@@ -33,5 +34,5 @@ def test_execution_block_hash_merkle_proof(spec, state):
         branch=branch,
         depth=spec.floorlog2(gindex),
         index=spec.get_subtree_index(gindex),
-        root=block.message.body.hash_tree_root(),
+        root=hash_tree_root(block.message.body),
     )

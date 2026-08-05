@@ -22,7 +22,7 @@ from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
 from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
-from ssz import Uint256
+from eth_consensus_specs.utils.ssz.ssz_typing import Uint256
 
 
 def with_pow_block_patch(spec, blocks, func):

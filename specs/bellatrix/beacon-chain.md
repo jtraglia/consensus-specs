@@ -4,8 +4,10 @@
 
 - [Introduction](#introduction)
 - [Types](#types)
-  - [`Bytes20`](#bytes20)
-  - [`Transaction`](#transaction)
+  - [New `ExtraData`](#new-extradata)
+  - [New `LogsBloom`](#new-logsbloom)
+  - [New `Transaction`](#new-transaction)
+  - [New `Transactions`](#new-transactions)
 - [Constants](#constants)
 - [Preset](#preset)
   - [Rewards and penalties](#rewards-and-penalties)
@@ -17,10 +19,6 @@
     - [`BeaconBlockBody`](#beaconblockbody)
     - [`BeaconState`](#beaconstate)
   - [New containers](#new-containers)
-    - [Misc dependencies](#misc-dependencies)
-      - [`LogsBloom`](#logsbloom)
-      - [`ExtraData`](#extradata)
-      - [`Transactions`](#transactions)
     - [`ExecutionPayload`](#executionpayload)
     - [`ExecutionPayloadHeader`](#executionpayloadheader)
 - [Helpers](#helpers)
@@ -58,26 +56,55 @@ Including:
 
 ## Types
 
-| Name               | SSZ equivalent | Description                               |
-| ------------------ | -------------- | ----------------------------------------- |
-| `ExecutionAddress` | `Bytes20`      | Address of account on the execution layer |
-
-### `Bytes20`
+### New `ExtraData`
 
 ```python
-class Bytes20(BaseBytes):
-    LENGTH = 20
+class ExtraData(ByteList):
+    """
+    Arbitrary extra data included in an execution payload.
+    """
+
+    LIMIT = MAX_EXTRA_DATA_BYTES
 ```
 
-### `Transaction`
+### New `LogsBloom`
 
-*Note*: The `Transaction` type is a stub which is not final. It is either a
+```python
+class LogsBloom(ByteVector):
+    """
+    A Bloom filter aggregating the logs emitted by an execution payload.
+    """
+
+    LENGTH = BYTES_PER_LOGS_BLOOM
+```
+
+### New `Transaction`
+
+*Note*: The `Transaction` type is a stub which is not final.
+
+*Note*: A `Transaction` is either a
 [typed transaction envelope](https://eips.ethereum.org/EIPS/eip-2718#opaque-byte-array-rather-than-an-rlp-array)
 or a legacy transaction.
 
 ```python
 class Transaction(ByteList):
+    """
+    An opaque execution-layer transaction, either a typed transaction
+    envelope or a legacy RLP-encoded transaction.
+    """
+
     LIMIT = MAX_BYTES_PER_TRANSACTION
+```
+
+### New `Transactions`
+
+```python
+class Transactions(List[Transaction]):
+    """
+    A list of execution-layer transactions.
+    """
+
+    LIMIT = MAX_TRANSACTIONS_PER_PAYLOAD
 ```
 
 ## Constants
@@ -112,11 +139,11 @@ final, maximum security values.
 
 ### Transition settings
 
-| Name                                   | Value                                                         |
-| -------------------------------------- | ------------------------------------------------------------- |
-| `TERMINAL_TOTAL_DIFFICULTY`            | `Uint256(58750000000000000000000)` (Estimated: Sept 15, 2022) |
-| `TERMINAL_BLOCK_HASH`                  | `Hash32()`                                                    |
-| `TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH` | `FAR_FUTURE_EPOCH`                                            |
+| Name                                   | Value                              |
+| -------------------------------------- | ---------------------------------- |
+| `TERMINAL_TOTAL_DIFFICULTY`            | `Uint256(58750000000000000000000)` |
+| `TERMINAL_BLOCK_HASH`                  | `Hash32()`                         |
+| `TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH` | `Epoch(FAR_FUTURE_EPOCH)`          |
 
 ## Containers
 
@@ -172,29 +199,6 @@ class BeaconState(Container):
 ```
 
 ### New containers
-
-#### Misc dependencies
-
-##### `LogsBloom`
-
-```python
-class LogsBloom(BaseBytes):
-    LENGTH = BYTES_PER_LOGS_BLOOM
-```
-
-##### `ExtraData`
-
-```python
-class ExtraData(ByteList):
-    LIMIT = MAX_EXTRA_DATA_BYTES
-```
-
-##### `Transactions`
-
-```python
-class Transactions(List[Transaction]):
-    LIMIT = MAX_TRANSACTIONS_PER_PAYLOAD
-```
 
 #### `ExecutionPayload`
 

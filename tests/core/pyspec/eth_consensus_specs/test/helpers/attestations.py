@@ -15,7 +15,20 @@ from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
 from eth_consensus_specs.utils import bls
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
+
+
+def get_parent_slot(state):
+    # Outside of block processing, the bid in the state is still the
+    # parent block's bid, so its slot is the parent block's slot.
+    return state.latest_execution_payload_bid.slot
+
+
+def process_attestation(spec, state, attestation):
+    if is_post_gloas(spec):
+        spec.process_attestation(state, attestation, get_parent_slot(state))
+    else:
+        spec.process_attestation(state, attestation)
 
 
 def run_attestation_processing(spec, state, attestation, valid=True):
@@ -23,6 +36,7 @@ def run_attestation_processing(spec, state, attestation, valid=True):
     Run ``process_attestation``, yielding:
       - pre-state ('pre')
       - attestation ('attestation')
+      - parent slot ('parent_slot' in meta, Gloas and later)
       - post-state ('post').
     If ``valid == False``, run expecting ``AssertionError``
     """
@@ -31,9 +45,13 @@ def run_attestation_processing(spec, state, attestation, valid=True):
 
     yield "attestation", attestation
 
+    # Gloas takes the parent block's slot as an extra input.
+    if is_post_gloas(spec):
+        yield "parent_slot", "meta", int(get_parent_slot(state))
+
     # If the attestation is invalid, processing is aborted, and there is no post-state.
     if not valid:
-        expect_assertion_error(lambda: spec.process_attestation(state, attestation))
+        expect_assertion_error(lambda: process_attestation(spec, state, attestation))
         yield "post", None
         return
 
@@ -42,7 +60,7 @@ def run_attestation_processing(spec, state, attestation, valid=True):
         previous_epoch_count = len(state.previous_epoch_attestations)
 
     # process attestation
-    spec.process_attestation(state, attestation)
+    process_attestation(spec, state, attestation)
 
     # Make sure the attestation has been processed
     if not is_post_altair(spec):
@@ -198,8 +216,9 @@ def to_single_attestation(spec, state, attestation, attester_index=None):
 def compute_max_inclusion_slot(spec, attestation):
     if is_post_deneb(spec):
         next_epoch = spec.compute_epoch_at_slot(attestation.data.slot) + spec.Epoch(1)
-        epoch_after_next = next_epoch + spec.Epoch(1)
-        end_of_next_epoch = spec.compute_start_slot_at_epoch(epoch_after_next) - spec.Slot(1)
+        end_of_next_epoch = spec.compute_start_slot_at_epoch(
+            next_epoch + spec.Epoch(1)
+        ) - spec.Slot(1)
         return end_of_next_epoch
     return attestation.data.slot + spec.SLOTS_PER_EPOCH
 
@@ -230,7 +249,7 @@ def fill_aggregate_attestation(
         )
     else:
         committee_size = len(beacon_committee)
-        attestation.aggregation_bits = spec.AggregationBits.of(*([0] * committee_size))
+        attestation.aggregation_bits = spec.AggregationBits(data=[0] * committee_size)
 
     # fill in the `aggregation_bits`
     for i in range(len(beacon_committee)):
@@ -253,7 +272,7 @@ def add_attestations_to_state(spec, state, attestations, slot):
     if state.slot < slot:
         spec.process_slots(state, slot)
     for attestation in attestations:
-        spec.process_attestation(state, attestation)
+        process_attestation(spec, state, attestation)
 
 
 def get_valid_attestations_at_slot(
@@ -321,7 +340,7 @@ def next_slots_with_attestations(
     """
     participation_fn: (slot, committee_index, committee_indices_set) -> participants_indices_set
     """
-    post_state = state.copy()
+    post_state = copy(state)
     signed_blocks = []
     for _ in range(slot_count):
         signed_block = state_transition_with_full_block(
@@ -371,7 +390,7 @@ def _add_valid_attestations(spec, state, block, slot_to_attest, participation_fn
 def next_epoch_with_attestations(
     spec, state, fill_cur_epoch, fill_prev_epoch, participation_fn=None
 ):
-    assert state.slot % spec.SLOTS_PER_EPOCH == 0
+    assert state.slot % spec.SLOTS_PER_EPOCH == spec.Slot(0)
 
     return next_slots_with_attestations(
         spec,
@@ -445,7 +464,7 @@ def state_transition_with_full_attestations_block(spec, state, fill_cur_epoch, f
                 target_slot,
             )
 
-    block.body.attestations = attestations
+    block.body.attestations = spec.Attestations(data=attestations)
     signed_block = state_transition_and_sign_block(spec, state, block)
     return signed_block
 
@@ -464,7 +483,7 @@ def prepare_state_with_attestations(spec, state, participation_fn=None):
     start_epoch = spec.get_current_epoch(state)
     next_epoch_start_slot = spec.compute_start_slot_at_epoch(start_epoch + spec.Epoch(1))
     attestations = []
-    for _ in range(spec.SLOTS_PER_EPOCH + spec.MIN_ATTESTATION_INCLUSION_DELAY):
+    for _ in range(int(spec.SLOTS_PER_EPOCH + spec.MIN_ATTESTATION_INCLUSION_DELAY)):
         # create an attestation for each index in each slot in epoch
         if state.slot < next_epoch_start_slot:
             for committee_index in range(
@@ -514,10 +533,14 @@ def cached_prepare_state_with_attestations(spec, state):
     key = (spec.fork, hash_tree_root(state))
     if key not in _prep_state_cache_dict:
         prepare_state_with_attestations(spec, state)
-        _prep_state_cache_dict[key] = state.copy()
-    else:
-        # Adopt the cached prepared state, as if we transitioned the original in place.
-        state.__dict__.update(_prep_state_cache_dict[key].copy().__dict__)
+        _prep_state_cache_dict[key] = copy(state)
+        return
+
+    # Restore the cached result into the caller's state, which it expects to be
+    # mutated in place. Each field is copied so the cache entry stays untouched.
+    cached = _prep_state_cache_dict[key]
+    for field_name in type(state).model_fields:
+        setattr(state, field_name, copy(getattr(cached, field_name)))
 
 
 def get_max_attestations(spec):
@@ -533,7 +556,7 @@ def get_empty_eip7549_aggregation_bits(spec, state, committee_bits, slot):
     for index in committee_indices:
         committee = spec.get_beacon_committee(state, slot, index)
         participants_count += len(committee)
-    aggregation_bits = spec.AggregationBits.of(*([False] * participants_count))
+    aggregation_bits = spec.AggregationBits(data=[False] * participants_count)
     return aggregation_bits
 
 
@@ -542,10 +565,10 @@ def get_eip7549_aggregation_bits_offset(spec, state, slot, committee_bits, commi
     Calculate the offset for the aggregation bits based on the committee index.
     """
     committee_indices = spec.get_committee_indices(committee_bits)
-    assert committee_index in committee_indices
+    assert spec.CommitteeIndex(committee_index) in committee_indices
     offset = 0
     for i in committee_indices:
-        if committee_index == i:
+        if spec.CommitteeIndex(committee_index) == i:
             break
         committee = spec.get_beacon_committee(state, slot, committee_indices[i])
         offset += len(committee)

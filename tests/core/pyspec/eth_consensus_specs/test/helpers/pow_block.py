@@ -1,5 +1,7 @@
 from random import Random
 
+from eth_consensus_specs.utils.ssz.ssz_typing import Uint256
+
 
 class PowChain:
     def __init__(self, blocks):
@@ -22,7 +24,7 @@ def prepare_random_pow_block(spec, rng=None):
     return spec.PowBlock(
         block_hash=spec.Hash32(spec.hash(bytearray(rng.getrandbits(8) for _ in range(32)))),
         parent_hash=spec.Hash32(spec.hash(bytearray(rng.getrandbits(8) for _ in range(32)))),
-        total_difficulty=spec.Uint256(0),
+        total_difficulty=Uint256(0),
     )
 
 

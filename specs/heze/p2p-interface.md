@@ -9,6 +9,8 @@
   - [Preset](#preset)
     - [Type-specific SSZ bounds](#type-specific-ssz-bounds)
   - [Configuration](#configuration)
+  - [Types](#types)
+    - [New `SignedInclusionLists`](#new-signedinclusionlists)
   - [Helpers](#helpers)
     - [Modified `compute_fork_version`](#modified-compute_fork_version)
   - [The gossip domain: gossipsub](#the-gossip-domain-gossipsub)
@@ -44,11 +46,25 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 
 ### Configuration
 
-| Name                                     | Value             | Description                                                     |
-| ---------------------------------------- | ----------------- | --------------------------------------------------------------- |
-| `MAX_REQUEST_INCLUSION_LIST`             | `2**4` (= 16)     | Maximum number of inclusion lists in a single request           |
-| `MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS` | `1`               | Minimum slot range over which a node must serve inclusion lists |
-| `MAX_BYTES_PER_INCLUSION_LIST`           | `2**13` (= 8,192) | Maximum size of the inclusion list's transactions in bytes      |
+| Name                                        | Value                     | Description                                                     |
+| ------------------------------------------- | ------------------------- | --------------------------------------------------------------- |
+| `MAX_REQUEST_INCLUSION_LIST`                | `Uint64(2**4)` (= 16)     | Maximum number of inclusion lists in a single request           |
+| `MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS`    | `Slot(1)`                 | Minimum slot range over which a node must serve inclusion lists |
+| `MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST` | `Uint64(2**13)` (= 8,192) | Maximum size of the inclusion list's transactions in bytes      |
+
+### Types
+
+#### New `SignedInclusionLists`
+
+```python
+class SignedInclusionLists(List[SignedInclusionList]):
+    """
+    Signed inclusion lists returned in an ``InclusionListsByIndices``
+    response.
+    """
+
+    LIMIT = MAX_REQUEST_INCLUSION_LIST
+```
 
 ### Helpers
 
@@ -100,7 +116,7 @@ The following validations are added, assuming the alias
 
 - _[IGNORE]_ `bid.inclusion_list_bits` is inclusive of the node's view of
   inclusion lists for the slot preceding the bid's slot -- i.e.
-  `is_inclusion_list_bits_inclusive(get_inclusion_list_store(), state, Slot(bid.slot - 1), bid.inclusion_list_bits, only_timely=False)`
+  `is_inclusion_list_bits_inclusive(get_inclusion_list_store(), state, Slot(bid.slot - 1), bid.inclusion_list_bits, only_timely=True)`
   returns `True`, where `state` is the head state corresponding to processing
   the block up to the current slot as determined by the fork choice.
 
@@ -111,7 +127,7 @@ The following validations MUST pass before forwarding the `inclusion_list` on
 the network, assuming the alias `message = signed_inclusion_list.message`:
 
 - _[REJECT]_ The size of `message.transactions` is within upperbound
-  `MAX_BYTES_PER_INCLUSION_LIST`.
+  `MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST`.
 - _[IGNORE]_ The slot `message.slot` is equal to the current slot (with a
   `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance), i.e.
   `message.slot == current_slot`.
@@ -184,7 +200,7 @@ Request Content:
 (
   slot: Slot
   inclusion_list_committee_root: Root
-  indices: Bitvector[INCLUSION_LIST_COMMITTEE_SIZE]
+  indices: InclusionListBits
 )
 ```
 
@@ -192,7 +208,7 @@ Response Content:
 
 ```
 (
-  List[SignedInclusionList, MAX_REQUEST_INCLUSION_LIST]
+  SignedInclusionLists
 )
 ```
 

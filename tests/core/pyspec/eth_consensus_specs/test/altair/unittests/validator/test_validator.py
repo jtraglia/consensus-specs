@@ -75,8 +75,9 @@ def _get_sync_committee_signature(
     index_in_subcommittee,
 ):
     subcommittee_size = spec.SYNC_COMMITTEE_SIZE // spec.SYNC_COMMITTEE_SUBNET_COUNT
-    base_index = spec.Uint64(subcommittee_index) * subcommittee_size
-    sync_committee_index = base_index + spec.Uint64(index_in_subcommittee)
+    sync_committee_index = int(subcommittee_index) * int(subcommittee_size) + int(
+        index_in_subcommittee
+    )
     pubkey = state.current_sync_committee.pubkeys[sync_committee_index]
     privkey = pubkey_to_privkey[bytes(pubkey)]
 
@@ -107,7 +108,7 @@ def test_process_sync_committee_contributions(spec, state):
             slot=block.slot,
             beacon_block_root=target_block_root,
             subcommittee_index=i,
-            aggregation_bits=aggregation_bits,
+            aggregation_bits=spec.SyncSubcommitteeBits(data=aggregation_bits),
             signature=_get_sync_committee_signature(
                 spec, state, previous_slot, target_block_root, i, aggregation_index
             ),
@@ -143,7 +144,7 @@ def test_get_sync_committee_message(spec, state):
     )
     assert sync_committee_message.slot == state.slot
     assert sync_committee_message.beacon_block_root == block_root
-    assert sync_committee_message.validator_index == validator_index
+    assert sync_committee_message.validator_index == spec.ValidatorIndex(validator_index)
     epoch = spec.get_current_epoch(state)
     domain = spec.get_domain(state, spec.DOMAIN_SYNC_COMMITTEE, epoch)
     signing_root = spec.compute_signing_root(block_root, domain)
@@ -156,7 +157,7 @@ def _validator_index_for_pubkey(state, pubkey):
 
 
 def _subnet_for_sync_committee_index(spec, i):
-    return spec.Uint64(i) // (spec.SYNC_COMMITTEE_SIZE // spec.SYNC_COMMITTEE_SUBNET_COUNT)
+    return int(i) // int(spec.SYNC_COMMITTEE_SIZE // spec.SYNC_COMMITTEE_SUBNET_COUNT)
 
 
 def _get_expected_subnets_by_pubkey(sync_committee_members):
@@ -173,7 +174,7 @@ def _get_expected_subnets_by_pubkey(sync_committee_members):
 def test_compute_subnets_for_sync_committee(state, spec):
     # Transition to the head of the next period
     transition_to(
-        spec, state, spec.Slot(spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
+        spec, state, spec.SLOTS_PER_EPOCH * spec.Slot(spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
     )
 
     next_slot_epoch = spec.compute_epoch_at_slot(state.slot + spec.Slot(1))
@@ -194,7 +195,7 @@ def test_compute_subnets_for_sync_committee(state, spec):
         validator_index = _validator_index_for_pubkey(state, pubkey)
         subnets = spec.compute_subnets_for_sync_committee(state, validator_index)
         expected_subnets = expected_subnets_by_pubkey[pubkey]
-        assert subnets == expected_subnets
+        assert {int(subnet) for subnet in subnets} == expected_subnets
 
 
 @with_altair_and_later
@@ -205,7 +206,7 @@ def test_compute_subnets_for_sync_committee_slot_period_boundary(state, spec):
     transition_to(
         spec,
         state,
-        spec.Slot(spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH - spec.Slot(1),
+        spec.SLOTS_PER_EPOCH * spec.Slot(spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD) - spec.Slot(1),
     )
 
     next_slot_epoch = spec.compute_epoch_at_slot(state.slot + spec.Slot(1))
@@ -226,7 +227,7 @@ def test_compute_subnets_for_sync_committee_slot_period_boundary(state, spec):
         validator_index = _validator_index_for_pubkey(state, pubkey)
         subnets = spec.compute_subnets_for_sync_committee(state, validator_index)
         expected_subnets = expected_subnets_by_pubkey[pubkey]
-        assert subnets == expected_subnets
+        assert {int(subnet) for subnet in subnets} == expected_subnets
 
 
 @with_altair_and_later
@@ -268,9 +269,9 @@ def test_is_sync_committee_aggregator(spec, state):
 
     # Accept ~10% deviation
     assert (
-        spec.TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE * 100 * 0.9
+        spec.TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE * spec.Uint64(100) * 0.9
         <= is_aggregator_count
-        <= spec.TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE * 100 * 1.1
+        <= spec.TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE * spec.Uint64(100) * 1.1
     )
 
 

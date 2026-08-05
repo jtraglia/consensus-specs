@@ -4,8 +4,8 @@
 
 - [Introduction](#introduction)
 - [Types](#types)
-  - [Modified `FinalityBranch`](#modified-finalitybranch)
   - [Modified `CurrentSyncCommitteeBranch`](#modified-currentsynccommitteebranch)
+  - [Modified `FinalityBranch`](#modified-finalitybranch)
   - [Modified `NextSyncCommitteeBranch`](#modified-nextsynccommitteebranch)
 - [Constants](#constants)
   - [Frozen constants](#frozen-constants)
@@ -31,30 +31,40 @@ Additional documents describe the impact of the upgrade on certain roles:
 
 ## Types
 
-### Modified `FinalityBranch`
-
-Merkle branch of `finalized_checkpoint.root` within `BeaconState`.
-
-```python
-class FinalityBranch(Vector[Bytes32]):
-    LENGTH = floorlog2(FINALIZED_ROOT_GINDEX_ELECTRA)
-```
-
 ### Modified `CurrentSyncCommitteeBranch`
 
-Merkle branch of `current_sync_committee` within `BeaconState`.
+```python
+# [Modified in Electra]
+class CurrentSyncCommitteeBranch(Vector[Bytes32]):
+    """
+    A Merkle branch proving ``current_sync_committee`` within ``BeaconState``.
+    """
+
+    LENGTH = floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA)
+```
+
+### Modified `FinalityBranch`
 
 ```python
-class CurrentSyncCommitteeBranch(Vector[Bytes32]):
-    LENGTH = floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA)
+# [Modified in Electra]
+class FinalityBranch(Vector[Bytes32]):
+    """
+    A Merkle branch proving ``finalized_checkpoint.root`` within
+    ``BeaconState``.
+    """
+
+    LENGTH = floorlog2(FINALIZED_ROOT_GINDEX_ELECTRA)
 ```
 
 ### Modified `NextSyncCommitteeBranch`
 
-Merkle branch of `next_sync_committee` within `BeaconState`.
-
 ```python
+# [Modified in Electra]
 class NextSyncCommitteeBranch(Vector[Bytes32]):
+    """
+    A Merkle branch proving ``next_sync_committee`` within ``BeaconState``.
+    """
+
     LENGTH = floorlog2(NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA)
 ```
 

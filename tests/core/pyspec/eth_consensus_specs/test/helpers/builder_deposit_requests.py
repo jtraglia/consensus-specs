@@ -65,7 +65,7 @@ def prepare_process_builder_deposit_request(
     # Phase 2: Derive effective values
     index = builder_index if builder_index is not None else len(state.builders)
     effective_pubkey = pubkey if pubkey is not None else builder_pubkeys[index]
-    effective_privkey = builder_pubkey_to_privkey[effective_pubkey]
+    effective_privkey = builder_pubkey_to_privkey[bytes(effective_pubkey)]
     effective_amount = amount if amount is not None else spec.MIN_ACTIVATION_BALANCE
     if withdrawal_credentials is not None:
         effective_withdrawal_credentials = withdrawal_credentials
@@ -77,7 +77,7 @@ def prepare_process_builder_deposit_request(
 
     # Phase 3: Apply state overrides (before creating request)
     if builders is not None:
-        state.builders = builders
+        state.builders = spec.Builders(data=builders)
 
     if builder_modifications is not None:
         current_epoch = spec.get_current_epoch(state)
@@ -88,9 +88,9 @@ def prepare_process_builder_deposit_request(
                 if epoch_value == "current_epoch":
                     epoch_value = current_epoch
                 elif epoch_value == "current_epoch-1":
-                    epoch_value = current_epoch - 1
+                    epoch_value = current_epoch - spec.Epoch(1)
                 elif epoch_value == "current_epoch+1":
-                    epoch_value = current_epoch + 1
+                    epoch_value = current_epoch + spec.Epoch(1)
                 state.builders[idx].withdrawable_epoch = epoch_value
             if "balance" in mods:
                 state.builders[idx].balance = spec.Gwei(mods["balance"])
@@ -195,7 +195,7 @@ def assert_process_builder_deposit_request(
 
     # Test-specific checks
     if expected_builder_balance is not None:
-        assert state.builders[builder_index].balance == expected_builder_balance
+        assert state.builders[builder_index].balance == spec.Gwei(expected_builder_balance)
 
     if expected_builder_balance_delta is not None:
         if pre_builder_index is not None:
@@ -249,7 +249,7 @@ def assert_process_builder_deposit_request(
             f"withdrawable_epoch <= current_epoch: "
             f"withdrawable_epoch={pre_builder.withdrawable_epoch}, current_epoch={current_epoch}"
         )
-        assert pre_builder.balance == 0, (
+        assert pre_builder.balance == spec.Gwei(0), (
             f"slot_reused=True: reused builder at index {reused_idx} must have "
             f"zero balance: balance={pre_builder.balance}"
         )

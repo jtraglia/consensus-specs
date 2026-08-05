@@ -11,7 +11,7 @@ def get_non_empty_execution_requests(spec):
     )
 
     return spec.ExecutionRequests(
-        deposits=spec.ProgressiveList[spec.DepositRequest].of(*[deposit_request]),
-        withdrawals=spec.ProgressiveList[spec.WithdrawalRequest](),
-        consolidations=spec.ProgressiveList[spec.ConsolidationRequest](),
+        deposits=spec.DepositRequests(data=[deposit_request]),
+        withdrawals=spec.WithdrawalRequests(),
+        consolidations=spec.ConsolidationRequests(),
     )

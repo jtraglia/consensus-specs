@@ -3,9 +3,19 @@ from eth_consensus_specs.test.context import (
     spec_state_test,
     with_altair_and_later,
 )
-from eth_consensus_specs.test.helpers.gossip import get_filename, get_seen, run_validate_gossip
+from eth_consensus_specs.test.helpers.fork_choice import (
+    get_genesis_forkchoice_store_and_block,
+)
+from eth_consensus_specs.test.helpers.gossip import (
+    get_filename,
+    get_seen,
+    run_validate_gossip,
+    wrap_genesis_block,
+)
 from eth_consensus_specs.test.helpers.keys import privkeys
+from eth_consensus_specs.test.helpers.state import transition_to
 from eth_consensus_specs.utils import bls
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def get_sync_committee_member(spec, state):
@@ -44,6 +54,10 @@ def test_gossip_sync_committee_message__valid(spec, state):
     """Test that a valid sync committee message passes gossip validation."""
     yield "topic", "meta", "sync_committee"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     seen = get_seen(spec)
     validator_index, subnet_id = get_sync_committee_member(spec, state)
@@ -51,13 +65,14 @@ def test_gossip_sync_committee_message__valid(spec, state):
 
     yield get_filename(message), message
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         sync_committee_message=message,
         current_time_ms=current_time_ms + spec.Uint64(500),
@@ -86,6 +101,10 @@ def test_gossip_sync_committee_message__ignore_future_slot(spec, state):
     """Test that a sync committee message from a future slot is ignored."""
     yield "topic", "meta", "sync_committee"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     seen = get_seen(spec)
     validator_index, subnet_id = get_sync_committee_member(spec, state)
@@ -96,13 +115,14 @@ def test_gossip_sync_committee_message__ignore_future_slot(spec, state):
 
     yield get_filename(message), message
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         sync_committee_message=message,
         current_time_ms=current_time_ms,
@@ -132,13 +152,18 @@ def test_gossip_sync_committee_message__ignore_past_slot(spec, state):
     """Test that a sync committee message from a past slot is ignored."""
     yield "topic", "meta", "sync_committee"
 
+    anchor_state = copy(state)
+    yield "state", anchor_state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
+
     seen = get_seen(spec)
     validator_index, subnet_id = get_sync_committee_member(spec, state)
 
     # Advance state so there's a past slot (gap >= 2 needed to exceed MAXIMUM_GOSSIP_CLOCK_DISPARITY)
-    state.slot += spec.Slot(3)
-
-    yield "state", state
+    transition_to(spec, state, state.slot + spec.Slot(3))
 
     # Create message for a past slot
     past_slot = state.slot - spec.Slot(2)
@@ -146,13 +171,14 @@ def test_gossip_sync_committee_message__ignore_past_slot(spec, state):
 
     yield get_filename(message), message
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         sync_committee_message=message,
         current_time_ms=current_time_ms,
@@ -182,6 +208,10 @@ def test_gossip_sync_committee_message__reject_wrong_subnet(spec, state):
     """Test that a sync committee message on the wrong subnet is rejected."""
     yield "topic", "meta", "sync_committee"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     seen = get_seen(spec)
     validator_index, correct_subnet_id = get_sync_committee_member(spec, state)
@@ -189,7 +219,7 @@ def test_gossip_sync_committee_message__reject_wrong_subnet(spec, state):
 
     yield get_filename(message), message
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
@@ -201,6 +231,7 @@ def test_gossip_sync_committee_message__reject_wrong_subnet(spec, state):
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         sync_committee_message=message,
         current_time_ms=current_time_ms + spec.Uint64(500),
@@ -230,6 +261,10 @@ def test_gossip_sync_committee_message__reject_validator_index_out_of_range(spec
     """Test that a sync committee message with validator index out of range is rejected."""
     yield "topic", "meta", "sync_committee"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     seen = get_seen(spec)
     validator_index, subnet_id = get_sync_committee_member(spec, state)
@@ -239,13 +274,14 @@ def test_gossip_sync_committee_message__reject_validator_index_out_of_range(spec
 
     yield get_filename(message), message
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         sync_committee_message=message,
         current_time_ms=current_time_ms + spec.Uint64(500),
@@ -275,6 +311,10 @@ def test_gossip_sync_committee_message__ignore_duplicate(spec, state):
     """Test that a duplicate sync committee message is ignored."""
     yield "topic", "meta", "sync_committee"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     messages = []
     seen = get_seen(spec)
@@ -283,7 +323,7 @@ def test_gossip_sync_committee_message__ignore_duplicate(spec, state):
 
     yield get_filename(message), message
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
@@ -291,6 +331,7 @@ def test_gossip_sync_committee_message__ignore_duplicate(spec, state):
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         sync_committee_message=message,
         current_time_ms=current_time_ms + spec.Uint64(500),
@@ -311,6 +352,7 @@ def test_gossip_sync_committee_message__ignore_duplicate(spec, state):
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         sync_committee_message=message,
         current_time_ms=current_time_ms + spec.Uint64(600),
@@ -338,6 +380,10 @@ def test_gossip_sync_committee_message__reject_invalid_signature(spec, state):
     """Test that a sync committee message with invalid signature is rejected."""
     yield "topic", "meta", "sync_committee"
     yield "state", state
+    store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
+    signed_anchor = wrap_genesis_block(spec, anchor_block)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
     seen = get_seen(spec)
     validator_index, subnet_id = get_sync_committee_member(spec, state)
@@ -348,7 +394,7 @@ def test_gossip_sync_committee_message__reject_invalid_signature(spec, state):
     domain = spec.get_domain(state, spec.DOMAIN_SYNC_COMMITTEE, epoch)
     signing_root = spec.compute_signing_root(block_root, domain)
     # Sign with a different validator's key
-    wrong_key = privkeys[(validator_index + 1) % len(privkeys)]
+    wrong_key = privkeys[(int(validator_index) + 1) % len(privkeys)]
     signature = bls.Sign(wrong_key, signing_root)
 
     message = spec.SyncCommitteeMessage(
@@ -360,13 +406,14 @@ def test_gossip_sync_committee_message__reject_invalid_signature(spec, state):
 
     yield get_filename(message), message
 
-    current_time_ms = spec.compute_time_at_slot_ms(state, state.slot)
+    current_time_ms = spec.compute_time_at_slot_ms(store, state.slot)
 
     yield "current_time_ms", "meta", int(current_time_ms)
 
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
+        store=store,
         state=state,
         sync_committee_message=message,
         current_time_ms=current_time_ms + spec.Uint64(500),

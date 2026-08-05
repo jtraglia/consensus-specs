@@ -35,7 +35,7 @@ def upgrade_lc_header_to_gloas(pre: electra.LightClientHeader) -> LightClientHea
             beacon=pre.beacon,
             execution_block_hash=pre.execution.block_hash,
             execution_branch=ExecutionBranch(
-                normalize_merkle_branch(
+                data=normalize_merkle_branch(
                     list(compute_merkle_proof(pre.execution, BLOCK_HASH_GINDEX))
                     + list(pre.execution_branch),
                     EXECUTION_BLOCK_HASH_GINDEX_GLOAS,
@@ -66,7 +66,7 @@ def upgrade_lc_header_to_gloas(pre: electra.LightClientHeader) -> LightClientHea
             beacon=pre.beacon,
             execution_block_hash=pre.execution.block_hash,
             execution_branch=ExecutionBranch(
-                normalize_merkle_branch(
+                data=normalize_merkle_branch(
                     list(compute_merkle_proof(execution_header, BLOCK_HASH_GINDEX))
                     + list(pre.execution_branch),
                     EXECUTION_BLOCK_HASH_GINDEX_GLOAS,

@@ -8,8 +8,7 @@ from eth_consensus_specs.test.helpers.constants import (
     ALLOWED_TEST_RUNNER_FORKS,
     DISABLED_PHASES,
 )
-from eth_consensus_specs.test.helpers.specs import spec_targets
-from eth_consensus_specs.utils.ckzg_utils import apply_ckzg_to_spec, load_trusted_setup
+from eth_consensus_specs.utils.kzg import load_trusted_setup
 
 # During the eth-ssz-specs migration, skip collecting the disabled forks' test
 # directories (their spec files are not compiled). Paths are relative to this conftest.
@@ -18,29 +17,6 @@ from eth_consensus_specs.utils.ckzg_utils import apply_ckzg_to_spec, load_truste
 # provided by the eth-ssz-specs library.)
 # TODO(ssz-specs migration): re-enable these as forks are migrated.
 collect_ignore = [*DISABLED_PHASES, "phase0/ssz_static"]
-
-# We import pytest only when it's present, i.e. when we are running tests.
-# The test-cases themselves can be generated without installing pytest.
-
-
-def module_exists(module_name):
-    try:
-        __import__(module_name)
-    except ImportError:
-        return False
-    else:
-        return True
-
-
-def fixture(*args, **kwargs):
-    if module_exists("pytest"):
-        return pytest.fixture(*args, **kwargs)
-    else:
-
-        def ignore():
-            pass
-
-        return ignore
 
 
 def pytest_addoption(parser):
@@ -66,14 +42,6 @@ def pytest_addoption(parser):
         default=False,
         help="coverage: enable code coverage tracking",
     )
-    parser.addoption(
-        "--kzg-type",
-        action="store",
-        type=str,
-        default="ckzg",
-        choices=["spec", "ckzg"],
-        help="kzg-type: use specified KZG implementation (default: ckzg)",
-    )
 
 
 def _validate_fork_name(forks):
@@ -96,7 +64,7 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("preset", presets, indirect=True)
 
 
-@fixture(autouse=True)
+@pytest.fixture(autouse=True)
 def preset(request):
     preset_value = request.param
     manifest_preset = getattr(getattr(request.function, "manifest", None), "preset_name", None)
@@ -120,7 +88,7 @@ def preset(request):
         alt_context.DEFAULT_TEST_PRESET = spec_preset
 
 
-@fixture(autouse=True)
+@pytest.fixture(autouse=True)
 def run_phases(request):
     forks = request.config.getoption("--fork", default=None)
     if forks:
@@ -131,29 +99,9 @@ def run_phases(request):
         context.DEFAULT_PYTEST_FORKS = ALL_PHASES
 
 
-def _apply_ckzg(request):
-    """
-    Patch all spec modules to use ckzg for KZG functions.
-    """
-    ts_path = (
-        request.config.rootdir
-        / "presets"
-        / "mainnet"
-        / "trusted_setups"
-        / "trusted_setup_4096.json"
-    )
-    ts = load_trusted_setup(ts_path)
-
-    for preset_specs in spec_targets.values():
-        for spec in preset_specs.values():
-            apply_ckzg_to_spec(spec, ts)
-
-
 @pytest.fixture(scope="session", autouse=True)
-def kzg_type(request):
-    kzg_type = request.config.getoption("--kzg-type")
-    if kzg_type == "ckzg":
-        _apply_ckzg(request)
+def trusted_setup():
+    load_trusted_setup()
 
 
 pytest_plugins = ["eth_consensus_specs.test.pytest_plugins.yield_generator"]

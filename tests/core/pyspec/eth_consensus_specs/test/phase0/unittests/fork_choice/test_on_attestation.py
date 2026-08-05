@@ -13,7 +13,7 @@ from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
     transition_to,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def run_on_attestation(spec, state, store, attestation, valid=True):
@@ -26,11 +26,11 @@ def run_on_attestation(spec, state, store, attestation, valid=True):
 
     sample_index = indexed_attestation.attesting_indices[0]
     if is_post_gloas(spec):
-        assert attestation.data.index < 2
+        assert attestation.data.index < spec.CommitteeIndex(2)
         latest_message = spec.LatestMessage(
             slot=attestation.data.slot,
             root=attestation.data.beacon_block_root,
-            payload_present=attestation.data.index == 1,
+            payload_present=attestation.data.index == spec.CommitteeIndex(1),
         )
     else:
         latest_message = spec.LatestMessage(
@@ -93,8 +93,9 @@ def test_on_attestation_past_epoch(spec, state):
     store = get_genesis_forkchoice_store(spec, state)
 
     # move time forward 2 epochs
-    duration_ms = spec.Uint64(2) * spec.config.SLOT_DURATION_MS * spec.Uint64(spec.SLOTS_PER_EPOCH)
-    time = store.time + duration_ms // spec.Uint64(1000)
+    time = store.time + spec.Uint64(2) * spec.config.SLOT_DURATION_MS * spec.Uint64(
+        spec.SLOTS_PER_EPOCH
+    ) // spec.Uint64(1000)
     spec.on_tick(store, time)
 
     # create and store block from 3 epochs ago
@@ -155,11 +156,11 @@ def test_on_attestation_inconsistent_target_and_head(spec, state):
     )
 
     # Create chain 1 as empty chain between genesis and start of 1st epoch
-    target_state_1 = state.copy()
+    target_state_1 = copy(state)
     next_epoch(spec, target_state_1)
 
     # Create chain 2 with different block in chain from chain 1 from chain 1 from chain 1 from chain 1
-    target_state_2 = state.copy()
+    target_state_2 = copy(state)
     diff_block = build_empty_block_for_next_slot(spec, target_state_2)
     signed_diff_block = state_transition_and_sign_block(spec, target_state_2, diff_block)
     spec.on_block(store, signed_diff_block)
@@ -192,8 +193,9 @@ def test_on_attestation_inconsistent_target_and_head(spec, state):
 @spec_state_test
 def test_on_attestation_target_block_not_in_store(spec, state):
     store = get_genesis_forkchoice_store(spec, state)
-    duration_ms = spec.config.SLOT_DURATION_MS * spec.Uint64(spec.SLOTS_PER_EPOCH + spec.Slot(1))
-    time = store.time + duration_ms // spec.Uint64(1000)
+    time = store.time + spec.config.SLOT_DURATION_MS * spec.Uint64(
+        spec.SLOTS_PER_EPOCH + spec.Slot(1)
+    ) // spec.Uint64(1000)
     spec.on_tick(store, time)
 
     # move to immediately before next epoch to make block new target
@@ -215,8 +217,9 @@ def test_on_attestation_target_block_not_in_store(spec, state):
 @spec_state_test
 def test_on_attestation_target_checkpoint_not_in_store(spec, state):
     store = get_genesis_forkchoice_store(spec, state)
-    duration_ms = spec.config.SLOT_DURATION_MS * spec.Uint64(spec.SLOTS_PER_EPOCH + spec.Slot(1))
-    time = store.time + duration_ms // spec.Uint64(1000)
+    time = store.time + spec.config.SLOT_DURATION_MS * spec.Uint64(
+        spec.SLOTS_PER_EPOCH + spec.Slot(1)
+    ) // spec.Uint64(1000)
     spec.on_tick(store, time)
 
     # move to immediately before next epoch to make block new target
@@ -241,8 +244,9 @@ def test_on_attestation_target_checkpoint_not_in_store(spec, state):
 @spec_state_test
 def test_on_attestation_target_checkpoint_not_in_store_diff_slot(spec, state):
     store = get_genesis_forkchoice_store(spec, state)
-    duration_ms = spec.config.SLOT_DURATION_MS * spec.Uint64(spec.SLOTS_PER_EPOCH + spec.Slot(1))
-    time = store.time + duration_ms // spec.Uint64(1000)
+    time = store.time + spec.config.SLOT_DURATION_MS * spec.Uint64(
+        spec.SLOTS_PER_EPOCH + spec.Slot(1)
+    ) // spec.Uint64(1000)
     spec.on_tick(store, time)
 
     # move to two slots before next epoch to make target block one before an empty slot
@@ -269,8 +273,9 @@ def test_on_attestation_target_checkpoint_not_in_store_diff_slot(spec, state):
 @spec_state_test
 def test_on_attestation_beacon_block_not_in_store(spec, state):
     store = get_genesis_forkchoice_store(spec, state)
-    duration_ms = spec.config.SLOT_DURATION_MS * spec.Uint64(spec.SLOTS_PER_EPOCH + spec.Slot(1))
-    time = store.time + duration_ms // spec.Uint64(1000)
+    time = store.time + spec.config.SLOT_DURATION_MS * spec.Uint64(
+        spec.SLOTS_PER_EPOCH + spec.Slot(1)
+    ) // spec.Uint64(1000)
     spec.on_tick(store, time)
 
     # move to immediately before next epoch to make block new target
@@ -368,6 +373,8 @@ def test_on_attestation_invalid_attestation(spec, state):
     if is_post_electra(spec):
         attestation.committee_bits = spec.CommitteeBits()
     else:
-        attestation.data.index = spec.MAX_COMMITTEES_PER_SLOT * spec.Uint64(spec.SLOTS_PER_EPOCH)
+        attestation.data.index = spec.CommitteeIndex(
+            int(spec.MAX_COMMITTEES_PER_SLOT) * int(spec.SLOTS_PER_EPOCH)
+        )
 
     run_on_attestation(spec, state, store, attestation, valid=False)

@@ -13,6 +13,7 @@ from eth_consensus_specs.test.helpers.forks import (
 from eth_consensus_specs.test.helpers.random import randomize_state
 from eth_consensus_specs.test.helpers.state import has_active_balance_differential, next_epoch
 from eth_consensus_specs.test.helpers.voluntary_exits import get_unslashed_exited_validators
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def run_process_slashings(spec, state):
@@ -33,7 +34,7 @@ def slash_validators(spec, state, indices, out_epochs):
     )
 
     # verify some slashings happened...
-    assert total_slashed_balance != 0
+    assert total_slashed_balance != spec.Gwei(0)
 
 
 def get_slashing_multiplier(spec):
@@ -80,7 +81,7 @@ def _setup_process_slashings_test(spec, state, not_slashable_set=None):
     slash_validators(spec, state, sorted(slashed_indices), [out_epoch] * slashed_count)
 
     total_balance = spec.get_total_active_balance(state)
-    total_penalties = sum(state.slashings, start=spec.Gwei(0))
+    total_penalties = sum(state.slashings, spec.Gwei(0))
 
     assert total_balance // spec.Gwei(get_slashing_multiplier(spec)) <= total_penalties
 
@@ -95,7 +96,7 @@ def test_max_penalties(spec, state):
     yield from run_process_slashings(spec, state)
 
     for i in slashed_indices:
-        assert state.balances[i] == 0
+        assert state.balances[i] == spec.Gwei(0)
 
 
 @with_all_phases
@@ -108,12 +109,12 @@ def test_low_penalty(spec, state):
     slashed_indices = list(range(slashed_count))
     slash_validators(spec, state, slashed_indices, [out_epoch] * slashed_count)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_process_slashings(spec, state)
 
     for i in slashed_indices:
-        assert 0 < state.balances[i] < pre_state.balances[i]
+        assert spec.Gwei(0) < state.balances[i] < pre_state.balances[i]
 
 
 @with_all_phases
@@ -137,7 +138,7 @@ def test_minimal_penalty(spec, state):
     slash_validators(spec, state, [0], [out_epoch])
 
     total_balance = spec.get_total_active_balance(state)
-    total_penalties = sum(state.slashings, start=spec.Gwei(0))
+    total_penalties = sum(state.slashings, spec.Gwei(0))
 
     assert total_balance // spec.Gwei(3) > total_penalties
 
@@ -164,10 +165,10 @@ def test_scaled_penalties(spec, state):
     base = spec.config.EJECTION_BALANCE
     incr = spec.EFFECTIVE_BALANCE_INCREMENT
     # Just add some random slashings. non-zero slashings are at least the minimal effective balance.
-    state.slashings[0] = base + incr * spec.Gwei(12)
-    state.slashings[4] = base + incr * spec.Gwei(3)
-    state.slashings[5] = base + incr * spec.Gwei(6)
-    state.slashings[spec.EPOCHS_PER_SLASHINGS_VECTOR - spec.Epoch(1)] = base + incr * spec.Gwei(7)
+    state.slashings[0] = base + (incr * spec.Gwei(12))
+    state.slashings[4] = base + (incr * spec.Gwei(3))
+    state.slashings[5] = base + (incr * spec.Gwei(6))
+    state.slashings[spec.EPOCHS_PER_SLASHINGS_VECTOR - spec.Epoch(1)] = base + (incr * spec.Gwei(7))
 
     slashed_count = len(state.validators) // (int(get_slashing_multiplier(spec)) + 1)
 
@@ -176,9 +177,9 @@ def test_scaled_penalties(spec, state):
     # make the balances non-uniform.
     # Otherwise it would just be a simple balance slashing. Test the per-validator scaled penalties.
     diff = spec.MAX_EFFECTIVE_BALANCE - base
-    increments = int(diff // incr)
+    increments = diff // incr
     for i in range(10):
-        state.validators[i].effective_balance = base + incr * spec.Gwei(i % increments)
+        state.validators[i].effective_balance = base + (incr * spec.Gwei(i % int(increments)))
         assert state.validators[i].effective_balance <= spec.MAX_EFFECTIVE_BALANCE
         # add/remove some, see if balances different than the effective balances are picked up
         state.balances[i] = state.validators[i].effective_balance + spec.Gwei(i) - spec.Gwei(5)
@@ -201,7 +202,7 @@ def test_scaled_penalties(spec, state):
     spec.process_slashings(state)
     yield "post", state
 
-    total_penalties = sum(state.slashings, start=spec.Gwei(0))
+    total_penalties = sum(state.slashings, spec.Gwei(0))
 
     for i in slashed_indices:
         v = state.validators[i]
@@ -217,7 +218,7 @@ def test_slashings_with_random_state(spec, state):
     rng = Random(9998)
     randomize_state(spec, state, rng)
 
-    pre_balances = state.balances.copy()
+    pre_balances = copy(state.balances)
 
     target_validators = get_unslashed_exited_validators(spec, state)
     assert len(target_validators) != 0

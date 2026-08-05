@@ -18,6 +18,7 @@ from eth_consensus_specs.test.helpers.keys import privkeys, pubkeys
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def run_deposit_transition_block(spec, state, block, top_up_keys=None, valid=True):
@@ -145,8 +146,8 @@ def prepare_state_and_block(
     block = build_empty_block_for_next_slot(spec, state)
 
     # Assign deposits and deposit requests
-    block.body.deposits = deposits
-    block.body.execution_requests.deposits = deposit_requests
+    block.body.deposits = spec.Deposits(data=deposits)
+    block.body.execution_requests.deposits = spec.DepositRequests(data=deposit_requests)
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
 
     return state, block
@@ -258,7 +259,7 @@ def test_deposit_transition__invalid_too_many_eth1_deposits(spec, state):
 @spec_state_test
 def test_deposit_transition__invalid_eth1_deposits_overlap_in_protocol_deposits(spec, state):
     # spec.MAX_DEPOSITS deposits, 1 deposit request, state.eth1_data.deposit_count > state.deposit_requests_start_index
-    # state.deposit_requests_start_index == spec.MAX_DEPOSITS - 1
+    # state.deposit_requests_start_index == spec.MAX_DEPOSITS - spec.Uint64(1)
     state, block = prepare_state_and_block(
         spec,
         state,
@@ -323,7 +324,7 @@ def test_deposit_transition__deposit_with_same_pubkey_different_withdrawal_crede
 
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
 
-    deposit_requests = block.body.execution_requests.deposits.copy()
+    deposit_requests = copy(block.body.execution_requests.deposits)
 
     yield from run_deposit_transition_block(spec, state, block)
 

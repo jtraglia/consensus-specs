@@ -3,18 +3,17 @@ from pathlib import Path
 from eth_utils import encode_hex
 from ruamel.yaml import YAML
 from snappy import compress
-from ssz.boolean import Boolean
-from ssz.uint import BaseUint
 
 from eth_consensus_specs.test import context
+from eth_consensus_specs.utils.ssz.ssz_typing import Boolean, Uint
 
 
 def _add_basic_type_representers(yaml: YAML) -> None:
     """Teach the YAML instance to represent basic SSZ types.
 
     ruamel.yaml matches representers by exact type, so int and bool subclasses
-    like uint64 or boolean are not covered by the built-in representers. Without
-    this, yielding such a value (e.g. a uint config value) as meta or data would
+    like Uint64 or Boolean are not covered by the built-in representers. Without
+    this, yielding such a value (e.g. a Uint config value) as meta or data would
     raise a RepresenterError. Represent them as the plain scalars they wrap.
     """
 
@@ -24,7 +23,7 @@ def _add_basic_type_representers(yaml: YAML) -> None:
     def _represent_boolean(self, data):
         return self.represent_bool(bool(data))
 
-    yaml.representer.add_multi_representer(BaseUint, _represent_uint)
+    yaml.representer.add_multi_representer(Uint, _represent_uint)
     yaml.representer.add_multi_representer(Boolean, _represent_boolean)
 
 

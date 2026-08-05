@@ -31,9 +31,7 @@ def run_slash_and_exit(spec, state, slash_index, exit_index, valid=True):
     Helper function to run a test that slashes and exits two validators
     """
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.Slot(
-        spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.Uint64(spec.SLOTS_PER_EPOCH)
-    )
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     yield "pre", state
 
@@ -185,7 +183,7 @@ def _eligible_for_exit(spec, state, index):
 
     no_pending_withdrawals = True
     if is_post_electra(spec):
-        no_pending_withdrawals = spec.get_pending_balance_to_withdraw(state, index) == 0
+        no_pending_withdrawals = spec.get_pending_balance_to_withdraw(state, index) == spec.Gwei(0)
 
     return not_slashed and active_for_long_enough and not_exited and no_pending_withdrawals
 
@@ -219,9 +217,9 @@ def get_random_sync_aggregate(
         block_root=block_root,
     )
     return spec.SyncAggregate(
-        sync_committee_bits=[
-            index in participant_indices for index in range(len(committee_indices))
-        ],
+        sync_committee_bits=spec.SyncCommitteeBits(
+            data=[index in participant_indices for index in range(len(committee_indices))]
+        ),
         sync_committee_signature=signature,
     )
 
@@ -232,7 +230,7 @@ def get_random_bls_to_execution_changes(spec, state, rng=None, num_address_chang
     bls_indices = [
         index
         for index, validator in enumerate(state.validators)
-        if validator.withdrawal_credentials[:1] == spec.BLS_WITHDRAWAL_PREFIX
+        if spec.Bytes1(validator.withdrawal_credentials[:1]) == spec.BLS_WITHDRAWAL_PREFIX
     ]
     assert len(bls_indices) > 0
 
@@ -247,14 +245,16 @@ def build_random_block_from_state_for_next_slot(spec, state, rng=None, deposits=
         rng = Random(2188)
     block = build_empty_block_for_next_slot(spec, state)
     proposer_slashings = get_random_proposer_slashings(spec, state, rng)
-    block.body.proposer_slashings = proposer_slashings
+    block.body.proposer_slashings = spec.ProposerSlashings(data=proposer_slashings)
     slashed_indices = [
         slashing.signed_header_1.message.proposer_index for slashing in proposer_slashings
     ]
-    block.body.attester_slashings = get_random_attester_slashings(spec, state, rng, slashed_indices)
-    block.body.attestations = get_random_attestations(spec, state, rng)
+    block.body.attester_slashings = spec.AttesterSlashings(
+        data=get_random_attester_slashings(spec, state, rng, slashed_indices)
+    )
+    block.body.attestations = spec.Attestations(data=get_random_attestations(spec, state, rng))
     if deposits:
-        block.body.deposits = deposits
+        block.body.deposits = spec.Deposits(data=deposits)
 
     # cannot include to be slashed indices as exits
     slashed_indices = {
@@ -264,7 +264,9 @@ def build_random_block_from_state_for_next_slot(spec, state, rng=None, deposits=
     for attester_slashing in block.body.attester_slashings:
         slashed_indices = slashed_indices.union(attester_slashing.attestation_1.attesting_indices)
         slashed_indices = slashed_indices.union(attester_slashing.attestation_2.attesting_indices)
-    block.body.voluntary_exits = get_random_voluntary_exits(spec, state, slashed_indices, rng)
+    block.body.voluntary_exits = spec.VoluntaryExits(
+        data=get_random_voluntary_exits(spec, state, slashed_indices, rng)
+    )
 
     return block
 
@@ -273,9 +275,7 @@ def run_test_full_random_operations(spec, state, rng=None):
     if rng is None:
         rng = Random(2080)
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.Slot(
-        spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.Uint64(spec.SLOTS_PER_EPOCH)
-    )
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     num_deposits = None
     if is_post_fulu(spec):
@@ -327,7 +327,9 @@ def get_random_deposit_requests(spec, state, rng, num_deposits=None):
             deposit_data_leaves,
             pubkeys[index],
             privkeys[index],
-            rng.randint(spec.EFFECTIVE_BALANCE_INCREMENT, 2 * spec.MAX_EFFECTIVE_BALANCE_ELECTRA),
+            rng.randint(
+                spec.EFFECTIVE_BALANCE_INCREMENT, spec.Gwei(2) * spec.MAX_EFFECTIVE_BALANCE_ELECTRA
+            ),
             withdrawal_credentials=withdrawal_credentials,
             signed=True,
         )

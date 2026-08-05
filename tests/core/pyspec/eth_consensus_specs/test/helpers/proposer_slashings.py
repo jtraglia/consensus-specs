@@ -13,6 +13,7 @@ from eth_consensus_specs.test.helpers.sync_committee import (
     compute_committee_indices,
     compute_sync_committee_participant_reward_and_penalty,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def get_min_slashing_penalty_quotient(spec):
@@ -195,7 +196,7 @@ def get_valid_proposer_slashing(
         state_root=b"\x44" * 32,
         body_root=b"\x55" * 32,
     )
-    header_2 = header_1.copy()
+    header_2 = copy(header_1)
     header_2.parent_root = random_root
 
     if signed_1:
@@ -376,8 +377,8 @@ def prepare_process_proposer_slashing(
         )
 
     if proposer_exit_epoch_offset is not None:
-        state.validators[effective_proposer_1].exit_epoch = current_epoch + spec.Epoch(
-            proposer_exit_epoch_offset
+        state.validators[effective_proposer_1].exit_epoch = (
+            current_epoch + proposer_exit_epoch_offset
         )
 
     if proposer_balance is not None:
@@ -393,11 +394,11 @@ def prepare_process_proposer_slashing(
         payment_epoch = spec.compute_epoch_at_slot(payment_slot)
 
         # Calculate payment index based on what current_epoch will be after advance_epochs_after
-        effective_current_epoch = current_epoch + (advance_epochs_after or 0)
+        effective_current_epoch = current_epoch + spec.Epoch(advance_epochs_after or 0)
 
         if payment_epoch == effective_current_epoch:
-            payment_index = spec.SLOTS_PER_EPOCH + payment_slot % spec.SLOTS_PER_EPOCH
-        elif payment_epoch == effective_current_epoch - 1:
+            payment_index = spec.Uint64(spec.SLOTS_PER_EPOCH + payment_slot % spec.SLOTS_PER_EPOCH)
+        elif payment_epoch == effective_current_epoch - spec.Epoch(1):
             # Previous epoch
             payment_index = payment_slot % spec.SLOTS_PER_EPOCH
         else:

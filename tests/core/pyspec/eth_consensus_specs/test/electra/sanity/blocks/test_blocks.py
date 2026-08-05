@@ -58,7 +58,7 @@ def test_basic_el_withdrawal_request(spec, state):
         validator_pubkey=validator_pubkey,
     )
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.execution_requests.withdrawals = [withdrawal_request]
+    block.body.execution_requests.withdrawals = spec.WithdrawalRequests(data=[withdrawal_request])
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -88,14 +88,14 @@ def test_basic_btec_and_el_withdrawal_request_in_same_block(spec, state):
         validator_index=validator_index,
         to_execution_address=address,
     )
-    block.body.bls_to_execution_changes = [signed_address_change]
+    block.body.bls_to_execution_changes = spec.BLSToExecutionChanges(data=[signed_address_change])
 
     validator_pubkey = state.validators[validator_index].pubkey
     withdrawal_request = spec.WithdrawalRequest(
         source_address=address,
         validator_pubkey=validator_pubkey,
     )
-    block.body.execution_requests.withdrawals = [withdrawal_request]
+    block.body.execution_requests.withdrawals = spec.WithdrawalRequests(data=[withdrawal_request])
 
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
     signed_block = state_transition_and_sign_block(spec, state, block)
@@ -109,7 +109,7 @@ def test_basic_btec_and_el_withdrawal_request_in_same_block(spec, state):
     is_execution_address = (
         spec.Bytes1(validator.withdrawal_credentials[:1]) == spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX
     )
-    is_correct_source_address = validator.withdrawal_credentials[12:] == address
+    is_correct_source_address = validator.withdrawal_credentials[12:] == bytes(address)
     assert is_execution_address
     assert is_correct_source_address
 
@@ -134,7 +134,7 @@ def test_basic_btec_before_el_withdrawal_request(spec, state):
         to_execution_address=address,
     )
     block_1 = build_empty_block_for_next_slot(spec, state)
-    block_1.body.bls_to_execution_changes = [signed_address_change]
+    block_1.body.bls_to_execution_changes = spec.BLSToExecutionChanges(data=[signed_address_change])
     signed_block_1 = state_transition_and_sign_block(spec, state, block_1)
 
     validator = state.validators[validator_index]
@@ -143,7 +143,7 @@ def test_basic_btec_before_el_withdrawal_request(spec, state):
     is_execution_address = (
         spec.Bytes1(validator.withdrawal_credentials[:1]) == spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX
     )
-    is_correct_source_address = validator.withdrawal_credentials[12:] == address
+    is_correct_source_address = validator.withdrawal_credentials[12:] == bytes(address)
     assert is_execution_address
     assert is_correct_source_address
 
@@ -154,7 +154,7 @@ def test_basic_btec_before_el_withdrawal_request(spec, state):
         validator_pubkey=validator_pubkey,
     )
     block_2 = build_empty_block_for_next_slot(spec, state)
-    block_2.body.execution_requests.withdrawals = [withdrawal_request]
+    block_2.body.execution_requests.withdrawals = spec.WithdrawalRequests(data=[withdrawal_request])
     block_2.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block_2)
     signed_block_2 = state_transition_and_sign_block(spec, state, block_2)
 
@@ -186,8 +186,8 @@ def test_cl_exit_and_el_withdrawal_request_in_same_block(spec, state):
         validator_pubkey=validator_pubkey,
     )
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.voluntary_exits = signed_voluntary_exits
-    block.body.execution_requests.withdrawals = [withdrawal_request]
+    block.body.voluntary_exits = spec.VoluntaryExits(data=signed_voluntary_exits)
+    block.body.execution_requests.withdrawals = spec.WithdrawalRequests(data=[withdrawal_request])
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -226,7 +226,9 @@ def test_multiple_el_partial_withdrawal_requests_same_validator(spec, state):
         amount=spec.Gwei(2),
     )
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.execution_requests.withdrawals = [withdrawal_request_1, withdrawal_request_2]
+    block.body.execution_requests.withdrawals = spec.WithdrawalRequests(
+        data=[withdrawal_request_1, withdrawal_request_2]
+    )
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -245,7 +247,10 @@ def test_multiple_el_partial_withdrawal_requests_different_validator(spec, state
 
     validator_indices = [1, 2]
     addresses = [bytes([v * 0x11]) * 20 for v in validator_indices]
-    balances = [spec.MIN_ACTIVATION_BALANCE + spec.Gwei(v * 2000000000) for v in validator_indices]
+    balances = [
+        spec.MIN_ACTIVATION_BALANCE + spec.Gwei(v) * spec.Gwei(2000000000)
+        for v in validator_indices
+    ]
 
     for validator_index, address, balance in zip(
         validator_indices, addresses, balances, strict=False
@@ -269,7 +274,7 @@ def test_multiple_el_partial_withdrawal_requests_different_validator(spec, state
         withdrawal_requests.append(withdrawal_request)
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.execution_requests.withdrawals = withdrawal_requests
+    block.body.execution_requests.withdrawals = spec.WithdrawalRequests(data=withdrawal_requests)
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -302,7 +307,7 @@ def test_withdrawal_and_withdrawal_request_same_validator(spec, state):
     # This will happen before the withdrawal request
     expected_withdrawals = spec.get_expected_withdrawals(state).withdrawals
     assert len(expected_withdrawals) == 1
-    assert expected_withdrawals[0].validator_index == validator_index
+    assert expected_withdrawals[0].validator_index == spec.ValidatorIndex(validator_index)
 
     yield "pre", state
 
@@ -314,7 +319,7 @@ def test_withdrawal_and_withdrawal_request_same_validator(spec, state):
     )
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.execution_requests.withdrawals = [withdrawal_request]
+    block.body.execution_requests.withdrawals = spec.WithdrawalRequests(data=[withdrawal_request])
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -346,7 +351,7 @@ def test_withdrawal_and_switch_to_compounding_request_same_validator(spec, state
     # This will happen before the withdrawal request
     expected_withdrawals = spec.get_expected_withdrawals(state).withdrawals
     assert len(expected_withdrawals) == 1
-    assert expected_withdrawals[0].validator_index == validator_index
+    assert expected_withdrawals[0].validator_index == spec.ValidatorIndex(validator_index)
 
     yield "pre", state
 
@@ -358,7 +363,9 @@ def test_withdrawal_and_switch_to_compounding_request_same_validator(spec, state
     )
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.execution_requests.consolidations = [consolidation_request]
+    block.body.execution_requests.consolidations = spec.ConsolidationRequests(
+        data=[consolidation_request]
+    )
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -406,11 +413,9 @@ def test_deposit_request_with_same_pubkey_different_withdrawal_credentials(spec,
 
     # build a block with deposit requests
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.execution_requests.deposits = [
-        deposit_request_0,
-        deposit_request_1,
-        deposit_request_2,
-    ]
+    block.body.execution_requests.deposits = spec.DepositRequests(
+        data=[deposit_request_0, deposit_request_1, deposit_request_2]
+    )
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
 
     yield "pre", state
@@ -452,7 +457,7 @@ def test_deposit_request_max_per_payload(spec, state):
 
     # build a block with deposit requests
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.execution_requests.deposits = deposit_requests
+    block.body.execution_requests.deposits = spec.DepositRequests(data=deposit_requests)
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
 
     yield "pre", state
@@ -533,18 +538,20 @@ def test_withdrawal_and_consolidation_effective_balance_updates(spec, state):
         state, state.validators[a_index].effective_balance
     )
     state.validators[a_index].withdrawable_epoch = current_epoch + spec.Epoch(1)
-    state.pending_consolidations = [
-        spec.PendingConsolidation(source_index=a_index, target_index=b_index)
-    ]
+    state.pending_consolidations = spec.PendingConsolidations(
+        data=[spec.PendingConsolidation(source_index=a_index, target_index=b_index)]
+    )
 
     # Add a pending partial withdrawal for 32 ETH from B
-    state.pending_partial_withdrawals = [
-        spec.PendingPartialWithdrawal(
-            validator_index=b_index,
-            amount=spec.MIN_ACTIVATION_BALANCE,
-            withdrawable_epoch=current_epoch,
-        )
-    ]
+    state.pending_partial_withdrawals = spec.PendingPartialWithdrawals(
+        data=[
+            spec.PendingPartialWithdrawal(
+                validator_index=b_index,
+                amount=spec.MIN_ACTIVATION_BALANCE,
+                withdrawable_epoch=current_epoch,
+            )
+        ]
+    )
 
     yield "pre", state
 
@@ -593,13 +600,14 @@ def test_consolidation_requests_when_pending_consolidation_queue_is_full(spec, s
     # Fill up the queue with invalid pending consolidations
     # Making these legit would be too much work
     # One less than the limit, to ensure another can be added
-    state.pending_consolidations = [
-        spec.PendingConsolidation(source_index=0x1111, target_index=0x2222)
-    ] * (int(spec.PENDING_CONSOLIDATIONS_LIMIT) - 1)
+    state.pending_consolidations = spec.PendingConsolidations(
+        data=[spec.PendingConsolidation(source_index=0x1111, target_index=0x2222)]
+        * int(spec.PENDING_CONSOLIDATIONS_LIMIT - spec.Uint64(1))
+    )
 
     # This will consolidate 0->1, 2->3, 4->5, ...
     consolidation_requests = []
-    for i in range(0, 2 * int(spec.MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD), 2):
+    for i in range(0, spec.Uint64(2) * spec.MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD, 2):
         # Setup the source validator
         current_epoch = spec.get_current_epoch(state)
         source_index = spec.get_active_validator_indices(state, current_epoch)[i + 0]
@@ -628,7 +636,9 @@ def test_consolidation_requests_when_pending_consolidation_queue_is_full(spec, s
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.execution_requests.consolidations = consolidation_requests
+    block.body.execution_requests.consolidations = spec.ConsolidationRequests(
+        data=consolidation_requests
+    )
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -636,7 +646,7 @@ def test_consolidation_requests_when_pending_consolidation_queue_is_full(spec, s
     yield "post", state
 
     # Ensure another consolidation was added and the other one was rejected
-    assert len(state.pending_consolidations) == spec.PENDING_CONSOLIDATIONS_LIMIT
+    assert len(state.pending_consolidations) == int(spec.PENDING_CONSOLIDATIONS_LIMIT)
 
 
 @with_all_phases_from_to(ELECTRA, GLOAS)
@@ -658,9 +668,10 @@ def test_switch_to_compounding_requests_when_pending_consolidation_queue_is_full
     # function with a for-loop, it's possible that they stop processing all consolidation requests
     # after the consolidation request. For this reason, the pending consolidations queue in this
     # test starts off as full and consolidations requests are made.
-    state.pending_consolidations = [
-        spec.PendingConsolidation(source_index=0x1111, target_index=0x2222)
-    ] * int(spec.PENDING_CONSOLIDATIONS_LIMIT)
+    state.pending_consolidations = spec.PendingConsolidations(
+        data=[spec.PendingConsolidation(source_index=0x1111, target_index=0x2222)]
+        * int(spec.PENDING_CONSOLIDATIONS_LIMIT)
+    )
 
     # This will contain two requests:
     #   1. A regular consolidation request
@@ -706,7 +717,9 @@ def test_switch_to_compounding_requests_when_pending_consolidation_queue_is_full
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.execution_requests.consolidations = consolidation_requests
+    block.body.execution_requests.consolidations = spec.ConsolidationRequests(
+        data=consolidation_requests
+    )
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -714,7 +727,7 @@ def test_switch_to_compounding_requests_when_pending_consolidation_queue_is_full
     yield "post", state
 
     # Ensure the pending consolidations queue is still full
-    assert len(state.pending_consolidations) == spec.PENDING_CONSOLIDATIONS_LIMIT
+    assert len(state.pending_consolidations) == int(spec.PENDING_CONSOLIDATIONS_LIMIT)
     # Ensure the validators have been upgraded to compounding validators
     assert spec.has_compounding_withdrawal_credential(state.validators[source_index])
 
@@ -773,7 +786,9 @@ def test_switch_to_compounding_requests_when_too_little_consolidation_churn_limi
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.execution_requests.consolidations = consolidation_requests
+    block.body.execution_requests.consolidations = spec.ConsolidationRequests(
+        data=consolidation_requests
+    )
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -794,14 +809,17 @@ def test_withdrawal_requests_when_pending_withdrawal_queue_is_full(spec, state):
     # Fill up the queue with invalid pending withdrawals
     # Making these legit would be too much work
     # One less than the limit, to ensure another can be added
-    state.pending_partial_withdrawals = [
-        spec.PendingPartialWithdrawal(
-            validator_index=0x1111,
-            amount=spec.Gwei(1),
-            # Withdrawable next epoch, so they aren't processed now
-            withdrawable_epoch=spec.get_current_epoch(state) + spec.Epoch(1),
-        )
-    ] * (int(spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT) - 1)
+    state.pending_partial_withdrawals = spec.PendingPartialWithdrawals(
+        data=[
+            spec.PendingPartialWithdrawal(
+                validator_index=0x1111,
+                amount=spec.Gwei(1),
+                # Withdrawable next epoch, so they aren't processed now
+                withdrawable_epoch=spec.get_current_epoch(state) + spec.Epoch(1),
+            )
+        ]
+        * int(spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT - spec.Uint64(1))
+    )
 
     # Setup a compounding validator with an excess balance
     index = 0
@@ -827,7 +845,9 @@ def test_withdrawal_requests_when_pending_withdrawal_queue_is_full(spec, state):
     )
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.execution_requests.withdrawals = [withdrawal_request_1, withdrawal_request_2]
+    block.body.execution_requests.withdrawals = spec.WithdrawalRequests(
+        data=[withdrawal_request_1, withdrawal_request_2]
+    )
     block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
@@ -835,12 +855,12 @@ def test_withdrawal_requests_when_pending_withdrawal_queue_is_full(spec, state):
     yield "post", state
 
     # Ensure the pending withdrawals queue is full
-    assert len(state.pending_partial_withdrawals) == spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT
+    assert len(state.pending_partial_withdrawals) == int(spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT)
     # Ensure the last pending withdrawal is for the first withdrawal request
     last_withdrawal = state.pending_partial_withdrawals[
-        int(spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT) - 1
+        spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT - spec.Uint64(1)
     ]
-    assert last_withdrawal.validator_index == index
+    assert last_withdrawal.validator_index == spec.ValidatorIndex(index)
     assert last_withdrawal.amount == withdrawal_request_1.amount
     assert withdrawal_request_1.amount != withdrawal_request_2.amount
 
@@ -866,7 +886,7 @@ def test_multi_epoch_consolidation_chain(spec, state):
     state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     # Check that we're at the first slot of the epoch
-    assert state.slot % spec.SLOTS_PER_EPOCH == 0
+    assert state.slot % spec.SLOTS_PER_EPOCH == spec.Slot(0)
     current_epoch = spec.get_current_epoch(state)
 
     # This will consolidate 0->1, 1->2, 2->3, ...
@@ -908,7 +928,9 @@ def test_multi_epoch_consolidation_chain(spec, state):
             consolidation_request_count += 1
 
         block = build_empty_block_for_next_slot(spec, state)
-        block.body.execution_requests.consolidations = consolidation_requests
+        block.body.execution_requests.consolidations = spec.ConsolidationRequests(
+            data=consolidation_requests
+        )
         block.body.execution_payload.block_hash = compute_el_block_hash_for_block(spec, block)
         transition_unsigned_block(spec, state, block)
 
@@ -932,7 +954,7 @@ def test_multi_epoch_consolidation_chain(spec, state):
         * spec.SLOTS_PER_EPOCH
     )
     # Get the last slot that consolidations will be processed
-    final_consolidation = state.pending_consolidations[consolidation_request_count - 1]
+    final_consolidation = state.pending_consolidations[int(consolidation_request_count) - 1]
     last_slot = (
         spec.Slot(state.validators[final_consolidation.source_index].withdrawable_epoch)
         * spec.SLOTS_PER_EPOCH

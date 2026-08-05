@@ -59,6 +59,7 @@
       - [`update_latest_messages`](#update_latest_messages)
     - [`on_block` helpers](#on_block-helpers)
       - [`record_block_timeliness`](#record_block_timeliness)
+      - [`compute_shuffling_dependent_slot`](#compute_shuffling_dependent_slot)
       - [`get_shuffling_dependent_root`](#get_shuffling_dependent_root)
       - [`update_proposer_boost_root`](#update_proposer_boost_root)
   - [Handlers](#handlers)
@@ -136,9 +137,9 @@ handlers must not modify `store`.
 
 #### Time parameters
 
-| Name                        | Value          | Unit         | Duration                   |
-| --------------------------- | -------------- | ------------ | -------------------------- |
-| `PROPOSER_REORG_CUTOFF_BPS` | `Uint64(1667)` | basis points | ~17% of `SLOT_DURATION_MS` |
+| Name                        | Value          | Duration                   |
+| --------------------------- | -------------- | -------------------------- |
+| `PROPOSER_REORG_CUTOFF_BPS` | `Uint64(1667)` | ~17% of `SLOT_DURATION_MS` |
 
 ### Helpers
 
@@ -625,11 +626,34 @@ def is_proposing_on_time(store: Store) -> bool:
 
 ##### `is_head_weak`
 
+*Note*: The function `is_head_weak` counts weight also from equivocating
+validators from the committees of the head slot. This ensures that the counted
+weight and the output of `is_head_weak` are monotonic: more attestations can
+only increase the weight and change the output from `True` to `False`, not
+vice-versa.
+
 ```python
 def is_head_weak(store: Store, head_root: Root) -> bool:
+    # Calculate weight threshold for weak head
     justified_state = store.checkpoint_states[store.justified_checkpoint]
     reorg_threshold = calculate_committee_fraction(justified_state, REORG_HEAD_WEIGHT_THRESHOLD)
-    head_weight = get_weight(store, ForkChoiceNode(root=head_root))
+
+    # Compute head weight including equivocations
+    head_state = store.block_states[head_root]
+    head_block = store.blocks[head_root]
+    epoch = compute_epoch_at_slot(head_block.slot)
+    head_node = ForkChoiceNode(root=head_root)
+    head_weight = get_attestation_score(store, head_node, justified_state)
+    for index in range(get_committee_count_per_slot(head_state, epoch)):
+        committee = get_beacon_committee(head_state, head_block.slot, CommitteeIndex(index))
+        head_weight += Gwei(
+            sum(
+                justified_state.validators[i].effective_balance
+                for i in committee
+                if i in store.equivocating_indices
+            )
+        )
+
     return head_weight < reorg_threshold
 ```
 
@@ -641,7 +665,7 @@ def is_parent_strong(store: Store, root: Root) -> bool:
     parent_threshold = calculate_committee_fraction(justified_state, REORG_PARENT_WEIGHT_THRESHOLD)
     parent_root = store.blocks[root].parent_root
     parent_node = ForkChoiceNode(root=parent_root)
-    parent_weight = get_weight(store, parent_node)
+    parent_weight = get_attestation_score(store, parent_node, justified_state)
     return parent_weight > parent_threshold
 ```
 
@@ -858,16 +882,21 @@ def record_block_timeliness(store: Store, root: Root) -> None:
     store.block_timeliness[root] = is_timely
 ```
 
+##### `compute_shuffling_dependent_slot`
+
+```python
+def compute_shuffling_dependent_slot(epoch: Epoch) -> Slot:
+    if epoch <= MIN_SEED_LOOKAHEAD:
+        return GENESIS_SLOT
+    return compute_start_slot_at_epoch(epoch - MIN_SEED_LOOKAHEAD) - Slot(1)
+```
+
 ##### `get_shuffling_dependent_root`
 
 ```python
 def get_shuffling_dependent_root(store: Store, root: Root, epoch: Epoch) -> Root:
-    if epoch <= MIN_SEED_LOOKAHEAD:
-        # Genesis block parent
-        return Root()
-
     node = ForkChoiceNode(root=root)
-    dependent_slot = compute_start_slot_at_epoch(epoch - MIN_SEED_LOOKAHEAD) - Slot(1)
+    dependent_slot = compute_shuffling_dependent_slot(epoch)
     return get_ancestor(store, node, dependent_slot).root
 ```
 
@@ -908,7 +937,16 @@ def on_tick(store: Store, time: Uint64) -> None:
 
 ```python
 def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
+    """
+    Run ``on_block`` upon receiving a new block.
+    """
     block = signed_block.message
+    block_root = hash_tree_root(block)
+
+    # Return early if the block is already known
+    if block_root in store.blocks:
+        return
+
     # Parent block must be known
     assert block.parent_root in store.block_states
     # Make a copy of the state to avoid mutability issues
@@ -929,7 +967,6 @@ def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
 
     # Check the block is valid and compute the post-state
     state = pre_state.copy()
-    block_root = hash_tree_root(block)
     state_transition(state, signed_block, validate_result=True)
 
     # Compute head before applying the block
@@ -954,7 +991,7 @@ def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
 ```python
 def on_attestation(store: Store, attestation: Attestation, is_from_block: bool = False) -> None:
     """
-    Run ``on_attestation`` upon receiving a new ``attestation`` from either within a block or directly on the wire.
+    Run ``on_attestation`` upon receiving a new attestation from either within a block or directly on the wire.
 
     An ``attestation`` that is asserted as invalid may be valid at a later time,
     consider scheduling it for later processing in such case.
@@ -981,7 +1018,7 @@ finalized checkpoint.
 ```python
 def on_attester_slashing(store: Store, attester_slashing: AttesterSlashing) -> None:
     """
-    Run ``on_attester_slashing`` immediately upon receiving a new ``AttesterSlashing``
+    Run ``on_attester_slashing`` immediately upon receiving a new attester slashing
     from either within a block or directly on the wire.
     """
     attestation_1 = attester_slashing.attestation_1

@@ -15,18 +15,13 @@ from eth_consensus_specs.test.helpers.random import (
 from eth_consensus_specs.test.helpers.state import (
     next_epoch,
 )
-from ssz import Container, List, Uint64
-
-
-class DeltaList(List[Uint64]):
-    """Per-validator reward or penalty amounts (VALIDATOR_REGISTRY_LIMIT)."""
-
-    LIMIT = Uint64(2**40)
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
+from eth_consensus_specs.utils.ssz.ssz_typing import Container, ProgressiveList, Uint64
 
 
 class Deltas(Container):
-    rewards: DeltaList
-    penalties: DeltaList
+    rewards: ProgressiveList[Uint64]
+    penalties: ProgressiveList[Uint64]
 
 
 def get_inactivity_penalty_quotient(spec):
@@ -45,10 +40,9 @@ def has_enough_for_reward(spec, state, index):
     At very low balances, it is possible for a validator have a positive effective_balance
     but a zero base reward.
     """
-    return (
-        state.validators[index].effective_balance * spec.Gwei(spec.BASE_REWARD_FACTOR)
-        > spec.integer_squareroot(spec.Uint64(spec.get_total_active_balance(state)))
-        // spec.BASE_REWARDS_PER_EPOCH
+    return state.validators[index].effective_balance * spec.Gwei(spec.BASE_REWARD_FACTOR) > (
+        spec.Gwei(spec.integer_squareroot(spec.Uint64(spec.get_total_active_balance(state))))
+        // spec.Gwei(spec.BASE_REWARDS_PER_EPOCH)
     )
 
 
@@ -61,14 +55,13 @@ def has_enough_for_leak_penalty(spec, state, index):
     """
 
     if is_post_altair(spec):
-        return state.validators[index].effective_balance * spec.Gwei(
+        return int(state.validators[index].effective_balance) * int(
             state.inactivity_scores[index]
-        ) > spec.config.INACTIVITY_SCORE_BIAS * get_inactivity_penalty_quotient(spec)
+        ) > int(spec.config.INACTIVITY_SCORE_BIAS) * int(get_inactivity_penalty_quotient(spec))
     else:
-        return (
-            state.validators[index].effective_balance * spec.Gwei(spec.get_finality_delay(state))
-            > spec.INACTIVITY_PENALTY_QUOTIENT
-        )
+        return state.validators[index].effective_balance * spec.Gwei(
+            spec.get_finality_delay(state)
+        ) > spec.Gwei(spec.INACTIVITY_PENALTY_QUOTIENT)
 
 
 def run_deltas(spec, state):
@@ -138,21 +131,33 @@ def run_attestation_component_deltas(spec, state, component_delta_fn, matching_a
     """
     rewards, penalties = component_delta_fn(state)
 
-    yield deltas_name, Deltas(rewards=rewards, penalties=penalties)
+    yield (
+        deltas_name,
+        Deltas(
+            # The spec returns Gwei; this container is plain Uint64.
+            rewards=ProgressiveList[Uint64](data=[int(v) for v in rewards]),
+            penalties=ProgressiveList[Uint64](data=[int(v) for v in penalties]),
+        ),
+    )
 
     if not is_post_altair(spec):
         matching_attestations = matching_att_fn(state, spec.get_previous_epoch(state))
-        matching_indices = spec.get_unslashed_attesting_indices(state, matching_attestations)
+        matching_indices = {
+            int(i) for i in spec.get_unslashed_attesting_indices(state, matching_attestations)
+        }
     else:
-        matching_indices = spec.get_unslashed_participating_indices(
-            state, deltas_name_to_flag_index(spec, deltas_name), spec.get_previous_epoch(state)
-        )
+        matching_indices = {
+            int(i)
+            for i in spec.get_unslashed_participating_indices(
+                state, deltas_name_to_flag_index(spec, deltas_name), spec.get_previous_epoch(state)
+            )
+        }
 
-    eligible_indices = spec.get_eligible_validator_indices(state)
+    eligible_indices = {int(i) for i in spec.get_eligible_validator_indices(state)}
     for index in range(len(state.validators)):
         if index not in eligible_indices:
-            assert rewards[index] == 0
-            assert penalties[index] == 0
+            assert rewards[index] == spec.Gwei(0)
+            assert penalties[index] == spec.Gwei(0)
             continue
 
         validator = state.validators[index]
@@ -160,23 +165,23 @@ def run_attestation_component_deltas(spec, state, component_delta_fn, matching_a
         if index in matching_indices and not validator.slashed:
             if is_post_altair(spec):
                 if not spec.is_in_inactivity_leak(state) and enough_for_reward:
-                    assert rewards[index] > 0
+                    assert rewards[index] > spec.Gwei(0)
                 else:
-                    assert rewards[index] == 0
+                    assert rewards[index] == spec.Gwei(0)
             elif enough_for_reward:
-                assert rewards[index] > 0
+                assert rewards[index] > spec.Gwei(0)
             else:
-                assert rewards[index] == 0
+                assert rewards[index] == spec.Gwei(0)
 
-            assert penalties[index] == 0
+            assert penalties[index] == spec.Gwei(0)
         else:
-            assert rewards[index] == 0
+            assert rewards[index] == spec.Gwei(0)
             if is_post_altair(spec) and "head" in deltas_name:
-                assert penalties[index] == 0
+                assert penalties[index] == spec.Gwei(0)
             elif enough_for_reward:
-                assert penalties[index] > 0
+                assert penalties[index] > spec.Gwei(0)
             else:
-                assert penalties[index] == 0
+                assert penalties[index] == spec.Gwei(0)
 
 
 def run_get_inclusion_delay_deltas(spec, state):
@@ -188,18 +193,29 @@ def run_get_inclusion_delay_deltas(spec, state):
         # No inclusion_delay_deltas
         yield (
             "inclusion_delay_deltas",
-            Deltas(rewards=[0] * len(state.validators), penalties=[0] * len(state.validators)),
+            Deltas(
+                rewards=ProgressiveList[Uint64](data=[0] * len(state.validators)),
+                penalties=ProgressiveList[Uint64](data=[0] * len(state.validators)),
+            ),
         )
         return
 
     rewards, penalties = spec.get_inclusion_delay_deltas(state)
 
-    yield "inclusion_delay_deltas", Deltas(rewards=rewards, penalties=penalties)
+    yield (
+        "inclusion_delay_deltas",
+        Deltas(
+            rewards=ProgressiveList[Uint64](data=[int(v) for v in rewards]),
+            penalties=ProgressiveList[Uint64](data=[int(v) for v in penalties]),
+        ),
+    )
 
     eligible_attestations = spec.get_matching_source_attestations(
         state, spec.get_previous_epoch(state)
     )
-    attesting_indices = spec.get_unslashed_attesting_indices(state, eligible_attestations)
+    attesting_indices = {
+        int(i) for i in spec.get_unslashed_attesting_indices(state, eligible_attestations)
+    }
 
     rewarded_indices = set()
     rewarded_proposer_indices = set()
@@ -207,29 +223,33 @@ def run_get_inclusion_delay_deltas(spec, state):
     # Track those that are rewarded and track proposers that should be rewarded
     for index in range(len(state.validators)):
         if index in attesting_indices and has_enough_for_reward(spec, state, index):
-            assert rewards[index] > 0
+            assert rewards[index] > spec.Gwei(0)
             rewarded_indices.add(index)
 
             # Track proposer of earliest included attestation for the validator defined by index
             earliest_attestation = min(
-                [a for a in eligible_attestations if index in spec.get_attesting_indices(state, a)],
+                [
+                    a
+                    for a in eligible_attestations
+                    if index in {int(i) for i in spec.get_attesting_indices(state, a)}
+                ],
                 key=lambda a: a.inclusion_delay,
             )
-            rewarded_proposer_indices.add(earliest_attestation.proposer_index)
+            rewarded_proposer_indices.add(int(earliest_attestation.proposer_index))
 
     # Ensure all expected proposers have been rewarded
     # Track reward indices
-    proposing_indices = [a.proposer_index for a in eligible_attestations]
+    proposing_indices = [int(a.proposer_index) for a in eligible_attestations]
     for index in proposing_indices:
         if index in rewarded_proposer_indices:
-            assert rewards[index] > 0
+            assert rewards[index] > spec.Gwei(0)
             rewarded_indices.add(index)
 
     # Ensure all expected non-rewarded indices received no reward
     for index in range(len(state.validators)):
-        assert penalties[index] == 0
+        assert penalties[index] == spec.Gwei(0)
         if index not in rewarded_indices:
-            assert rewards[index] == 0
+            assert rewards[index] == spec.Gwei(0)
 
 
 def run_get_inactivity_penalty_deltas(spec, state):
@@ -239,25 +259,34 @@ def run_get_inactivity_penalty_deltas(spec, state):
     """
     rewards, penalties = spec.get_inactivity_penalty_deltas(state)
 
-    yield "inactivity_penalty_deltas", Deltas(rewards=rewards, penalties=penalties)
+    yield (
+        "inactivity_penalty_deltas",
+        Deltas(
+            rewards=ProgressiveList[Uint64](data=[int(v) for v in rewards]),
+            penalties=ProgressiveList[Uint64](data=[int(v) for v in penalties]),
+        ),
+    )
 
     if not is_post_altair(spec):
         matching_attestations = spec.get_matching_target_attestations(
             state, spec.get_previous_epoch(state)
         )
-        matching_attesting_indices = spec.get_unslashed_attesting_indices(
-            state, matching_attestations
-        )
+        matching_attesting_indices = {
+            int(i) for i in spec.get_unslashed_attesting_indices(state, matching_attestations)
+        }
     else:
-        matching_attesting_indices = spec.get_unslashed_participating_indices(
-            state, spec.TIMELY_TARGET_FLAG_INDEX, spec.get_previous_epoch(state)
-        )
+        matching_attesting_indices = {
+            int(i)
+            for i in spec.get_unslashed_participating_indices(
+                state, spec.TIMELY_TARGET_FLAG_INDEX, spec.get_previous_epoch(state)
+            )
+        }
 
-    eligible_indices = spec.get_eligible_validator_indices(state)
+    eligible_indices = {int(i) for i in spec.get_eligible_validator_indices(state)}
     for index in range(len(state.validators)):
-        assert rewards[index] == 0
+        assert rewards[index] == spec.Gwei(0)
         if index not in eligible_indices:
-            assert penalties[index] == 0
+            assert penalties[index] == spec.Gwei(0)
             continue
 
         if spec.is_in_inactivity_leak(state):
@@ -270,41 +299,41 @@ def run_get_inactivity_penalty_deltas(spec, state):
                 ) * base_reward - spec.get_proposer_reward(state, index)
 
             if not has_enough_for_reward(spec, state, index):
-                assert penalties[index] == 0
+                assert penalties[index] == spec.Gwei(0)
             elif index in matching_attesting_indices or not has_enough_for_leak_penalty(
                 spec, state, index
             ):
                 if is_post_altair(spec):
-                    assert penalties[index] == 0
+                    assert penalties[index] == spec.Gwei(0)
                 else:
                     assert penalties[index] == base_penalty
             elif is_post_altair(spec):
-                assert penalties[index] > 0
+                assert penalties[index] > spec.Gwei(0)
             else:
                 assert penalties[index] > base_penalty
         elif not is_post_altair(spec):
-            assert penalties[index] == 0
+            assert penalties[index] == spec.Gwei(0)
             continue
         # post altair, this penalty is derived from the inactivity score
         # regardless if the state is leaking or not...
         elif index in matching_attesting_indices:
-            assert penalties[index] == 0
+            assert penalties[index] == spec.Gwei(0)
         else:
             # copied from spec:
-            penalty_numerator = state.validators[index].effective_balance * spec.Gwei(
+            penalty_numerator = int(state.validators[index].effective_balance) * int(
                 state.inactivity_scores[index]
             )
-            penalty_denominator = (
-                spec.config.INACTIVITY_SCORE_BIAS * get_inactivity_penalty_quotient(spec)
+            penalty_denominator = int(spec.config.INACTIVITY_SCORE_BIAS) * int(
+                get_inactivity_penalty_quotient(spec)
             )
-            assert penalties[index] == penalty_numerator // spec.Gwei(penalty_denominator)
+            assert penalties[index] == spec.Gwei(penalty_numerator // penalty_denominator)
 
 
 def transition_state_to_leak(spec, state, epochs=None):
     if epochs is None:
         # +2 because finality delay is based on previous_epoch and must be more than `MIN_EPOCHS_TO_INACTIVITY_PENALTY`
         epochs = spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY + spec.Epoch(2)
-    assert epochs > spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY
+    assert spec.Epoch(epochs) > spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY
 
     for _ in range(epochs):
         next_epoch(spec, state)
@@ -321,18 +350,18 @@ def leaking(epochs=None):
             # transition it to leak, and put it in the LRU.
             # The input state is likely already cached, so the hash-tree-root does not affect speed.
             key = (
-                state.hash_tree_root(),
+                hash_tree_root(state),
                 spec.MIN_EPOCHS_TO_INACTIVITY_PENALTY,
                 spec.SLOTS_PER_EPOCH,
                 epochs,
             )
             if key not in _cache_dict:
                 transition_state_to_leak(spec, state, epochs=epochs)
-                _cache_dict[key] = state
+                _cache_dict[key] = copy(state)
 
-            # Take an entry out of the LRU.
-            # Deep-copy so cached states are never polluted by test mutations.
-            state = _cache_dict[key].copy()
+            # Take an entry out of the LRU. States are mutable, so the test gets a
+            # copy and the cached one stays as it was transitioned.
+            state = copy(_cache_dict[key])
             return fn(*args, spec=spec, state=state, **kw)
 
         return entry
@@ -359,7 +388,9 @@ def run_test_full_but_partial_participation(spec, state, rng=None):
 
     if not is_post_altair(spec):
         for a in state.previous_epoch_attestations:
-            a.aggregation_bits = [rng.choice([True, False]) for _ in a.aggregation_bits]
+            a.aggregation_bits = type(a.aggregation_bits)(
+                data=[rng.choice([True, False]) for _ in a.aggregation_bits]
+            )
     else:
         for index in range(len(state.validators)):
             if rng.choice([True, False]):
@@ -374,7 +405,9 @@ def run_test_partial(spec, state, fraction_filled):
     # Remove portion of attestations
     if not is_post_altair(spec):
         num_attestations = int(len(state.previous_epoch_attestations) * fraction_filled)
-        state.previous_epoch_attestations = state.previous_epoch_attestations[:num_attestations]
+        state.previous_epoch_attestations = spec.PendingAttestations(
+            data=state.previous_epoch_attestations[:num_attestations]
+        )
     else:
         for index in range(int(len(state.validators) * fraction_filled)):
             state.previous_epoch_participation[index] = spec.ParticipationFlags(0b0000_0000)
@@ -390,7 +423,9 @@ def run_test_one_attestation_one_correct(spec, state):
     cached_prepare_state_with_attestations(spec, state)
 
     # Remove all attestations except for the first one
-    state.previous_epoch_attestations = state.previous_epoch_attestations[:1]
+    state.previous_epoch_attestations = spec.PendingAttestations(
+        data=state.previous_epoch_attestations[:1]
+    )
 
     yield from run_deltas(spec, state)
 
@@ -441,9 +476,11 @@ def run_test_some_very_low_effective_balances_that_did_not_attest(spec, state):
     if not is_post_altair(spec):
         # Remove attestation
         attestation = state.previous_epoch_attestations[0]
-        state.previous_epoch_attestations = state.previous_epoch_attestations[1:]
+        state.previous_epoch_attestations = spec.PendingAttestations(
+            data=state.previous_epoch_attestations[1:]
+        )
         # Set removed indices effective balance to very low amount
-        indices = spec.get_unslashed_attesting_indices(state, [attestation])
+        indices = {int(i) for i in spec.get_unslashed_attesting_indices(state, [attestation])}
         for i, index in enumerate(indices):
             state.validators[index].effective_balance = i
     else:
@@ -500,11 +537,13 @@ def run_test_proposer_not_in_attestations(spec, state):
     # Get an attestation where the proposer is not in the committee
     non_proposer_attestations = []
     for a in state.previous_epoch_attestations:
-        if a.proposer_index not in spec.get_unslashed_attesting_indices(state, [a]):
+        if int(a.proposer_index) not in {
+            int(i) for i in spec.get_unslashed_attesting_indices(state, [a])
+        }:
             non_proposer_attestations.append(a)
 
     assert any(non_proposer_attestations)
-    state.previous_epoch_attestations = non_proposer_attestations
+    state.previous_epoch_attestations = spec.PendingAttestations(data=non_proposer_attestations)
 
     yield from run_deltas(spec, state)
 
@@ -514,7 +553,9 @@ def run_test_duplicate_attestations_at_later_slots(spec, state):
 
     # Remove 2/3 of attestations to make it more interesting
     num_attestations = int(len(state.previous_epoch_attestations) * 0.33)
-    state.previous_epoch_attestations = state.previous_epoch_attestations[:num_attestations]
+    state.previous_epoch_attestations = spec.PendingAttestations(
+        data=state.previous_epoch_attestations[:num_attestations]
+    )
 
     # Get map of the proposer at each slot to make valid-looking duplicate attestations
     per_slot_proposers = {
@@ -528,16 +569,18 @@ def run_test_duplicate_attestations_at_later_slots(spec, state):
         # duplicate if slot exceeds the max slot in previous_epoch_attestations
         if a.data.slot + a.inclusion_delay >= max_slot:
             continue
-        later_a = a.copy()
+        later_a = copy(a)
         later_a.inclusion_delay += spec.Slot(1)
         later_a.proposer_index = per_slot_proposers[later_a.data.slot + later_a.inclusion_delay]
         later_attestations.append(later_a)
 
     assert any(later_attestations)
 
-    state.previous_epoch_attestations = sorted(
-        state.previous_epoch_attestations + later_attestations,
-        key=lambda a: a.data.slot + a.inclusion_delay,
+    state.previous_epoch_attestations = spec.PendingAttestations(
+        data=sorted(
+            list(state.previous_epoch_attestations) + later_attestations,
+            key=lambda a: a.data.slot + a.inclusion_delay,
+        )
     )
 
     yield from run_deltas(spec, state)

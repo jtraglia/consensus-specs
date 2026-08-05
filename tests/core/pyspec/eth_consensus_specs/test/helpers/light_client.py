@@ -72,7 +72,7 @@ def compute_start_slot_at_sync_committee_period(spec, sync_committee_period):
 
 def compute_start_slot_at_next_sync_committee_period(spec, state):
     sync_committee_period = spec.compute_sync_committee_period_at_slot(state.slot)
-    return compute_start_slot_at_sync_committee_period(spec, sync_committee_period + spec.Uint64(1))
+    return compute_start_slot_at_sync_committee_period(spec, sync_committee_period + spec.Epoch(1))
 
 
 def get_sync_aggregate(spec, state, num_participants=None, signature_slot=None, phases=None):
@@ -93,18 +93,18 @@ def get_sync_aggregate(spec, state, num_participants=None, signature_slot=None, 
     # By default, use full participation
     if num_participants is None:
         num_participants = committee_size
-    assert committee_size >= num_participants >= 0
+    assert int(committee_size) >= int(num_participants) >= 0
 
     # Compute sync aggregate
     sync_committee_bits = [True] * num_participants + [False] * (committee_size - num_participants)
     sync_committee_signature = compute_aggregate_sync_committee_signature(
         signature_spec,
         signature_state,
-        max(signature_slot, signature_spec.Slot(1)) - signature_spec.Slot(1),
+        max(signature_slot, spec.Slot(1)) - spec.Slot(1),
         committee_indices[:num_participants],
     )
     sync_aggregate = signature_spec.SyncAggregate(
-        sync_committee_bits=sync_committee_bits,
+        sync_committee_bits=signature_spec.SyncCommitteeBits(data=sync_committee_bits),
         sync_committee_signature=sync_committee_signature,
     )
     return sync_aggregate, signature_slot
@@ -128,14 +128,14 @@ def create_update(
 
     if with_next:
         update.next_sync_committee = attested_state.next_sync_committee
-        update.next_sync_committee_branch = spec.compute_merkle_proof(
-            attested_state, latest_next_sync_committee_gindex(spec)
+        update.next_sync_committee_branch = spec.NextSyncCommitteeBranch(
+            data=spec.compute_merkle_proof(attested_state, latest_next_sync_committee_gindex(spec))
         )
 
     if with_finality:
         update.finalized_header = spec.block_to_light_client_header(finalized_block)
-        update.finality_branch = spec.compute_merkle_proof(
-            attested_state, latest_finalized_root_gindex(spec)
+        update.finality_branch = spec.FinalityBranch(
+            data=spec.compute_merkle_proof(attested_state, latest_finalized_root_gindex(spec))
         )
 
     update.sync_aggregate, update.signature_slot = get_sync_aggregate(
@@ -167,7 +167,7 @@ def check_merkle_branch_equal(spec, new_spec, data, upgraded, gindex):
             upgraded, gindex
         ) == new_spec.normalize_merkle_branch(data, gindex)
     else:
-        assert list(upgraded) == list(data)
+        assert upgraded == data
 
 
 def check_lc_header_equal(spec, new_spec, data, upgraded):
@@ -204,9 +204,7 @@ def upgrade_lc_header_to_new_spec(spec, new_spec, data, phases):
 
 def check_lc_bootstrap_equal(spec, new_spec, data, upgraded):
     check_lc_header_equal(spec, new_spec, data.header, upgraded.header)
-    assert hash_tree_root(upgraded.current_sync_committee) == hash_tree_root(
-        data.current_sync_committee
-    )
+    assert upgraded.current_sync_committee == data.current_sync_committee
     check_merkle_branch_equal(
         spec,
         new_spec,
@@ -240,7 +238,7 @@ def upgrade_lc_bootstrap_to_new_spec(spec, new_spec, data, phases):
 
 def check_lc_update_equal(spec, new_spec, data, upgraded):
     check_lc_header_equal(spec, new_spec, data.attested_header, upgraded.attested_header)
-    assert hash_tree_root(upgraded.next_sync_committee) == hash_tree_root(data.next_sync_committee)
+    assert upgraded.next_sync_committee == data.next_sync_committee
     check_merkle_branch_equal(
         spec,
         new_spec,
@@ -256,7 +254,7 @@ def check_lc_update_equal(spec, new_spec, data, upgraded):
         upgraded.finality_branch,
         latest_finalized_root_gindex(new_spec),
     )
-    assert hash_tree_root(upgraded.sync_aggregate) == hash_tree_root(data.sync_aggregate)
+    assert upgraded.sync_aggregate == data.sync_aggregate
     assert upgraded.signature_slot == data.signature_slot
 
 
@@ -292,7 +290,7 @@ def check_lc_finality_update_equal(spec, new_spec, data, upgraded):
         upgraded.finality_branch,
         latest_finalized_root_gindex(new_spec),
     )
-    assert hash_tree_root(upgraded.sync_aggregate) == hash_tree_root(data.sync_aggregate)
+    assert upgraded.sync_aggregate == data.sync_aggregate
     assert upgraded.signature_slot == data.signature_slot
 
 
@@ -320,10 +318,8 @@ def upgrade_lc_finality_update_to_new_spec(spec, new_spec, data, phases):
 
 def check_lc_store_equal(spec, new_spec, data, upgraded):
     check_lc_header_equal(spec, new_spec, data.finalized_header, upgraded.finalized_header)
-    assert hash_tree_root(upgraded.current_sync_committee) == hash_tree_root(
-        data.current_sync_committee
-    )
-    assert hash_tree_root(upgraded.next_sync_committee) == hash_tree_root(data.next_sync_committee)
+    assert upgraded.current_sync_committee == data.current_sync_committee
+    assert upgraded.next_sync_committee == data.next_sync_committee
     if upgraded.best_valid_update is None:
         assert data.best_valid_update is None
     else:

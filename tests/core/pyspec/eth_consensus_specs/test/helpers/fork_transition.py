@@ -52,7 +52,7 @@ from eth_consensus_specs.test.helpers.voluntary_exits import (
 from eth_consensus_specs.test.helpers.withdrawals import (
     prepare_withdrawal_request,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 class OperationType(Enum):
@@ -73,7 +73,10 @@ def _set_operations_by_dict(spec, block, operation_dict, state):
         obj = block.body
         for attr in key.split(".")[:-1]:
             obj = getattr(obj, attr)
-        setattr(obj, key.split(".")[-1], value)
+        name = key.split(".")[-1]
+        if isinstance(value, list):
+            value = type(obj).model_fields[name].annotation(data=value)
+        setattr(obj, name, value)
     if is_post_gloas(spec):
         payload = build_empty_execution_payload(spec, state)
         block.body.signed_execution_payload_bid.message.block_hash = compute_el_block_hash(
@@ -121,7 +124,8 @@ def skip_slots(*slots):
     """
 
     def f(state_at_prior_slot):
-        return int(state_at_prior_slot.slot) + 1 not in slots
+        next_slot = state_at_prior_slot.slot + type(state_at_prior_slot.slot)(1)
+        return next_slot not in slots
 
     return f
 
@@ -136,7 +140,8 @@ def only_at(slot):
     """
 
     def f(state_at_prior_slot):
-        return int(state_at_prior_slot.slot) + 1 == slot
+        next_slot = state_at_prior_slot.slot + type(state_at_prior_slot.slot)(1)
+        return next_slot == slot
 
     return f
 
@@ -168,10 +173,10 @@ def state_transition_across_slots_with_ignoring_proposers(
             next_slot(spec, state)
             continue
 
-        future_state = state.copy()
+        future_state = copy(state)
         next_slot(spec, future_state)
         proposer_index = spec.get_beacon_proposer_index(future_state)
-        if proposer_index not in ignoring_proposers:
+        if int(proposer_index) not in ignoring_proposers:
             block = build_empty_block_for_next_slot(spec, state)
             signed_block = state_transition_and_sign_block(spec, state, block)
             yield signed_block
@@ -197,12 +202,12 @@ def do_fork(
 ):
     spec.process_slots(state, state.slot + spec.Slot(1))
 
-    assert state.slot % spec.SLOTS_PER_EPOCH == 0
-    assert spec.get_current_epoch(state) == fork_epoch
+    assert state.slot % spec.SLOTS_PER_EPOCH == spec.Slot(0)
+    assert spec.get_current_epoch(state) == spec.Epoch(fork_epoch)
 
     state = get_upgrade_fn(post_spec, post_spec.fork)(state)
 
-    assert state.fork.epoch == fork_epoch
+    assert state.fork.epoch == post_spec.Epoch(fork_epoch)
 
     previous_version = get_previous_fork_version(post_spec, post_spec.fork)
     current_version = get_fork_version(post_spec, post_spec.fork)
@@ -226,8 +231,8 @@ def do_fork_generate(
 ):
     spec.process_slots(state, state.slot + spec.Slot(1))
 
-    assert state.slot % spec.SLOTS_PER_EPOCH == 0
-    assert spec.get_current_epoch(state) == fork_epoch
+    assert state.slot % spec.SLOTS_PER_EPOCH == spec.Slot(0)
+    assert spec.get_current_epoch(state) == spec.Epoch(fork_epoch)
 
     yield "pre", state
 
@@ -235,7 +240,7 @@ def do_fork_generate(
 
     yield "post", state
 
-    assert state.fork.epoch == fork_epoch
+    assert state.fork.epoch == post_spec.Epoch(fork_epoch)
 
     previous_version = get_previous_fork_version(post_spec, post_spec.fork)
     current_version = get_fork_version(post_spec, post_spec.fork)
@@ -268,8 +273,7 @@ def transition_across_forks(
     spec, state, to_slot, phases=None, with_block=False, sync_aggregate=None
 ):
     assert to_slot > state.slot
-    to_slot = spec.Slot(to_slot)
-    state = state.copy()
+    state = copy(state)
     block = None
     to_epoch = spec.compute_epoch_at_slot(to_slot)
     while state.slot < to_slot:
@@ -353,12 +357,10 @@ def run_transition_with_operation(
     selected_validator_index = None
     if is_slashing_operation:
         # avoid slashing the next proposer
-        future_state = state.copy()
+        future_state = copy(state)
         next_slot(spec, future_state)
         proposer_index = spec.get_beacon_proposer_index(future_state)
-        selected_validator_index = (proposer_index + spec.ValidatorIndex(1)) % spec.ValidatorIndex(
-            len(state.validators)
-        )
+        selected_validator_index = (int(proposer_index) + 1) % len(state.validators)
         if operation_type == OperationType.PROPOSER_SLASHING:
             proposer_slashing = get_valid_proposer_slashing(
                 spec, state, slashed_index=selected_validator_index, signed_1=True, signed_2=True
@@ -370,7 +372,7 @@ def run_transition_with_operation(
                 # NOTE: attestation format changes between Deneb and Electra
                 # so attester slashing must be made with the `post_spec`
                 target_spec = post_spec
-                target_state = post_spec.upgrade_to_electra(state.copy())
+                target_state = post_spec.upgrade_to_electra(copy(state))
                 target_state.fork = state.fork
             else:
                 target_spec = spec
@@ -434,18 +436,15 @@ def run_transition_with_operation(
             ]
             assert slashed_proposer.slashed
         elif operation_type == OperationType.ATTESTER_SLASHING:
-            indices = set(attester_slashing.attestation_1.attesting_indices).intersection(
-                attester_slashing.attestation_2.attesting_indices
-            )
+            indices = {int(index) for index in attester_slashing.attestation_1.attesting_indices}
+            indices &= {int(index) for index in attester_slashing.attestation_2.attesting_indices}
             assert selected_validator_index in indices
             assert len(indices) > 0
             for validator_index in indices:
                 assert state.validators[validator_index].slashed
         elif operation_type == OperationType.DEPOSIT:
-            # The check may run before or after the fork; pick the state's spec.
-            state_spec = post_spec if isinstance(state, post_spec.BeaconState) else spec
-            assert not state_spec.is_active_validator(
-                state.validators[selected_validator_index], state_spec.get_current_epoch(state)
+            assert not post_spec.is_active_validator(
+                state.validators[selected_validator_index], post_spec.get_current_epoch(state)
             )
         elif operation_type == OperationType.VOLUNTARY_EXIT:
             validator = state.validators[selected_validator_index]
@@ -457,7 +456,7 @@ def run_transition_with_operation(
                 == spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX
             )
         elif operation_type == OperationType.DEPOSIT_REQUEST:
-            assert state.pending_deposits == [
+            assert list(state.pending_deposits) == [
                 post_spec.PendingDeposit(
                     pubkey=deposit_request.pubkey,
                     withdrawal_credentials=deposit_request.withdrawal_credentials,

@@ -23,6 +23,8 @@ from eth_consensus_specs.test.helpers.constants import (
 from eth_consensus_specs.test.helpers.execution_payload import (
     compute_el_block_hash,
 )
+from eth_consensus_specs.utils import kzg
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def _run_blob_kzg_commitments_merkle_proof_test(spec, state, rng=None, blob_count=1):
@@ -38,13 +40,15 @@ def _run_blob_kzg_commitments_merkle_proof_test(spec, state, rng=None, blob_coun
             mode=RandomizationMode,
             chaos=True,
         )
-    block.body.blob_kzg_commitments = blob_kzg_commitments
-    block.body.execution_payload.transactions = [opaque_tx]
+    block.body.blob_kzg_commitments = spec.BlobKZGCommitments(data=blob_kzg_commitments)
+    block.body.execution_payload.transactions = spec.Transactions(
+        data=[spec.Transaction(data=opaque_tx)]
+    )
     block.body.execution_payload.block_hash = compute_el_block_hash(
         spec, block.body.execution_payload, state
     )
     signed_block = sign_block(spec, state, block, proposer_index=0)
-    cells_and_kzg_proofs = [spec.compute_cells_and_kzg_proofs(blob) for blob in blobs]
+    cells_and_kzg_proofs = [kzg.compute_cells_and_kzg_proofs(blob) for blob in blobs]
     column_sidecars = spec.get_data_column_sidecars_from_block(signed_block, cells_and_kzg_proofs)
     column_sidecar = column_sidecars[0]
 
@@ -54,13 +58,13 @@ def _run_blob_kzg_commitments_merkle_proof_test(spec, state, rng=None, blob_coun
     yield (
         "proof",
         {
-            "leaf": "0x" + column_sidecar.kzg_commitments.hash_tree_root().hex(),
+            "leaf": "0x" + hash_tree_root(column_sidecar.kzg_commitments).hex(),
             "leaf_index": gindex,
             "branch": ["0x" + root.hex() for root in kzg_commitments_inclusion_proof],
         },
     )
     assert spec.is_valid_merkle_branch(
-        leaf=column_sidecar.kzg_commitments.hash_tree_root(),
+        leaf=hash_tree_root(column_sidecar.kzg_commitments),
         branch=column_sidecar.kzg_commitments_inclusion_proof,
         depth=spec.floorlog2(gindex),
         index=spec.get_subtree_index(gindex),

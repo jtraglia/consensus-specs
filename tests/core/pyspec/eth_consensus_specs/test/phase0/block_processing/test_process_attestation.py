@@ -130,7 +130,7 @@ def test_invalid_old_source_epoch(spec, state):
     state.previous_justified_checkpoint.epoch = 3
     state.current_justified_checkpoint.epoch = 4
     attestation = get_valid_attestation(
-        spec, state, slot=spec.SLOTS_PER_EPOCH * spec.Slot(3) + spec.Slot(1)
+        spec, state, slot=(spec.SLOTS_PER_EPOCH * spec.Slot(3)) + spec.Slot(1)
     )
 
     # test logic sanity check: make sure the attestation is pointing to oldest known source epoch
@@ -164,8 +164,8 @@ def reduce_state_committee_count_from_max(spec, state):
         spec.get_committee_count_per_slot(state, spec.get_current_epoch(state))
         >= spec.MAX_COMMITTEES_PER_SLOT
     ):
-        state.validators = state.validators[: len(state.validators) // 2]
-        state.balances = state.balances[: len(state.balances) // 2]
+        state.validators = spec.Validators(data=state.validators[: len(state.validators) // 2])
+        state.balances = spec.Balances(data=state.balances[: len(state.balances) // 2])
 
 
 @with_all_phases
@@ -326,7 +326,7 @@ def test_invalid_previous_source_root(spec, state):
     state.current_justified_checkpoint = spec.Checkpoint(epoch=4, root=b"\x32" * 32)
 
     attestation = get_valid_attestation(
-        spec, state, slot=spec.SLOTS_PER_EPOCH * spec.Slot(4) + spec.Slot(1)
+        spec, state, slot=(spec.SLOTS_PER_EPOCH * spec.Slot(4)) + spec.Slot(1)
     )
     next_slots(spec, state, spec.MIN_ATTESTATION_INCLUSION_DELAY)
 
@@ -374,14 +374,14 @@ def test_invalid_too_few_aggregation_bits(spec, state):
     attestation = get_valid_attestation(spec, state)
     next_slots(spec, state, spec.MIN_ATTESTATION_INCLUSION_DELAY)
 
-    attestation.aggregation_bits = spec.AggregationBits.of(
-        *([0b1] + [0b0] * (len(attestation.aggregation_bits) - 1))
+    attestation.aggregation_bits = spec.AggregationBits(
+        data=[0b1] + [0b0] * (len(attestation.aggregation_bits) - 1)
     )
 
     sign_attestation(spec, state, attestation)
 
     # one too few bits
-    attestation.aggregation_bits = attestation.aggregation_bits[:-1]
+    attestation.aggregation_bits = spec.AggregationBits(data=attestation.aggregation_bits[:-1])
 
     yield from run_attestation_processing(spec, state, attestation, valid=False)
 

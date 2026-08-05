@@ -14,7 +14,7 @@ from eth_consensus_specs.test.helpers.forks import (
 )
 from eth_consensus_specs.test.helpers.keys import builder_privkeys, privkeys
 from eth_consensus_specs.test.helpers.withdrawals import get_expected_withdrawals
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def get_execution_payload_header(spec, execution_payload):
@@ -49,7 +49,7 @@ def get_execution_payload_bid(spec, state, execution_payload):
         raise ValueError("get_execution_payload_bid only available for gloas and later")
 
     parent_block_root = hash_tree_root(state.latest_block_header)
-    kzg_list = spec.ProgressiveList[spec.KZGCommitment]()
+    kzg_list = spec.BlobKZGCommitments()
     builder_index = spec.get_beacon_proposer_index(state)
 
     return spec.ExecutionPayloadBid(
@@ -74,9 +74,7 @@ def compute_trie_root_from_indexed_data(data):
     t = HexaryTrie(db={})
     for i, obj in enumerate(data):
         k = encode(i, big_endian_int)
-        # Byte-list values carry their payload in `data`.
-        payload = bytes(obj.data) if hasattr(obj, "data") else obj
-        t.set(k, payload)  # Implicitly skipped if `payload == b''` (invalid RLP)
+        t.set(k, bytes(obj))  # Implicitly skipped if `obj == b''` (invalid RLP)
     return t.root_hash
 
 
@@ -85,7 +83,7 @@ def compute_requests_hash(block_requests):
     m = sha256()
     for r in block_requests:
         if len(r) > 1:
-            m.update(sha256(r).digest())
+            m.update(sha256(bytes(r)).digest())
     return m.digest()
 
 
@@ -105,59 +103,59 @@ def compute_el_header_block_hash(
     """
     execution_payload_header_rlp = [
         # parent_hash
-        (Binary(32, 32), payload.parent_hash),
+        (Binary(32, 32), bytes(payload.parent_hash)),
         # ommers_hash
         (
             Binary(32, 32),
             bytes.fromhex("1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347"),
         ),
         # coinbase
-        (Binary(20, 20), payload.fee_recipient),
+        (Binary(20, 20), bytes(payload.fee_recipient)),
         # state_root
-        (Binary(32, 32), payload.state_root),
+        (Binary(32, 32), bytes(payload.state_root)),
         # txs_root
-        (Binary(32, 32), transactions_trie_root),
+        (Binary(32, 32), bytes(transactions_trie_root)),
         # receipts_root
-        (Binary(32, 32), payload.receipts_root),
+        (Binary(32, 32), bytes(payload.receipts_root)),
         # logs_bloom
-        (Binary(256, 256), payload.logs_bloom),
+        (Binary(256, 256), bytes(payload.logs_bloom)),
         # difficulty
         (big_endian_int, 0),
         # number
-        (big_endian_int, payload.block_number),
+        (big_endian_int, int(payload.block_number)),
         # gas_limit
-        (big_endian_int, payload.gas_limit),
+        (big_endian_int, int(payload.gas_limit)),
         # gas_used
-        (big_endian_int, payload.gas_used),
+        (big_endian_int, int(payload.gas_used)),
         # timestamp
-        (big_endian_int, payload.timestamp),
+        (big_endian_int, int(payload.timestamp)),
         # extradata
-        (Binary(0, 32), bytes(payload.extra_data.data)),
+        (Binary(0, 32), bytes(payload.extra_data)),
         # prev_randao
-        (Binary(32, 32), payload.prev_randao),
+        (Binary(32, 32), bytes(payload.prev_randao)),
         # nonce
         (Binary(8, 8), bytes.fromhex("0000000000000000")),
         # base_fee_per_gas
-        (big_endian_int, payload.base_fee_per_gas),
+        (big_endian_int, int(payload.base_fee_per_gas)),
     ]
     if is_post_capella(spec):
         # withdrawals_root
-        execution_payload_header_rlp.append((Binary(32, 32), withdrawals_trie_root))
+        execution_payload_header_rlp.append((Binary(32, 32), bytes(withdrawals_trie_root)))
     if is_post_deneb(spec):
         # blob_gas_used
-        execution_payload_header_rlp.append((big_endian_int, payload.blob_gas_used))
+        execution_payload_header_rlp.append((big_endian_int, int(payload.blob_gas_used)))
         # excess_blob_gas
-        execution_payload_header_rlp.append((big_endian_int, payload.excess_blob_gas))
+        execution_payload_header_rlp.append((big_endian_int, int(payload.excess_blob_gas)))
         # parent_beacon_root
-        execution_payload_header_rlp.append((Binary(32, 32), parent_beacon_block_root))
+        execution_payload_header_rlp.append((Binary(32, 32), bytes(parent_beacon_block_root)))
     if is_post_electra(spec):
         # requests_hash
-        execution_payload_header_rlp.append((Binary(32, 32), requests_hash))
+        execution_payload_header_rlp.append((Binary(32, 32), bytes(requests_hash)))
     if is_post_gloas(spec):
         # block access list
-        execution_payload_header_rlp.append((Binary(32, 32), block_access_list_hash))
+        execution_payload_header_rlp.append((Binary(32, 32), bytes(block_access_list_hash)))
         # slot number
-        execution_payload_header_rlp.append((big_endian_int, payload.slot_number))
+        execution_payload_header_rlp.append((big_endian_int, int(payload.slot_number)))
 
     sedes = List([schema for schema, _ in execution_payload_header_rlp])
     values = [value for _, value in execution_payload_header_rlp]
@@ -170,13 +168,13 @@ def compute_el_header_block_hash(
 def get_withdrawal_rlp(withdrawal):
     withdrawal_rlp = [
         # index
-        (big_endian_int, withdrawal.index),
+        (big_endian_int, int(withdrawal.index)),
         # validator_index
-        (big_endian_int, withdrawal.validator_index),
+        (big_endian_int, int(withdrawal.validator_index)),
         # address
-        (Binary(20, 20), withdrawal.address),
+        (Binary(20, 20), bytes(withdrawal.address)),
         # amount
-        (big_endian_int, withdrawal.amount),
+        (big_endian_int, int(withdrawal.amount)),
     ]
 
     sedes = List([schema for schema, _ in withdrawal_rlp])
@@ -187,15 +185,15 @@ def get_withdrawal_rlp(withdrawal):
 def get_deposit_request_rlp_bytes(deposit_request):
     deposit_request_rlp = [
         # pubkey
-        (Binary(48, 48), deposit_request.pubkey),
+        (Binary(48, 48), bytes(deposit_request.pubkey)),
         # withdrawal_credentials
-        (Binary(32, 32), deposit_request.withdrawal_credentials),
+        (Binary(32, 32), bytes(deposit_request.withdrawal_credentials)),
         # amount
-        (big_endian_int, deposit_request.amount),
+        (big_endian_int, int(deposit_request.amount)),
         # pubkey
-        (Binary(96, 96), deposit_request.signature),
+        (Binary(96, 96), bytes(deposit_request.signature)),
         # index
-        (big_endian_int, deposit_request.index),
+        (big_endian_int, int(deposit_request.index)),
     ]
 
     sedes = List([schema for schema, _ in deposit_request_rlp])
@@ -207,9 +205,9 @@ def get_deposit_request_rlp_bytes(deposit_request):
 def get_withdrawal_request_rlp_bytes(withdrawal_request):
     withdrawal_request_rlp = [
         # source_address
-        (Binary(20, 20), withdrawal_request.source_address),
+        (Binary(20, 20), bytes(withdrawal_request.source_address)),
         # validator_pubkey
-        (Binary(48, 48), withdrawal_request.validator_pubkey),
+        (Binary(48, 48), bytes(withdrawal_request.validator_pubkey)),
     ]
 
     sedes = List([schema for schema, _ in withdrawal_request_rlp])
@@ -221,11 +219,11 @@ def get_withdrawal_request_rlp_bytes(withdrawal_request):
 def get_consolidation_request_rlp_bytes(consolidation_request):
     consolidation_request_rlp = [
         # source_address
-        (Binary(20, 20), consolidation_request.source_address),
+        (Binary(20, 20), bytes(consolidation_request.source_address)),
         # source_pubkey
-        (Binary(48, 48), consolidation_request.source_pubkey),
+        (Binary(48, 48), bytes(consolidation_request.source_pubkey)),
         # target_pubkey
-        (Binary(48, 48), consolidation_request.target_pubkey),
+        (Binary(48, 48), bytes(consolidation_request.target_pubkey)),
     ]
 
     sedes = List([schema for schema, _ in consolidation_request_rlp])
@@ -267,10 +265,10 @@ def compute_el_block_hash(spec, payload, pre_state, execution_requests=None):
     requests_hash = None
 
     if is_post_deneb(spec):
-        previous_block_header = pre_state.latest_block_header.copy()
+        previous_block_header = copy(pre_state.latest_block_header)
         if previous_block_header.state_root == spec.Root():
-            previous_block_header.state_root = pre_state.hash_tree_root()
-        parent_beacon_block_root = previous_block_header.hash_tree_root()
+            previous_block_header.state_root = hash_tree_root(pre_state)
+        parent_beacon_block_root = hash_tree_root(previous_block_header)
     if is_post_electra(spec):
         if execution_requests is None:
             requests_list = []
@@ -299,7 +297,7 @@ def build_empty_post_gloas_execution_payload_bid(spec, state):
     assert is_post_gloas(spec)
 
     parent_block_root = hash_tree_root(state.latest_block_header)
-    kzg_list = spec.ProgressiveList[spec.KZGCommitment]()
+    kzg_list = spec.BlobKZGCommitments()
     # Use self-build: builder_index is the same as the beacon proposer index
     builder_index = spec.BUILDER_INDEX_SELF_BUILD
     # Set block_hash to a different value than spec.Hash32(),
@@ -380,9 +378,10 @@ def build_empty_execution_payload(
         receipts_root=spec.Bytes32(
             bytes.fromhex("1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347")
         ),
-        logs_bloom=spec.LogsBloom(),  # TODO: zeroed logs bloom for empty logs ok?
+        # TODO: zeroed logs bloom for empty logs ok?
+        logs_bloom=spec.LogsBloom(),
         prev_randao=randao_mix,
-        gas_used=0,  # empty block, 0 gas
+        gas_used=spec.Uint64(0),  # empty block, 0 gas
         gas_limit=gas_limit,
         timestamp=timestamp,
         extra_data=spec.ExtraData(),
@@ -397,8 +396,8 @@ def build_empty_execution_payload(
     if is_post_capella(spec):
         payload.withdrawals = get_expected_withdrawals(spec, state)
     if is_post_deneb(spec):
-        payload.blob_gas_used = 0
-        payload.excess_blob_gas = 0
+        payload.blob_gas_used = spec.Uint64(0)
+        payload.excess_blob_gas = spec.Uint64(0)
     if is_post_gloas(spec):
         payload.block_access_list = spec.BlockAccessList()
         payload.slot_number = state.slot
@@ -414,19 +413,21 @@ def build_randomized_execution_payload(spec, state, rng):
     execution_payload.state_root = spec.Bytes32(get_random_bytes_list(rng, 32))
     execution_payload.receipts_root = spec.Bytes32(get_random_bytes_list(rng, 32))
     execution_payload.logs_bloom = spec.LogsBloom(
-        get_random_bytes_list(rng, int(spec.BYTES_PER_LOGS_BLOOM))
+        get_random_bytes_list(rng, spec.BYTES_PER_LOGS_BLOOM)
     )
     execution_payload.block_number = rng.randint(0, int(10e10))
     execution_payload.gas_limit = rng.randint(0, int(10e10))
     execution_payload.gas_used = rng.randint(0, int(10e10))
-    extra_data_length = rng.randint(0, int(spec.MAX_EXTRA_DATA_BYTES))
+    extra_data_length = rng.randint(0, spec.MAX_EXTRA_DATA_BYTES)
     execution_payload.extra_data = spec.ExtraData(
         data=get_random_bytes_list(rng, extra_data_length)
     )
     execution_payload.base_fee_per_gas = rng.randint(0, 2**256 - 1)
 
     num_transactions = rng.randint(0, 100)
-    execution_payload.transactions = [get_random_tx(rng) for _ in range(num_transactions)]
+    execution_payload.transactions = spec.Transactions(
+        data=[spec.Transaction(data=get_random_tx(rng)) for _ in range(num_transactions)]
+    )
 
     execution_payload.block_hash = compute_el_block_hash(spec, execution_payload, state)
 
@@ -436,7 +437,7 @@ def build_randomized_execution_payload(spec, state, rng):
 def build_state_with_incomplete_transition(spec, state):
     if is_post_gloas(spec):
         # In Gloas, we need to set up the execution payload bid instead
-        kzgs = spec.ProgressiveList[spec.KZGCommitment]()
+        kzgs = spec.BlobKZGCommitments()
         bid = spec.ExecutionPayloadBid(
             slot=state.slot,
             value=spec.Gwei(0),
@@ -467,14 +468,21 @@ def build_state_with_complete_transition(spec, state):
 
 
 def build_state_with_execution_payload_header(spec, state, execution_payload_header):
-    pre_state = state.copy()
+    pre_state = copy(state)
     pre_state.latest_execution_payload_header = execution_payload_header
     return pre_state
 
 
 def build_state_with_execution_payload_bid(spec, state, execution_payload_bid):
-    pre_state = state.copy()
+    pre_state = copy(state)
     pre_state.latest_execution_payload_bid = execution_payload_bid
+    # The committed bid is part of the latest block's body, so refresh the
+    # header's body root to match, as ``create_genesis_state`` does. Otherwise
+    # blocks built on this state reference a parent root that differs from the
+    # anchor block reconstructed by ``get_genesis_forkchoice_store_and_block``.
+    block_body = spec.BeaconBlockBody()
+    block_body.signed_execution_payload_bid.message = execution_payload_bid
+    pre_state.latest_block_header.body_root = spec.hash_tree_root(block_body)
     return pre_state
 
 
@@ -527,7 +535,7 @@ def compute_execution_payload_bid(spec, state, payload, execution_requests=None)
         execution_requests = spec.ExecutionRequests()
 
     parent_block_root = hash_tree_root(state.latest_block_header)
-    kzg_list = spec.ProgressiveList[spec.KZGCommitment]()
+    kzg_list = spec.BlobKZGCommitments()
     # Use self-build: builder_index is the same as the beacon proposer index
     builder_index = spec.BUILDER_INDEX_SELF_BUILD
     return spec.ExecutionPayloadBid(

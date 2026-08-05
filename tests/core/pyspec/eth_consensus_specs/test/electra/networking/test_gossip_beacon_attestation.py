@@ -1,15 +1,17 @@
 from eth_consensus_specs.test.context import (
     spec_state_test,
-    with_phases,
+    with_all_phases_from_to,
+    with_electra_and_later,
 )
 from eth_consensus_specs.test.helpers.attestations import (
     get_valid_attestation,
     to_single_attestation,
 )
-from eth_consensus_specs.test.helpers.constants import ELECTRA, FULU
+from eth_consensus_specs.test.helpers.constants import ELECTRA, GLOAS
 from eth_consensus_specs.test.helpers.fork_choice import (
     get_genesis_forkchoice_store_and_block,
 )
+from eth_consensus_specs.test.helpers.forks import is_post_gloas
 from eth_consensus_specs.test.helpers.gossip import (
     get_filename,
     get_seen,
@@ -17,6 +19,7 @@ from eth_consensus_specs.test.helpers.gossip import (
     wrap_genesis_block,
 )
 from eth_consensus_specs.test.helpers.state import next_slot
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def get_correct_subnet(spec, state, attestation):
@@ -29,22 +32,23 @@ def get_correct_subnet(spec, state, attestation):
 def prepare_single_attestation(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
     next_slot(spec, state)
     attestation = get_valid_attestation(spec, state, signed=False, beacon_block_root=anchor_root)
     single = to_single_attestation(spec, state, attestation)
     return store, signed_anchor, single
 
 
-@with_phases([ELECTRA, FULU])
+@with_all_phases_from_to(ELECTRA, GLOAS)
 @spec_state_test
 def test_gossip_beacon_attestation__reject_nonzero_data_index(spec, state):
     """
     [New in Electra:EIP7549] Test that a ``SingleAttestation`` with
     ``data.index != 0`` is rejected.
     """
+    anchor_state = copy(state)
     yield "topic", "meta", "beacon_attestation"
-    yield "state", state
+    yield "state", anchor_state
 
     seen = get_seen(spec)
     store, signed_anchor, attestation = prepare_single_attestation(spec, state)
@@ -56,10 +60,13 @@ def test_gossip_beacon_attestation__reject_nonzero_data_index(spec, state):
 
     yield get_filename(attestation), attestation
 
-    block_time_ms = spec.compute_time_at_slot_ms(state, attestation.data.slot)
+    block_time_ms = spec.compute_time_at_slot_ms(store, attestation.data.slot)
     yield "current_time_ms", "meta", int(block_time_ms)
 
     subnet_id = get_correct_subnet(spec, state, attestation)
+    kwargs = {}
+    if is_post_gloas(spec):
+        kwargs["block_payload_statuses"] = {}
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -68,6 +75,7 @@ def test_gossip_beacon_attestation__reject_nonzero_data_index(spec, state):
         attestation=attestation,
         current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
+        **kwargs,
     )
     assert result == "reject"
     assert reason == "attestation data index is non-zero"
@@ -87,15 +95,16 @@ def test_gossip_beacon_attestation__reject_nonzero_data_index(spec, state):
     )
 
 
-@with_phases([ELECTRA, FULU])
+@with_electra_and_later
 @spec_state_test
 def test_gossip_beacon_attestation__reject_attester_not_in_committee(spec, state):
     """
     [New in Electra:EIP7549] Test that a ``SingleAttestation`` whose
     ``attester_index`` is not a member of the encoded committee is rejected.
     """
+    anchor_state = copy(state)
     yield "topic", "meta", "beacon_attestation"
-    yield "state", state
+    yield "state", anchor_state
 
     seen = get_seen(spec)
     store, signed_anchor, attestation = prepare_single_attestation(spec, state)
@@ -113,10 +122,13 @@ def test_gossip_beacon_attestation__reject_attester_not_in_committee(spec, state
 
     yield get_filename(attestation), attestation
 
-    block_time_ms = spec.compute_time_at_slot_ms(state, attestation.data.slot)
+    block_time_ms = spec.compute_time_at_slot_ms(store, attestation.data.slot)
     yield "current_time_ms", "meta", int(block_time_ms)
 
     subnet_id = get_correct_subnet(spec, state, attestation)
+    kwargs = {}
+    if is_post_gloas(spec):
+        kwargs["block_payload_statuses"] = {}
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -125,6 +137,7 @@ def test_gossip_beacon_attestation__reject_attester_not_in_committee(spec, state
         attestation=attestation,
         current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
+        **kwargs,
     )
     assert result == "reject"
     assert reason == "attester is not a member of the committee"

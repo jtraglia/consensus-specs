@@ -4,8 +4,8 @@
 
 - [Introduction](#introduction)
 - [Types](#types)
-  - [`FinalityBranch`](#finalitybranch)
   - [`CurrentSyncCommitteeBranch`](#currentsynccommitteebranch)
+  - [`FinalityBranch`](#finalitybranch)
   - [`NextSyncCommitteeBranch`](#nextsynccommitteebranch)
 - [Constants](#constants)
 - [Preset](#preset)
@@ -62,30 +62,37 @@ Additional documents describe how the light client sync protocol can be used:
 
 ## Types
 
-### `FinalityBranch`
-
-Merkle branch of `finalized_checkpoint.root` within `BeaconState`.
-
-```python
-class FinalityBranch(Vector[Bytes32]):
-    LENGTH = floorlog2(FINALIZED_ROOT_GINDEX)
-```
-
 ### `CurrentSyncCommitteeBranch`
-
-Merkle branch of `current_sync_committee` within `BeaconState`.
 
 ```python
 class CurrentSyncCommitteeBranch(Vector[Bytes32]):
+    """
+    A Merkle branch proving ``current_sync_committee`` within ``BeaconState``.
+    """
+
     LENGTH = floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX)
+```
+
+### `FinalityBranch`
+
+```python
+class FinalityBranch(Vector[Bytes32]):
+    """
+    A Merkle branch proving ``finalized_checkpoint.root`` within
+    ``BeaconState``.
+    """
+
+    LENGTH = floorlog2(FINALIZED_ROOT_GINDEX)
 ```
 
 ### `NextSyncCommitteeBranch`
 
-Merkle branch of `next_sync_committee` within `BeaconState`.
-
 ```python
 class NextSyncCommitteeBranch(Vector[Bytes32]):
+    """
+    A Merkle branch proving ``next_sync_committee`` within ``BeaconState``.
+    """
+
     LENGTH = floorlog2(NEXT_SYNC_COMMITTEE_GINDEX)
 ```
 
@@ -101,10 +108,10 @@ class NextSyncCommitteeBranch(Vector[Bytes32]):
 
 ### Misc
 
-| Name                              | Value                                                      | Unit       |
-| --------------------------------- | ---------------------------------------------------------- | ---------- |
-| `MIN_SYNC_COMMITTEE_PARTICIPANTS` | `1`                                                        | validators |
-| `UPDATE_TIMEOUT`                  | `Slot(SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)` | slots      |
+| Name                              | Value                                                      |
+| --------------------------------- | ---------------------------------------------------------- |
+| `MIN_SYNC_COMMITTEE_PARTICIPANTS` | `Uint64(1)`                                                |
+| `UPDATE_TIMEOUT`                  | `Slot(SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)` |
 
 ## Containers
 

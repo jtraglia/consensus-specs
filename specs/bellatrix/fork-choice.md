@@ -5,6 +5,7 @@
 - [Introduction](#introduction)
 - [Types](#types)
   - [`Bytes8`](#bytes8)
+  - [New `PayloadId`](#new-payloadid)
 - [Protocols](#protocols)
   - [`ExecutionEngine`](#executionengine)
     - [`notify_forkchoice_updated`](#notify_forkchoice_updated)
@@ -33,15 +34,13 @@ first PoS block.
 
 ## Types
 
-| Name        | SSZ equivalent | Description                              |
-| ----------- | -------------- | ---------------------------------------- |
-| `PayloadId` | `Bytes8`       | Identifier of a payload building process |
-
-### `Bytes8`
+### New `PayloadId`
 
 ```python
-class Bytes8(BaseBytes):
-    LENGTH = 8
+class PayloadId(Bytes8):
+    """
+    An identifier of a payload build process on the execution engine.
+    """
 ```
 
 ## Protocols
@@ -99,7 +98,7 @@ MUST be set to the hash of a terminal PoW block in this case.
 ##### `safe_block_hash`
 
 The `safe_block_hash` parameter MUST be set to return value of
-[`get_safe_execution_block_hash(fcr_store)`](./fast-confirmation.md#get_safe_execution_block_hash)
+[`get_safe_execution_block_hash(fcr_store)`](./fast-confirmation.md#new-get_safe_execution_block_hash)
 function.
 
 ## Helpers
@@ -189,6 +188,12 @@ def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
     consider scheduling it for later processing in such case.
     """
     block = signed_block.message
+    block_root = hash_tree_root(block)
+
+    # Return early if the block is already known
+    if block_root in store.blocks:
+        return
+
     # Parent block must be known
     assert block.parent_root in store.block_states
     # Make a copy of the state to avoid mutability issues
@@ -209,7 +214,6 @@ def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
 
     # Check the block is valid and compute the post-state
     state = pre_state.copy()
-    block_root = hash_tree_root(block)
     state_transition(state, signed_block, validate_result=True)
 
     # [New in Bellatrix]

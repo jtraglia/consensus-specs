@@ -27,6 +27,7 @@ from eth_consensus_specs.test.helpers.execution_payload import (
 from eth_consensus_specs.test.helpers.forks import (
     is_post_gloas,
 )
+from eth_consensus_specs.utils import kzg
 
 # Helpers
 
@@ -43,15 +44,17 @@ def compute_data_column_sidecar(spec, state):
     )
 
     opaque_tx, blobs, blob_kzg_commitments, _ = get_sample_blob_tx(spec, blob_count=2)
-    cells_and_kzg_proofs = [spec.compute_cells_and_kzg_proofs(blob) for blob in blobs]
+    cells_and_kzg_proofs = [kzg.compute_cells_and_kzg_proofs(blob) for blob in blobs]
 
     if is_post_gloas(spec):
-        block.body.signed_execution_payload_bid.message.blob_kzg_commitments = spec.ProgressiveList[
-            spec.KZGCommitment
-        ](blob_kzg_commitments)
+        block.body.signed_execution_payload_bid.message.blob_kzg_commitments = (
+            spec.BlobKZGCommitments(data=blob_kzg_commitments)
+        )
     else:
-        block.body.blob_kzg_commitments = blob_kzg_commitments
-        block.body.execution_payload.transactions = [opaque_tx]
+        block.body.blob_kzg_commitments = spec.BlobKZGCommitments(data=blob_kzg_commitments)
+        block.body.execution_payload.transactions = spec.Transactions(
+            data=[spec.Transaction(data=opaque_tx)]
+        )
         block.body.execution_payload.block_hash = compute_el_block_hash(
             spec, block.body.execution_payload, state
         )
@@ -89,12 +92,12 @@ def test_verify_data_column_sidecar__valid(spec, state):
 @single_phase
 def test_verify_data_column_sidecar__invalid_zero_blobs(spec, state):
     sidecar, blob_kzg_commitments = compute_data_column_sidecar(spec, state)
-    sidecar.column = []
-    sidecar.kzg_proofs = []
+    sidecar.column = spec.DataColumn(data=[])
+    sidecar.kzg_proofs = spec.KZGProofs(data=[])
     if is_post_gloas(spec):
         blob_kzg_commitments = []
     else:
-        sidecar.kzg_commitments = []
+        sidecar.kzg_commitments = spec.BlobKZGCommitments(data=[])
     assert not _verify_data_column_sidecar(spec, sidecar, blob_kzg_commitments)
 
 
@@ -112,7 +115,7 @@ def test_verify_data_column_sidecar__invalid_index(spec, state):
 @single_phase
 def test_verify_data_column_sidecar__invalid_mismatch_len_column(spec, state):
     sidecar, blob_kzg_commitments = compute_data_column_sidecar(spec, state)
-    sidecar.column = sidecar.column[1:]
+    sidecar.column = spec.DataColumn(data=sidecar.column[1:])
     assert not _verify_data_column_sidecar(spec, sidecar, blob_kzg_commitments)
 
 
@@ -124,7 +127,7 @@ def test_verify_data_column_sidecar__invalid_mismatch_len_kzg_commitments(spec, 
     if is_post_gloas(spec):
         del blob_kzg_commitments[0]
     else:
-        sidecar.kzg_commitments = sidecar.kzg_commitments[1:]
+        sidecar.kzg_commitments = spec.BlobKZGCommitments(data=sidecar.kzg_commitments[1:])
     assert not _verify_data_column_sidecar(spec, sidecar, blob_kzg_commitments)
 
 
@@ -133,7 +136,7 @@ def test_verify_data_column_sidecar__invalid_mismatch_len_kzg_commitments(spec, 
 @single_phase
 def test_verify_data_column_sidecar__invalid_mismatch_len_kzg_proofs(spec, state):
     sidecar, blob_kzg_commitments = compute_data_column_sidecar(spec, state)
-    sidecar.kzg_proofs = sidecar.kzg_proofs[1:]
+    sidecar.kzg_proofs = spec.KZGProofs(data=sidecar.kzg_proofs[1:])
     assert not _verify_data_column_sidecar(spec, sidecar, blob_kzg_commitments)
 
 
@@ -148,7 +151,7 @@ def test_verify_data_column_sidecar__invalid_kzg_commitments_over_max_blobs(spec
 
     for _ in range(int(max_blobs) - len(sidecar.kzg_commitments) + 1):
         sidecar.kzg_commitments.append(sidecar.kzg_commitments[0])
-    assert len(sidecar.kzg_commitments) > max_blobs
+    assert len(sidecar.kzg_commitments) > int(max_blobs)
 
     assert not _verify_data_column_sidecar(spec, sidecar, blob_kzg_commitments)
 
@@ -210,7 +213,7 @@ def test_verify_data_column_sidecar_inclusion_proof__valid(spec, state):
 @single_phase
 def test_verify_data_column_sidecar_inclusion_proof__invalid_missing_commitment(spec, state):
     sidecar, _ = compute_data_column_sidecar(spec, state)
-    sidecar.kzg_commitments = sidecar.kzg_commitments[1:]
+    sidecar.kzg_commitments = spec.BlobKZGCommitments(data=sidecar.kzg_commitments[1:])
     assert not spec.verify_data_column_sidecar_inclusion_proof(sidecar)
 
 
@@ -219,7 +222,9 @@ def test_verify_data_column_sidecar_inclusion_proof__invalid_missing_commitment(
 @single_phase
 def test_verify_data_column_sidecar_inclusion_proof__invalid_duplicate_commitment(spec, state):
     sidecar, _ = compute_data_column_sidecar(spec, state)
-    sidecar.kzg_commitments = sidecar.kzg_commitments + [sidecar.kzg_commitments[0]]
+    sidecar.kzg_commitments = spec.BlobKZGCommitments(
+        data=sidecar.kzg_commitments + [sidecar.kzg_commitments[0]]
+    )
     assert not spec.verify_data_column_sidecar_inclusion_proof(sidecar)
 
 
@@ -273,7 +278,7 @@ def test_get_validators_custody_requirement__single_validator(spec, state):
 @single_phase
 def test_get_validators_custody_requirement__multiple_validators(spec, state):
     assert len(state.validators) > 10, "Test requires more than 10 validators"
-    assert spec.config.NUMBER_OF_CUSTODY_GROUPS > 10, (
+    assert spec.Uint64(10) < spec.config.NUMBER_OF_CUSTODY_GROUPS, (
         "Test requires NUMBER_OF_CUSTODY_GROUPS to be more than 10"
     )
 
@@ -293,7 +298,9 @@ def test_get_validators_custody_requirement__multiple_validators(spec, state):
     total_balance = sum(
         (state.validators[i].effective_balance for i in validator_indices), spec.Gwei(0)
     )
-    expected_count = total_balance // spec.config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP
+    expected_count = spec.Uint64(
+        total_balance // spec.Gwei(spec.config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP)
+    )
     expected = min(
         max(expected_count, spec.config.VALIDATOR_CUSTODY_REQUIREMENT),
         spec.config.NUMBER_OF_CUSTODY_GROUPS,
@@ -319,14 +326,13 @@ def _run_get_validators_custody_requirement__maximum(spec, state, validator_indi
 
     # Check here that it is
     total_node_balance = sum(
-        (state.validators[index].effective_balance for index in validator_indices),
-        spec.Gwei(0),
+        (state.validators[index].effective_balance for index in validator_indices), spec.Gwei(0)
     )
     assert total_node_balance > (
         spec.config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP
         * spec.Gwei(spec.config.NUMBER_OF_CUSTODY_GROUPS)
     )
-    count = total_node_balance // spec.config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP
+    count = spec.Uint64(total_node_balance // spec.config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP)
     assert count > spec.config.NUMBER_OF_CUSTODY_GROUPS
 
     result = spec.get_validators_custody_requirement(state, validator_indices)
@@ -367,21 +373,20 @@ def _run_get_validators_custody_requirement__minimum(spec, state, validator_indi
     # This will force count to be more than NUMBER_OF_CUSTODY_GROUPS
     for validator_index in validator_indices:
         state.validators[validator_index].effective_balance = (
-            int(spec.config.VALIDATOR_CUSTODY_REQUIREMENT)
-            * int(spec.config.NUMBER_OF_CUSTODY_GROUPS)
-            // len(validator_indices)
-        ) - 1
+            spec.Gwei(spec.config.VALIDATOR_CUSTODY_REQUIREMENT)
+            * spec.Gwei(spec.config.NUMBER_OF_CUSTODY_GROUPS)
+            // spec.Gwei(len(validator_indices))
+        ) - spec.Gwei(1)
 
     # Check here that it is
     total_node_balance = sum(
-        (state.validators[index].effective_balance for index in validator_indices),
-        spec.Gwei(0),
+        (state.validators[index].effective_balance for index in validator_indices), spec.Gwei(0)
     )
     assert total_node_balance < (
         spec.config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP
         * spec.Gwei(spec.config.VALIDATOR_CUSTODY_REQUIREMENT)
     )
-    count = total_node_balance // spec.config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP
+    count = spec.Uint64(total_node_balance // spec.config.BALANCE_PER_ADDITIONAL_CUSTODY_GROUP)
     assert count < spec.config.VALIDATOR_CUSTODY_REQUIREMENT
 
     result = spec.get_validators_custody_requirement(state, validator_indices)

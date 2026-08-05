@@ -12,15 +12,15 @@ def _run_get_custody_groups(spec, rng, node_id=None, custody_group_count=None):
         node_id = rng.randint(0, 2**256 - 1)
 
     if custody_group_count is None:
-        custody_group_count = rng.randint(0, spec.config.NUMBER_OF_CUSTODY_GROUPS)
+        custody_group_count = rng.randint(0, int(spec.config.NUMBER_OF_CUSTODY_GROUPS))
 
-    result = spec.get_custody_groups(node_id, custody_group_count)
+    result = spec.get_custody_groups(spec.NodeID(node_id), spec.Uint64(custody_group_count))
     yield "node_id", "meta", node_id
     yield "custody_group_count", "meta", int(custody_group_count)
 
     assert len(result) == len(set(result))
-    assert len(result) == custody_group_count
-    assert all(i < spec.config.NUMBER_OF_CUSTODY_GROUPS for i in result)
+    assert len(result) == int(custody_group_count)
+    assert all(i < spec.CustodyIndex(spec.config.NUMBER_OF_CUSTODY_GROUPS) for i in result)
     python_list_result = [int(i) for i in result]
 
     yield "result", "meta", python_list_result

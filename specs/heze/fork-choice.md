@@ -33,9 +33,9 @@ This is the modification of the fork choice accompanying the Heze upgrade.
 
 ### Time parameters
 
-| Name                     | Value          | Unit         | Duration                   |
-| ------------------------ | -------------- | ------------ | -------------------------- |
-| `INCLUSION_LIST_DUE_BPS` | `Uint64(6667)` | basis points | ~67% of `SLOT_DURATION_MS` |
+| Name                     | Value          | Duration                   |
+| ------------------------ | -------------- | -------------------------- |
+| `INCLUSION_LIST_DUE_BPS` | `Uint64(6667)` | ~67% of `SLOT_DURATION_MS` |
 
 ## Protocols
 
@@ -192,7 +192,7 @@ def record_payload_inclusion_list_satisfaction(
     execution_engine: ExecutionEngine,
 ) -> None:
     inclusion_list_transactions = get_inclusion_list_transactions(
-        get_inclusion_list_store(), state, Slot(state.slot - 1)
+        get_inclusion_list_store(), state, Slot(state.slot - 1), only_timely=True
     )
     is_inclusion_list_satisfied = execution_engine.is_inclusion_list_satisfied(
         payload, inclusion_list_transactions
@@ -264,14 +264,12 @@ def on_inclusion_list(store: Store, signed_inclusion_list: SignedInclusionList) 
     """
     Run ``on_inclusion_list`` upon receiving a new inclusion list.
     """
-    inclusion_list = signed_inclusion_list.message
-
     seconds_since_genesis = store.time - store.genesis_time
     time_into_slot_ms = seconds_to_milliseconds(seconds_since_genesis) % SLOT_DURATION_MS
     inclusion_list_due_ms = get_inclusion_list_due_ms()
     is_timely = time_into_slot_ms < inclusion_list_due_ms
 
-    process_inclusion_list(get_inclusion_list_store(), inclusion_list, is_timely)
+    process_inclusion_list(get_inclusion_list_store(), signed_inclusion_list, is_timely)
 ```
 
 ### Modified `on_execution_payload_envelope`

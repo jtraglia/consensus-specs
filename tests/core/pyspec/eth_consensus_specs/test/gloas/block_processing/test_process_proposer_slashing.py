@@ -9,6 +9,7 @@ from eth_consensus_specs.test.helpers.proposer_slashings import (
     prepare_process_proposer_slashing,
     run_proposer_slashing_processing,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 @with_gloas_and_later
@@ -42,7 +43,7 @@ def test_builder_payment_deletion_current_epoch(spec, state):
     slashed_slot = proposer_slashing.signed_header_1.message.slot
     assert spec.compute_epoch_at_slot(slashed_slot) == spec.get_current_epoch(state)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_proposer_slashing_processing(spec, state, proposer_slashing)
 
@@ -86,7 +87,7 @@ def test_builder_payment_deletion_previous_epoch(spec, state):
     slashed_slot = proposer_slashing.signed_header_1.message.slot
     assert spec.compute_epoch_at_slot(slashed_slot) == spec.get_previous_epoch(state)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_proposer_slashing_processing(spec, state, proposer_slashing)
 
@@ -125,7 +126,7 @@ def test_builder_payment_deletion_too_late(spec, state):
         builder_payment_weight=1000,
     )
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_proposer_slashing_processing(spec, state, proposer_slashing)
 
@@ -166,7 +167,7 @@ def test_builder_payment_empty_current_epoch(spec, state):
     slashed_slot = proposer_slashing.signed_header_1.message.slot
     assert spec.compute_epoch_at_slot(slashed_slot) == spec.get_current_epoch(state)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_proposer_slashing_processing(spec, state, proposer_slashing)
 
@@ -207,7 +208,7 @@ def test_builder_payment_empty_previous_epoch(spec, state):
     slashed_slot = proposer_slashing.signed_header_1.message.slot
     assert spec.compute_epoch_at_slot(slashed_slot) == spec.get_previous_epoch(state)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_proposer_slashing_processing(spec, state, proposer_slashing)
 
@@ -245,7 +246,7 @@ def test_builder_payment_empty_old_epoch(spec, state):
         # No builder_payment_amount - payment slot stays empty
     )
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_proposer_slashing_processing(spec, state, proposer_slashing)
 
@@ -284,9 +285,9 @@ def test_builder_payment_deletion_current_epoch_first_slot(spec, state):
     )
 
     slashed_slot = proposer_slashing.signed_header_1.message.slot
-    assert slashed_slot % spec.SLOTS_PER_EPOCH == 0
+    assert slashed_slot % spec.SLOTS_PER_EPOCH == spec.Slot(0)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_proposer_slashing_processing(spec, state, proposer_slashing)
 
@@ -317,7 +318,7 @@ def test_builder_payment_deletion_current_epoch_last_slot(spec, state):
         spec,
         state,
         advance_epochs=2,
-        slot_offset=spec.SLOTS_PER_EPOCH - 1,  # Last slot of epoch
+        slot_offset=spec.SLOTS_PER_EPOCH - spec.Slot(1),  # Last slot of epoch
         parent_root_2=b"\x99" * 32,
         builder_payment_amount=spec.MIN_ACTIVATION_BALANCE,
         builder_payment_fee_recipient=b"\x43" * 20,
@@ -325,9 +326,9 @@ def test_builder_payment_deletion_current_epoch_last_slot(spec, state):
     )
 
     slashed_slot = proposer_slashing.signed_header_1.message.slot
-    assert slashed_slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - 1
+    assert slashed_slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_proposer_slashing_processing(spec, state, proposer_slashing)
 
@@ -367,10 +368,10 @@ def test_builder_payment_deletion_previous_epoch_first_slot(spec, state):
     )
 
     slashed_slot = proposer_slashing.signed_header_1.message.slot
-    assert slashed_slot % spec.SLOTS_PER_EPOCH == 0
+    assert slashed_slot % spec.SLOTS_PER_EPOCH == spec.Slot(0)
     assert spec.compute_epoch_at_slot(slashed_slot) == spec.get_previous_epoch(state)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_proposer_slashing_processing(spec, state, proposer_slashing)
 
@@ -402,7 +403,7 @@ def test_builder_payment_deletion_previous_epoch_last_slot(spec, state):
         state,
         advance_epochs=2,
         advance_epochs_after=1,
-        slot_offset=spec.SLOTS_PER_EPOCH - 1,  # Last slot of epoch
+        slot_offset=spec.SLOTS_PER_EPOCH - spec.Slot(1),  # Last slot of epoch
         parent_root_2=b"\x99" * 32,
         builder_payment_amount=spec.MIN_ACTIVATION_BALANCE,
         builder_payment_fee_recipient=b"\x45" * 20,
@@ -410,10 +411,10 @@ def test_builder_payment_deletion_previous_epoch_last_slot(spec, state):
     )
 
     slashed_slot = proposer_slashing.signed_header_1.message.slot
-    assert slashed_slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - 1
+    assert slashed_slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
     assert spec.compute_epoch_at_slot(slashed_slot) == spec.get_previous_epoch(state)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_proposer_slashing_processing(spec, state, proposer_slashing)
 
@@ -465,7 +466,7 @@ def test_builder_payment_not_deleted_foreign_equivocation(spec, state):
     slashed_slot = proposer_slashing.signed_header_1.message.slot
     assert spec.compute_epoch_at_slot(slashed_slot) == spec.get_current_epoch(state)
 
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     yield from run_proposer_slashing_processing(spec, state, proposer_slashing)
 

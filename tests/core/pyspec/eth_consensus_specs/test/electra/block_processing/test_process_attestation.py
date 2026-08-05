@@ -29,7 +29,10 @@ def test_invalid_attestation_data_index_not_zero(spec, state):
     next_slots(spec, state, spec.MIN_ATTESTATION_INCLUSION_DELAY)
 
     # flip the attestations index to make it non-zero and invalid
-    assert committee_index == spec.get_committee_indices(attestation.committee_bits)[0]
+    assert (
+        spec.CommitteeIndex(committee_index)
+        == spec.get_committee_indices(attestation.committee_bits)[0]
+    )
     attestation.data.index = committee_index
 
     sign_attestation(spec, state, attestation)
@@ -49,7 +52,7 @@ def test_invalid_committee_index(spec, state):
     next_slots(spec, state, spec.MIN_ATTESTATION_INCLUSION_DELAY)
 
     # flip the bits of the attestation to make it invalid
-    assert attestation.committee_bits[committee_index] == 1
+    assert attestation.committee_bits[committee_index]
     attestation.committee_bits[committee_index] = 0
     attestation.committee_bits[committee_index + 1] = 1
 

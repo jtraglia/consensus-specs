@@ -26,9 +26,11 @@ def set_some_activations(spec, state, rng, activation_epoch=None):
             continue
         # Set ~1/10 validators' activation_eligibility_epoch and activation_epoch
         if rng.randrange(num_validators) < num_validators // 10:
-            state.validators[index].activation_eligibility_epoch = max(
-                int(activation_epoch) - int(spec.MAX_SEED_LOOKAHEAD) - 1,
-                spec.GENESIS_EPOCH,
+            state.validators[index].activation_eligibility_epoch = spec.Epoch(
+                max(
+                    int(activation_epoch) - int(spec.MAX_SEED_LOOKAHEAD) - 1,
+                    int(spec.GENESIS_EPOCH),
+                )
             )
             state.validators[index].activation_epoch = activation_epoch
             selected_indices.append(index)
@@ -131,11 +133,13 @@ def randomize_epoch_participation(spec, state, epoch, rng):
             if rng.randint(0, 2) == 0:
                 pending_attestation.data.beacon_block_root = b"\x66" * 32
             # ~50% participation
-            pending_attestation.aggregation_bits = [
-                rng.choice([True, False]) for _ in pending_attestation.aggregation_bits
-            ]
+            pending_attestation.aggregation_bits = type(pending_attestation.aggregation_bits)(
+                data=[rng.choice([True, False]) for _ in pending_attestation.aggregation_bits]
+            )
             # Random inclusion delay
-            pending_attestation.inclusion_delay = rng.randint(1, spec.SLOTS_PER_EPOCH)
+            pending_attestation.inclusion_delay = spec.Slot(
+                rng.randint(1, int(spec.SLOTS_PER_EPOCH))
+            )
     else:
         if epoch == spec.get_current_epoch(state):
             epoch_participation = state.current_epoch_participation
@@ -148,7 +152,7 @@ def randomize_epoch_participation(spec, state, epoch, rng):
 
             def set_flag(index, value):
                 nonlocal flags
-                flag = spec.ParticipationFlags(2**index)
+                flag = spec.ParticipationFlags(2 ** int(index))
                 if value:
                     flags |= flag
                 else:
@@ -174,11 +178,11 @@ def randomize_previous_epoch_participation(spec, state, rng=None):
     cached_prepare_state_with_attestations(spec, state)
     randomize_epoch_participation(spec, state, spec.get_previous_epoch(state), rng)
     if not is_post_altair(spec):
-        state.current_epoch_attestations = []
+        state.current_epoch_attestations = spec.PendingAttestations(data=[])
     else:
-        state.current_epoch_participation = [
-            spec.ParticipationFlags(0b0000_0000) for _ in range(len(state.validators))
-        ]
+        state.current_epoch_participation = spec.EpochParticipation(
+            data=[spec.ParticipationFlags(0b0000_0000) for _ in range(len(state.validators))]
+        )
 
 
 def randomize_attestation_participation(spec, state, rng=None):

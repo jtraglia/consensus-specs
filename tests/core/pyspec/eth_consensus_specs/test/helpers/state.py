@@ -8,9 +8,9 @@ from eth_consensus_specs.test.helpers.block import (
 )
 from eth_consensus_specs.test.helpers.forks import is_post_altair
 from eth_consensus_specs.test.helpers.voluntary_exits import get_unslashed_exited_validators
-from eth_consensus_specs.utils.hash_function import Bytes32, hash
-from eth_consensus_specs.utils.ssz.ssz_impl import uint_to_bytes
-from ssz import Uint64
+from eth_consensus_specs.utils.hash_function import hash
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root, uint_to_bytes
+from eth_consensus_specs.utils.ssz.ssz_typing import Bytes32, Uint64
 
 
 def get_balance(state, index):
@@ -28,7 +28,7 @@ def next_slots(spec, state, slots):
     """
     Transition given slots forward.
     """
-    if slots > 0:
+    if int(slots) > 0:
         spec.process_slots(state, state.slot + spec.Slot(slots))
 
 
@@ -37,7 +37,7 @@ def transition_to(spec, state, slot):
     Transition to ``slot``.
     """
     assert state.slot <= slot
-    for _ in range(spec.Slot(slot) - state.slot):
+    for _ in range(slot - state.slot):
         next_slot(spec, state)
     assert state.slot == slot
 
@@ -46,6 +46,7 @@ def transition_to_slot_via_block(spec, state, slot):
     """
     Transition to ``slot`` via an empty block transition
     """
+    slot = spec.Slot(slot)
     assert state.slot < slot
     apply_empty_block(spec, state, slot)
     assert state.slot == slot
@@ -55,7 +56,7 @@ def next_epoch(spec, state):
     """
     Transition to the start slot of the next epoch
     """
-    slot = state.slot + spec.SLOTS_PER_EPOCH - state.slot % spec.SLOTS_PER_EPOCH
+    slot = state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH)
     if slot > state.slot:
         spec.process_slots(state, slot)
 
@@ -76,7 +77,7 @@ def next_epoch_via_block(spec, state, insert_state_root=False):
         spec, state, state.slot + spec.SLOTS_PER_EPOCH - state.slot % spec.SLOTS_PER_EPOCH
     )
     if insert_state_root:
-        block.state_root = state.hash_tree_root()
+        block.state_root = hash_tree_root(state)
     return block
 
 
@@ -89,8 +90,8 @@ def get_state_root(spec, state, slot) -> bytes:
     """
     Return the state root at a recent ``slot``.
     """
-    assert slot < state.slot <= spec.Slot(slot) + spec.SLOTS_PER_HISTORICAL_ROOT
-    return state.state_roots[spec.Slot(slot) % spec.SLOTS_PER_HISTORICAL_ROOT]
+    assert slot < state.slot <= slot + spec.SLOTS_PER_HISTORICAL_ROOT
+    return state.state_roots[slot % spec.SLOTS_PER_HISTORICAL_ROOT]
 
 
 def state_transition_and_sign_block(spec, state, block, expect_fail=False):
@@ -102,7 +103,7 @@ def state_transition_and_sign_block(spec, state, block, expect_fail=False):
         expect_assertion_error(lambda: transition_unsigned_block(spec, state, block))
     else:
         transition_unsigned_block(spec, state, block)
-    block.state_root = state.hash_tree_root()
+    block.state_root = hash_tree_root(state)
     return sign_block(spec, state, block)
 
 
@@ -199,7 +200,7 @@ def simulate_lookahead(spec, state):
     calling `get_beacon_proposer_index`.
     """
     lookahead = []
-    simulation_state = state.copy()
+    simulation_state = copy(state)
     for _ in range(int(spec.SLOTS_PER_EPOCH) * (int(spec.MIN_SEED_LOOKAHEAD) + 1)):
         proposer_index = spec.get_beacon_proposer_index(simulation_state)
         lookahead.append(proposer_index)
@@ -214,12 +215,12 @@ def cause_effective_balance_decrease_below_threshold(
     Cause an effective balance decrease change for the validator at
     `validator_index` below a threshold
     """
-    HYSTERESIS_INCREMENT = Uint64(spec.EFFECTIVE_BALANCE_INCREMENT) // spec.HYSTERESIS_QUOTIENT
-    DOWNWARD_THRESHOLD = spec.Gwei(HYSTERESIS_INCREMENT * spec.HYSTERESIS_DOWNWARD_MULTIPLIER)
-    balance_below_threshold = min(
-        threshold, state.validators[validator_index].effective_balance - DOWNWARD_THRESHOLD
-    )
-    state.balances[validator_index] = balance_below_threshold - spec.Gwei(1)
+    HYSTERESIS_INCREMENT = spec.EFFECTIVE_BALANCE_INCREMENT // spec.Gwei(spec.HYSTERESIS_QUOTIENT)
+    DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * spec.Gwei(spec.HYSTERESIS_DOWNWARD_MULTIPLIER)
+    state.balances[validator_index] = min(
+        spec.Gwei(threshold),
+        state.validators[validator_index].effective_balance - DOWNWARD_THRESHOLD,
+    ) - spec.Gwei(1)
 
 
 def simulate_lookahead_with_thresholds(spec, state) -> Sequence[tuple[Uint64, Uint64]]:
@@ -228,7 +229,7 @@ def simulate_lookahead_with_thresholds(spec, state) -> Sequence[tuple[Uint64, Ui
     calling `get_beacon_proposer_index`. Returns along, the lookaheads.
     """
     lookahead = []
-    simulation_state = state.copy()
+    simulation_state = copy(state)
     for _ in range(int(spec.SLOTS_PER_EPOCH) * (int(spec.MIN_SEED_LOOKAHEAD) + 1)):
         proposer_index = get_beacon_proposer_index_and_threshold(spec, simulation_state)
         lookahead.append(proposer_index)
@@ -264,8 +265,8 @@ def electra_compute_proposer_index_and_threshold(
         candidate_index = indices[spec.compute_shuffled_index(i % total, total, seed)]
         # [Modified in Electra]
         random_bytes = hash(seed + uint_to_bytes(i // Uint64(16)))
-        offset = i % Uint64(16) * Uint64(2)
-        random_value = spec.bytes_to_uint64(random_bytes[offset : offset + Uint64(2)])
+        offset = int(i % Uint64(16)) * 2
+        random_value = spec.bytes_to_uint64(random_bytes[offset : offset + 2])
         effective_balance = state.validators[candidate_index].effective_balance
         # [Modified in Electra:EIP7251]
         if effective_balance * spec.Gwei(

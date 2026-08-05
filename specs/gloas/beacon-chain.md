@@ -6,6 +6,41 @@
 
 - [Introduction](#introduction)
 - [Types](#types)
+  - [Modified `AggregationBits`](#modified-aggregationbits)
+  - [Modified `Attestations`](#modified-attestations)
+  - [Modified `AttesterSlashings`](#modified-attesterslashings)
+  - [Modified `AttestingIndices`](#modified-attestingindices)
+  - [Modified `Balances`](#modified-balances)
+  - [Modified `BlobKZGCommitments`](#modified-blobkzgcommitments)
+  - [Modified `BLSToExecutionChanges`](#modified-blstoexecutionchanges)
+  - [Modified `ConsolidationRequests`](#modified-consolidationrequests)
+  - [Modified `DepositRequests`](#modified-depositrequests)
+  - [Modified `Deposits`](#modified-deposits)
+  - [Modified `EpochParticipation`](#modified-epochparticipation)
+  - [Modified `InactivityScores`](#modified-inactivityscores)
+  - [Modified `PendingConsolidations`](#modified-pendingconsolidations)
+  - [Modified `PendingDeposits`](#modified-pendingdeposits)
+  - [Modified `PendingPartialWithdrawals`](#modified-pendingpartialwithdrawals)
+  - [Modified `ProposerSlashings`](#modified-proposerslashings)
+  - [Modified `Transaction`](#modified-transaction)
+  - [Modified `Transactions`](#modified-transactions)
+  - [Modified `Validators`](#modified-validators)
+  - [Modified `VoluntaryExits`](#modified-voluntaryexits)
+  - [Modified `WithdrawalRequests`](#modified-withdrawalrequests)
+  - [Modified `Withdrawals`](#modified-withdrawals)
+  - [New `BlockAccessList`](#new-blockaccesslist)
+  - [New `BuilderDepositRequests`](#new-builderdepositrequests)
+  - [New `BuilderExitRequests`](#new-builderexitrequests)
+  - [New `BuilderIndex`](#new-builderindex)
+  - [New `BuilderPendingPayments`](#new-builderpendingpayments)
+  - [New `BuilderPendingWithdrawals`](#new-builderpendingwithdrawals)
+  - [New `Builders`](#new-builders)
+  - [New `ExecutionPayloadAvailability`](#new-executionpayloadavailability)
+  - [New `PayloadAttestations`](#new-payloadattestations)
+  - [New `PTC`](#new-ptc)
+  - [New `PTCAttestingIndices`](#new-ptcattestingindices)
+  - [New `PTCBits`](#new-ptcbits)
+  - [New `PTCWindow`](#new-ptcwindow)
 - [Constants](#constants)
   - [Index flags](#index-flags)
   - [Domains](#domains)
@@ -99,6 +134,7 @@
       - [Modified `process_withdrawals`](#modified-process_withdrawals)
     - [Execution payload](#execution-payload)
       - [Removed `process_execution_payload`](#removed-process_execution_payload)
+      - [New `verify_execution_payload_envelope_signature`](#new-verify_execution_payload_envelope_signature)
       - [Modified `get_execution_requests_list`](#modified-get_execution_requests_list)
     - [Execution payload bid](#execution-payload-bid)
       - [New `verify_execution_payload_bid_signature`](#new-verify_execution_payload_bid_signature)
@@ -144,18 +180,360 @@ from the latest published version of the EIPs.
 
 ## Types
 
-| Name                     | SSZ equivalent                           |
-| ------------------------ | ---------------------------------------- |
-| `AggregationBits`        | `ProgressiveBitlist`                     |
-| `AttestingIndices`       | `ProgressiveList[ValidatorIndex]`        |
-| `Transaction`            | `ProgressiveByteList`                    |
-| `DepositRequests`        | `ProgressiveList[DepositRequest]`        |
-| `WithdrawalRequests`     | `ProgressiveList[WithdrawalRequest]`     |
-| `ConsolidationRequests`  | `ProgressiveList[ConsolidationRequest]`  |
-| `BuilderDepositRequests` | `ProgressiveList[BuilderDepositRequest]` |
-| `BuilderExitRequests`    | `ProgressiveList[BuilderExitRequest]`    |
-| `BuilderIndex`           | `Uint64`                                 |
-| `BlockAccessList`        | `ProgressiveByteList`                    |
+### Modified `AggregationBits`
+
+```python
+# [Modified in Gloas:EIP7688]
+class AggregationBits(ProgressiveBitList):
+    """
+    The participation bits of all committees participating in an attestation,
+    concatenated in committee order.
+    """
+```
+
+### Modified `Attestations`
+
+```python
+# [Modified in Gloas:EIP7688]
+class Attestations(ProgressiveList[Attestation]):
+    """
+    The attestations included in a beacon block.
+    """
+```
+
+### Modified `AttesterSlashings`
+
+```python
+# [Modified in Gloas:EIP7688]
+class AttesterSlashings(ProgressiveList[AttesterSlashing]):
+    """
+    The attester slashings included in a beacon block.
+    """
+```
+
+### Modified `AttestingIndices`
+
+```python
+# [Modified in Gloas:EIP7688]
+class AttestingIndices(ProgressiveList[ValidatorIndex]):
+    """
+    The indices of the validators participating in an attestation.
+    """
+```
+
+### Modified `Balances`
+
+```python
+# [Modified in Gloas:EIP7688]
+class Balances(ProgressiveList[Gwei]):
+    """
+    The balances of all validators.
+    """
+```
+
+### Modified `BlobKZGCommitments`
+
+```python
+# [Modified in Gloas:EIP7688]
+class BlobKZGCommitments(ProgressiveList[KZGCommitment]):
+    """
+    The KZG commitments to the blobs of a beacon block.
+    """
+```
+
+### Modified `BLSToExecutionChanges`
+
+```python
+# [Modified in Gloas:EIP7688]
+class BLSToExecutionChanges(ProgressiveList[SignedBLSToExecutionChange]):
+    """
+    The signed BLS-to-execution credential changes included in a beacon
+    block.
+    """
+```
+
+### Modified `ConsolidationRequests`
+
+```python
+# [Modified in Gloas:EIP7688]
+class ConsolidationRequests(ProgressiveList[ConsolidationRequest]):
+    """
+    The consolidation requests pertaining to a single execution payload.
+    """
+```
+
+### Modified `DepositRequests`
+
+```python
+# [Modified in Gloas:EIP7688]
+class DepositRequests(ProgressiveList[DepositRequest]):
+    """
+    The deposit requests pertaining to a single execution payload.
+    """
+```
+
+### Modified `Deposits`
+
+```python
+# [Modified in Gloas:EIP7688]
+class Deposits(ProgressiveList[Deposit]):
+    """
+    The deposits included in a beacon block.
+    """
+```
+
+### Modified `EpochParticipation`
+
+```python
+# [Modified in Gloas:EIP7688]
+class EpochParticipation(ProgressiveList[ParticipationFlags]):
+    """
+    The participation flags of each validator for an epoch.
+    """
+```
+
+### Modified `InactivityScores`
+
+```python
+# [Modified in Gloas:EIP7688]
+class InactivityScores(ProgressiveList[Uint64]):
+    """
+    Each validator's inactivity score, tracking missed timely target votes.
+    """
+```
+
+### Modified `PendingConsolidations`
+
+```python
+# [Modified in Gloas:EIP7688]
+class PendingConsolidations(ProgressiveList[PendingConsolidation]):
+    """
+    The queue of consolidations awaiting processing.
+    """
+```
+
+### Modified `PendingDeposits`
+
+```python
+# [Modified in Gloas:EIP7688]
+class PendingDeposits(ProgressiveList[PendingDeposit]):
+    """
+    The queue of deposits awaiting processing.
+    """
+```
+
+### Modified `PendingPartialWithdrawals`
+
+```python
+# [Modified in Gloas:EIP7688]
+class PendingPartialWithdrawals(ProgressiveList[PendingPartialWithdrawal]):
+    """
+    The queue of partial withdrawals awaiting processing.
+    """
+```
+
+### Modified `ProposerSlashings`
+
+```python
+# [Modified in Gloas:EIP7688]
+class ProposerSlashings(ProgressiveList[ProposerSlashing]):
+    """
+    The proposer slashings included in a beacon block.
+    """
+```
+
+### Modified `Transaction`
+
+```python
+# [Modified in Gloas:EIP7688]
+class Transaction(ProgressiveByteList):
+    """
+    An opaque execution-layer transaction, either a typed transaction
+    envelope or a legacy RLP-encoded transaction.
+    """
+```
+
+### Modified `Transactions`
+
+```python
+# [Modified in Gloas:EIP7688]
+class Transactions(ProgressiveList[Transaction]):
+    """
+    A list of execution-layer transactions.
+    """
+```
+
+### Modified `Validators`
+
+```python
+# [Modified in Gloas:EIP7688]
+class Validators(ProgressiveList[Validator]):
+    """
+    The validator registry.
+    """
+```
+
+### Modified `VoluntaryExits`
+
+```python
+# [Modified in Gloas:EIP7688]
+class VoluntaryExits(ProgressiveList[SignedVoluntaryExit]):
+    """
+    The signed voluntary exits included in a beacon block.
+    """
+```
+
+### Modified `WithdrawalRequests`
+
+```python
+# [Modified in Gloas:EIP7688]
+class WithdrawalRequests(ProgressiveList[WithdrawalRequest]):
+    """
+    The withdrawal requests pertaining to a single execution payload.
+    """
+```
+
+### Modified `Withdrawals`
+
+```python
+# [Modified in Gloas:EIP7688]
+class Withdrawals(ProgressiveList[Withdrawal]):
+    """
+    A list of withdrawals.
+    """
+```
+
+### New `BlockAccessList`
+
+```python
+class BlockAccessList(ProgressiveByteList):
+    """
+    The serialized block access list of an execution payload.
+    """
+```
+
+### New `BuilderDepositRequests`
+
+```python
+class BuilderDepositRequests(ProgressiveList[BuilderDepositRequest]):
+    """
+    The builder deposit requests pertaining to a single execution payload.
+    """
+```
+
+### New `BuilderExitRequests`
+
+```python
+class BuilderExitRequests(ProgressiveList[BuilderExitRequest]):
+    """
+    The builder exit requests pertaining to a single execution payload.
+    """
+```
+
+### New `BuilderIndex`
+
+```python
+class BuilderIndex(Uint64):
+    """
+    The index of a builder in the builder registry.
+    """
+```
+
+### New `BuilderPendingPayments`
+
+```python
+class BuilderPendingPayments(Vector[BuilderPendingPayment]):
+    """
+    The pending builder payments of the previous and current epoch.
+    """
+
+    LENGTH = 2 * SLOTS_PER_EPOCH
+```
+
+### New `BuilderPendingWithdrawals`
+
+```python
+class BuilderPendingWithdrawals(ProgressiveList[BuilderPendingWithdrawal]):
+    """
+    The queue of builder withdrawals awaiting processing.
+    """
+```
+
+### New `Builders`
+
+```python
+class Builders(ProgressiveList[Builder]):
+    """
+    The builder registry.
+    """
+```
+
+### New `ExecutionPayloadAvailability`
+
+```python
+class ExecutionPayloadAvailability(BitVector):
+    """
+    Bits tracking payload availability for recent slots, indexed by slot
+    modulo ``SLOTS_PER_HISTORICAL_ROOT``.
+    """
+
+    LENGTH = SLOTS_PER_HISTORICAL_ROOT
+```
+
+### New `PayloadAttestations`
+
+```python
+class PayloadAttestations(ProgressiveList[PayloadAttestation]):
+    """
+    The payload attestations included in a beacon block.
+    """
+```
+
+### New `PTC`
+
+```python
+class PTC(Vector[ValidatorIndex]):
+    """
+    The payload timeliness committee of a slot.
+    """
+
+    LENGTH = PTC_SIZE
+```
+
+### New `PTCAttestingIndices`
+
+```python
+class PTCAttestingIndices(List[ValidatorIndex]):
+    """
+    The indices of the PTC members participating in a payload attestation.
+    """
+
+    LIMIT = PTC_SIZE
+```
+
+### New `PTCBits`
+
+```python
+class PTCBits(BitVector):
+    """
+    The participation bits of the payload timeliness committee, one bit per
+    member in committee order.
+    """
+
+    LENGTH = PTC_SIZE
+```
+
+### New `PTCWindow`
+
+```python
+class PTCWindow(Vector[PTC]):
+    """
+    A rolling window of payload timeliness committees for the previous,
+    current, and lookahead epochs.
+    """
+
+    LENGTH = (2 + MIN_SEED_LOOKAHEAD) * SLOTS_PER_EPOCH
+```
 
 ## Constants
 
@@ -244,9 +622,9 @@ same `Withdrawal` container can be used for validators and builders.
 
 ### Time parameters
 
-| Name                                | Value                 | Unit   |
-| ----------------------------------- | --------------------- | ------ |
-| `MIN_BUILDER_WITHDRAWABILITY_DELAY` | `Uint64(2**6)` (= 64) | epochs |
+| Name                                | Value                |
+| ----------------------------------- | -------------------- |
+| `MIN_BUILDER_WITHDRAWABILITY_DELAY` | `Epoch(2**6)` (= 64) |
 
 ## Containers
 
@@ -314,7 +692,7 @@ class PayloadAttestationData(Container):
 
 ```python
 class PayloadAttestation(ProgressiveContainer(active_fields=[1] * 3)):
-    aggregation_bits: Bitvector[PTC_SIZE]
+    aggregation_bits: PTCBits
     data: PayloadAttestationData
     signature: BLSSignature
 ```
@@ -332,7 +710,7 @@ class PayloadAttestationMessage(Container):
 
 ```python
 class IndexedPayloadAttestation(ProgressiveContainer(active_fields=[1] * 3)):
-    attesting_indices: List[ValidatorIndex, PTC_SIZE]
+    attesting_indices: PTCAttestingIndices
     data: PayloadAttestationData
     signature: BLSSignature
 ```
@@ -351,7 +729,7 @@ class ExecutionPayloadBid(ProgressiveContainer(active_fields=[1] * 12)):
     slot: Slot
     value: Gwei
     execution_payment: Gwei
-    blob_kzg_commitments: ProgressiveList[KZGCommitment]
+    blob_kzg_commitments: BlobKZGCommitments
     execution_requests_root: Root
 ```
 
@@ -392,7 +770,7 @@ class Attestation(ProgressiveContainer(active_fields=[1] * 4)):
     aggregation_bits: AggregationBits
     data: AttestationData
     signature: BLSSignature
-    committee_bits: Bitvector[MAX_COMMITTEES_PER_SLOT]
+    committee_bits: CommitteeBits
 ```
 
 #### `IndexedAttestation`
@@ -417,20 +795,20 @@ class BeaconBlockBody(ProgressiveContainer(active_fields=[1] * 13)):
     eth1_data: Eth1Data
     graffiti: Bytes32
     # [Modified in Gloas:EIP7688]
-    proposer_slashings: ProgressiveList[ProposerSlashing]
+    proposer_slashings: ProposerSlashings
     # [Modified in Gloas:EIP7688]
-    attester_slashings: ProgressiveList[AttesterSlashing]
+    attester_slashings: AttesterSlashings
     # [Modified in Gloas:EIP7688]
-    attestations: ProgressiveList[Attestation]
+    attestations: Attestations
     # [Modified in Gloas:EIP7688]
-    deposits: ProgressiveList[Deposit]
+    deposits: Deposits
     # [Modified in Gloas:EIP7688]
-    voluntary_exits: ProgressiveList[SignedVoluntaryExit]
+    voluntary_exits: VoluntaryExits
     sync_aggregate: SyncAggregate
     # [Modified in Gloas:EIP7732]
     # Removed `execution_payload`
     # [Modified in Gloas:EIP7688]
-    bls_to_execution_changes: ProgressiveList[SignedBLSToExecutionChange]
+    bls_to_execution_changes: BLSToExecutionChanges
     # [Modified in Gloas:EIP7732]
     # Removed `blob_kzg_commitments`
     # [Modified in Gloas:EIP7732]
@@ -438,7 +816,7 @@ class BeaconBlockBody(ProgressiveContainer(active_fields=[1] * 13)):
     # [New in Gloas:EIP7732]
     signed_execution_payload_bid: SignedExecutionPayloadBid
     # [New in Gloas:EIP7732]
-    payload_attestations: ProgressiveList[PayloadAttestation]
+    payload_attestations: PayloadAttestations
     # [New in Gloas:EIP7732]
     parent_execution_requests: ExecutionRequests
 ```
@@ -453,28 +831,28 @@ class BeaconState(ProgressiveContainer(active_fields=[1] * 46)):
     slot: Slot
     fork: Fork
     latest_block_header: BeaconBlockHeader
-    block_roots: Vector[Root, SLOTS_PER_HISTORICAL_ROOT]
-    state_roots: Vector[Root, SLOTS_PER_HISTORICAL_ROOT]
-    historical_roots: List[Root, HISTORICAL_ROOTS_LIMIT]
+    block_roots: BlockRoots
+    state_roots: StateRoots
+    historical_roots: HistoricalRoots
     eth1_data: Eth1Data
-    eth1_data_votes: List[Eth1Data, EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH]
+    eth1_data_votes: Eth1DataVotes
     eth1_deposit_index: Uint64
     # [Modified in Gloas:EIP7688]
-    validators: ProgressiveList[Validator]
+    validators: Validators
     # [Modified in Gloas:EIP7688]
-    balances: ProgressiveList[Gwei]
-    randao_mixes: Vector[Bytes32, EPOCHS_PER_HISTORICAL_VECTOR]
-    slashings: Vector[Gwei, EPOCHS_PER_SLASHINGS_VECTOR]
+    balances: Balances
+    randao_mixes: RandaoMixes
+    slashings: Slashings
     # [Modified in Gloas:EIP7688]
-    previous_epoch_participation: ProgressiveList[ParticipationFlags]
+    previous_epoch_participation: EpochParticipation
     # [Modified in Gloas:EIP7688]
-    current_epoch_participation: ProgressiveList[ParticipationFlags]
-    justification_bits: Bitvector[JUSTIFICATION_BITS_LENGTH]
+    current_epoch_participation: EpochParticipation
+    justification_bits: JustificationBits
     previous_justified_checkpoint: Checkpoint
     current_justified_checkpoint: Checkpoint
     finalized_checkpoint: Checkpoint
     # [Modified in Gloas:EIP7688]
-    inactivity_scores: ProgressiveList[Uint64]
+    inactivity_scores: InactivityScores
     current_sync_committee: SyncCommittee
     next_sync_committee: SyncCommittee
     # [Modified in Gloas:EIP7732]
@@ -483,7 +861,7 @@ class BeaconState(ProgressiveContainer(active_fields=[1] * 46)):
     latest_block_hash: Hash32
     next_withdrawal_index: WithdrawalIndex
     next_withdrawal_validator_index: ValidatorIndex
-    historical_summaries: List[HistoricalSummary, HISTORICAL_ROOTS_LIMIT]
+    historical_summaries: HistoricalSummaries
     deposit_requests_start_index: Uint64
     deposit_balance_to_consume: Gwei
     exit_balance_to_consume: Gwei
@@ -491,28 +869,28 @@ class BeaconState(ProgressiveContainer(active_fields=[1] * 46)):
     consolidation_balance_to_consume: Gwei
     earliest_consolidation_epoch: Epoch
     # [Modified in Gloas:EIP7688]
-    pending_deposits: ProgressiveList[PendingDeposit]
+    pending_deposits: PendingDeposits
     # [Modified in Gloas:EIP7688]
-    pending_partial_withdrawals: ProgressiveList[PendingPartialWithdrawal]
+    pending_partial_withdrawals: PendingPartialWithdrawals
     # [Modified in Gloas:EIP7688]
-    pending_consolidations: ProgressiveList[PendingConsolidation]
-    proposer_lookahead: Vector[ValidatorIndex, (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH]
+    pending_consolidations: PendingConsolidations
+    proposer_lookahead: ProposerLookahead
     # [New in Gloas:EIP7732]
-    builders: ProgressiveList[Builder]
+    builders: Builders
     # [New in Gloas:EIP7732]
     next_withdrawal_builder_index: BuilderIndex
     # [New in Gloas:EIP7732]
-    execution_payload_availability: Bitvector[SLOTS_PER_HISTORICAL_ROOT]
+    execution_payload_availability: ExecutionPayloadAvailability
     # [New in Gloas:EIP7732]
-    builder_pending_payments: Vector[BuilderPendingPayment, 2 * SLOTS_PER_EPOCH]
+    builder_pending_payments: BuilderPendingPayments
     # [New in Gloas:EIP7732]
-    builder_pending_withdrawals: ProgressiveList[BuilderPendingWithdrawal]
+    builder_pending_withdrawals: BuilderPendingWithdrawals
     # [New in Gloas:EIP7732]
     latest_execution_payload_bid: ExecutionPayloadBid
     # [New in Gloas:EIP7732]
-    payload_expected_withdrawals: ProgressiveList[Withdrawal]
+    payload_expected_withdrawals: Withdrawals
     # [New in Gloas:EIP7732]
-    ptc_window: Vector[Vector[ValidatorIndex, PTC_SIZE], (2 + MIN_SEED_LOOKAHEAD) * SLOTS_PER_EPOCH]
+    ptc_window: PTCWindow
 ```
 
 #### `ExecutionPayload`
@@ -524,19 +902,19 @@ class ExecutionPayload(ProgressiveContainer(active_fields=[1] * 19)):
     fee_recipient: ExecutionAddress
     state_root: Bytes32
     receipts_root: Bytes32
-    logs_bloom: ByteVector[BYTES_PER_LOGS_BLOOM]
+    logs_bloom: LogsBloom
     prev_randao: Bytes32
     block_number: Uint64
     gas_limit: Uint64
     gas_used: Uint64
     timestamp: Uint64
-    extra_data: ByteList[MAX_EXTRA_DATA_BYTES]
+    extra_data: ExtraData
     base_fee_per_gas: Uint256
     block_hash: Hash32
     # [Modified in Gloas:EIP7688]
-    transactions: ProgressiveList[Transaction]
+    transactions: Transactions
     # [Modified in Gloas:EIP7688]
-    withdrawals: ProgressiveList[Withdrawal]
+    withdrawals: Withdrawals
     blob_gas_used: Uint64
     excess_blob_gas: Uint64
     # [New in Gloas:EIP7928]
@@ -765,7 +1143,7 @@ def compute_balance_weighted_selection(
     total = Uint64(len(indices))
     assert total > 0
     effective_balances = [state.validators[index].effective_balance for index in indices]
-    selected: List[ValidatorIndex] = []
+    selected: list[ValidatorIndex] = []
     i = Uint64(0)
     while len(selected) < size:
         offset = i % 16 * 2
@@ -792,36 +1170,38 @@ sampling process.
 ```python
 def compute_proposer_indices(
     state: BeaconState, epoch: Epoch, seed: Bytes32, indices: Sequence[ValidatorIndex]
-) -> Vector[ValidatorIndex, SLOTS_PER_EPOCH]:
+) -> ProposerIndices:
     """
     Return the proposer indices for the given ``epoch``.
     """
     start_slot = compute_start_slot_at_epoch(epoch)
     seeds = [hash(seed + uint_to_bytes(Slot(start_slot + i))) for i in range(SLOTS_PER_EPOCH)]
     # [Modified in Gloas:EIP7732]
-    return [
+    return ProposerIndices(data=[
         compute_balance_weighted_selection(state, indices, seed, size=1, shuffle_indices=True)[0]
         for seed in seeds
-    ]
+    ])
 ```
 
 #### New `compute_ptc`
 
 ```python
-def compute_ptc(state: BeaconState, slot: Slot) -> Vector[ValidatorIndex, PTC_SIZE]:
+def compute_ptc(state: BeaconState, slot: Slot) -> PTC:
     """
     Get the payload timeliness committee, with possible duplicates, for the given ``slot``.
     """
     epoch = compute_epoch_at_slot(slot)
     seed = hash(get_seed(state, epoch, DOMAIN_PTC_ATTESTER) + uint_to_bytes(slot))
-    indices: List[ValidatorIndex] = []
+    indices: list[ValidatorIndex] = []
     # Concatenate all committees for this slot in order
     committees_per_slot = get_committee_count_per_slot(state, epoch)
     for i in range(committees_per_slot):
         committee = get_beacon_committee(state, slot, CommitteeIndex(i))
         indices.extend(committee)
-    return compute_balance_weighted_selection(
-        state, indices, seed, size=PTC_SIZE, shuffle_indices=False
+    return PTC(
+        data=compute_balance_weighted_selection(
+            state, indices, seed, size=PTC_SIZE, shuffle_indices=False
+        )
     )
 ```
 
@@ -834,9 +1214,7 @@ from the candidate pool before invoking `compute_proposer_indices`, so the newly
 computed proposer indices only contain active and unslashed validators.
 
 ```python
-def get_beacon_proposer_indices(
-    state: BeaconState, epoch: Epoch
-) -> Vector[ValidatorIndex, SLOTS_PER_EPOCH]:
+def get_beacon_proposer_indices(state: BeaconState, epoch: Epoch) -> ProposerIndices:
     """
     Return the proposer indices for the given ``epoch``.
     """
@@ -872,11 +1250,21 @@ def get_next_sync_committee_indices(state: BeaconState) -> Sequence[ValidatorInd
 #### Modified `get_attestation_participation_flag_indices`
 
 *Note*: The function `get_attestation_participation_flag_indices` is modified to
-include a new payload matching constraint to `is_matching_head`.
+include a new payload matching constraint to `is_matching_head`. The new
+`parent_slot` parameter is the slot of the parent block of the block being
+processed. Since the timely head flag requires both the minimum inclusion delay
+and a head root that matches the block root at the attestation slot, an
+attestation can only receive the flag if it attests to the parent block. The
+payload availability of the attested block is therefore tracked at
+`parent_slot`, even when `data.slot` is a skipped slot.
 
 ```python
 def get_attestation_participation_flag_indices(
-    state: BeaconState, data: AttestationData, inclusion_delay: Uint64
+    state: BeaconState,
+    data: AttestationData,
+    inclusion_delay: Uint64,
+    # [New in Gloas:EIP7732]
+    parent_slot: Slot,
 ) -> Sequence[int]:
     """
     Return the flag indices that are satisfied by an attestation.
@@ -898,7 +1286,7 @@ def get_attestation_participation_flag_indices(
         assert data.index == 0
         payload_matches = True
     else:
-        slot_index = data.slot % SLOTS_PER_HISTORICAL_ROOT
+        slot_index = parent_slot % SLOTS_PER_HISTORICAL_ROOT
         payload_index = state.execution_payload_availability[slot_index]
         payload_matches = data.index == payload_index
 
@@ -924,7 +1312,7 @@ def get_attestation_participation_flag_indices(
 #### New `get_ptc`
 
 ```python
-def get_ptc(state: BeaconState, slot: Slot) -> Vector[ValidatorIndex, PTC_SIZE]:
+def get_ptc(state: BeaconState, slot: Slot) -> PTC:
     """
     Get the payload timeliness committee for the given ``slot``.
     """
@@ -1251,11 +1639,11 @@ def process_block(state: BeaconState, block: BeaconBlock) -> None:
     # [Modified in Gloas:EIP7732]
     # Removed `process_execution_payload`
     # [New in Gloas:EIP7732]
-    process_execution_payload_bid(state, block.body.signed_execution_payload_bid)
+    parent_slot = process_execution_payload_bid(state, block.body.signed_execution_payload_bid)
     process_randao(state, block.body)
     process_eth1_data(state, block.body)
     # [Modified in Gloas:EIP7732]
-    process_operations(state, block.body)
+    process_operations(state, block.body, parent_slot)
     process_sync_aggregate(state, block.body.sync_aggregate)
 ```
 
@@ -1354,9 +1742,9 @@ def get_builder_withdrawals(
     assert len(prior_withdrawals) <= withdrawals_limit
 
     processed_count: Uint64 = 0
-    withdrawals: List[Withdrawal] = []
+    withdrawals: list[Withdrawal] = []
     for withdrawal in state.builder_pending_withdrawals:
-        all_withdrawals = prior_withdrawals + withdrawals
+        all_withdrawals = list(prior_withdrawals) + withdrawals
         has_reached_limit = len(all_withdrawals) >= withdrawals_limit
         if has_reached_limit:
             break
@@ -1390,10 +1778,10 @@ def get_builders_sweep_withdrawals(
     assert len(prior_withdrawals) <= withdrawals_limit
 
     processed_count: Uint64 = 0
-    withdrawals: List[Withdrawal] = []
+    withdrawals: list[Withdrawal] = []
     builder_index = state.next_withdrawal_builder_index
     for _ in range(builders_limit):
-        all_withdrawals = prior_withdrawals + withdrawals
+        all_withdrawals = list(prior_withdrawals) + withdrawals
         has_reached_limit = len(all_withdrawals) >= withdrawals_limit
         if has_reached_limit:
             break
@@ -1421,7 +1809,7 @@ def get_builders_sweep_withdrawals(
 ```python
 def get_expected_withdrawals(state: BeaconState) -> ExpectedWithdrawals:
     withdrawal_index = state.next_withdrawal_index
-    withdrawals: List[Withdrawal] = []
+    withdrawals: list[Withdrawal] = []
 
     # [New in Gloas:EIP7732]
     # Get builder withdrawals
@@ -1480,7 +1868,7 @@ def apply_withdrawals(state: BeaconState, withdrawals: Sequence[Withdrawal]) -> 
 def update_payload_expected_withdrawals(
     state: BeaconState, withdrawals: Sequence[Withdrawal]
 ) -> None:
-    state.payload_expected_withdrawals = ProgressiveList[Withdrawal](withdrawals)
+    state.payload_expected_withdrawals = Withdrawals(data=withdrawals)
 ```
 
 ##### New `update_builder_pending_withdrawals`
@@ -1569,6 +1957,25 @@ def process_withdrawals(
 `on_execution_payload_envelope`. Payload processing is deferred to the next
 beacon block via `process_parent_execution_payload`.
 
+##### New `verify_execution_payload_envelope_signature`
+
+```python
+def verify_execution_payload_envelope_signature(
+    state: BeaconState, signed_envelope: SignedExecutionPayloadEnvelope
+) -> bool:
+    builder_index = signed_envelope.message.builder_index
+    if builder_index == BUILDER_INDEX_SELF_BUILD:
+        validator_index = state.latest_block_header.proposer_index
+        pubkey = state.validators[validator_index].pubkey
+    else:
+        pubkey = state.builders[builder_index].pubkey
+
+    signing_root = compute_signing_root(
+        signed_envelope.message, get_domain(state, DOMAIN_BEACON_BUILDER)
+    )
+    return bls.Verify(pubkey, signing_root, signed_envelope.signature)
+```
+
 ##### Modified `get_execution_requests_list`
 
 ```python
@@ -1607,10 +2014,14 @@ def verify_execution_payload_bid_signature(
 
 ##### New `process_execution_payload_bid`
 
+*Note*: This function returns the slot of the parent block, read from the bid in
+the state before it is overwritten by the new bid. The slot is later given to
+`process_attestation` to look up the payload availability of the attested block.
+
 ```python
 def process_execution_payload_bid(
     state: BeaconState, signed_bid: SignedExecutionPayloadBid
-) -> None:
+) -> Slot:
     bid = signed_bid.message
     builder_index = bid.builder_index
     amount = bid.value
@@ -1658,25 +2069,37 @@ def process_execution_payload_bid(
             pending_payment
         )
 
+    # Cache the parent block's slot before overwriting the bid
+    parent_slot = state.latest_execution_payload_bid.slot
+
     # Cache the signed execution payload bid
     state.latest_execution_payload_bid = bid
+
+    return parent_slot
 ```
 
 #### Operations
 
 ##### Modified `process_operations`
 
-*Note*: `process_operations` is modified to process PTC attestations and removes
-calls to `process_deposit_request`, `process_withdrawal_request`, and
+*Note*: `process_operations` is modified to process PTC attestations, to pass
+the parent block's slot to `process_attestation`, and removes calls to
+`process_deposit_request`, `process_withdrawal_request`, and
 `process_consolidation_request`.
 
 ```python
-def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
+def process_operations(
+    state: BeaconState,
+    body: BeaconBlockBody,
+    # [New in Gloas:EIP7732]
+    parent_slot: Slot,
+) -> None:
     assert len(body.deposits) == 0
 
-    def for_ops(operations: Sequence[Any], fn: Callable[[BeaconState, Any], None]) -> None:
+    # [Modified in Gloas:EIP7732]
+    def for_ops(operations: Sequence[Any], fn: Callable[..., None], *args: Any) -> None:
         for operation in operations:
-            fn(state, operation)
+            fn(state, operation, *args)
 
     # [New in Gloas:EIP7688]
     assert len(body.proposer_slashings) <= MAX_PROPOSER_SLASHINGS
@@ -1690,7 +2113,7 @@ def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
     for_ops(body.proposer_slashings, process_proposer_slashing)
     for_ops(body.attester_slashings, process_attester_slashing)
     # [Modified in Gloas:EIP7732]
-    for_ops(body.attestations, process_attestation)
+    for_ops(body.attestations, process_attestation, parent_slot)
     for_ops(body.voluntary_exits, process_voluntary_exit)
     for_ops(body.bls_to_execution_changes, process_bls_to_execution_change)
     # [Modified in Gloas:EIP7732]
@@ -1827,10 +2250,16 @@ def process_builder_exit_request(state: BeaconState, request: BuilderExitRequest
 
 *Note*: The function is modified to track the weight for pending builder
 payments and to use the `index` field in the `AttestationData` to signal the
-payload availability.
+payload availability. The new `parent_slot` parameter, the slot of the parent
+block, is where the payload availability of the attested block is looked up.
 
 ```python
-def process_attestation(state: BeaconState, attestation: Attestation) -> None:
+def process_attestation(
+    state: BeaconState,
+    attestation: Attestation,
+    # [New in Gloas:EIP7732]
+    parent_slot: Slot,
+) -> None:
     data = attestation.data
     assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
     assert data.target.epoch == compute_epoch_at_slot(data.slot)
@@ -1855,8 +2284,9 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     assert len(attestation.aggregation_bits) == committee_offset
 
     # Participation flag indices
+    # [Modified in Gloas:EIP7732]
     participation_flag_indices = get_attestation_participation_flag_indices(
-        state, data, state.slot - data.slot
+        state, data, state.slot - data.slot, parent_slot
     )
 
     # Verify signature

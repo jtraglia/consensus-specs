@@ -39,7 +39,7 @@ def test_fcr_invariants_monotone_and_canonical(spec, state):
 
     # Run through an entire epoch + 1 to cross epoch boundary
     # This tests reconfirmation and restart logic
-    for _ in range(spec.SLOTS_PER_EPOCH + 1):
+    for _ in range(spec.SLOTS_PER_EPOCH + spec.Slot(1)):
         fcr.next_slot_with_block_and_fast_confirmation(participation_rate=100)
 
         head = fcr.head_root()
@@ -113,7 +113,7 @@ def test_observed_justified_checkpoints_update_timing(spec, state):
         assert not spec.is_start_slot_at_epoch(spec.Slot(fcr.current_slot())), (
             f"Slot {fcr.current_slot()} should not be an epoch start"
         )
-        assert not spec.is_start_slot_at_epoch(spec.Slot(fcr.current_slot() + 1)), (
+        assert not spec.is_start_slot_at_epoch(fcr.current_slot() + spec.Slot(1)), (
             f"Slot {fcr.current_slot()} should not be the last slot of an epoch"
         )
 
@@ -136,7 +136,7 @@ def test_observed_justified_checkpoints_update_timing(spec, state):
     fcr.next_slot_with_block_and_fast_confirmation(participation_rate=100)
 
     assert fcr.current_slot() == last_slot_of_epoch2
-    assert spec.is_start_slot_at_epoch(spec.Slot(fcr.current_slot() + 1)), (
+    assert spec.is_start_slot_at_epoch(fcr.current_slot() + spec.Slot(1)), (
         f"Slot {fcr.current_slot()} should be the last slot of the epoch"
     )
 
@@ -234,7 +234,7 @@ def test_observed_justified_checkpoints_properties_across_epochs(spec, state):
 
         # Now at last slot of epoch — verify GU snapshot is taken
         assert fcr.current_slot() == last_slot
-        assert spec.is_start_slot_at_epoch(spec.Slot(fcr.current_slot() + 1))
+        assert spec.is_start_slot_at_epoch(fcr.current_slot() + spec.Slot(1))
 
         assert (
             fcr_store.previous_epoch_greatest_unrealized_checkpoint

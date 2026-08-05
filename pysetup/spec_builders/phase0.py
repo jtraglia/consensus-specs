@@ -30,12 +30,11 @@ from typing import (
 )
 
 from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root, copy, uint_to_bytes
-from ssz import (
-    Boolean, Container, List, Vector, Uint8, Uint32, Uint64, Uint256)
-from ssz.bitfields import BaseBitlist as Bitlist, BaseBitvector as Bitvector
-from ssz.byte_arrays import BaseByteList as ByteList
-from ssz.byte_arrays import BaseBytes
-from ssz.ssz_base import SSZType
+from eth_consensus_specs.utils.ssz.ssz_typing import (
+    BitList, BitVector, Boolean, Byte, ByteList, ByteVector, Container, List,
+    ProgressiveBitList, ProgressiveContainer, ProgressiveList, SSZType, Vector,
+    Uint8, Uint32, Uint64, Uint256,
+    Bytes1, Bytes4, Bytes8, Bytes20, Bytes32, Bytes48, Bytes96)
 from eth_consensus_specs.utils import bls
 from eth_consensus_specs.utils.hash_function import hash
 """

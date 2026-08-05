@@ -7,7 +7,7 @@ from eth_consensus_specs.test.context import (
 from eth_consensus_specs.test.helpers.pow_block import (
     prepare_random_pow_block,
 )
-from ssz import Uint256
+from eth_consensus_specs.utils.ssz.ssz_typing import Uint256
 
 
 @with_bellatrix_and_later

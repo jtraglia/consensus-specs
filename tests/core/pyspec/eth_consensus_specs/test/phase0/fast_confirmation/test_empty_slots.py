@@ -65,7 +65,7 @@ def test_fcr_handles_single_empty_slot(spec, state):
         parent_root=head_before_empty, graffiti="after_empty", participation_rate=100
     )
 
-    # This block skips a slot, so parent_block.slot + 1 < block.slot
+    # This block skips a slot, so parent_block.slot + spec.Slot(1) < block.slot
     parent_slot = store.blocks[head_before_empty].slot
     block_slot = store.blocks[block_after_empty].slot
     assert parent_slot + 1 < block_slot, "Block should have skipped a slot"
@@ -196,7 +196,7 @@ def test_fcr_empty_slot_at_epoch_boundary(spec, state):
     fcr.next_slot()
 
     assert fcr.current_slot() == last_slot_epoch0  # slot 7
-    assert spec.is_start_slot_at_epoch(spec.Slot(fcr.current_slot() + 1)), (
+    assert spec.is_start_slot_at_epoch(fcr.current_slot() + spec.Slot(1)), (
         "Should be last slot of epoch (GU snapshot slot)"
     )
 
@@ -329,7 +329,7 @@ def test_fcr_empty_slots_at_epoch_boundary_both_sides(spec, state):
     assert fcr.current_slot() == last_slot_epoch0  # slot 7
 
     # Slot 7: Last slot of epoch 0 (EMPTY) - GU snapshot happens here
-    assert spec.is_start_slot_at_epoch(spec.Slot(fcr.current_slot() + 1)), (
+    assert spec.is_start_slot_at_epoch(fcr.current_slot() + spec.Slot(1)), (
         "Slot 7 should be last slot of epoch 0"
     )
 

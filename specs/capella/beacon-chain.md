@@ -4,6 +4,10 @@
 
 - [Introduction](#introduction)
 - [Types](#types)
+  - [New `BLSToExecutionChanges`](#new-blstoexecutionchanges)
+  - [New `HistoricalSummaries`](#new-historicalsummaries)
+  - [New `WithdrawalIndex`](#new-withdrawalindex)
+  - [New `Withdrawals`](#new-withdrawals)
 - [Constants](#constants)
   - [Domains](#domains)
 - [Preset](#preset)
@@ -12,10 +16,6 @@
   - [Withdrawals processing](#withdrawals-processing)
 - [Containers](#containers)
   - [New containers](#new-containers)
-    - [Misc dependencies](#misc-dependencies)
-      - [`Withdrawals`](#withdrawals)
-      - [`BLSToExecutionChanges`](#blstoexecutionchanges)
-      - [`HistoricalSummaries`](#historicalsummaries)
     - [`Withdrawal`](#withdrawal)
     - [`BLSToExecutionChange`](#blstoexecutionchange)
     - [`SignedBLSToExecutionChange`](#signedblstoexecutionchange)
@@ -72,9 +72,48 @@ and the blocks.
 
 We define the following Python custom types for type hinting and readability:
 
-| Name              | SSZ equivalent | Description                |
-| ----------------- | -------------- | -------------------------- |
-| `WithdrawalIndex` | `Uint64`       | An index of a `Withdrawal` |
+### New `BLSToExecutionChanges`
+
+```python
+class BLSToExecutionChanges(List[SignedBLSToExecutionChange]):
+    """
+    The signed BLS-to-execution credential changes included in a beacon
+    block.
+    """
+
+    LIMIT = MAX_BLS_TO_EXECUTION_CHANGES
+```
+
+### New `HistoricalSummaries`
+
+```python
+class HistoricalSummaries(List[HistoricalSummary]):
+    """
+    Summaries of the chain's block and state root history.
+    """
+
+    LIMIT = HISTORICAL_ROOTS_LIMIT
+```
+
+### New `WithdrawalIndex`
+
+```python
+class WithdrawalIndex(Uint64):
+    """
+    The index of a withdrawal, counting all withdrawals ever made.
+    """
+```
+
+### New `Withdrawals`
+
+```python
+class Withdrawals(List[Withdrawal]):
+    """
+    A list of withdrawals.
+    """
+
+    LIMIT = MAX_WITHDRAWALS_PER_PAYLOAD
+```
 
 ## Constants
 
@@ -107,29 +146,6 @@ We define the following Python custom types for type hinting and readability:
 ## Containers
 
 ### New containers
-
-#### Misc dependencies
-
-##### `Withdrawals`
-
-```python
-class Withdrawals(List[Withdrawal]):
-    LIMIT = MAX_WITHDRAWALS_PER_PAYLOAD
-```
-
-##### `BLSToExecutionChanges`
-
-```python
-class BLSToExecutionChanges(List[SignedBLSToExecutionChange]):
-    LIMIT = MAX_BLS_TO_EXECUTION_CHANGES
-```
-
-##### `HistoricalSummaries`
-
-```python
-class HistoricalSummaries(List[HistoricalSummary]):
-    LIMIT = HISTORICAL_ROOTS_LIMIT
-```
 
 #### `Withdrawal`
 

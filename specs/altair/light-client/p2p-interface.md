@@ -3,6 +3,8 @@
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Networking](#networking)
+  - [Types](#types)
+    - [`LightClientUpdates`](#lightclientupdates)
   - [Configuration](#configuration)
   - [The gossip domain: gossipsub](#the-gossip-domain-gossipsub)
     - [Topics and messages](#topics-and-messages)
@@ -28,11 +30,24 @@ This section extends the
 [networking specification for Altair](../p2p-interface.md) with additional
 messages, topics and data to the Req-Resp and Gossip domains.
 
+### Types
+
+#### `LightClientUpdates`
+
+```python
+class LightClientUpdates(List[LightClientUpdate]):
+    """
+    Light client updates returned in a ``LightClientUpdatesByRange`` response.
+    """
+
+    LIMIT = MAX_REQUEST_LIGHT_CLIENT_UPDATES
+```
+
 ### Configuration
 
-| Name                               | Value          | Description                                                         |
-| ---------------------------------- | -------------- | ------------------------------------------------------------------- |
-| `MAX_REQUEST_LIGHT_CLIENT_UPDATES` | `2**7` (= 128) | Maximum number of `LightClientUpdate` instances in a single request |
+| Name                               | Value                  | Description                                                         |
+| ---------------------------------- | ---------------------- | ------------------------------------------------------------------- |
+| `MAX_REQUEST_LIGHT_CLIENT_UPDATES` | `Uint64(2**7)` (= 128) | Maximum number of `LightClientUpdate` instances in a single request |
 
 ### The gossip domain: gossipsub
 
@@ -212,7 +227,7 @@ Response Content:
 
 ```
 (
-  List[LightClientUpdate, MAX_REQUEST_LIGHT_CLIENT_UPDATES]
+  LightClientUpdates
 )
 ```
 
@@ -334,7 +349,7 @@ supports processing `LightClientFinalityUpdate` and
 Light clients MAY also collect historic light client data and make it available
 to other peers. If they do, they SHOULD advertise supported message endpoints in
 [the Req/Resp domain](#the-reqresp-domain), and MAY also update the contents of
-their [`Status`](../../phase0/p2p-interface.md#status) message to reflect the
+their [`Status`](../../phase0/p2p-interface.md#status-v1) message to reflect the
 locally available light client data.
 
 If only limited light client data is locally available, the light client SHOULD

@@ -10,8 +10,7 @@ class AltairSpecBuilder(BaseSpecBuilder):
     def imports(cls, preset_name: str) -> str:
         return f"""
 from eth_consensus_specs.phase0 import {preset_name} as phase0
-from ssz import compute_merkle_proof as ssz_compute_merkle_proof
-from ssz import get_generalized_index
+from eth_consensus_specs.utils.ssz.ssz_impl import build_proof, get_generalized_index
 """
 
     @classmethod
@@ -23,8 +22,11 @@ GeneralizedIndex = int
     @classmethod
     def sundry_functions(cls) -> str:
         return """
-# The in-document definition is a stub; the SSZ library provides the implementation.
-compute_merkle_proof = ssz_compute_merkle_proof"""
+def compute_merkle_proof(object: SSZObject,
+                         index: GeneralizedIndex) -> list[Bytes32]:
+    # A branch of Root does not fit a Vector[Bytes32]: the two are siblings,
+    # and a collection coerces an element only from an ancestor of its own type.
+    return [Bytes32(node) for node in build_proof(object, index)]"""
 
     @classmethod
     def hardcoded_ssz_dep_constants(cls) -> dict[str, str]:

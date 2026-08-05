@@ -14,6 +14,7 @@ ALL_EXECUTABLE_SPEC_NAMES = \
 # A list of fake targets.
 .PHONY: \
 	_sync         \
+	build_docs    \
 	clean         \
 	help          \
 	lint          \
@@ -62,9 +63,6 @@ help-verbose:
 	@echo "    fork=<fork>        Run only tests for this fork (phase0, altair, bellatrix, capella, etc.)"
 	@echo "    preset=<preset>    Preset to use: mainnet, minimal (default: minimal)"
 	@echo ""
-	@echo "  Libraries:"
-	@echo "    kzg=<type>         KZG library: spec, ckzg (default: ckzg)"
-	@echo ""
 	@echo "  Output:"
 	@echo "    verbose=true       Enable verbose pytest output"
 	@echo "    reftests=true      Generate reference test vectors"
@@ -72,10 +70,10 @@ help-verbose:
 	@echo ""
 	@echo "  Examples:"
 	@echo "    make test"
-	@echo "    make test k=test_verify_kzg_proof"
+	@echo "    make test k=test_compute_fork_digest"
 	@echo "    make test fork=deneb"
 	@echo "    make test preset=mainnet"
-	@echo "    make test preset=mainnet fork=deneb k=test_verify_kzg_proof"
+	@echo "    make test preset=mainnet fork=deneb k=test_compute_fork_digest"
 	@echo "    make test reftests=true"
 	@echo "    make test reftests=true fork=fulu"
 	@echo "    make test reftests=true preset=mainnet fork=fulu k=invalid_committee_index"
@@ -131,11 +129,10 @@ help-verbose:
 	@echo ""
 	@echo "$(BOLD)make serve_docs$(NORM)"
 	@echo ""
-	@echo "  Builds and serves the documentation locally using MkDocs. Copies spec files,"
-	@echo "  removes deprecated content, and starts a local web server for viewing docs."
+	@echo "  Builds and serves the documentation locally using Zensical."
 	@echo ""
 	@echo "  Example: make serve_docs"
-	@echo "  Then open: http://127.0.0.1:8000"
+	@echo "  Then open: http://127.0.0.1:8000/consensus-specs/"
 	@echo ""
 	@echo "$(BOLD)MAINTENANCE$(NORM)"
 	@echo "$(BOLD)--------------------------------------------------------------------------------$(NORM)"
@@ -198,10 +195,6 @@ test: MAYBE_FORK := $(if $(fork),--fork=$(fork))
 test: PRESET := $(if $(preset),--preset=$(preset),)
 # Disable parallelism when running a specific test. Makes debugging difficult (print doesn't work).
 test: MAYBE_PARALLEL := $(if $(k),,-n logical --dist=worksteal)
-#
-# Libraries
-test: KZG := --kzg-type=$(if $(kzg),$(kzg),ckzg)
-#
 # Output
 test: MAYBE_VERBOSE := $(if $(filter true,$(verbose)),-v)
 test: MAYBE_REFTESTS := $(if $(filter true,$(reftests)),--reftests --reftests-output=$(REFTESTS_DIR))
@@ -219,7 +212,6 @@ test: _pyspec
 		$(MAYBE_TEST) \
 		$(MAYBE_FORK) \
 		$(PRESET) \
-		$(KZG) \
 		--junitxml=$(TEST_REPORT_DIR)/test_results.xml \
 		--html=$(TEST_REPORT_DIR)/test_results.html \
 		--self-contained-html \
@@ -232,6 +224,9 @@ test: _pyspec
 # Documentation
 ###############################################################################
 
+DOCS_CONFIG = ./zensical.toml
+DOCS_BUILD_CONFIG = ./.zensical.build.toml
+
 DOCS_DIR = ./docs
 SPEC_DIR = ./specs
 SSZ_DIR = ./ssz
@@ -239,15 +234,22 @@ SYNC_DIR = ./sync
 
 # Copy files to the docs directory.
 _copy_docs:
-	@cp -r $(SPEC_DIR) $(DOCS_DIR)
-	@cp -r $(SYNC_DIR) $(DOCS_DIR)
-	@cp -r $(SSZ_DIR) $(DOCS_DIR)
-	@cp $(CURDIR)/README.md $(DOCS_DIR)/README.md
+	@rm -rf $(DOCS_DIR)
+	@mkdir -p $(DOCS_DIR)
+	@cp -r $(SPEC_DIR) $(DOCS_DIR)/specs
+	@cp -r $(SYNC_DIR) $(DOCS_DIR)/sync
+	@cp -r $(SSZ_DIR) $(DOCS_DIR)/ssz
+	@cp $(CURDIR)/README.md $(DOCS_DIR)/index.md
+	@$(UV_RUN) python $(CURDIR)/scripts/strip_inline_tocs.py $(DOCS_DIR)
+	@$(UV_RUN) python $(CURDIR)/scripts/gen_spec_indices.py $(DOCS_DIR) $(DOCS_CONFIG) $(DOCS_BUILD_CONFIG)
+
+# Build the documentation.
+build_docs: _sync _copy_docs
+	@$(UV_RUN) zensical build --clean --strict -f $(DOCS_BUILD_CONFIG)
 
 # Start a local documentation server.
 serve_docs: _pyspec _copy_docs
-	@$(UV_RUN) mkdocs build
-	@$(UV_RUN) mkdocs serve
+	@$(UV_RUN) zensical serve -f $(DOCS_BUILD_CONFIG)
 
 ###############################################################################
 # Checks

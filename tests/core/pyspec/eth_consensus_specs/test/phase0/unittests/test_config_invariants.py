@@ -11,8 +11,8 @@ from eth_consensus_specs.test.helpers.forks import (
 
 
 def check_bound(value, lower_bound, upper_bound):
-    assert value >= lower_bound
-    assert value <= upper_bound
+    assert int(value) >= int(lower_bound)
+    assert int(value) <= int(upper_bound)
 
 
 @with_all_phases
@@ -24,9 +24,9 @@ def test_validators(spec, state):
 
     # Note: can be less if you assume stricters bounds on validator set based on total ETH supply
     maximum_validators_per_committee = (
-        spec.VALIDATOR_REGISTRY_LIMIT
-        // spec.Uint64(spec.SLOTS_PER_EPOCH)
-        // spec.MAX_COMMITTEES_PER_SLOT
+        int(spec.VALIDATOR_REGISTRY_LIMIT)
+        // int(spec.SLOTS_PER_EPOCH)
+        // int(spec.MAX_COMMITTEES_PER_SLOT)
     )
     check_bound(spec.MAX_VALIDATORS_PER_COMMITTEE, 1, maximum_validators_per_committee)
     check_bound(spec.config.MIN_PER_EPOCH_CHURN_LIMIT, 1, spec.VALIDATOR_REGISTRY_LIMIT)
@@ -40,7 +40,7 @@ def test_validators(spec, state):
 @with_all_phases
 @spec_state_test
 def test_balances(spec, state):
-    assert spec.MAX_EFFECTIVE_BALANCE % spec.EFFECTIVE_BALANCE_INCREMENT == 0
+    assert spec.Gwei(0) == spec.MAX_EFFECTIVE_BALANCE % spec.EFFECTIVE_BALANCE_INCREMENT
     check_bound(spec.MIN_DEPOSIT_AMOUNT, 1, UINT64_MAX)
     check_bound(spec.MAX_EFFECTIVE_BALANCE, spec.MIN_DEPOSIT_AMOUNT, UINT64_MAX)
     check_bound(spec.MAX_EFFECTIVE_BALANCE, spec.EFFECTIVE_BALANCE_INCREMENT, UINT64_MAX)
@@ -75,7 +75,7 @@ def test_incentives(spec, state):
 def test_time(spec, state):
     assert spec.SLOTS_PER_EPOCH <= spec.SLOTS_PER_HISTORICAL_ROOT
     assert spec.MIN_SEED_LOOKAHEAD < spec.MAX_SEED_LOOKAHEAD
-    assert spec.SLOTS_PER_HISTORICAL_ROOT % spec.SLOTS_PER_EPOCH == 0
+    assert spec.Slot(0) == spec.SLOTS_PER_HISTORICAL_ROOT % spec.SLOTS_PER_EPOCH
     check_bound(spec.SLOTS_PER_HISTORICAL_ROOT, spec.SLOTS_PER_EPOCH, UINT64_MAX)
     check_bound(spec.MIN_ATTESTATION_INCLUSION_DELAY, 1, spec.SLOTS_PER_EPOCH)
     assert spec.config.ATTESTATION_DUE_BPS <= spec.BASIS_POINTS
@@ -86,12 +86,12 @@ def test_time(spec, state):
 @spec_state_test
 def test_networking(spec, state):
     assert spec.config.SUBNETS_PER_NODE <= spec.config.ATTESTATION_SUBNET_COUNT
-    node_id_length = spec.NodeID(1).get_byte_length()  # in bytes
-    assert node_id_length * 8 == spec.NODE_ID_BITS  # in bits
+    node_id_length = spec.NodeID.get_byte_length()  # in bytes
+    assert node_id_length * 8 == int(spec.NODE_ID_BITS)  # in bits
 
 
 @with_all_phases
 @spec_state_test
 def test_fork_choice(spec, state):
-    assert spec.config.PROPOSER_SCORE_BOOST <= 100
+    assert spec.Uint64(100) >= spec.config.PROPOSER_SCORE_BOOST
     assert spec.config.PROPOSER_REORG_CUTOFF_BPS <= spec.BASIS_POINTS

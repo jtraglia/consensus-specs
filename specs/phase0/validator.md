@@ -100,18 +100,18 @@ specifications before continuing and use as a reference throughout.
 
 ### Misc
 
-| Name                               | Value                 | Unit       |
-| ---------------------------------- | --------------------- | ---------- |
-| `TARGET_AGGREGATORS_PER_COMMITTEE` | `Uint64(2**4)` (= 16) | validators |
+| Name                               | Value                 |
+| ---------------------------------- | --------------------- |
+| `TARGET_AGGREGATORS_PER_COMMITTEE` | `Uint64(2**4)` (= 16) |
 
 ## Configuration
 
 ### Time parameters
 
-| Name                  | Value          | Unit         | Duration                   |
-| --------------------- | -------------- | ------------ | -------------------------- |
-| `ATTESTATION_DUE_BPS` | `Uint64(3333)` | basis points | ~33% of `SLOT_DURATION_MS` |
-| `AGGREGATE_DUE_BPS`   | `Uint64(6667)` | basis points | ~67% of `SLOT_DURATION_MS` |
+| Name                  | Value          | Duration                   |
+| --------------------- | -------------- | -------------------------- |
+| `ATTESTATION_DUE_BPS` | `Uint64(3333)` | ~33% of `SLOT_DURATION_MS` |
+| `AGGREGATE_DUE_BPS`   | `Uint64(6667)` | ~67% of `SLOT_DURATION_MS` |
 
 ## Containers
 
@@ -665,9 +665,9 @@ Set `attestation.data = attestation_data` where `attestation_data` is the
 
 ##### Aggregation bits
 
-- Let `attestation.aggregation_bits` be a
-  `Bitlist[MAX_VALIDATORS_PER_COMMITTEE]` of length `len(committee)`, where the
-  bit of the index of the validator in the `committee` is set to `0b1`.
+- Let `attestation.aggregation_bits` be an `AggregationBits` of length
+  `len(committee)`, where the bit of the index of the validator in the
+  `committee` is set to `0b1`.
 
 *Note*: Calling `get_attesting_indices(state, attestation)` should return a list
 of length equal to 1, containing `validator_index`.
@@ -758,9 +758,9 @@ being aggregated.
 
 ##### Aggregation bits
 
-Let `aggregate_attestation.aggregation_bits` be a
-`Bitlist[MAX_VALIDATORS_PER_COMMITTEE]` of length `len(committee)`, where each
-bit set from each individual attestation is set to `0b1`.
+Let `aggregate_attestation.aggregation_bits` be an `AggregationBits` of length
+`len(committee)`, where each bit set from each individual attestation is set to
+`0b1`.
 
 ##### Aggregate signature
 

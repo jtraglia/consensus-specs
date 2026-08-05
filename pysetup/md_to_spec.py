@@ -1,6 +1,5 @@
 import ast
 import contextlib
-import json
 import re
 import string
 from collections.abc import Iterator, Mapping
@@ -16,16 +15,36 @@ from marko.inline import CodeSpan
 
 from .typing import ProtocolDefinition, SpecObject, VariableDefinition
 
-# SSZ collection bases that a named type may subclass, e.g.
-# `class Validators(List[Validator])`.
-COLLECTION_BASE_CLASSES = {
-    "List",
-    "Vector",
-    "Bitlist",
-    "Bitvector",
+COLLECTION_BASE_CLASSES = (
+    "BitList",
+    "BitVector",
     "ByteList",
     "ByteVector",
-}
+    "List",
+    "ProgressiveBitList",
+    "ProgressiveByteList",
+    "ProgressiveList",
+    "Vector",
+)
+
+SCALAR_BASE_CLASSES = (
+    "Boolean",
+    "Byte",
+    "Bytes1",
+    "Bytes4",
+    "Bytes8",
+    "Bytes20",
+    "Bytes31",
+    "Bytes32",
+    "Bytes48",
+    "Bytes96",
+    "Uint8",
+    "Uint16",
+    "Uint32",
+    "Uint64",
+    "Uint128",
+    "Uint256",
+)
 
 
 class MarkdownToSpec:
@@ -67,7 +86,6 @@ class MarkdownToSpec:
         """
         while (child := self._get_next_element()) is not None:
             self._process_child(child)
-        self._finalize_types()
         return self._build_spec_object()
 
     def _get_next_element(self) -> Element | None:
@@ -180,26 +198,51 @@ class MarkdownToSpec:
     def _add_dataclass(self, source: str, cls: ast.ClassDef) -> None:
         self.spec["dataclasses"][cls.name] = source
 
+    def _is_early_call(self, node: ast.Call) -> bool:
+        """
+        Returns true if the call is to something defined before the types.
+        """
+        if not isinstance(node.func, ast.Name):
+            return False
+        early = (
+            *SCALAR_BASE_CLASSES,
+            *self.spec["custom_types"],
+            "ceillog2",
+            "floorlog2",
+        )
+        return node.func.id in early
+
     def _process_code_class(self, source: str, cls: ast.ClassDef) -> None:
         """
         Processes a class definition and updates the spec.
         """
         class_name, parent_class = _get_class_info_from_ast(cls)
 
-        # Named SSZ collection types (e.g. `class Validators(List[Validator])`)
-        # are grouped together, so skip the heading-consistency check.
-        if parent_class in COLLECTION_BASE_CLASSES:
-            self.spec["ssz_objects"][class_name] = source
-            return
-
         # check consistency with spec
         if class_name != self.current_heading_name:
             raise Exception(f"class_name {class_name} != current_name {self.current_heading_name}")
 
-        if parent_class != "ProgressiveContainer":
-            # Containers, plus the primitive fixed byte arrays that the custom
-            # types build upon.
-            assert parent_class is None or parent_class in ("Container", "BaseBytes")
+        if parent_class in SCALAR_BASE_CLASSES and isinstance(cls.bases[0], ast.Name):
+            # Scalar aliases are handled as custom types, so that those used in
+            # the types of configurations, presets, and constants are defined
+            # before them in the generated specification.
+            self.spec["custom_types"][class_name] = parent_class
+            return
+        if parent_class in COLLECTION_BASE_CLASSES:
+            # Types whose bound is given by a helper function only appear in
+            # networking schemas. They cannot be compiled, since helpers are
+            # defined after types in the generated specification. Casts to a
+            # type and the math helpers ceillog2 and floorlog2 are excluded, as
+            # they are defined before types.
+            if any(
+                isinstance(node, ast.Call) and not self._is_early_call(node)
+                for stmt in cls.body
+                if isinstance(stmt, ast.Assign)
+                for node in ast.walk(stmt.value)
+            ):
+                return
+        elif parent_class != "ProgressiveContainer":
+            assert parent_class is None or parent_class == "Container"
         self.spec["ssz_objects"][class_name] = source
 
     def _process_table(self, table: Table) -> None:
@@ -223,13 +266,13 @@ class MarkdownToSpec:
                     (
                         "Uint",
                         "Boolean",
-                        "Bitlist",
-                        "Bitvector",
+                        "BitList",
+                        "BitVector",
                         "ByteList",
                         "ByteVector",
                         "Bytes",
                         "List",
-                        "ProgressiveBitlist",
+                        "ProgressiveBitList",
                         "ProgressiveByteList",
                         "ProgressiveList",
                         "Union",
@@ -274,7 +317,7 @@ class MarkdownToSpec:
 
             # It is a constant variable or a preset_dep_constant_vars
             else:
-                if name in ("ENDIANNESS", "KZG_ENDIANNESS"):
+                if name == "ENDIANNESS":
                     # Annotate as Final so the value is treated as a Literal.
                     value_def = _parse_value(name, value, type_hint="Final")
                 if any(k in value for k in self.preset) or any(
@@ -448,16 +491,6 @@ class MarkdownToSpec:
                 )
             self._process_list_of_records_table(table_element, match.group(1).upper())
 
-    def _finalize_types(self) -> None:
-        """
-        Calls helper functions to update KZG setups if needed.
-        """
-        # Update KZG trusted setup if needed
-        if any("KZG_SETUP" in name for name in self.spec["constant_vars"]):
-            _update_constant_vars_with_kzg_setups(
-                self.spec["constant_vars"], self.spec["preset_dep_constant_vars"], self.preset_name
-            )
-
     def _build_spec_object(self) -> SpecObject:
         """
         Returns the SpecObject using all collected data.
@@ -530,30 +563,6 @@ def _is_constant_id(name: str) -> bool:
 
 
 @cache
-def _load_kzg_trusted_setups(preset_name: str) -> tuple[list[str], list[str], list[str]]:
-    trusted_setups_file_path = (
-        str(Path(__file__).parent.parent)
-        + "/presets/"
-        + preset_name
-        + "/trusted_setups/trusted_setup_4096.json"
-    )
-
-    with Path(trusted_setups_file_path).open() as f:
-        json_data = json.load(f)
-        trusted_setup_G1_monomial = json_data["g1_monomial"]
-        trusted_setup_G1_lagrange = json_data["g1_lagrange"]
-        trusted_setup_G2_monomial = json_data["g2_monomial"]
-
-    return trusted_setup_G1_monomial, trusted_setup_G1_lagrange, trusted_setup_G2_monomial
-
-
-ALL_KZG_SETUPS = {
-    "minimal": _load_kzg_trusted_setups("minimal"),
-    "mainnet": _load_kzg_trusted_setups("mainnet"),
-}
-
-
-@cache
 def _parse_value(name: str, typed_value: str, type_hint: str | None = None) -> VariableDefinition:
     comment = None
     if name in ("ROOT_OF_UNITY_EXTENDED", "ROOTS_OF_UNITY_EXTENDED", "ROOTS_OF_UNITY_REDUCED"):
@@ -570,23 +579,6 @@ def _parse_value(name: str, typed_value: str, type_hint: str | None = None) -> V
     return VariableDefinition(
         type_name=type_name, value=typed_value[i + 1 : -1], comment=comment, type_hint=type_hint
     )
-
-
-def _update_constant_vars_with_kzg_setups(
-    constant_vars: dict[str, VariableDefinition],
-    preset_dep_constant_vars: dict[str, VariableDefinition],
-    preset_name: str,
-) -> None:
-    comment = "noqa: E501"
-    kzg_setups = ALL_KZG_SETUPS[preset_name]
-    setup_values = {
-        "KZG_SETUP_G1_MONOMIAL": kzg_setups[0],
-        "KZG_SETUP_G1_LAGRANGE": kzg_setups[1],
-        "KZG_SETUP_G2_MONOMIAL": kzg_setups[2],
-    }
-    for name, setup in setup_values.items():
-        vars_dict = preset_dep_constant_vars if name in preset_dep_constant_vars else constant_vars
-        vars_dict[name] = VariableDefinition(vars_dict[name].value, f"data={setup}", comment, None)
 
 
 @cache

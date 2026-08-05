@@ -10,11 +10,15 @@ def run_process_participation_record_updates(spec, state):
 @with_phases([PHASE0])
 @spec_state_test
 def test_updated_participation_record(spec, state):
-    state.previous_epoch_attestations = [spec.PendingAttestation(proposer_index=100)]
-    current_epoch_attestations = [spec.PendingAttestation(proposer_index=200)]
-    state.current_epoch_attestations = current_epoch_attestations
+    state.previous_epoch_attestations = spec.PendingAttestations(
+        data=[spec.PendingAttestation(proposer_index=100)]
+    )
+    current_epoch_attestations = spec.PendingAttestations(
+        data=[spec.PendingAttestation(proposer_index=200)]
+    )
+    state.current_epoch_attestations = spec.PendingAttestations(data=current_epoch_attestations)
 
     yield from run_process_participation_record_updates(spec, state)
 
-    assert list(state.previous_epoch_attestations) == current_epoch_attestations
-    assert len(state.current_epoch_attestations) == 0
+    assert state.previous_epoch_attestations == current_epoch_attestations
+    assert state.current_epoch_attestations == spec.PendingAttestations()

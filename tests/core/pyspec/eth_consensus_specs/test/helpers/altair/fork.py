@@ -1,13 +1,14 @@
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
-
 ALTAIR_FORK_TEST_META_TAGS = {
     "fork": "altair",
 }
 
 
 def run_fork_test(post_spec, pre_state):
-    # Clean up state to be more realistic
-    pre_state.current_epoch_attestations = []
+    # Clean up state to be more realistic. The empty value has to carry the
+    # field's own type, which belongs to the pre-fork spec rather than to
+    # ``post_spec``, so it is read off the state's own field list.
+    attestations_type = type(pre_state).model_fields["current_epoch_attestations"].annotation
+    pre_state.current_epoch_attestations = attestations_type()
 
     yield "pre", pre_state
 
@@ -35,14 +36,12 @@ def run_fork_test(post_spec, pre_state):
         "finalized_checkpoint",
     ]
     for field in stable_fields:
-        assert hash_tree_root(getattr(pre_state, field)) == hash_tree_root(
-            getattr(post_state, field)
-        )
+        assert getattr(pre_state, field) == getattr(post_state, field)
 
     # Modified fields
     modified_fields = ["fork"]
     for field in modified_fields:
-        assert getattr(pre_state, field).encode_bytes() != getattr(post_state, field).encode_bytes()
+        assert getattr(pre_state, field) != getattr(post_state, field)
 
     assert pre_state.fork.current_version == post_state.fork.previous_version
     assert post_state.fork.current_version == post_spec.config.ALTAIR_FORK_VERSION

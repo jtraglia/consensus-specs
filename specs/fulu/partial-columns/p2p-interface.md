@@ -3,6 +3,9 @@
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
+- [Types](#types)
+  - [New `CellsBitList`](#new-cellsbitlist)
+  - [New `OptionalPartialDataColumnHeader`](#new-optionalpartialdatacolumnheader)
 - [Containers](#containers)
   - [New `PartialDataColumnSidecar`](#new-partialdatacolumnsidecar)
   - [New `PartialDataColumnPartsMetadata`](#new-partialdatacolumnpartsmetadata)
@@ -40,6 +43,31 @@ specifications of previous upgrades, and assumes them as pre-requisite. In
 particular, this document builds on the
 [Fulu networking specification](../p2p-interface.md).
 
+## Types
+
+### New `CellsBitList`
+
+```python
+class CellsBitList(BitList):
+    """
+    A bitfield over the cells of a column, one bit per blob.
+    """
+
+    LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
+```
+
+### New `OptionalPartialDataColumnHeader`
+
+```python
+class OptionalPartialDataColumnHeader(List[PartialDataColumnHeader]):
+    """
+    A header that may or may not be present, encoded as a list of length zero
+    or one.
+    """
+
+    LIMIT = 1
+```
+
 ## Containers
 
 ### New `PartialDataColumnSidecar`
@@ -50,22 +78,12 @@ except that only the cells and proofs identified by the bitmap are present.
 *Note*: The column index is inferred from the gossipsub topic subnet.
 
 ```python
-class CellsBitlist(Bitlist):
-    LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
-```
-
-```python
-class PartialDataColumnHeaderList(List[PartialDataColumnHeader]):
-    LIMIT = Uint64(1)
-```
-
-```python
 class PartialDataColumnSidecar(Container):
-    cells_present_bitmap: CellsBitlist
+    cells_present_bitmap: CellsBitList
     partial_column: DataColumn
     kzg_proofs: KZGProofs
     # Optional header, only sent on eager pushes
-    header: PartialDataColumnHeaderList
+    header: OptionalPartialDataColumnHeader
 ```
 
 ### New `PartialDataColumnPartsMetadata`
@@ -81,8 +99,8 @@ This is encoded as the following SSZ container:
 
 ```python
 class PartialDataColumnPartsMetadata(Container):
-    available: CellsBitlist
-    requests: CellsBitlist
+    available: CellsBitList
+    requests: CellsBitList
 ```
 
 This means that for each cell there are two bits of state. Where the first bit
@@ -156,12 +174,31 @@ def verify_partial_data_column_sidecar_kzg_proofs(
     cell_indices = [CellIndex(column_index)] * len(blob_indices)
 
     # Batch verify that the cells match the corresponding commitments and proofs
-    return verify_cell_kzg_proof_batch(
+    return kzg.verify_cell_kzg_proof_batch(
         commitments_bytes=[all_commitments[i] for i in blob_indices],
         cell_indices=cell_indices,
         cells=sidecar.partial_column,
         proofs_bytes=sidecar.kzg_proofs,
     )
+```
+
+*Note*: The function `kzg.verify_cell_kzg_proof_batch` is defined in
+[cryptography-specs](https://github.com/ethereum/cryptography-specs) with the
+following signature:
+
+<!-- eth_consensus_specs: skip -->
+
+```python
+def verify_cell_kzg_proof_batch(
+    commitments_bytes: Sequence[Bytes48],
+    cell_indices: Sequence[CellIndex],
+    cells: Sequence[Cell],
+    proofs_bytes: Sequence[Bytes48],
+) -> bool:
+    """
+    Return ``True`` if and only if all cells and their proofs match the
+    commitments.
+    """
 ```
 
 ## The gossip domain: gossipsub
@@ -235,7 +272,7 @@ def validate_partial_data_column_sidecar_gossip(
 
         # [IGNORE] The header is not from a future slot
         # (MAY be queued for processing at the appropriate slot)
-        if not is_not_from_future_slot(state, block_header.slot, current_time_ms):
+        if is_future_slot(store, block_header.slot, current_time_ms):
             raise GossipIgnore("header is from a future slot")
 
         # [IGNORE] The header is from a slot greater than the latest finalized slot
@@ -256,22 +293,22 @@ def validate_partial_data_column_sidecar_gossip(
 
         # [IGNORE] The header's block's parent has been seen
         # (MAY be queued for processing once the parent block is retrieved)
-        if block_header.parent_root not in store.blocks:
+        parent_root = block_header.parent_root
+        if parent_root not in store.blocks:
             raise GossipIgnore("header's parent has not been seen")
 
         # [REJECT] The header's block's parent passes validation
-        if block_header.parent_root not in store.block_states:
+        if parent_root not in store.block_states:
             raise GossipReject("header's parent failed validation")
 
         # [REJECT] The header is from a higher slot than the header's block's parent
-        if block_header.slot <= store.blocks[block_header.parent_root].slot:
+        if block_header.slot <= store.blocks[parent_root].slot:
             raise GossipReject("header is not from a higher slot than its parent")
 
         # [REJECT] The current finalized_checkpoint is an ancestor of the header's block
-        checkpoint_block = get_checkpoint_block(
-            store, block_header.parent_root, store.finalized_checkpoint.epoch
-        )
-        if checkpoint_block != store.finalized_checkpoint.root:
+        finalized_epoch = store.finalized_checkpoint.epoch
+        finalized_checkpoint_block = get_checkpoint_block(store, parent_root, finalized_epoch)
+        if finalized_checkpoint_block != store.finalized_checkpoint.root:
             raise GossipReject("finalized checkpoint is not an ancestor of header's block")
 
         # [REJECT] The header's kzg_commitments inclusion proof is valid
@@ -280,7 +317,7 @@ def validate_partial_data_column_sidecar_gossip(
 
         # [REJECT] The header is proposed by the expected proposer_index
         # (if shuffling is not available, IGNORE instead and MAY be queued for later)
-        parent_state = store.block_states[block_header.parent_root].copy()
+        parent_state = store.block_states[parent_root].copy()
         process_slots(parent_state, block_header.slot)
         expected_proposer = get_beacon_proposer_index(parent_state)
         if block_header.proposer_index != expected_proposer:
@@ -299,7 +336,7 @@ def validate_partial_data_column_sidecar_gossip(
 
         # [IGNORE] The corresponding header is not from a future slot
         # (MAY be queued for processing at the appropriate slot)
-        if not is_not_from_future_slot(state, block_header.slot, current_time_ms):
+        if is_future_slot(store, block_header.slot, current_time_ms):
             raise GossipIgnore("corresponding header is from a future slot")
 
         # [IGNORE] The corresponding header is from a slot greater than the latest finalized slot

@@ -32,7 +32,7 @@ def run_test_activation_churn_limit(spec, state):
     balance = spec.MIN_ACTIVATION_BALANCE if is_post_electra(spec) else spec.MAX_EFFECTIVE_BALANCE
 
     for i in range(mock_activations):
-        index = validator_count_0 + i
+        index = int(validator_count_0) + i
         validator = spec.Validator(
             pubkey=pubkeys[index],
             withdrawal_credentials=spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX
@@ -48,22 +48,22 @@ def run_test_activation_churn_limit(spec, state):
         state.balances.append(balance)
         state.previous_epoch_participation.append(spec.ParticipationFlags(0b0000_0000))
         state.current_epoch_participation.append(spec.ParticipationFlags(0b0000_0000))
-        state.inactivity_scores.append(0)
+        state.inactivity_scores.append(spec.Uint64(0))
         state.validators[index].activation_epoch = spec.FAR_FUTURE_EPOCH
 
     if is_post_electra(spec):
-        churn_limit_0 = int(get_activation_churn_limit(spec, state) // spec.MIN_ACTIVATION_BALANCE)
+        churn_limit_0 = get_activation_churn_limit(spec, state) // spec.MIN_ACTIVATION_BALANCE
     else:
-        churn_limit_0 = int(spec.get_validator_activation_churn_limit(state))
+        churn_limit_0 = spec.get_validator_activation_churn_limit(state)
 
     yield from run_process_registry_updates(spec, state)
 
     # Half should churn in first run of registry update
     for i in range(mock_activations):
-        index = validator_count_0 + i
+        index = int(validator_count_0) + i
         # NOTE: activations are gated different after EIP-7251
         # all eligible validators have been activated
-        if index < validator_count_0 + churn_limit_0 or is_post_electra(spec):
+        if index < int(validator_count_0) + int(churn_limit_0) or is_post_electra(spec):
             # The eligible validators within the activation churn limit should have been activated
             assert state.validators[index].activation_epoch < spec.FAR_FUTURE_EPOCH
         else:

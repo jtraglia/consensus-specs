@@ -14,7 +14,7 @@ from eth_consensus_specs.test.helpers.attestations import (
 from eth_consensus_specs.test.helpers.block import build_empty_block_for_next_slot
 from eth_consensus_specs.test.helpers.forks import is_post_fulu, is_post_gloas
 from eth_consensus_specs.test.helpers.state import next_epoch, state_transition_and_sign_block
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def check_head_against_root(spec, store, root):
@@ -161,7 +161,7 @@ def get_fork_choice_node(spec, root, payload_status=None):
 
 
 def get_anchor_root(spec, state):
-    anchor_block_header = state.latest_block_header.copy()
+    anchor_block_header = copy(state.latest_block_header)
     if anchor_block_header.state_root == spec.Bytes32():
         anchor_block_header.state_root = spec.hash_tree_root(state)
     return spec.hash_tree_root(anchor_block_header)
@@ -182,13 +182,13 @@ def tick_and_add_block(
     if merge_block:
         assert spec.is_merge_transition_block(pre_state, signed_block.message.body)
 
-    block_slot = spec.Uint64(signed_block.message.slot)
-    block_offset = block_slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
-    block_time = pre_state.genesis_time + block_offset
+    block_time = pre_state.genesis_time + spec.Uint64(
+        signed_block.message.slot
+    ) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
     while store.time < block_time:
-        next_slot = spec.Uint64(spec.get_current_slot(store) + spec.Slot(1))
-        next_offset = next_slot * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
-        time = pre_state.genesis_time + next_offset
+        time = pre_state.genesis_time + spec.Uint64(
+            spec.get_current_slot(store) + spec.Slot(1)
+        ) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
         on_tick_and_append_step(spec, store, time, test_steps)
 
     post_state = yield from add_block(
@@ -231,11 +231,9 @@ def add_attestations(spec, store, attestations, test_steps, is_from_block=False)
 
 
 def tick_and_run_on_attestation(spec, store, attestation, test_steps, is_from_block=False):
-    # Make get_current_slot(store) >= attestation.data.slot + 1
-    min_time_to_include = (
-        spec.Uint64(attestation.data.slot + spec.Slot(1))
-        * spec.config.SLOT_DURATION_MS
-        // spec.Uint64(1000)
+    # Make get_current_slot(store) >= attestation.data.slot + spec.Slot(1)
+    min_time_to_include = spec.Uint64(
+        int(attestation.data.slot + spec.Slot(1)) * int(spec.config.SLOT_DURATION_MS) // 1000
     )
     if store.time < min_time_to_include:
         spec.on_tick(store, min_time_to_include)
@@ -347,7 +345,7 @@ def add_block(
         assert blob_data.is_pre_fulu() or blob_data.is_post_fulu(), "Integrity fail blob_data"
 
         if blob_data.is_pre_fulu():
-            blobs = spec.Blobs.of(*blob_data.blobs)
+            blobs = spec.Blobs(data=blob_data.blobs)
             blobs_root = hash_tree_root(blobs)
             yield get_blobs_file_name(blobs_root=blobs_root), blobs
 
@@ -658,13 +656,13 @@ def is_ready_to_justify(spec, state):
     """
     Check if the given ``state`` will trigger justification updates at epoch boundary.
     """
-    temp_state = state.copy()
+    temp_state = copy(state)
     spec.process_justification_and_finalization(temp_state)
     return temp_state.current_justified_checkpoint.epoch > state.current_justified_checkpoint.epoch
 
 
 def find_next_justifying_slot(spec, state, fill_cur_epoch, fill_prev_epoch, participation_fn=None):
-    temp_state = state.copy()
+    temp_state = copy(state)
 
     signed_blocks = []
     justifying_slot = None
@@ -711,8 +709,9 @@ def tick_store_to_slot(spec, store, slot, test_steps):
     """
     Tick the store forward to the start of ``slot``.
     """
-    slot_offset = spec.Uint64(slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
-    slot_time = store.genesis_time + slot_offset
+    slot_time = store.genesis_time + spec.Uint64(
+        slot
+    ) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
     if store.time < slot_time:
         on_tick_and_append_step(spec, store, slot_time, test_steps)
 

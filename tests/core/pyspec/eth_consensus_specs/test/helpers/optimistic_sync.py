@@ -6,8 +6,8 @@ from eth_utils import encode_hex
 from eth_consensus_specs.test.helpers.fork_choice import (
     add_block,
 )
-from eth_consensus_specs.utils.hash_function import Bytes32
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
+from eth_consensus_specs.utils.ssz.ssz_typing import Bytes32
 
 
 class PayloadStatusV1StatusAlias(Enum):
@@ -65,8 +65,8 @@ def get_optimistic_store(spec, anchor_state, anchor_block):
         head_block_root=hash_tree_root(anchor_block),
     )
     anchor_block_root = hash_tree_root(anchor_block)
-    opt_store.blocks[anchor_block_root] = anchor_block.copy()
-    opt_store.block_states[anchor_block_root] = anchor_state.copy()
+    opt_store.blocks[anchor_block_root] = copy(anchor_block)
+    opt_store.block_states[anchor_block_root] = copy(anchor_state)
 
     return opt_store
 
@@ -150,11 +150,11 @@ def add_optimistic_block(
     )
     if is_optimistic_candidate:
         mega_store.opt_store.optimistic_roots.add(block_root)
-        mega_store.opt_store.blocks[block_root] = signed_block.message.copy()
+        mega_store.opt_store.blocks[block_root] = copy(signed_block.message)
         if not is_invalidated(mega_store, block_root):
-            mega_store.opt_store.block_states[block_root] = mega_store.fc_store.block_states[
-                block_root
-            ].copy()
+            mega_store.opt_store.block_states[block_root] = copy(
+                mega_store.fc_store.block_states[block_root]
+            )
 
     # Clean up the invalidated blocks
     clean_up_store(mega_store)

@@ -1,11 +1,6 @@
 from hashlib import sha256
 
-from ssz import BaseBytes
-
-
-class Bytes32(BaseBytes):
-    LENGTH = 32
-
+from eth_consensus_specs.utils.ssz.ssz_typing import Bytes32
 
 ZERO_BYTES32 = b"\x00" * 32
 

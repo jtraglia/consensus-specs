@@ -5,14 +5,16 @@
 - [Introduction](#introduction)
 - [Types](#types)
   - [Modified `AggregationBits`](#modified-aggregationbits)
+  - [Modified `Attestations`](#modified-attestations)
+  - [Modified `AttesterSlashings`](#modified-attesterslashings)
   - [Modified `AttestingIndices`](#modified-attestingindices)
   - [New `CommitteeBits`](#new-committeebits)
-  - [New `DepositRequests`](#new-depositrequests)
-  - [New `WithdrawalRequests`](#new-withdrawalrequests)
   - [New `ConsolidationRequests`](#new-consolidationrequests)
+  - [New `DepositRequests`](#new-depositrequests)
+  - [New `PendingConsolidations`](#new-pendingconsolidations)
   - [New `PendingDeposits`](#new-pendingdeposits)
   - [New `PendingPartialWithdrawals`](#new-pendingpartialwithdrawals)
-  - [New `PendingConsolidations`](#new-pendingconsolidations)
+  - [New `WithdrawalRequests`](#new-withdrawalrequests)
 - [Constants](#constants)
   - [Misc](#misc)
   - [Withdrawal prefixes](#withdrawal-prefixes)
@@ -140,62 +142,105 @@ Electra is a consensus-layer upgrade containing a number of features. Including:
 
 ### Modified `AggregationBits`
 
-Combined participation info for all participating committees.
+```python
+# [Modified in Electra:EIP7549]
+class AggregationBits(BitList):
+    """
+    The participation bits of all committees participating in an attestation,
+    concatenated in committee order.
+    """
+
+    LIMIT = MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
+```
+
+### Modified `Attestations`
 
 ```python
-class AggregationBits(Bitlist):
-    LIMIT = MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
+# [Modified in Electra:EIP7549]
+class Attestations(List[Attestation]):
+    """
+    The attestations included in a beacon block.
+    """
+
+    LIMIT = MAX_ATTESTATIONS_ELECTRA
+```
+
+### Modified `AttesterSlashings`
+
+```python
+# [Modified in Electra:EIP7549]
+class AttesterSlashings(List[AttesterSlashing]):
+    """
+    The attester slashings included in a beacon block.
+    """
+
+    LIMIT = MAX_ATTESTER_SLASHINGS_ELECTRA
 ```
 
 ### Modified `AttestingIndices`
 
-List of attesting validator indices.
-
 ```python
+# [Modified in Electra:EIP7549]
 class AttestingIndices(List[ValidatorIndex]):
+    """
+    The indices of the validators participating in an attestation.
+    """
+
     LIMIT = MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
 ```
 
 ### New `CommitteeBits`
 
-Participation info for each committee in a slot.
-
 ```python
-class CommitteeBits(Bitvector):
+class CommitteeBits(BitVector):
+    """
+    Bits marking which committees of a slot participate in an attestation.
+    """
+
     LENGTH = MAX_COMMITTEES_PER_SLOT
-```
-
-### New `DepositRequests`
-
-List of deposit requests pertaining to an execution payload.
-
-```python
-class DepositRequests(List[DepositRequest]):
-    LIMIT = MAX_DEPOSIT_REQUESTS_PER_PAYLOAD
-```
-
-### New `WithdrawalRequests`
-
-List of withdrawal requests pertaining to an execution payload.
-
-```python
-class WithdrawalRequests(List[WithdrawalRequest]):
-    LIMIT = MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD
 ```
 
 ### New `ConsolidationRequests`
 
-List of consolidation requests pertaining to an execution payload.
-
 ```python
 class ConsolidationRequests(List[ConsolidationRequest]):
+    """
+    The consolidation requests pertaining to a single execution payload.
+    """
+
     LIMIT = MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD
+```
+
+### New `DepositRequests`
+
+```python
+class DepositRequests(List[DepositRequest]):
+    """
+    The deposit requests pertaining to a single execution payload.
+    """
+
+    LIMIT = MAX_DEPOSIT_REQUESTS_PER_PAYLOAD
+```
+
+### New `PendingConsolidations`
+
+```python
+class PendingConsolidations(List[PendingConsolidation]):
+    """
+    The queue of consolidations awaiting processing.
+    """
+
+    LIMIT = PENDING_CONSOLIDATIONS_LIMIT
 ```
 
 ### New `PendingDeposits`
 
 ```python
 class PendingDeposits(List[PendingDeposit]):
+    """
+    The queue of deposits awaiting processing.
+    """
+
     LIMIT = PENDING_DEPOSITS_LIMIT
 ```
 
@@ -203,14 +248,22 @@ class PendingDeposits(List[PendingDeposit]):
 
 ```python
 class PendingPartialWithdrawals(List[PendingPartialWithdrawal]):
+    """
+    The queue of partial withdrawals awaiting processing.
+    """
+
     LIMIT = PENDING_PARTIAL_WITHDRAWALS_LIMIT
 ```
 
-### New `PendingConsolidations`
+### New `WithdrawalRequests`
 
 ```python
-class PendingConsolidations(List[PendingConsolidation]):
-    LIMIT = PENDING_CONSOLIDATIONS_LIMIT
+class WithdrawalRequests(List[WithdrawalRequest]):
+    """
+    The withdrawal requests pertaining to a single execution payload.
+    """
+
+    LIMIT = MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD
 ```
 
 ## Constants
@@ -223,7 +276,7 @@ specification.
 | Name                                 | Value               | Description                                            |
 | ------------------------------------ | ------------------- | ------------------------------------------------------ |
 | `UNSET_DEPOSIT_REQUESTS_START_INDEX` | `Uint64(2**64 - 1)` | Value which indicates no start index has been assigned |
-| `FULL_EXIT_REQUEST_AMOUNT`           | `Uint64(0)`         | Withdrawal amount used to signal a full validator exit |
+| `FULL_EXIT_REQUEST_AMOUNT`           | `Gwei(0)`           | Withdrawal amount used to signal a full validator exit |
 
 ### Withdrawal prefixes
 
@@ -257,11 +310,11 @@ specification.
 
 ### State list lengths
 
-| Name                                | Value                           | Unit                        |
-| ----------------------------------- | ------------------------------- | --------------------------- |
-| `PENDING_DEPOSITS_LIMIT`            | `Uint64(2**27)` (= 134,217,728) | pending deposits            |
-| `PENDING_PARTIAL_WITHDRAWALS_LIMIT` | `Uint64(2**27)` (= 134,217,728) | pending partial withdrawals |
-| `PENDING_CONSOLIDATIONS_LIMIT`      | `Uint64(2**18)` (= 262,144)     | pending consolidations      |
+| Name                                | Value                           |
+| ----------------------------------- | ------------------------------- |
+| `PENDING_DEPOSITS_LIMIT`            | `Uint64(2**27)` (= 134,217,728) |
+| `PENDING_PARTIAL_WITHDRAWALS_LIMIT` | `Uint64(2**27)` (= 134,217,728) |
+| `PENDING_CONSOLIDATIONS_LIMIT`      | `Uint64(2**18)` (= 262,144)     |
 
 ### Max operations per block
 
@@ -672,7 +725,7 @@ def is_eligible_for_partial_withdrawals(validator: Validator, balance: Gwei) -> 
 #### New `get_committee_indices`
 
 ```python
-def get_committee_indices(committee_bits: Bitvector) -> Sequence[CommitteeIndex]:
+def get_committee_indices(committee_bits: BitVector) -> Sequence[CommitteeIndex]:
     return [CommitteeIndex(index) for index, bit in enumerate(committee_bits) if bit]
 ```
 
@@ -781,7 +834,7 @@ def get_next_sync_committee_indices(state: BeaconState) -> Sequence[ValidatorInd
     active_validator_count = Uint64(len(active_validator_indices))
     seed = get_seed(state, epoch, DOMAIN_SYNC_COMMITTEE)
     i = Uint64(0)
-    sync_committee_indices: List[ValidatorIndex] = []
+    sync_committee_indices: list[ValidatorIndex] = []
     while len(sync_committee_indices) < SYNC_COMMITTEE_SIZE:
         shuffled_index = compute_shuffled_index(
             i % active_validator_count, active_validator_count, seed

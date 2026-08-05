@@ -4,9 +4,10 @@
 
 - [Introduction](#introduction)
 - [Prerequisites](#prerequisites)
-- [Helpers](#helpers)
-  - [`KZGProofs`](#kzgproofs)
+- [Types](#types)
   - [`Blobs`](#blobs)
+  - [`KZGProofs`](#kzgproofs)
+- [Helpers](#helpers)
   - [`BlobsBundle`](#blobsbundle)
   - [Modified `GetPayloadResponse`](#modified-getpayloadresponse)
 - [Protocols](#protocols)
@@ -39,21 +40,31 @@ updated [beacon-chain specifications of Deneb](./beacon-chain.md) are requisite
 for this document and used throughout. Please see related beacon-chain
 specifications before continuing and use them as a reference throughout.
 
-## Helpers
-
-### `KZGProofs`
-
-```python
-class KZGProofs(List[KZGProof]):
-    LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
-```
+## Types
 
 ### `Blobs`
 
 ```python
 class Blobs(List[Blob]):
+    """
+    The blobs of a single beacon block.
+    """
+
     LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
 ```
+
+### `KZGProofs`
+
+```python
+class KZGProofs(List[KZGProof]):
+    """
+    A list of KZG proofs, one for each blob or cell being proven.
+    """
+
+    LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
+```
+
+## Helpers
 
 ### `BlobsBundle`
 

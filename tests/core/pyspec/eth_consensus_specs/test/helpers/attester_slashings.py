@@ -4,6 +4,7 @@ from eth_consensus_specs.test.helpers.attestations import (
     sign_indexed_attestation,
 )
 from eth_consensus_specs.test.helpers.forks import is_post_electra, is_post_gloas
+from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def get_valid_attester_slashing(
@@ -13,7 +14,7 @@ def get_valid_attester_slashing(
         spec, state, slot=slot, signed=signed_1, filter_participant_set=filter_participant_set
     )
 
-    attestation_2 = attestation_1.copy()
+    attestation_2 = copy(attestation_1)
     attestation_2.data.target.root = b"\x01" * 32
 
     if signed_2:
@@ -36,8 +37,8 @@ def get_valid_attester_slashing_by_indices(
 
     attester_slashing = get_valid_attester_slashing(spec, state, slot=slot)
 
-    attester_slashing.attestation_1.attesting_indices = indices_1
-    attester_slashing.attestation_2.attesting_indices = indices_2
+    attester_slashing.attestation_1.attesting_indices = spec.AttestingIndices(data=indices_1)
+    attester_slashing.attestation_2.attesting_indices = spec.AttestingIndices(data=indices_2)
 
     if signed_1:
         sign_indexed_attestation(spec, state, attester_slashing.attestation_1)

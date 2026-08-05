@@ -40,9 +40,8 @@ def run_bls_to_execution_change_processing(spec, state, signed_address_change, v
     validator = state.validators[validator_index]
     assert spec.Bytes1(validator.withdrawal_credentials[:1]) == spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX
     assert validator.withdrawal_credentials[1:12] == b"\x00" * 11
-    assert (
-        spec.ExecutionAddress(validator.withdrawal_credentials[12:])
-        == signed_address_change.message.to_execution_address
+    assert validator.withdrawal_credentials[12:] == bytes(
+        signed_address_change.message.to_execution_address
     )
 
     # yield post-state

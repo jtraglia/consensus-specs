@@ -6,8 +6,11 @@
 - [Modifications in Fulu](#modifications-in-fulu)
   - [Preset](#preset)
   - [Configuration](#configuration)
-  - [Containers](#containers)
+  - [Types](#types)
     - [New `DataColumnIndices`](#new-datacolumnindices)
+    - [New `DataColumnsByRootIdentifiers`](#new-datacolumnsbyrootidentifiers)
+    - [New `DataColumnSidecars`](#new-datacolumnsidecars)
+  - [Containers](#containers)
     - [New `DataColumnsByRootIdentifier`](#new-datacolumnsbyrootidentifier)
   - [Helpers](#helpers)
     - [Modified `Seen`](#modified-seen)
@@ -64,19 +67,49 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 
 *[New in Fulu:EIP7594]*
 
-| Name                                           | Value                     | Description                                                           |
-| ---------------------------------------------- | ------------------------- | --------------------------------------------------------------------- |
-| `DATA_COLUMN_SIDECAR_SUBNET_COUNT`             | `Uint64(2**7)` (= 128)    | Number of data column sidecar subnets used in the gossipsub protocol  |
-| `MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS` | `Uint64(2**12)` (= 4,096) | Minimum epoch range over which a node must serve data column sidecars |
+| Name                                           | Value                    | Description                                                           |
+| ---------------------------------------------- | ------------------------ | --------------------------------------------------------------------- |
+| `DATA_COLUMN_SIDECAR_SUBNET_COUNT`             | `Uint64(2**7)` (= 128)   | Number of data column sidecar subnets used in the gossipsub protocol  |
+| `MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS` | `Epoch(2**12)` (= 4,096) | Minimum epoch range over which a node must serve data column sidecars |
 
-### Containers
+### Types
 
 #### New `DataColumnIndices`
 
 ```python
 class DataColumnIndices(List[ColumnIndex]):
+    """
+    The indices of the data columns being requested.
+    """
+
     LIMIT = NUMBER_OF_COLUMNS
 ```
+
+#### New `DataColumnsByRootIdentifiers`
+
+```python
+class DataColumnsByRootIdentifiers(List[DataColumnsByRootIdentifier]):
+    """
+    The identifiers of the data column sidecars requested in a
+    ``DataColumnSidecarsByRoot`` request.
+    """
+
+    LIMIT = MAX_REQUEST_BLOCKS_DENEB
+```
+
+#### New `DataColumnSidecars`
+
+```python
+class DataColumnSidecars(List[DataColumnSidecar]):
+    """
+    Data column sidecars returned in a ``DataColumnSidecarsByRange`` or
+    ``DataColumnSidecarsByRoot`` response.
+    """
+
+    LIMIT = compute_max_request_data_column_sidecars()
+```
+
+### Containers
 
 #### New `DataColumnsByRootIdentifier`
 
@@ -93,14 +126,14 @@ class DataColumnsByRootIdentifier(Container):
 ```python
 @dataclass
 class Seen:
-    proposer_slots: Set[Tuple[ValidatorIndex, Slot]]
-    aggregator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
+    proposer_slots: Set[Tuple[Slot, ValidatorIndex]]
+    aggregator_epochs: Set[Tuple[Epoch, ValidatorIndex]]
     aggregate_data_roots: Dict[Tuple[Root, CommitteeIndex], Set[Tuple[Boolean, ...]]]
     voluntary_exit_indices: Set[ValidatorIndex]
     proposer_slashing_indices: Set[ValidatorIndex]
     attester_slashing_indices: Set[ValidatorIndex]
-    attestation_validator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
-    sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, Uint64]]
+    attestation_validator_epochs: Set[Tuple[Epoch, ValidatorIndex]]
+    sync_contribution_aggregator_slots: Set[Tuple[Slot, ValidatorIndex, Uint64]]
     sync_contribution_data: Dict[Tuple[Slot, Root, Uint64], Set[Tuple[Boolean, ...]]]
     sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, Uint64]]
     bls_to_execution_change_indices: Set[ValidatorIndex]
@@ -164,10 +197,12 @@ def verify_data_column_sidecar(sidecar: DataColumnSidecar) -> bool:
     if len(sidecar.kzg_commitments) > get_blob_parameters(epoch).max_blobs_per_block:
         return False
 
-    # The column length must be equal to the number of commitments/proofs
-    if len(sidecar.column) != len(sidecar.kzg_commitments) or len(sidecar.column) != len(
-        sidecar.kzg_proofs
-    ):
+    # The column length must be equal to the number of commitments
+    if len(sidecar.column) != len(sidecar.kzg_commitments):
+        return False
+
+    # The column length must be equal to the number of proofs
+    if len(sidecar.column) != len(sidecar.kzg_proofs):
         return False
 
     return True
@@ -184,12 +219,31 @@ def verify_data_column_sidecar_kzg_proofs(sidecar: DataColumnSidecar) -> bool:
     cell_indices = [CellIndex(sidecar.index)] * len(sidecar.column)
 
     # Batch verify that the cells match the corresponding commitments and proofs
-    return verify_cell_kzg_proof_batch(
+    return kzg.verify_cell_kzg_proof_batch(
         commitments_bytes=sidecar.kzg_commitments,
         cell_indices=cell_indices,
         cells=sidecar.column,
         proofs_bytes=sidecar.kzg_proofs,
     )
+```
+
+*Note*: The function `kzg.verify_cell_kzg_proof_batch` is defined in
+[cryptography-specs](https://github.com/ethereum/cryptography-specs) with the
+following signature:
+
+<!-- eth_consensus_specs: skip -->
+
+```python
+def verify_cell_kzg_proof_batch(
+    commitments_bytes: Sequence[Bytes48],
+    cell_indices: Sequence[CellIndex],
+    cells: Sequence[Cell],
+    proofs_bytes: Sequence[Bytes48],
+) -> bool:
+    """
+    Return ``True`` if and only if all cells and their proofs match the
+    commitments.
+    """
 ```
 
 #### New `verify_data_column_sidecar_inclusion_proof`
@@ -223,8 +277,8 @@ communicate the custody group count.
 ```
 (
   seq_number: Uint64
-  attnets: Bitvector[ATTESTATION_SUBNET_COUNT]
-  syncnets: Bitvector[SYNC_COMMITTEE_SUBNET_COUNT]
+  attnets: Attnets
+  syncnets: Syncnets
   custody_group_count: Uint64 # cgc
 )
 ```
@@ -257,20 +311,18 @@ def validate_beacon_block_gossip(
     state: BeaconState,
     signed_beacon_block: SignedBeaconBlock,
     current_time_ms: Uint64,
-    block_payload_statuses: Optional[Dict[Root, PayloadValidationStatus]] = None,
+    block_payload_statuses: Dict[Root, PayloadValidationStatus],
 ) -> None:
     """
     Validate a SignedBeaconBlock for gossip propagation.
     Raises GossipIgnore or GossipReject on validation failure.
     """
-    if block_payload_statuses is None:
-        block_payload_statuses = {}
     block = signed_beacon_block.message
     execution_payload = block.body.execution_payload
 
     # [IGNORE] The block is not from a future slot
     # (MAY be queued for processing at the appropriate slot)
-    if not is_not_from_future_slot(state, block.slot, current_time_ms):
+    if is_future_slot(store, block.slot, current_time_ms):
         raise GossipIgnore("block is from a future slot")
 
     # [IGNORE] The block is from a slot greater than the latest finalized slot
@@ -280,9 +332,10 @@ def validate_beacon_block_gossip(
     if block.slot <= finalized_slot:
         raise GossipIgnore("block is not from a slot greater than the latest finalized slot")
 
-    # [IGNORE] The block is the first block with valid signature received for the proposer for the slot
-    if (block.proposer_index, block.slot) in seen.proposer_slots:
-        raise GossipIgnore("block is not the first valid block for this proposer and slot")
+    # [IGNORE] The block is the first block with valid signature received for the slot and proposer
+    proposer_slot_key = (block.slot, block.proposer_index)
+    if proposer_slot_key in seen.proposer_slots:
+        raise GossipIgnore("block is not the first valid block for this slot and proposer")
 
     # [REJECT] The proposer index is a valid validator index
     if block.proposer_index >= len(state.validators):
@@ -310,25 +363,24 @@ def validate_beacon_block_gossip(
 
     if block.parent_root not in store.block_states:
         if parent_payload_status == PAYLOAD_STATUS_NOT_VALIDATED:
-            # [REJECT] The block's parent passes validation
-            raise GossipReject("block's parent is invalid and EL result is unknown")
+            # [REJECT] The block's parent failed validation and its execution payload is optimistic
+            raise GossipReject("block's parent is invalid and its payload is optimistic")
 
-        # [IGNORE] The block's parent passes validation
-        raise GossipIgnore("block's parent is invalid and EL result is known")
+        # [IGNORE] The block's parent failed validation and its execution payload is processed
+        raise GossipIgnore("block's parent is invalid and its payload is processed")
 
-    # [IGNORE] The block's parent's execution payload passes validation
+    # [IGNORE] The block's parent passed validation but its execution payload is invalid
     if parent_payload_status == PAYLOAD_STATUS_INVALIDATED:
-        raise GossipIgnore("block's parent is valid and EL result is invalid")
+        raise GossipIgnore("block's parent is valid and its payload is invalid")
 
     # [REJECT] The block is from a higher slot than its parent
     if block.slot <= store.blocks[block.parent_root].slot:
         raise GossipReject("block is not from a higher slot than its parent")
 
     # [REJECT] The current finalized checkpoint is an ancestor of the block
-    checkpoint_block = get_checkpoint_block(
-        store, block.parent_root, store.finalized_checkpoint.epoch
-    )
-    if checkpoint_block != store.finalized_checkpoint.root:
+    finalized_epoch = store.finalized_checkpoint.epoch
+    finalized_checkpoint_block = get_checkpoint_block(store, block.parent_root, finalized_epoch)
+    if finalized_checkpoint_block != store.finalized_checkpoint.root:
         raise GossipReject("finalized checkpoint is not an ancestor of block")
 
     # [Modified in Fulu:EIP7892]
@@ -346,7 +398,7 @@ def validate_beacon_block_gossip(
         raise GossipReject("block proposer_index does not match expected proposer")
 
     # Mark this block as seen
-    seen.proposer_slots.add((block.proposer_index, block.slot))
+    seen.proposer_slots.add(proposer_slot_key)
 ```
 
 ##### Blob subnets
@@ -378,8 +430,8 @@ def validate_data_column_sidecar_gossip(
 
     # [IGNORE] The sidecar is the first sidecar for the tuple
     # (block_header.slot, block_header.proposer_index, sidecar.index)
-    sidecar_tuple = (block_header.slot, block_header.proposer_index, sidecar.index)
-    if sidecar_tuple in seen.data_column_sidecar_tuples:
+    sidecar_key = (block_header.slot, block_header.proposer_index, sidecar.index)
+    if sidecar_key in seen.data_column_sidecar_tuples:
         raise GossipIgnore("already seen sidecar from this proposer for this slot and index")
 
     # [REJECT] The sidecar is valid as verified by verify_data_column_sidecar
@@ -392,7 +444,7 @@ def validate_data_column_sidecar_gossip(
 
     # [IGNORE] The sidecar is not from a future slot
     # (MAY be queued for processing at the appropriate slot)
-    if not is_not_from_future_slot(state, block_header.slot, current_time_ms):
+    if is_future_slot(store, block_header.slot, current_time_ms):
         raise GossipIgnore("sidecar is from a future slot")
 
     # [IGNORE] The sidecar is from a slot greater than the latest finalized slot
@@ -413,22 +465,22 @@ def validate_data_column_sidecar_gossip(
 
     # [IGNORE] The sidecar's block's parent has been seen
     # (MAY be queued for processing once the parent block is retrieved)
-    if block_header.parent_root not in store.blocks:
+    parent_root = block_header.parent_root
+    if parent_root not in store.blocks:
         raise GossipIgnore("sidecar's parent has not been seen")
 
     # [REJECT] The sidecar's block's parent passes validation
-    if block_header.parent_root not in store.block_states:
+    if parent_root not in store.block_states:
         raise GossipReject("sidecar's parent failed validation")
 
     # [REJECT] The sidecar is from a higher slot than the sidecar's block's parent
-    if block_header.slot <= store.blocks[block_header.parent_root].slot:
+    if block_header.slot <= store.blocks[parent_root].slot:
         raise GossipReject("sidecar is not from a higher slot than its parent")
 
     # [REJECT] The current finalized_checkpoint is an ancestor of the sidecar's block
-    checkpoint_block = get_checkpoint_block(
-        store, block_header.parent_root, store.finalized_checkpoint.epoch
-    )
-    if checkpoint_block != store.finalized_checkpoint.root:
+    finalized_epoch = store.finalized_checkpoint.epoch
+    finalized_checkpoint_block = get_checkpoint_block(store, parent_root, finalized_epoch)
+    if finalized_checkpoint_block != store.finalized_checkpoint.root:
         raise GossipReject("finalized checkpoint is not an ancestor of sidecar's block")
 
     # [REJECT] The sidecar is valid as verified by verify_data_column_sidecar_inclusion_proof
@@ -441,14 +493,14 @@ def validate_data_column_sidecar_gossip(
 
     # [REJECT] The sidecar is proposed by the expected proposer_index
     # (if shuffling is not available, IGNORE instead and MAY be queued for later)
-    parent_state = store.block_states[block_header.parent_root].copy()
+    parent_state = store.block_states[parent_root].copy()
     process_slots(parent_state, block_header.slot)
     expected_proposer = get_beacon_proposer_index(parent_state)
     if block_header.proposer_index != expected_proposer:
         raise GossipReject("sidecar proposer_index does not match expected proposer")
 
     # Mark this data column sidecar as seen
-    seen.data_column_sidecar_tuples.add(sidecar_tuple)
+    seen.data_column_sidecar_tuples.add(sidecar_key)
 ```
 
 *Note*: In the `verify_data_column_sidecar_inclusion_proof(sidecar)` check, for
@@ -562,7 +614,7 @@ Request Content:
 (
   start_slot: Slot
   count: Uint64
-  columns: List[ColumnIndex, NUMBER_OF_COLUMNS]
+  columns: DataColumnIndices
 )
 ```
 
@@ -570,7 +622,7 @@ Response Content:
 
 ```
 (
-  List[DataColumnSidecar, compute_max_request_data_column_sidecars()]
+  DataColumnSidecars
 )
 ```
 
@@ -668,7 +720,7 @@ Request Content:
 
 ```
 (
-  List[DataColumnsByRootIdentifier, MAX_REQUEST_BLOCKS_DENEB]
+  DataColumnsByRootIdentifiers
 )
 ```
 
@@ -676,7 +728,7 @@ Response Content:
 
 ```
 (
-  List[DataColumnSidecar, compute_max_request_data_column_sidecars()]
+  DataColumnSidecars
 )
 ```
 
@@ -761,7 +813,7 @@ Response Content:
 
 ```
 (
-  List[SignedBeaconBlock, MAX_REQUEST_BLOCKS_DENEB]
+  SignedBeaconBlocks
 )
 ```
 
@@ -828,9 +880,9 @@ ENRs MUST carry a generic `eth2` key with an 16-byte value of the node's current
 fork digest, next fork version, and next fork epoch to ensure connections are
 made with peers on the intended Ethereum network.
 
-| Key    | Value           |
-| ------ | --------------- |
-| `eth2` | SSZ `ENRForkID` |
+| Key    | Value       |
+| ------ | ----------- |
+| `eth2` | `ENRForkID` |
 
 Specifically, the value of the `eth2` key MUST be the following SSZ encoded
 object (`ENRForkID`):
@@ -883,9 +935,9 @@ cause disconnects.
 If no next fork is scheduled, the `nfd` entry contains the default value for the
 type (i.e., the SSZ representation of a zero-filled array).
 
-| Key   | Value                   |
-| ----- | ----------------------- |
-| `nfd` | SSZ Bytes4 `ForkDigest` |
+| Key   | Value        |
+| ----- | ------------ |
+| `nfd` | `ForkDigest` |
 
 When discovering and interfacing with peers, nodes MUST evaluate `nfd` alongside
 their existing consideration of the `ENRForkID::next_*` fields under the `eth2`
