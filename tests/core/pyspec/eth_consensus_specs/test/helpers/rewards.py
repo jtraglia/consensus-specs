@@ -409,7 +409,7 @@ def run_test_partial(spec, state, fraction_filled):
             data=state.previous_epoch_attestations[:num_attestations]
         )
     else:
-        for index in range(len(state.validators) * fraction_filled):
+        for index in range(int(len(state.validators) * fraction_filled)):
             state.previous_epoch_participation[index] = spec.ParticipationFlags(0b0000_0000)
 
     yield from run_deltas(spec, state)
