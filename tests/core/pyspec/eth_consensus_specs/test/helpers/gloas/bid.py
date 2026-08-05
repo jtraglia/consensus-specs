@@ -233,7 +233,7 @@ def build_signed_bid(
         blob_kzg_commitments=blob_kzg_commitments,
         execution_requests_root=spec.hash_tree_root(spec.ExecutionRequests()),
     )
-    if valid_signature and int(builder_index) < len(builder_privkeys):
+    if valid_signature and builder_index < len(builder_privkeys):
         privkey = builder_privkeys[builder_index]
         signature = spec.get_execution_payload_bid_signature(state, bid, privkey)
     else:

@@ -27,7 +27,7 @@ def test_eth1_vote_no_reset(spec, state):
 
     yield from run_process_eth1_data_reset(spec, state)
 
-    assert len(state.eth1_data_votes) == int(spec.SLOTS_PER_EPOCH)
+    assert len(state.eth1_data_votes) == spec.SLOTS_PER_EPOCH
 
 
 @with_all_phases

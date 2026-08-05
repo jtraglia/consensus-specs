@@ -348,7 +348,7 @@ def is_valid_normalized_merkle_branch(
 ) -> bool:
     depth = floorlog2(gindex)
     index = get_subtree_index(gindex)
-    num_extra = len(branch) - int(depth)
+    num_extra = len(branch) - depth
     for i in range(num_extra):
         if branch[i] != Bytes32():
             return False

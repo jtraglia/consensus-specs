@@ -158,7 +158,7 @@ def run_test_activation_queue_efficiency(spec, state):
     for i in range(mock_activations):
         # NOTE: EIP-7251 changes how activations are gated
         # given the prefix setup here, all validators are eligible for activation
-        if i < int(churn_limit_0) or is_post_electra(spec):
+        if i < churn_limit_0 or is_post_electra(spec):
             assert state.validators[i].activation_epoch < spec.FAR_FUTURE_EPOCH
         else:
             assert state.validators[i].activation_epoch == spec.FAR_FUTURE_EPOCH

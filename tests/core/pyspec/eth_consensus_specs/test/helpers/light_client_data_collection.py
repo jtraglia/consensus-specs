@@ -474,7 +474,7 @@ def _process_head_change_for_light_client(test, spec, head_bid, old_finalized_bi
     low_slot = max(test.lc_data_store.cache.tail_slot, old_finalized_bid.slot)
     low_period = spec.compute_sync_committee_period_at_slot(low_slot)
     bid = head_bid
-    for period in reversed(range(int(low_period), int(head_period) + 1)):
+    for period in reversed(range(low_period, int(head_period) + 1)):
         period_end_slot = compute_start_slot_at_sync_committee_period(spec, period + 1) - spec.Slot(
             1
         )
@@ -559,7 +559,7 @@ def get_light_client_bootstrap(test, block_root):  # -> ForkedLightClientBootstr
         spec=header.spec,
         data=header.spec.LightClientBootstrap(
             header=header.data,
-            current_sync_committee=test.lc_data_store.db.sync_committees[int(period)],
+            current_sync_committee=test.lc_data_store.db.sync_committees[period],
             current_sync_committee_branch=header.spec.CurrentSyncCommitteeBranch(
                 data=test.lc_data_store.db.current_branches[slot]
             ),
@@ -569,7 +569,7 @@ def get_light_client_bootstrap(test, block_root):  # -> ForkedLightClientBootstr
 
 def get_light_client_update_for_period(test, period):  # -> ForkedLightClientUpdate
     try:
-        return test.lc_data_store.db.best_updates[int(period)]
+        return test.lc_data_store.db.best_updates[period]
     except KeyError:
         return ForkedLightClientUpdate(spec=None, data=None)
 
@@ -778,7 +778,7 @@ def select_new_head(test, spec, head_bid):
     best_updates = []
     low_period = spec.compute_sync_committee_period_at_slot(test.lc_data_store.cache.tail_slot)
     head_period = spec.compute_sync_committee_period_at_slot(head_bid.slot)
-    for period in range(int(low_period), int(head_period) + 1):
+    for period in range(low_period, int(head_period) + 1):
         entry = {
             "period": int(period),
         }
@@ -966,7 +966,7 @@ def run_lc_data_collection_test_multi_fork(spec, phases, state, fork_1, fork_2):
     # All data for periods between the common ancestor of the two branches should have reorged.
     # As there was no sync participation on branch B, that means it is deleted.
     state_b_period = spec_b.compute_sync_committee_period_at_slot(state_b.slot)
-    for period in range(int(state_period) + 1, int(state_b_period)):
+    for period in range(int(state_period) + 1, state_b_period):
         assert get_light_client_update_for_period(test, period).spec is None
 
     # Branch A: Another block, reorging branch B once more
@@ -1008,7 +1008,7 @@ def run_lc_data_collection_test_multi_fork(spec, phases, state, fork_1, fork_2):
 
     # Data has been restored
     state_a_period = spec_a.compute_sync_committee_period_at_slot(state_a.slot)
-    for period in range(int(state_period) + 1, int(state_a_period)):
+    for period in range(int(state_period) + 1, state_a_period):
         assert get_light_client_update_for_period(test, period).spec is not None
 
     # Finish test

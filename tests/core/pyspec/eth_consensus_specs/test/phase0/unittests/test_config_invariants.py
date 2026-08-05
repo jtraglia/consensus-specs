@@ -11,8 +11,8 @@ from eth_consensus_specs.test.helpers.forks import (
 
 
 def check_bound(value, lower_bound, upper_bound):
-    assert int(value) >= int(lower_bound)
-    assert int(value) <= int(upper_bound)
+    assert value >= lower_bound
+    assert value <= upper_bound
 
 
 @with_all_phases
@@ -87,7 +87,7 @@ def test_time(spec, state):
 def test_networking(spec, state):
     assert spec.config.SUBNETS_PER_NODE <= spec.config.ATTESTATION_SUBNET_COUNT
     node_id_length = spec.NodeID.get_byte_length()  # in bytes
-    assert node_id_length * 8 == int(spec.NODE_ID_BITS)  # in bits
+    assert node_id_length * 8 == spec.NODE_ID_BITS  # in bits
 
 
 @with_all_phases

@@ -66,7 +66,7 @@ def _generate_filter_block_tree(
     # Run constraint checks before starting to generate blocks
     for epoch in range(anchor_epoch + 1, max(block_epochs) + 1):
         current_blocks = [i for i, e in enumerate(block_epochs) if e == epoch]
-        assert len(current_blocks) <= int(spec.SLOTS_PER_EPOCH), (
+        assert len(current_blocks) <= spec.SLOTS_PER_EPOCH, (
             "Number of blocks does not fit into an epoch=" + str(epoch)
         )
 

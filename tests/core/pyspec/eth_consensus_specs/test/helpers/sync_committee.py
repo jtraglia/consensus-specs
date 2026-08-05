@@ -77,8 +77,8 @@ def compute_sync_committee_participant_reward_and_penalty(
     included_multiplicities = Counter(included_indices)
     not_included_multiplicities = Counter(not_included_indices)
     return (
-        inclusion_reward * spec.Gwei(included_multiplicities[int(participant_index)]),
-        inclusion_reward * spec.Gwei(not_included_multiplicities[int(participant_index)]),
+        inclusion_reward * spec.Gwei(included_multiplicities[participant_index]),
+        inclusion_reward * spec.Gwei(not_included_multiplicities[participant_index]),
     )
 
 
@@ -120,7 +120,7 @@ def validate_sync_committee_rewards(
             reward += _reward
             penalty += _penalty
 
-        if int(proposer_index) == index:
+        if proposer_index == index:
             reward += compute_sync_committee_proposer_reward(
                 spec,
                 pre_state,

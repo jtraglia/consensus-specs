@@ -198,7 +198,7 @@ def test_pending_withdrawals_at_max(spec, state):
     )
 
     withdrawals_exceeding_max = pending_withdrawal_requests[
-        int(spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP) :
+        spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP :
     ]
     assert list(state.pending_partial_withdrawals) == list(withdrawals_exceeding_max)
 
@@ -615,7 +615,7 @@ def test_pending_withdrawals_mixed_with_sweep_and_fully_withdrawable(spec, state
 
     pending_withdrawal_requests = []
     for index in range(len(state.validators)):
-        if len(pending_withdrawal_requests) >= int(num_pending_withdrawal_requests):
+        if len(pending_withdrawal_requests) >= num_pending_withdrawal_requests:
             break
         if index in (fully_withdrawable_indices + partial_withdrawals_indices):
             continue
@@ -666,7 +666,7 @@ def test_pending_withdrawals_at_max_mixed_with_sweep_and_fully_withdrawable(spec
 
     pending_withdrawal_requests = []
     for index in range(len(state.validators)):
-        if len(pending_withdrawal_requests) >= int(num_pending_withdrawal_requests):
+        if len(pending_withdrawal_requests) >= num_pending_withdrawal_requests:
             break
         if index in (fully_withdrawable_indices + partial_withdrawals_indices):
             continue
@@ -694,7 +694,7 @@ def test_pending_withdrawals_at_max_mixed_with_sweep_and_fully_withdrawable(spec
     )
 
     withdrawals_exceeding_max = pending_withdrawal_requests[
-        int(spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP) :
+        spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP :
     ]
     assert list(state.pending_partial_withdrawals) == list(withdrawals_exceeding_max)
 

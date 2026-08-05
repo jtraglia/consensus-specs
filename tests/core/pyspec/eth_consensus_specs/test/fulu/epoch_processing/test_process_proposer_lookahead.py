@@ -21,7 +21,7 @@ def test_proposer_lookahead_in_state_matches_computed_lookahead(spec, state):
     # Verify lookahead was shifted correctly
     assert list(
         state.proposer_lookahead[: int(spec.SLOTS_PER_EPOCH) * int(spec.MIN_SEED_LOOKAHEAD)]
-    ) == list(initial_lookahead[int(spec.SLOTS_PER_EPOCH) :])
+    ) == list(initial_lookahead[spec.SLOTS_PER_EPOCH :])
 
 
 @with_fulu_and_later

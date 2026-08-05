@@ -431,7 +431,7 @@ def process_pending_deposits(state: BeaconState) -> None:
             break
 
         # Check if number of processed deposits has not reached the limit, otherwise, stop processing.
-        if next_deposit_index >= int(MAX_PENDING_DEPOSITS_PER_EPOCH):
+        if next_deposit_index >= MAX_PENDING_DEPOSITS_PER_EPOCH:
             break
 
         # Read validator state
@@ -483,9 +483,9 @@ this means that at the start of epoch `N`, the proposer lookahead for epoch
 
 ```python
 def process_proposer_lookahead(state: BeaconState) -> None:
-    last_epoch_start = len(state.proposer_lookahead) - int(SLOTS_PER_EPOCH)
+    last_epoch_start = len(state.proposer_lookahead) - SLOTS_PER_EPOCH
     # Shift out proposers in the first epoch
-    state.proposer_lookahead[:last_epoch_start] = state.proposer_lookahead[int(SLOTS_PER_EPOCH) :]
+    state.proposer_lookahead[:last_epoch_start] = state.proposer_lookahead[SLOTS_PER_EPOCH:]
     # Fill in the last epoch with new proposer indices
     last_epoch_proposers = get_beacon_proposer_indices(
         state, get_current_epoch(state) + MIN_SEED_LOOKAHEAD + Epoch(1)

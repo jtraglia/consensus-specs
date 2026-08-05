@@ -483,7 +483,7 @@ def prepare_state_with_attestations(spec, state, participation_fn=None):
     start_epoch = spec.get_current_epoch(state)
     next_epoch_start_slot = spec.compute_start_slot_at_epoch(start_epoch + spec.Epoch(1))
     attestations = []
-    for _ in range(int(spec.SLOTS_PER_EPOCH + spec.MIN_ATTESTATION_INCLUSION_DELAY)):
+    for _ in range(spec.SLOTS_PER_EPOCH + spec.MIN_ATTESTATION_INCLUSION_DELAY):
         # create an attestation for each index in each slot in epoch
         if state.slot < next_epoch_start_slot:
             for committee_index in range(

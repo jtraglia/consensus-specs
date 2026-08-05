@@ -307,7 +307,7 @@ def get_index_for_new_validator(state: BeaconState) -> ValidatorIndex:
 ```python
 def set_or_append_list(list: List, index: ValidatorIndex, value: Any) -> None:
     # Compared as plain ints: gloas reuses this with a `BuilderIndex`.
-    if int(index) == len(list):
+    if index == len(list):
         list.append(value)
     else:
         list[index] = value

@@ -1161,7 +1161,7 @@ def process_pending_deposits(state: BeaconState) -> None:
             break
 
         # Check if number of processed deposits has not reached the limit, otherwise, stop processing.
-        if next_deposit_index >= int(MAX_PENDING_DEPOSITS_PER_EPOCH):
+        if next_deposit_index >= MAX_PENDING_DEPOSITS_PER_EPOCH:
             break
 
         # Read validator state
@@ -1461,7 +1461,7 @@ def get_validators_sweep_withdrawals(
             )
             withdrawal_index += WithdrawalIndex(1)
 
-        validator_index = ValidatorIndex((int(validator_index) + 1) % len(state.validators))
+        validator_index = ValidatorIndex((validator_index + 1) % len(state.validators))
         processed_count += 1
 
     return withdrawals, withdrawal_index, processed_count

@@ -19,7 +19,7 @@ def _run_get_custody_groups(spec, rng, node_id=None, custody_group_count=None):
     yield "custody_group_count", "meta", int(custody_group_count)
 
     assert len(result) == len(set(result))
-    assert len(result) == int(custody_group_count)
+    assert len(result) == custody_group_count
     assert all(i < spec.CustodyIndex(spec.config.NUMBER_OF_CUSTODY_GROUPS) for i in result)
     python_list_result = [int(i) for i in result]
 

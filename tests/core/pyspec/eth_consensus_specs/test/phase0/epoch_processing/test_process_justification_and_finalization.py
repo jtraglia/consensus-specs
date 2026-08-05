@@ -46,9 +46,9 @@ def add_mock_attestations(
 
     start_slot = spec.compute_start_slot_at_epoch(epoch)
     committees_per_slot = spec.get_committee_count_per_slot(state, epoch)
-    for slot_number in range(int(start_slot), int(start_slot + spec.SLOTS_PER_EPOCH)):
+    for slot_number in range(start_slot, start_slot + spec.SLOTS_PER_EPOCH):
         slot = spec.Slot(slot_number)
-        for index_number in range(int(committees_per_slot)):
+        for index_number in range(committees_per_slot):
             index = spec.CommitteeIndex(index_number)
             # Check if we already have had sufficient balance. (and undone if we don't want it).
             # If so, do not create more attestations. (we do not have empty pending attestations normally anyway)

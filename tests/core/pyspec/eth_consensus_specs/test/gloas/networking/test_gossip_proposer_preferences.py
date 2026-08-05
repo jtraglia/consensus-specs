@@ -246,7 +246,7 @@ def test_gossip_proposer_preferences__valid_at_last_lookahead_slot(spec, state):
 
     proposal_slot = past_window_slot - spec.Slot(1)
     lookahead_index = proposal_slot - epoch_start_slot
-    assert int(lookahead_index) == len(state.proposer_lookahead) - 1
+    assert lookahead_index == len(state.proposer_lookahead) - 1
     signed_prefs = build_signed_proposer_preferences(
         spec,
         state,
@@ -699,7 +699,7 @@ def test_gossip_proposer_preferences__reject_wrong_proposer(spec, state):
     proposal_slot, true_proposer = find_upcoming_proposal_slot(spec, state)
     # Pick a different validator that isn't the proposer for this slot.
     wrong_index = spec.ValidatorIndex(
-        next(i for i in range(len(state.validators)) if i != int(true_proposer))
+        next(i for i in range(len(state.validators)) if i != true_proposer)
     )
     signed_prefs = build_signed_proposer_preferences(
         spec, state, proposal_slot=proposal_slot, validator_index=wrong_index

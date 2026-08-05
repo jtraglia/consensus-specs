@@ -82,7 +82,7 @@ def test_requests_deserialize__reject_out_of_order_requests(spec):
         spec.WITHDRAWAL_REQUEST_TYPE + 76 * b"\x0a",
         spec.DEPOSIT_REQUEST_TYPE + 192 * b"\x0b",
     ]
-    assert int(serialized_execution_requests[0][0]) > int(serialized_execution_requests[1][0])
+    assert serialized_execution_requests[0][0] > serialized_execution_requests[1][0]
     expect_assertion_error(lambda: spec.get_execution_requests(serialized_execution_requests))
 
 

@@ -100,7 +100,7 @@ def prepare_signed_payload_attestation(
 
         signatures = []
         for validator_index in attesting_indices:
-            if int(validator_index) < len(privkeys):
+            if validator_index < len(privkeys):
                 signature = spec.bls.Sign(privkeys[validator_index], signing_root)
                 signatures.append(signature)
 
@@ -127,7 +127,7 @@ def _compute_selection_with_acceptance_iterations(spec, state, indices, seed, si
     accepted_at = []
     total = len(indices)
     i = 0
-    while len(selected) < int(size):
+    while len(selected) < size:
         offset = i % 16 * 2
         if offset == 0:
             random_bytes = spec.hash(seed + spec.uint_to_bytes(spec.Uint64(i // 16)))

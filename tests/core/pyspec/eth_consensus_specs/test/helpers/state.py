@@ -28,7 +28,7 @@ def next_slots(spec, state, slots):
     """
     Transition given slots forward.
     """
-    if int(slots) > 0:
+    if slots > 0:
         spec.process_slots(state, state.slot + spec.Slot(slots))
 
 

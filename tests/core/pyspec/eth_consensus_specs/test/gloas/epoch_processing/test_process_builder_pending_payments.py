@@ -211,7 +211,7 @@ def test_process_builder_pending_payments_mixed_weights(spec, state):
     ]
 
     for i, (builder_index, amount, weight) in enumerate(payments_data):
-        if i >= int(spec.SLOTS_PER_EPOCH):
+        if i >= spec.SLOTS_PER_EPOCH:
             break
         payment = create_builder_pending_payment(spec, builder_index, amount, weight)
         state.builder_pending_payments[i] = payment

@@ -100,7 +100,7 @@ def prepare_full_genesis_deposits(
     if deposit_data_list is None:
         deposit_data_list = []
     genesis_deposits = []
-    for pubkey_index in range(int(min_pubkey_index), int(min_pubkey_index) + int(deposit_count)):
+    for pubkey_index in range(min_pubkey_index, int(min_pubkey_index) + int(deposit_count)):
         pubkey = pubkeys[pubkey_index]
         privkey = privkeys[pubkey_index]
         # insecurely use pubkey as withdrawal key if no credentials provided
@@ -412,23 +412,17 @@ def run_deposit_processing(spec, state, deposit, validator_index, valid=True, ef
             )
             # new correct balance deposit queued up
             assert len(state.pending_deposits) == int(pre_pending_deposits_count) + 1
+            assert state.pending_deposits[pre_pending_deposits_count].pubkey == deposit.data.pubkey
             assert (
-                state.pending_deposits[int(pre_pending_deposits_count)].pubkey
-                == deposit.data.pubkey
-            )
-            assert (
-                state.pending_deposits[int(pre_pending_deposits_count)].withdrawal_credentials
+                state.pending_deposits[pre_pending_deposits_count].withdrawal_credentials
                 == deposit.data.withdrawal_credentials
             )
+            assert state.pending_deposits[pre_pending_deposits_count].amount == deposit.data.amount
             assert (
-                state.pending_deposits[int(pre_pending_deposits_count)].amount
-                == deposit.data.amount
-            )
-            assert (
-                state.pending_deposits[int(pre_pending_deposits_count)].signature
+                state.pending_deposits[pre_pending_deposits_count].signature
                 == deposit.data.signature
             )
-            assert state.pending_deposits[int(pre_pending_deposits_count)].slot == spec.GENESIS_SLOT
+            assert state.pending_deposits[pre_pending_deposits_count].slot == spec.GENESIS_SLOT
 
     assert state.eth1_deposit_index == state.eth1_data.deposit_count
 

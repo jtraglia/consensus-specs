@@ -495,8 +495,8 @@ def test_proposer_in_committee_without_participation(spec, state):
         proposer_pubkey = state.validators[proposer_index].pubkey
         proposer_is_in_sync_committee = proposer_pubkey in state.current_sync_committee.pubkeys
         if proposer_is_in_sync_committee:
-            participation = [index != int(proposer_index) for index in committee_indices]
-            participants = [index for index in committee_indices if index != int(proposer_index)]
+            participation = [index != proposer_index for index in committee_indices]
+            participants = [index for index in committee_indices if index != proposer_index]
         else:
             participation = [True for _ in committee_indices]
             participants = committee_indices

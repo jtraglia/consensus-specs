@@ -12,7 +12,7 @@ from eth_consensus_specs.test.helpers.state import next_epoch
 def _compute_first_ptc_assignments(spec, state, epoch):
     assignments = {}
     start_slot = spec.compute_start_slot_at_epoch(epoch)
-    for slot in range(int(start_slot), int(start_slot) + int(spec.SLOTS_PER_EPOCH)):
+    for slot in range(start_slot, int(start_slot) + int(spec.SLOTS_PER_EPOCH)):
         for validator_index in spec.compute_ptc(state, spec.Slot(slot)):
             assignments.setdefault(int(validator_index), spec.Slot(slot))
     return assignments

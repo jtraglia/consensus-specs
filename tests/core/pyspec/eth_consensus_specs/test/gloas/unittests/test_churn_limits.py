@@ -84,7 +84,7 @@ def test_compute_weak_subjectivity_period_weighted_delta(spec, state):
     expected_wsp = int(spec.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY) + expected_epochs
 
     actual_wsp = spec.compute_weak_subjectivity_period(state)
-    assert int(actual_wsp) == expected_wsp
+    assert actual_wsp == expected_wsp
 
 
 @with_gloas_and_later
@@ -113,7 +113,7 @@ def test_compute_weak_subjectivity_period_scaled(spec, state):
     expected_wsp = int(spec.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY) + expected_epochs
 
     actual_wsp = spec.compute_weak_subjectivity_period(state)
-    assert int(actual_wsp) == expected_wsp
+    assert actual_wsp == expected_wsp
 
 
 @with_gloas_and_later

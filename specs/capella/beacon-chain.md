@@ -470,7 +470,7 @@ def get_validators_sweep_withdrawals(
             )
             withdrawal_index += WithdrawalIndex(1)
 
-        validator_index = ValidatorIndex((int(validator_index) + 1) % len(state.validators))
+        validator_index = ValidatorIndex((validator_index + 1) % len(state.validators))
         processed_count += 1
 
     return withdrawals, withdrawal_index, processed_count
@@ -523,7 +523,7 @@ def update_next_withdrawal_validator_index(
     if Uint64(len(withdrawals)) == MAX_WITHDRAWALS_PER_PAYLOAD:
         # Next sweep starts after the latest withdrawal's validator index
         next_validator_index = ValidatorIndex(
-            (int(withdrawals[-1].validator_index) + 1) % len(state.validators)
+            (withdrawals[-1].validator_index + 1) % len(state.validators)
         )
         state.next_withdrawal_validator_index = next_validator_index
     else:
@@ -531,7 +531,7 @@ def update_next_withdrawal_validator_index(
         next_index = state.next_withdrawal_validator_index + ValidatorIndex(
             MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP
         )
-        next_validator_index = ValidatorIndex(int(next_index) % len(state.validators))
+        next_validator_index = ValidatorIndex(next_index % len(state.validators))
         state.next_withdrawal_validator_index = next_validator_index
 ```
 

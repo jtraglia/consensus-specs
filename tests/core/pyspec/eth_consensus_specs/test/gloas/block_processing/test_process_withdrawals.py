@@ -822,7 +822,7 @@ def test_builder_and_pending_leave_room_for_sweep(spec, state):
     expected_sweep = 1
     expected_total = int(expected_builders) + int(expected_pending) + expected_sweep
 
-    assert expected_total == int(spec.MAX_WITHDRAWALS_PER_PAYLOAD), (
+    assert expected_total == spec.MAX_WITHDRAWALS_PER_PAYLOAD, (
         f"Expected total withdrawals to fill payload: {spec.MAX_WITHDRAWALS_PER_PAYLOAD}, "
         f"but got {expected_total}"
     )
@@ -1079,7 +1079,7 @@ def test_full_builder_payload_reserves_sweep_slot(spec, state):
     # Verify setup: One slot reserved for sweep, so only MAX - 1 builder withdrawals
     expected_result = spec.get_expected_withdrawals(state)
     expected_builder_withdrawals = spec.MAX_WITHDRAWALS_PER_PAYLOAD - spec.Uint64(1)
-    assert len(expected_result.withdrawals) == int(expected_builder_withdrawals), (
+    assert len(expected_result.withdrawals) == expected_builder_withdrawals, (
         f"Expected {expected_builder_withdrawals} builder withdrawals (one slot reserved for sweep)"
     )
     for w in expected_result.withdrawals:
@@ -1107,10 +1107,10 @@ def test_full_builder_payload_reserves_sweep_slot(spec, state):
 
     # Assert the fix: next_withdrawal_validator_index is correct
     # Before the fix, it would have been buggy_result (completely wrong due to BUILDER_INDEX_FLAG)
-    assert int(state.next_withdrawal_validator_index) == correct_result, (
+    assert state.next_withdrawal_validator_index == correct_result, (
         f"Spec produces {state.next_withdrawal_validator_index}, expected {correct_result}"
     )
-    assert int(state.next_withdrawal_validator_index) != buggy_result, (
+    assert state.next_withdrawal_validator_index != buggy_result, (
         f"Bug fix verified: spec no longer produces buggy result {buggy_result}"
     )
 

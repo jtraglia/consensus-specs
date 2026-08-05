@@ -1184,7 +1184,7 @@ def compute_shuffled_permutation(index_count: Uint64, seed: Bytes32) -> Sequence
                 )
             source = source_by_bucket[position_bucket]
             byte_val = source[(position % Uint64(256)) // Uint64(8)]
-            bit = (byte_val >> int(position % Uint64(8))) % 2
+            bit = (byte_val >> (position % Uint64(8))) % 2
             indices[i] = flip if bit else indices[i]
     return indices
 ```
@@ -1874,7 +1874,7 @@ def weigh_justification_and_finalization(
 
     # Process justifications
     state.previous_justified_checkpoint = state.current_justified_checkpoint
-    state.justification_bits[1:] = state.justification_bits[: int(JUSTIFICATION_BITS_LENGTH) - 1]
+    state.justification_bits[1:] = state.justification_bits[: JUSTIFICATION_BITS_LENGTH - 1]
     state.justification_bits[0] = 0b0
     if previous_epoch_target_balance * Gwei(3) >= total_active_balance * Gwei(2):
         state.current_justified_checkpoint = Checkpoint(

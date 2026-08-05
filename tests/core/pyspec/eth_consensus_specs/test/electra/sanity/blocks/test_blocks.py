@@ -644,7 +644,7 @@ def test_consolidation_requests_when_pending_consolidation_queue_is_full(spec, s
     yield "post", state
 
     # Ensure another consolidation was added and the other one was rejected
-    assert len(state.pending_consolidations) == int(spec.PENDING_CONSOLIDATIONS_LIMIT)
+    assert len(state.pending_consolidations) == spec.PENDING_CONSOLIDATIONS_LIMIT
 
 
 @with_all_phases_from_to(ELECTRA, GLOAS)
@@ -725,7 +725,7 @@ def test_switch_to_compounding_requests_when_pending_consolidation_queue_is_full
     yield "post", state
 
     # Ensure the pending consolidations queue is still full
-    assert len(state.pending_consolidations) == int(spec.PENDING_CONSOLIDATIONS_LIMIT)
+    assert len(state.pending_consolidations) == spec.PENDING_CONSOLIDATIONS_LIMIT
     # Ensure the validators have been upgraded to compounding validators
     assert spec.has_compounding_withdrawal_credential(state.validators[source_index])
 
@@ -853,7 +853,7 @@ def test_withdrawal_requests_when_pending_withdrawal_queue_is_full(spec, state):
     yield "post", state
 
     # Ensure the pending withdrawals queue is full
-    assert len(state.pending_partial_withdrawals) == int(spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT)
+    assert len(state.pending_partial_withdrawals) == spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT
     # Ensure the last pending withdrawal is for the first withdrawal request
     last_withdrawal = state.pending_partial_withdrawals[
         spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT - spec.Uint64(1)

@@ -124,7 +124,7 @@ def sign_inclusion_list(spec, state, inclusion_list):
     """
     Sign an inclusion list.
     """
-    privkey = privkeys[int(inclusion_list.validator_index)]
+    privkey = privkeys[inclusion_list.validator_index]
     signature = spec.get_inclusion_list_signature(state, inclusion_list, privkey)
 
     return spec.SignedInclusionList(message=inclusion_list, signature=signature)

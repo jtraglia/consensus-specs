@@ -240,9 +240,9 @@ def run_withdrawals_processing(
     If ``valid == False``, run expecting ``AssertionError``
     """
     expected_withdrawals = get_expected_withdrawals(spec, state)
-    assert len(expected_withdrawals) <= int(spec.MAX_WITHDRAWALS_PER_PAYLOAD)
+    assert len(expected_withdrawals) <= spec.MAX_WITHDRAWALS_PER_PAYLOAD
     if num_expected_withdrawals is not None:
-        assert len(expected_withdrawals) == int(num_expected_withdrawals)
+        assert len(expected_withdrawals) == num_expected_withdrawals
 
     pre_state = copy(state)
     yield "pre", state
@@ -750,7 +750,7 @@ def assert_process_withdrawals(
 
     # INVARIANT: next_withdrawal_validator_index advancement per spec
     num_validators = len(pre_state.validators)
-    if len(expected_withdrawals) == int(spec.MAX_WITHDRAWALS_PER_PAYLOAD):
+    if len(expected_withdrawals) == spec.MAX_WITHDRAWALS_PER_PAYLOAD:
         # Full payload: next validator is after last withdrawal's validator index
         last_validator_index = expected_withdrawals[-1].validator_index
         expected_next = (int(last_validator_index) + 1) % num_validators
@@ -760,7 +760,7 @@ def assert_process_withdrawals(
             int(pre_state.next_withdrawal_validator_index)
             + int(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
         ) % num_validators
-    assert int(state.next_withdrawal_validator_index) == expected_next, (
+    assert state.next_withdrawal_validator_index == expected_next, (
         f"next_withdrawal_validator_index: expected {expected_next}, "
         f"got {state.next_withdrawal_validator_index}"
     )
@@ -781,7 +781,7 @@ def assert_process_withdrawals(
 
     # Withdrawal count verification
     if withdrawal_count is not None:
-        assert len(withdrawals) == int(withdrawal_count)
+        assert len(withdrawals) == withdrawal_count
 
     # Balance verification - explicit values
     if balances is not None:
@@ -809,7 +809,7 @@ def assert_process_withdrawals(
     if builder_balance_deltas is not None:
         for builder_idx, delta in builder_balance_deltas.items():
             expected = int(pre_state.builders[builder_idx].balance) + delta
-            assert int(state.builders[builder_idx].balance) == expected, (
+            assert state.builders[builder_idx].balance == expected, (
                 f"Builder {builder_idx}: expected balance {expected}, got {state.builders[builder_idx].balance}"
             )
 
@@ -842,7 +842,7 @@ def assert_process_withdrawals(
     # Withdrawal content
     if withdrawal_amounts is not None:
         for validator_idx, expected_amount in withdrawal_amounts.items():
-            matching = [w for w in withdrawals if int(w.validator_index) == int(validator_idx)]
+            matching = [w for w in withdrawals if w.validator_index == validator_idx]
             assert len(matching) == 1, (
                 f"Expected exactly 1 withdrawal for validator {validator_idx}"
             )
@@ -858,7 +858,7 @@ def assert_process_withdrawals(
 
     if withdrawal_addresses is not None:
         for validator_idx, expected_address in withdrawal_addresses.items():
-            matching = [w for w in withdrawals if int(w.validator_index) == int(validator_idx)]
+            matching = [w for w in withdrawals if w.validator_index == validator_idx]
             assert len(matching) == 1
             assert matching[0].address == spec.ExecutionAddress(expected_address)
 
@@ -873,7 +873,7 @@ def assert_process_withdrawals(
     # No withdrawal verification
     if no_withdrawal_indices is not None:
         for idx in no_withdrawal_indices:
-            assert not any(int(w.validator_index) == int(idx) for w in withdrawals), (
+            assert not any(w.validator_index == idx for w in withdrawals), (
                 f"Validator {idx} should not have a withdrawal"
             )
 
@@ -942,7 +942,7 @@ def _verify_withdrawals_next_withdrawal_index(spec, pre_state, post_state, expec
     )
     if len(expected_withdrawals) == 0:
         assert post_state.next_withdrawal_index == pre_state.next_withdrawal_index
-    elif len(expected_withdrawals) <= int(spec.MAX_WITHDRAWALS_PER_PAYLOAD):
+    elif len(expected_withdrawals) <= spec.MAX_WITHDRAWALS_PER_PAYLOAD:
         latest_withdrawal = expected_withdrawals[-1]
         assert post_state.next_withdrawal_index == latest_withdrawal.index + spec.WithdrawalIndex(1)
 
@@ -959,7 +959,7 @@ def _verify_withdrawals_next_withdrawal_index(spec, pre_state, post_state, expec
         )
 
     # Verify post_state.next_withdrawal_validator_index
-    if len(expected_withdrawals) == int(spec.MAX_WITHDRAWALS_PER_PAYLOAD):
+    if len(expected_withdrawals) == spec.MAX_WITHDRAWALS_PER_PAYLOAD:
         # Next sweep starts after the latest withdrawal's validator index
         next_validator_index = (
             expected_withdrawals[-1].validator_index + spec.ValidatorIndex(1)

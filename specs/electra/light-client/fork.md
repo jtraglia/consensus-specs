@@ -27,6 +27,7 @@ def normalize_merkle_branch(
     branch: Sequence[Bytes32], gindex: GeneralizedIndex
 ) -> Sequence[Bytes32]:
     depth = floorlog2(gindex)
+    # A plain count: the padding below repeats a list, which a uint cannot drive.
     num_extra = int(depth) - len(branch)
     return [Bytes32()] * num_extra + [*branch]
 ```

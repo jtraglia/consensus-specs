@@ -162,7 +162,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_committee_index_out_of_range(
         assert committee_count < spec.MAX_COMMITTEES_PER_SLOT
         oob_index = committee_count
         signed_agg.message.aggregate.committee_bits = spec.CommitteeBits(
-            data=[i == int(oob_index) for i in range(int(spec.MAX_COMMITTEES_PER_SLOT))]
+            data=[i == oob_index for i in range(spec.MAX_COMMITTEES_PER_SLOT)]
         )
     else:
         signed_agg.message.aggregate.data.index = spec.CommitteeIndex(

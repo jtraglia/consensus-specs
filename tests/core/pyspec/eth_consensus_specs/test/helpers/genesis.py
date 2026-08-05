@@ -216,7 +216,7 @@ def create_genesis_state(spec, validator_balances, activation_threshold):
             data=[build_mock_builder(spec, i, builder_balance) for i in range(8)]
         )
         state.execution_payload_availability = spec.ExecutionPayloadAvailability(
-            data=[0b1 for _ in range(int(spec.SLOTS_PER_HISTORICAL_ROOT))]
+            data=[0b1 for _ in range(spec.SLOTS_PER_HISTORICAL_ROOT)]
         )
         state.payload_expected_withdrawals = spec.Withdrawals()
         state.builder_pending_payments = spec.BuilderPendingPayments(

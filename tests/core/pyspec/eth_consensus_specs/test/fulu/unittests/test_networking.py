@@ -151,7 +151,7 @@ def test_verify_data_column_sidecar__invalid_kzg_commitments_over_max_blobs(spec
 
     for _ in range(int(max_blobs) - len(sidecar.kzg_commitments) + 1):
         sidecar.kzg_commitments.append(sidecar.kzg_commitments[0])
-    assert len(sidecar.kzg_commitments) > int(max_blobs)
+    assert len(sidecar.kzg_commitments) > max_blobs
 
     assert not _verify_data_column_sidecar(spec, sidecar, blob_kzg_commitments)
 

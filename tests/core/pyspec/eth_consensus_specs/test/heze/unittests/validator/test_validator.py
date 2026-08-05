@@ -27,7 +27,7 @@ def run_get_inclusion_list_committee_assignments(spec, state, epoch, valid=True)
 
     start_slot = spec.compute_start_slot_at_epoch(epoch)
     end_slot = start_slot + spec.SLOTS_PER_EPOCH
-    some_slots = [spec.Slot(s) for s in rng.sample(range(int(start_slot), int(end_slot)), 3)]
+    some_slots = [spec.Slot(s) for s in rng.sample(range(start_slot, end_slot), 3)]
 
     inclusion_assignments = [(None, None, spec.ValidatorIndex(len(state.validators)))]
     for slot in some_slots:

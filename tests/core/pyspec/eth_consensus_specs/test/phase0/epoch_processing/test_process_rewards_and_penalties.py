@@ -101,11 +101,11 @@ def test_genesis_epoch_full_attestations_no_rewards(spec, state):
     attestations = []
     for slot in range(spec.SLOTS_PER_EPOCH - spec.Slot(1)):
         # create an attestation for each slot
-        if slot < int(spec.SLOTS_PER_EPOCH):
+        if slot < spec.SLOTS_PER_EPOCH:
             attestation = get_valid_attestation(spec, state, signed=True)
             attestations.append(attestation)
         # fill each created slot in state after inclusion delay
-        if slot >= int(spec.MIN_ATTESTATION_INCLUSION_DELAY):
+        if slot >= spec.MIN_ATTESTATION_INCLUSION_DELAY:
             include_att = attestations[slot - int(spec.MIN_ATTESTATION_INCLUSION_DELAY)]
             add_attestations_to_state(spec, state, [include_att], state.slot)
         next_slot(spec, state)
@@ -489,7 +489,8 @@ def test_attestations_some_slashed(spec, state):
 
     attesting_indices = _get_unslashed_attesting_indices(spec, state, attestations)
     assert len(attesting_indices) > 0
-    assert len(attesting_indices_before_slashings) - len(attesting_indices) == int(
-        spec.config.MIN_PER_EPOCH_CHURN_LIMIT
+    assert (
+        len(attesting_indices_before_slashings) - len(attesting_indices)
+        == spec.config.MIN_PER_EPOCH_CHURN_LIMIT
     )
     validate_resulting_balances(spec, pre_state, state, attestations)

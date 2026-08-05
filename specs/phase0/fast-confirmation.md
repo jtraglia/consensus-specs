@@ -320,7 +320,7 @@ def get_block_support_between_slots(
     between ``start_slot`` and ``end_slot`` (inclusive of both).
     """
     participants: Set[ValidatorIndex] = set()
-    for slot in range(int(start_slot), int(end_slot) + 1):
+    for slot in range(start_slot, end_slot + 1):
         participants.update(get_slot_committee(store, Slot(slot)))
 
     # Keep validators that were active at the balance_source epoch to be consistent
@@ -452,7 +452,7 @@ def get_equivocation_score(
     in the slots between ``start_slot`` and ``end_slot`` (inclusive of both).
     """
     committee_indices: Set[ValidatorIndex] = set()
-    for slot in range(int(start_slot), int(end_slot) + 1):
+    for slot in range(start_slot, end_slot + 1):
         committee_indices.update(get_slot_committee(store, Slot(slot)))
 
     # Keep equivocating validators that were active at the balance_source epoch to be consistent

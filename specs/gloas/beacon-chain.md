@@ -1111,7 +1111,7 @@ def convert_builder_index_to_validator_index(builder_index: BuilderIndex) -> Val
 
 ```python
 def convert_validator_index_to_builder_index(validator_index: ValidatorIndex) -> BuilderIndex:
-    return BuilderIndex(int(validator_index) & ~int(BUILDER_INDEX_FLAG))
+    return BuilderIndex(validator_index & ~BUILDER_INDEX_FLAG)
 ```
 
 #### New `get_pending_balance_to_withdraw_for_builder`
@@ -1203,7 +1203,7 @@ def compute_proposer_indices(
     Return the proposer indices for the given ``epoch``.
     """
     start_slot = compute_start_slot_at_epoch(epoch)
-    seeds = [hash(seed + uint_to_bytes(start_slot + Slot(i))) for i in range(int(SLOTS_PER_EPOCH))]
+    seeds = [hash(seed + uint_to_bytes(start_slot + Slot(i))) for i in range(SLOTS_PER_EPOCH)]
     # [Modified in Gloas:EIP7732]
     return ProposerIndices(
         data=[
@@ -1585,7 +1585,7 @@ def process_pending_deposits(state: BeaconState) -> None:
             break
 
         # Check if number of processed deposits has not reached the limit, otherwise, stop processing.
-        if next_deposit_index >= int(MAX_PENDING_DEPOSITS_PER_EPOCH):
+        if next_deposit_index >= MAX_PENDING_DEPOSITS_PER_EPOCH:
             break
 
         # Read validator state
@@ -1635,12 +1635,12 @@ def process_builder_pending_payments(state: BeaconState) -> None:
     Processes the builder pending payments from the previous epoch.
     """
     quorum = get_builder_payment_quorum_threshold(state)
-    for payment in state.builder_pending_payments[: int(SLOTS_PER_EPOCH)]:
+    for payment in state.builder_pending_payments[:SLOTS_PER_EPOCH]:
         if payment.weight >= Gwei(quorum):
             state.builder_pending_withdrawals.append(payment.withdrawal)
 
-    old_payments = list(state.builder_pending_payments[int(SLOTS_PER_EPOCH) :])
-    new_payments = [BuilderPendingPayment() for _ in range(int(SLOTS_PER_EPOCH))]
+    old_payments = list(state.builder_pending_payments[SLOTS_PER_EPOCH:])
+    new_payments = [BuilderPendingPayment() for _ in range(SLOTS_PER_EPOCH)]
     state.builder_pending_payments = BuilderPendingPayments(data=old_payments + new_payments)
 ```
 
@@ -1652,11 +1652,11 @@ def process_ptc_window(state: BeaconState) -> None:
     Update the cached PTC window.
     """
     # Shift all epochs forward by one
-    state.ptc_window[: -int(SLOTS_PER_EPOCH)] = state.ptc_window[int(SLOTS_PER_EPOCH) :]
+    state.ptc_window[:-SLOTS_PER_EPOCH] = state.ptc_window[SLOTS_PER_EPOCH:]
     # Fill in the last epoch
     next_epoch = get_current_epoch(state) + MIN_SEED_LOOKAHEAD + Epoch(1)
     start_slot = compute_start_slot_at_epoch(next_epoch)
-    state.ptc_window[-int(SLOTS_PER_EPOCH) :] = [
+    state.ptc_window[-SLOTS_PER_EPOCH:] = [
         compute_ptc(state, Slot(slot)) for slot in range(start_slot, start_slot + SLOTS_PER_EPOCH)
     ]
 ```
@@ -1832,7 +1832,7 @@ def get_builders_sweep_withdrawals(
             )
             withdrawal_index += WithdrawalIndex(1)
 
-        builder_index = BuilderIndex((int(builder_index) + 1) % len(state.builders))
+        builder_index = BuilderIndex((builder_index + 1) % len(state.builders))
         processed_count += 1
 
     return withdrawals, withdrawal_index, processed_count

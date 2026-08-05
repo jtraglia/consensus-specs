@@ -56,7 +56,7 @@ def test_initialize_beacon_state_from_eth1(spec):
     state = spec.initialize_beacon_state_from_eth1(eth1_block_hash, eth1_timestamp, deposits)
 
     assert state.genesis_time == eth1_timestamp + spec.config.GENESIS_DELAY
-    assert len(state.validators) == int(deposit_count)
+    assert len(state.validators) == deposit_count
     assert state.eth1_data.deposit_root == spec.Root(deposit_root)
     assert state.eth1_data.deposit_count == spec.Uint64(deposit_count)
     assert state.eth1_data.block_hash == spec.Hash32(eth1_block_hash)
@@ -110,7 +110,7 @@ def test_initialize_beacon_state_some_small_balances(spec):
     state = spec.initialize_beacon_state_from_eth1(eth1_block_hash, eth1_timestamp, deposits)
 
     assert state.genesis_time == eth1_timestamp + spec.config.GENESIS_DELAY
-    assert len(state.validators) == int(small_deposit_count)
+    assert len(state.validators) == small_deposit_count
     assert state.eth1_data.deposit_root == spec.Root(deposit_root)
     assert state.eth1_data.deposit_count == spec.Uint64(len(deposits))
     assert state.eth1_data.block_hash == spec.Hash32(eth1_block_hash)

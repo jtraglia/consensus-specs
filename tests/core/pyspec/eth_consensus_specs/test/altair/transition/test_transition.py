@@ -267,7 +267,7 @@ def test_transition_only_blocks_post_fork(state, fork_epoch, spec, post_spec, pr
 
     slots_with_blocks = [int(block.message.slot) for block in blocks]
     assert len(slots_with_blocks) == 1
-    assert slots_with_blocks[0] == int(last_slot)
+    assert slots_with_blocks[0] == last_slot
 
     yield "blocks", blocks
     yield "post", state

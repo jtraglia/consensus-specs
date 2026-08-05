@@ -382,7 +382,7 @@ def test_skipped_slots(spec, state):
 
     assert state.slot == block.slot
     assert spec.get_randao_mix(state, spec.get_current_epoch(state)) != spec.Bytes32()
-    for slot in range(int(pre_slot), int(state.slot)):
+    for slot in range(pre_slot, state.slot):
         assert spec.get_block_root_at_slot(state, spec.Slot(slot)) == block.parent_root
 
 
@@ -400,7 +400,7 @@ def test_empty_epoch_transition(spec, state):
     yield "post", state
 
     assert state.slot == block.slot
-    for slot in range(int(pre_slot), int(state.slot)):
+    for slot in range(pre_slot, state.slot):
         assert spec.get_block_root_at_slot(state, spec.Slot(slot)) == block.parent_root
 
 
@@ -426,7 +426,7 @@ def test_empty_epoch_transition_large_validator_set(spec, state):
     yield "post", state
 
     assert state.slot == block.slot
-    for slot in range(int(pre_slot), int(state.slot)):
+    for slot in range(pre_slot, state.slot):
         assert spec.get_block_root_at_slot(state, spec.Slot(slot)) == block.parent_root
 
 
@@ -628,7 +628,7 @@ def test_attester_slashing(spec, state):
 @with_all_phases
 @spec_state_test
 def test_invalid_duplicate_attester_slashing_same_block(spec, state):
-    if int(get_max_attester_slashings(spec)) < 2:
+    if get_max_attester_slashings(spec) < 2:
         return dump_skipping_message(
             "Skip test if config cannot handle multiple AttesterSlashings per block"
         )
@@ -656,7 +656,7 @@ def test_invalid_duplicate_attester_slashing_same_block(spec, state):
 @with_all_phases
 @spec_state_test
 def test_multiple_attester_slashings_no_overlap(spec, state):
-    if int(get_max_attester_slashings(spec)) < 2:
+    if get_max_attester_slashings(spec) < 2:
         return dump_skipping_message(
             "Skip test if config cannot handle multiple AttesterSlashings per block"
         )
@@ -704,7 +704,7 @@ def test_multiple_attester_slashings_no_overlap(spec, state):
 @with_all_phases
 @spec_state_test
 def test_multiple_attester_slashings_partial_overlap(spec, state):
-    if int(get_max_attester_slashings(spec)) < 2:
+    if get_max_attester_slashings(spec) < 2:
         return dump_skipping_message(
             "Skip test if config cannot handle multiple AttesterSlashings per block"
         )
@@ -761,7 +761,7 @@ def test_proposer_after_inactive_index(spec, state):
     next_epoch_via_block(spec, state)
     while True:
         proposer_index = spec.get_beacon_proposer_index(state)
-        if int(proposer_index) > int(inactive_index):
+        if proposer_index > inactive_index:
             # found a proposer that has a higher index than a disabled validator
             yield "pre", state
             # test if the proposer can be recognized correctly after the inactive validator
@@ -792,7 +792,7 @@ def test_high_proposer_index(spec, state):
     active_count = len(spec.get_active_validator_indices(state, current_epoch))
     while True:
         proposer_index = spec.get_beacon_proposer_index(state)
-        if int(proposer_index) >= int(active_count):
+        if proposer_index >= active_count:
             # found a proposer that has a higher index than the active validator count
             yield "pre", state
             # test if the proposer can be recognized correctly, even while it has a high index.
@@ -1208,7 +1208,7 @@ def test_eth1_data_votes_consensus(spec, state):
         signed_block = state_transition_and_sign_block(spec, state, block)
         blocks.append(signed_block)
 
-    assert len(state.eth1_data_votes) == int(voting_period_slots)
+    assert len(state.eth1_data_votes) == voting_period_slots
     assert state.eth1_data.block_hash == spec.Hash32(a)
 
     # transition to next eth1 voting period
@@ -1252,7 +1252,7 @@ def test_eth1_data_votes_no_consensus(spec, state):
         signed_block = state_transition_and_sign_block(spec, state, block)
         blocks.append(signed_block)
 
-    assert len(state.eth1_data_votes) == int(voting_period_slots)
+    assert len(state.eth1_data_votes) == voting_period_slots
     assert state.eth1_data.block_hash == pre_eth1_hash
 
     yield "blocks", blocks

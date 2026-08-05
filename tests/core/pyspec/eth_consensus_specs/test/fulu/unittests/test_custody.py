@@ -17,7 +17,7 @@ def run_get_custody_columns(spec, peer_count, custody_group_count):
         columns = []
         for group in assignment:
             group_columns = spec.compute_columns_for_custody_group(group)
-            assert len(group_columns) == int(columns_per_group)
+            assert len(group_columns) == columns_per_group
             columns.extend(group_columns)
 
         assert len(columns) == int(custody_group_count) * int(columns_per_group)
@@ -30,7 +30,7 @@ def run_get_custody_columns(spec, peer_count, custody_group_count):
 def test_get_custody_columns_peers_within_number_of_columns(spec):
     peer_count = 10
     custody_group_count = spec.config.CUSTODY_REQUIREMENT
-    assert peer_count < int(spec.NUMBER_OF_COLUMNS)
+    assert peer_count < spec.NUMBER_OF_COLUMNS
     run_get_custody_columns(spec, peer_count, custody_group_count)
 
 
@@ -40,7 +40,7 @@ def test_get_custody_columns_peers_within_number_of_columns(spec):
 def test_get_custody_columns_peers_more_than_number_of_columns(spec):
     peer_count = 200
     custody_group_count = spec.config.CUSTODY_REQUIREMENT
-    assert peer_count > int(spec.NUMBER_OF_COLUMNS)
+    assert peer_count > spec.NUMBER_OF_COLUMNS
     run_get_custody_columns(spec, peer_count, custody_group_count)
 
 

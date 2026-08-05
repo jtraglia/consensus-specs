@@ -268,7 +268,7 @@ def test_partial_withdrawal_in_epoch_transition(spec, state):
 @with_capella_and_later
 @spec_state_test
 def test_many_partial_withdrawals_in_epoch_transition(spec, state):
-    assert len(state.validators) > int(spec.MAX_WITHDRAWALS_PER_PAYLOAD)
+    assert len(state.validators) > spec.MAX_WITHDRAWALS_PER_PAYLOAD
 
     for i in range(spec.MAX_WITHDRAWALS_PER_PAYLOAD + spec.Uint64(1)):
         index = (i + int(state.next_withdrawal_index)) % len(state.validators)
@@ -284,11 +284,11 @@ def test_many_partial_withdrawals_in_epoch_transition(spec, state):
             spec.MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
             spec.MAX_WITHDRAWALS_PER_PAYLOAD - spec.Uint64(1),
         )
-        assert len(get_expected_withdrawals(spec, state)) == int(expected_count)
+        assert len(get_expected_withdrawals(spec, state)) == expected_count
         # Make parent block full in Gloas so withdrawals are processed
         state.latest_block_hash = state.latest_execution_payload_bid.block_hash
     else:
-        assert len(get_expected_withdrawals(spec, state)) == int(spec.MAX_WITHDRAWALS_PER_PAYLOAD)
+        assert len(get_expected_withdrawals(spec, state)) == spec.MAX_WITHDRAWALS_PER_PAYLOAD
 
     yield "pre", state
 
@@ -315,7 +315,7 @@ def test_many_partial_withdrawals_in_epoch_transition(spec, state):
                 if w.withdrawable_epoch <= spec.get_current_epoch(state)
             ]
         )
-        assert int(remaining_pending) == int(expected_remaining)
+        assert remaining_pending == expected_remaining
     else:
         assert len(get_expected_withdrawals(spec, state)) == 1
 
@@ -526,7 +526,7 @@ def test_top_up_to_fully_withdrawn_validator(spec, state):
     signed_block_2 = state_transition_and_sign_block(spec, state, block)
 
     # With mainnet preset, it holds
-    if len(state.validators) <= int(spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP):
+    if len(state.validators) <= spec.MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP:
         assert not spec.is_fully_withdrawable_validator(
             state.validators[validator_index],
             state.balances[validator_index],

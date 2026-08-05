@@ -47,10 +47,10 @@ def initialize_ptc_window(
 
     ptcs = []
     current_epoch = get_current_epoch(state)
-    for e in range(1 + int(MIN_SEED_LOOKAHEAD)):
+    for e in range(1 + MIN_SEED_LOOKAHEAD):
         epoch = current_epoch + Epoch(e)
         start_slot = compute_start_slot_at_epoch(epoch)
-        ptcs += [compute_ptc(state, start_slot + Slot(i)) for i in range(int(SLOTS_PER_EPOCH))]
+        ptcs += [compute_ptc(state, start_slot + Slot(i)) for i in range(SLOTS_PER_EPOCH)]
 
     return PTCWindow(data=empty_previous_epoch + ptcs)
 ```
@@ -199,11 +199,11 @@ def upgrade_to_gloas(pre: fulu.BeaconState) -> BeaconState:
         next_withdrawal_builder_index=BuilderIndex(0),
         # [New in Gloas:EIP7732]
         execution_payload_availability=ExecutionPayloadAvailability(
-            data=[0b1 for _ in range(int(SLOTS_PER_HISTORICAL_ROOT))]
+            data=[0b1 for _ in range(SLOTS_PER_HISTORICAL_ROOT)]
         ),
         # [New in Gloas:EIP7732]
         builder_pending_payments=BuilderPendingPayments(
-            data=[BuilderPendingPayment() for _ in range(2 * int(SLOTS_PER_EPOCH))]
+            data=[BuilderPendingPayment() for _ in range(2 * SLOTS_PER_EPOCH)]
         ),
         # [New in Gloas:EIP7732]
         builder_pending_withdrawals=BuilderPendingWithdrawals(),
