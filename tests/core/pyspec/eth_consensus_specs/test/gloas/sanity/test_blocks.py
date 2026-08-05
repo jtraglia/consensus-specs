@@ -917,7 +917,9 @@ def test_attestations_after_missed_slot_use_applied_parent_payload_availability(
     child_slot = attestation_slot + spec.MIN_ATTESTATION_INCLUSION_DELAY
     block_2 = build_empty_block(spec, state, slot=child_slot)
     block_2.body.signed_execution_payload_bid.message.parent_block_hash = parent_block_hash
-    block_2.body.attestations = [matching_attestation, mismatching_attestation]
+    block_2.body.attestations = spec.Attestations(
+        data=[matching_attestation, mismatching_attestation]
+    )
     signed_block_2 = state_transition_and_sign_block(spec, state, block_2)
 
     yield "blocks", [signed_block_1, signed_block_2]

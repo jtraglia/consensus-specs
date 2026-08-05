@@ -75,10 +75,10 @@ def test_process_builder_exit_request__unknown_pubkey(spec, state):
     advance_past_finalization(spec, state)
 
     # Use a pubkey that is not in the builder registry
-    existing_pubkeys = {builder.pubkey for builder in state.builders}
+    existing_pubkeys = {bytes(builder.pubkey) for builder in state.builders}
     unknown_pubkey = None
     for pk in builder_pubkeys:
-        if pk not in existing_pubkeys:
+        if bytes(pk) not in existing_pubkeys:
             unknown_pubkey = pk
             break
     assert unknown_pubkey is not None
