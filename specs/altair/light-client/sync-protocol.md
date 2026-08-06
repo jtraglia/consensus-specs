@@ -254,12 +254,8 @@ def is_better_update(new_update: LightClientUpdate, old_update: LightClientUpdat
     max_active_participants = Uint64(len(new_update.sync_aggregate.sync_committee_bits))
     new_num_active_participants = count_active_participants(new_update.sync_aggregate)
     old_num_active_participants = count_active_participants(old_update.sync_aggregate)
-    new_has_supermajority = new_num_active_participants * Uint64(
-        3
-    ) >= max_active_participants * Uint64(2)
-    old_has_supermajority = old_num_active_participants * Uint64(
-        3
-    ) >= max_active_participants * Uint64(2)
+    new_has_supermajority = new_num_active_participants * Uint64(3) >= max_active_participants * 2
+    old_has_supermajority = old_num_active_participants * Uint64(3) >= max_active_participants * 2
     if new_has_supermajority != old_has_supermajority:
         return new_has_supermajority
     if not new_has_supermajority and new_num_active_participants != old_num_active_participants:
@@ -337,7 +333,7 @@ def get_safety_threshold(store: LightClientStore) -> Uint64:
 
 ```python
 def get_subtree_index(generalized_index: GeneralizedIndex) -> Uint64:
-    return Uint64(generalized_index) % Uint64(2) ** floorlog2(generalized_index)
+    return Uint64(generalized_index) % 2 ** floorlog2(generalized_index)
 ```
 
 ### `is_valid_normalized_merkle_branch`

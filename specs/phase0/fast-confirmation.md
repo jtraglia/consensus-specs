@@ -356,7 +356,7 @@ def is_full_validator_set_covered(start_slot: Slot, end_slot: Slot) -> bool:
     """
     Return ``True`` if the range between ``start_slot`` and ``end_slot`` (inclusive of both) includes an entire epoch.
     """
-    start_full_epoch = compute_epoch_at_slot(start_slot + SLOTS_PER_EPOCH - Slot(1))
+    start_full_epoch = compute_epoch_at_slot(start_slot + SLOTS_PER_EPOCH - 1)
     end_full_epoch = compute_epoch_at_slot(end_slot + Slot(1))
     return start_full_epoch < end_full_epoch
 ```
@@ -376,8 +376,8 @@ def adjust_committee_weight_estimate_to_ensure_safety(estimate: Gwei) -> Gwei:
     Return adjusted ``estimate`` of the weight of a committee for a sequence of slots
     spanning an epoch boundary that does not cover any full epoch.
     """
-    ceil = (estimate + Gwei(999)) // Gwei(1000)
-    return ceil * Gwei(1000 + COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR)
+    ceil = (estimate + 999) // 1000
+    return ceil * (1000 + COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR)
 ```
 
 ##### `estimate_committee_weight_between_slots`
@@ -403,7 +403,7 @@ def estimate_committee_weight_between_slots(
     end_epoch = compute_epoch_at_slot(end_slot)
     committee_weight = total_active_balance // Gwei(SLOTS_PER_EPOCH)
     if start_epoch == end_epoch:
-        return committee_weight * Gwei(end_slot - start_slot + Slot(1))
+        return committee_weight * Gwei(end_slot - start_slot + 1)
     else:
         # First, calculate the number of committees in the end epoch
         num_slots_in_end_epoch = compute_slots_since_epoch_start(end_slot) + Slot(1)
@@ -537,7 +537,7 @@ def compute_empty_slot_support_discount(
     block = store.blocks[block_root]
     parent_block = store.blocks[block.parent_root]
     # No empty slot
-    if parent_block.slot + Slot(1) == block.slot:
+    if parent_block.slot + 1 == block.slot:
         return Gwei(0)
 
     # Discount votes supporting the parent block if they are from the committees of empty slots
@@ -656,7 +656,7 @@ def is_confirmed_chain_safe(fcr_store: FastConfirmationStore, confirmed_root: Ro
         return False
 
     current_epoch = get_current_store_epoch(store)
-    if fcr_store.current_epoch_observed_justified_checkpoint.epoch + Epoch(1) >= current_epoch:
+    if fcr_store.current_epoch_observed_justified_checkpoint.epoch + 1 >= current_epoch:
         # Exclude the justified checkpoint block if it is from the previous epoch
         # as then this block will always be canonical in this case.
         start_root_exclusive = fcr_store.current_epoch_observed_justified_checkpoint.root
@@ -862,15 +862,15 @@ def find_latest_confirmed_descendant(
 
     if (
         get_block_epoch(store, confirmed_root) + Epoch(1) == current_epoch
-        and get_voting_source(store, fcr_store.previous_slot_head).epoch + Epoch(2) >= current_epoch
+        and get_voting_source(store, fcr_store.previous_slot_head).epoch + 2 >= current_epoch
         and (
             is_start_slot_at_epoch(get_current_slot(store))
             or (
                 will_no_conflicting_checkpoint_be_justified(store)
                 and (
-                    store.unrealized_justifications[fcr_store.previous_slot_head].epoch + Epoch(1)
+                    store.unrealized_justifications[fcr_store.previous_slot_head].epoch + 1
                     >= current_epoch
-                    or store.unrealized_justifications[head].epoch + Epoch(1) >= current_epoch
+                    or store.unrealized_justifications[head].epoch + 1 >= current_epoch
                 )
             )
         )
@@ -905,7 +905,7 @@ def find_latest_confirmed_descendant(
 
     if (
         is_start_slot_at_epoch(get_current_slot(store))
-        or store.unrealized_justifications[head].epoch + Epoch(1) >= current_epoch
+        or store.unrealized_justifications[head].epoch + 1 >= current_epoch
     ):
         # Get suffix of the canonical chain
         canonical_roots = get_ancestor_roots(store, head, confirmed_root)
@@ -932,7 +932,7 @@ def find_latest_confirmed_descendant(
         # The tentative_confirmed_root can only be confirmed
         # if it is for sure not going to be reorged out in either the current or next epoch.
         if get_block_epoch(store, tentative_confirmed_root) == current_epoch or (
-            get_voting_source(store, tentative_confirmed_root).epoch + Epoch(2) >= current_epoch
+            get_voting_source(store, tentative_confirmed_root).epoch + 2 >= current_epoch
             and (
                 is_start_slot_at_epoch(get_current_slot(store))
                 or will_no_conflicting_checkpoint_be_justified(store)

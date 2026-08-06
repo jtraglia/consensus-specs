@@ -364,7 +364,7 @@ def compute_time_at_slot_ms(store: Store, slot: Slot) -> Uint64:
     Return the time in milliseconds at the start of the given slot.
     """
     slots_since_genesis = slot - GENESIS_SLOT
-    return store.genesis_time * Uint64(1000) + Uint64(slots_since_genesis) * SLOT_DURATION_MS
+    return store.genesis_time * 1000 + Uint64(slots_since_genesis) * SLOT_DURATION_MS
 ```
 
 #### `is_future_slot`
@@ -399,7 +399,7 @@ def is_within_slot_range(
     start_time_ms = compute_time_at_slot_ms(store, slot)
     if current_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY < start_time_ms:
         return False
-    end_time_ms = compute_time_at_slot_ms(store, slot + Slot(slot_range) + Slot(1))
+    end_time_ms = compute_time_at_slot_ms(store, slot + slot_range + 1)
     if end_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY < current_time_ms:
         return False
     return True
@@ -412,7 +412,7 @@ def compute_attestation_subnet_prefix_bits() -> Uint64:
     """
     Return the number of NodeId bits to use when mapping to a subscribed subnet.
     """
-    return Uint64(ceillog2(ATTESTATION_SUBNET_COUNT) + ATTESTATION_SUBNET_EXTRA_BITS)
+    return ceillog2(ATTESTATION_SUBNET_COUNT) + ATTESTATION_SUBNET_EXTRA_BITS
 ```
 
 #### `compute_min_epochs_for_block_requests`
@@ -481,7 +481,7 @@ can carry according to the following functions:
 def max_compressed_len(n: Uint64) -> Uint64:
     # Worst-case compressed length for a given payload of size n when using snappy:
     # https://github.com/google/snappy/blob/32ded457c0b1fe78ceb8397632c416568d6714a0/snappy.cc#L218C1-L218C47
-    return Uint64(32) + n + n // Uint64(6)
+    return 32 + n + n // 6
 ```
 
 #### `max_message_size`
@@ -650,7 +650,7 @@ def validate_beacon_block_gossip(
         raise GossipIgnore("block is not the first valid block for this slot and proposer")
 
     # [REJECT] The proposer index is a valid validator index
-    if block.proposer_index >= ValidatorIndex(len(state.validators)):
+    if block.proposer_index >= len(state.validators):
         raise GossipReject("proposer index out of range")
 
     # [REJECT] The proposer signature is valid
@@ -832,7 +832,7 @@ def validate_voluntary_exit_gossip(
         raise GossipIgnore("already seen voluntary exit for this validator")
 
     # [REJECT] The validator index is valid
-    if validator_index >= ValidatorIndex(len(state.validators)):
+    if validator_index >= len(state.validators):
         raise GossipReject("validator index out of range")
 
     validator = state.validators[validator_index]
@@ -901,7 +901,7 @@ def validate_proposer_slashing_gossip(
         raise GossipReject("headers are not different")
 
     # [REJECT] The proposer index is a valid validator index
-    if proposer_index >= ValidatorIndex(len(state.validators)):
+    if proposer_index >= len(state.validators):
         raise GossipReject("proposer index out of range")
 
     # [REJECT] The proposer is slashable
@@ -955,9 +955,7 @@ def validate_attester_slashing_gossip(
         raise GossipReject("attestation data is not slashable")
 
     # [REJECT] All validator indices in the first indexed attestation are valid
-    if any(
-        index >= ValidatorIndex(len(state.validators)) for index in attestation_1.attesting_indices
-    ):
+    if any(index >= len(state.validators) for index in attestation_1.attesting_indices):
         raise GossipReject("validator index out of range in indexed attestation 1")
 
     # [REJECT] The first indexed attestation has valid properties
@@ -965,9 +963,7 @@ def validate_attester_slashing_gossip(
         raise GossipReject("invalid indexed attestation 1")
 
     # [REJECT] All validator indices in the second indexed attestation are valid
-    if any(
-        index >= ValidatorIndex(len(state.validators)) for index in attestation_2.attesting_indices
-    ):
+    if any(index >= len(state.validators) for index in attestation_2.attesting_indices):
         raise GossipReject("validator index out of range in indexed attestation 2")
 
     # [REJECT] The second indexed attestation has valid properties
@@ -1027,7 +1023,7 @@ def validate_beacon_attestation_gossip(
     expected_subnet = compute_subnet_for_attestation(
         committees_per_slot, data.slot, committee_index
     )
-    if expected_subnet != SubnetID(subnet_id):
+    if expected_subnet != subnet_id:
         raise GossipReject("attestation is for wrong subnet")
 
     # [IGNORE] The attestation slot is within the propagation range

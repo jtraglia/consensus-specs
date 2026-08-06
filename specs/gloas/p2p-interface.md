@@ -316,7 +316,7 @@ def is_current_or_next_slot(
     (with MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
     """
     is_current = is_current_slot(store, slot, current_time_ms)
-    is_next = is_current_slot(store, slot - Slot(1), current_time_ms)
+    is_next = is_current_slot(store, slot - 1, current_time_ms)
     return is_current or is_next
 ```
 
@@ -346,7 +346,7 @@ def is_gas_limit_target_compatible(
     Check if ``gas_limit`` is compatible with ``target_gas_limit`` under the
     EIP-1559 transition rule from ``parent_gas_limit``.
     """
-    max_gas_limit_difference = max(parent_gas_limit // Uint64(1024), Uint64(1)) - Uint64(1)
+    max_gas_limit_difference = max(parent_gas_limit // 1024, Uint64(1)) - Uint64(1)
     min_gas_limit = parent_gas_limit - max_gas_limit_difference
     max_gas_limit = parent_gas_limit + max_gas_limit_difference
 
@@ -452,15 +452,15 @@ def verify_block_body_operation_limits(body: BeaconBlockBody) -> None:
     Raises GossipReject on validation failure.
     """
     # [REJECT] The proposer slashing count is within the limit
-    if Uint64(len(body.proposer_slashings)) > MAX_PROPOSER_SLASHINGS:
+    if len(body.proposer_slashings) > MAX_PROPOSER_SLASHINGS:
         raise GossipReject("too many proposer slashings")
 
     # [REJECT] The attester slashing count is within the limit
-    if Uint64(len(body.attester_slashings)) > MAX_ATTESTER_SLASHINGS_ELECTRA:
+    if len(body.attester_slashings) > MAX_ATTESTER_SLASHINGS_ELECTRA:
         raise GossipReject("too many attester slashings")
 
     # [REJECT] The attestation count is within the limit
-    if Uint64(len(body.attestations)) > MAX_ATTESTATIONS_ELECTRA:
+    if len(body.attestations) > MAX_ATTESTATIONS_ELECTRA:
         raise GossipReject("too many attestations")
 
     # [REJECT] The block contains no deposits
@@ -468,15 +468,15 @@ def verify_block_body_operation_limits(body: BeaconBlockBody) -> None:
         raise GossipReject("block must not contain deposits")
 
     # [REJECT] The voluntary exit count is within the limit
-    if Uint64(len(body.voluntary_exits)) > MAX_VOLUNTARY_EXITS:
+    if len(body.voluntary_exits) > MAX_VOLUNTARY_EXITS:
         raise GossipReject("too many voluntary exits")
 
     # [REJECT] The BLS to execution change count is within the limit
-    if Uint64(len(body.bls_to_execution_changes)) > MAX_BLS_TO_EXECUTION_CHANGES:
+    if len(body.bls_to_execution_changes) > MAX_BLS_TO_EXECUTION_CHANGES:
         raise GossipReject("too many bls to execution changes")
 
     # [REJECT] The payload attestation count is within the limit
-    if Uint64(len(body.payload_attestations)) > MAX_PAYLOAD_ATTESTATIONS:
+    if len(body.payload_attestations) > MAX_PAYLOAD_ATTESTATIONS:
         raise GossipReject("too many payload attestations")
 ```
 
@@ -489,19 +489,19 @@ def verify_execution_requests_limits(execution_requests: ExecutionRequests) -> N
     Raises GossipReject on validation failure.
     """
     # [REJECT] The withdrawal request count is within the limit
-    if Uint64(len(execution_requests.withdrawals)) > MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD:
+    if len(execution_requests.withdrawals) > MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD:
         raise GossipReject("too many withdrawal requests")
 
     # [REJECT] The consolidation request count is within the limit
-    if Uint64(len(execution_requests.consolidations)) > MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD:
+    if len(execution_requests.consolidations) > MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD:
         raise GossipReject("too many consolidation requests")
 
     # [REJECT] The builder deposit request count is within the limit
-    if Uint64(len(execution_requests.builder_deposits)) > MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD:
+    if len(execution_requests.builder_deposits) > MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD:
         raise GossipReject("too many builder deposit requests")
 
     # [REJECT] The builder exit request count is within the limit
-    if Uint64(len(execution_requests.builder_exits)) > MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD:
+    if len(execution_requests.builder_exits) > MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD:
         raise GossipReject("too many builder exit requests")
 ```
 
@@ -581,7 +581,7 @@ def validate_beacon_block_gossip(
     verify_execution_requests_limits(block.body.parent_execution_requests)
 
     # [REJECT] The proposer index is a valid validator index
-    if block.proposer_index >= ValidatorIndex(len(state.validators)):
+    if block.proposer_index >= len(state.validators):
         raise GossipReject("proposer index out of range")
 
     # [REJECT] The proposer signature is valid
@@ -616,7 +616,7 @@ def validate_beacon_block_gossip(
     # [Modified in Gloas:EIP7732]
     # [REJECT] The bid's blob KZG commitment count is within the per-epoch limit
     max_blobs = get_blob_parameters(get_current_epoch(state)).max_blobs_per_block
-    if Uint64(len(bid.blob_kzg_commitments)) > max_blobs:
+    if len(bid.blob_kzg_commitments) > max_blobs:
         raise GossipReject("too many blob kzg commitments")
 
     # [Modified in Gloas:EIP7732]
@@ -819,14 +819,14 @@ def validate_execution_payload_envelope_gossip(
 
     # [IGNORE] The envelope is from a slot greater than or equal to the latest finalized slot
     finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
-    if Uint64(payload.slot_number) < Uint64(finalized_slot):
+    if payload.slot_number < Uint64(finalized_slot):
         raise GossipIgnore("envelope is from a slot before the latest finalized slot")
 
     block = store.blocks[block_root]
     bid = block.body.signed_execution_payload_bid.message
 
     # [REJECT] The block's slot matches the payload's slot number
-    if block.slot != Slot(payload.slot_number):
+    if block.slot != payload.slot_number:
         raise GossipReject("block's slot does not match payload's slot number")
 
     # [REJECT] The envelope is from the builder committed to by the bid
@@ -845,7 +845,7 @@ def validate_execution_payload_envelope_gossip(
     verify_execution_requests_limits(envelope.execution_requests)
 
     # [REJECT] The number of withdrawals is within the limit
-    if Uint64(len(payload.withdrawals)) > MAX_WITHDRAWALS_PER_PAYLOAD:
+    if len(payload.withdrawals) > MAX_WITHDRAWALS_PER_PAYLOAD:
         raise GossipReject("too many withdrawals")
 
     # [REJECT] The envelope signature is valid
@@ -899,7 +899,7 @@ def validate_payload_attestation_message_gossip(
         raise GossipIgnore("payload attestation's block is not at the assigned slot")
 
     # [REJECT] The validator index is valid
-    if validator_index >= ValidatorIndex(len(state.validators)):
+    if validator_index >= len(state.validators):
         raise GossipReject("validator index out of range")
 
     # [REJECT] The validator is a member of the payload timeliness committee
@@ -960,13 +960,13 @@ def validate_execution_payload_bid_gossip(
         raise GossipReject("bid's slot is not higher than its parent's slot")
 
     # [REJECT] The bid's execution payment is zero
-    if bid.execution_payment != Gwei(0):
+    if bid.execution_payment != 0:
         raise GossipReject("bid's execution payment must be zero")
 
     # [REJECT] The bid's blob KZG commitment count is within the per-epoch limit
     proposal_epoch = compute_epoch_at_slot(bid.slot)
     max_blobs = get_blob_parameters(proposal_epoch).max_blobs_per_block
-    if Uint64(len(bid.blob_kzg_commitments)) > max_blobs:
+    if len(bid.blob_kzg_commitments) > max_blobs:
         raise GossipReject("too many blob kzg commitments")
 
     # [IGNORE] The bid's parent block root is a known beacon block
@@ -982,7 +982,7 @@ def validate_execution_payload_bid_gossip(
         raise GossipIgnore("state is not the bid's parent block post-state")
 
     # [IGNORE] The bid's slot is within the parent's proposer lookahead
-    if proposal_epoch > get_current_epoch(state) + Epoch(MIN_SEED_LOOKAHEAD):
+    if proposal_epoch > get_current_epoch(state) + MIN_SEED_LOOKAHEAD:
         raise GossipIgnore("bid's slot is past the parent's proposer lookahead")
 
     # [IGNORE] The matching proposer preferences have been seen
@@ -1021,7 +1021,7 @@ def validate_execution_payload_bid_gossip(
     process_slots(state, bid.slot)
 
     # [REJECT] The builder index is valid
-    if bid.builder_index >= BuilderIndex(len(state.builders)):
+    if bid.builder_index >= len(state.builders):
         raise GossipReject("builder index out of range")
 
     # [IGNORE] The builder can cover the bid

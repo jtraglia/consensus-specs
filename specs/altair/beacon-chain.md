@@ -366,8 +366,8 @@ def get_next_sync_committee(state: BeaconState) -> SyncCommittee:
 def get_base_reward_per_increment(state: BeaconState) -> Gwei:
     return (
         EFFECTIVE_BALANCE_INCREMENT
-        * Gwei(BASE_REWARD_FACTOR)
-        // Gwei(integer_squareroot(Uint64(get_total_active_balance(state))))
+        * BASE_REWARD_FACTOR
+        // integer_squareroot(Uint64(get_total_active_balance(state)))
     )
 ```
 
@@ -479,7 +479,7 @@ def get_flag_index_deltas(
                 rewards[index] += reward_numerator // (
                     Gwei(active_increments) * Gwei(WEIGHT_DENOMINATOR)
                 )
-        elif Uint64(flag_index) != TIMELY_HEAD_FLAG_INDEX:
+        elif flag_index != TIMELY_HEAD_FLAG_INDEX:
             penalties[index] += base_reward * Gwei(weight) // Gwei(WEIGHT_DENOMINATOR)
     return rewards, penalties
 ```
@@ -535,17 +535,17 @@ def slash_validator(
     decrease_balance(
         state,
         slashed_index,
-        validator.effective_balance // Gwei(MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR),
+        validator.effective_balance // MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR,
     )
 
     # Apply proposer and whistleblower rewards
     proposer_index = get_beacon_proposer_index(state)
     if whistleblower_index is None:
         whistleblower_index = proposer_index
-    whistleblower_reward = validator.effective_balance // Gwei(WHISTLEBLOWER_REWARD_QUOTIENT)
-    proposer_reward = whistleblower_reward * Gwei(PROPOSER_WEIGHT) // Gwei(WEIGHT_DENOMINATOR)
+    whistleblower_reward = validator.effective_balance // WHISTLEBLOWER_REWARD_QUOTIENT
+    proposer_reward = whistleblower_reward * PROPOSER_WEIGHT // WEIGHT_DENOMINATOR
     increase_balance(state, proposer_index, proposer_reward)
-    increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
+    increase_balance(state, whistleblower_index, whistleblower_reward - proposer_reward)
 ```
 
 ### Block processing
@@ -637,10 +637,10 @@ def process_sync_aggregate(state: BeaconState, sync_aggregate: SyncAggregate) ->
     # Verify sync committee aggregate signature signing over the previous slot block root
     committee_pubkeys = state.current_sync_committee.pubkeys
     committee_bits = sync_aggregate.sync_committee_bits
-    if Uint64(len([bit for bit in committee_bits if bit])) == SYNC_COMMITTEE_SIZE:
+    if len([bit for bit in committee_bits if bit]) == SYNC_COMMITTEE_SIZE:
         # All members participated - use precomputed aggregate key
         participant_pubkeys = [state.current_sync_committee.aggregate_pubkey]
-    elif Uint64(len([bit for bit in committee_bits if bit])) > SYNC_COMMITTEE_SIZE // Uint64(2):
+    elif len([bit for bit in committee_bits if bit]) > SYNC_COMMITTEE_SIZE // 2:
         # More than half participated - subtract non-participant keys.
         # First determine nonparticipating members
         non_participant_pubkeys = [
@@ -736,7 +736,7 @@ adapt to the new participation records.
 def process_justification_and_finalization(state: BeaconState) -> None:
     # Initial FFG checkpoint values have a `0x00` stub for `root`.
     # Skip FFG updates in the first two epochs to avoid corner cases that might result in modifying this stub.
-    if get_current_epoch(state) <= GENESIS_EPOCH + Epoch(1):
+    if get_current_epoch(state) <= GENESIS_EPOCH + 1:
         return
     previous_indices = get_unslashed_participating_indices(
         state, TIMELY_TARGET_FLAG_INDEX, get_previous_epoch(state)
@@ -814,7 +814,7 @@ def process_slashings(state: BeaconState) -> None:
     for index, validator in enumerate(state.validators):
         if (
             validator.slashed
-            and epoch + EPOCHS_PER_SLASHINGS_VECTOR // Epoch(2) == validator.withdrawable_epoch
+            and epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch
         ):
             increment = EFFECTIVE_BALANCE_INCREMENT  # Factored out from penalty numerator to avoid Uint64 overflow
             penalty_numerator = (

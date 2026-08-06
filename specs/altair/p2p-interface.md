@@ -118,7 +118,7 @@ def get_sync_subcommittee_pubkeys(
 ) -> Sequence[BLSPubkey]:
     # Committees assigned to `slot` sign for `slot - 1`
     # This creates the exceptional logic below when transitioning between sync committee periods
-    next_slot_epoch = compute_epoch_at_slot(state.slot + Slot(1))
+    next_slot_epoch = compute_epoch_at_slot(state.slot + 1)
     if compute_sync_committee_period(get_current_epoch(state)) == compute_sync_committee_period(
         next_slot_epoch
     ):
@@ -128,7 +128,7 @@ def get_sync_subcommittee_pubkeys(
 
     # Return pubkeys for the subcommittee index
     sync_subcommittee_size = SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT
-    i = Uint64(subcommittee_index) * sync_subcommittee_size
+    i = subcommittee_index * sync_subcommittee_size
     return sync_committee.pubkeys[i : i + sync_subcommittee_size]
 ```
 
@@ -249,7 +249,7 @@ def validate_sync_committee_contribution_and_proof_gossip(
         raise GossipIgnore("contribution is not for the current slot")
 
     # [REJECT] The subcommittee index is in the allowed range
-    if Uint64(contribution.subcommittee_index) >= SYNC_COMMITTEE_SUBNET_COUNT:
+    if contribution.subcommittee_index >= SYNC_COMMITTEE_SUBNET_COUNT:
         raise GossipReject("subcommittee index out of range")
 
     # [REJECT] The contribution has participants
@@ -261,7 +261,7 @@ def validate_sync_committee_contribution_and_proof_gossip(
         raise GossipReject("validator is not selected as aggregator")
 
     # [REJECT] The aggregator index is valid
-    if contribution_and_proof.aggregator_index >= ValidatorIndex(len(state.validators)):
+    if contribution_and_proof.aggregator_index >= len(state.validators):
         raise GossipReject("aggregator index out of range")
 
     # [REJECT] The aggregator's validator index is in the declared subcommittee
@@ -365,7 +365,7 @@ def validate_sync_committee_message_gossip(
         raise GossipIgnore("message is not for the current slot")
 
     # [REJECT] The validator index is valid
-    if sync_committee_message.validator_index >= ValidatorIndex(len(state.validators)):
+    if sync_committee_message.validator_index >= len(state.validators):
         raise GossipReject("validator index out of range")
 
     # [REJECT] The subnet_id is valid for the given validator

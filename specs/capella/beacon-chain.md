@@ -327,7 +327,7 @@ def is_fully_withdrawable_validator(validator: Validator, balance: Gwei, epoch: 
     return (
         has_eth1_withdrawal_credential(validator)
         and validator.withdrawable_epoch <= epoch
-        and balance > Gwei(0)
+        and balance > 0
     )
 ```
 
@@ -436,7 +436,7 @@ def get_validators_sweep_withdrawals(
     validators_limit = min(Uint64(len(state.validators)), MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
     withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD
     # There must be at least one space reserved for validator sweep withdrawals
-    assert Uint64(len(prior_withdrawals)) < withdrawals_limit
+    assert len(prior_withdrawals) < withdrawals_limit
 
     processed_count: Uint64 = 0
     withdrawals: list[Withdrawal] = []
@@ -470,7 +470,7 @@ def get_validators_sweep_withdrawals(
             )
             withdrawal_index += WithdrawalIndex(1)
 
-        validator_index = ValidatorIndex((validator_index + 1) % len(state.validators))
+        validator_index = (validator_index + 1) % len(state.validators)
         processed_count += 1
 
     return withdrawals, withdrawal_index, processed_count
@@ -520,18 +520,14 @@ def update_next_withdrawal_validator_index(
     state: BeaconState, withdrawals: Sequence[Withdrawal]
 ) -> None:
     # Update the next validator index to start the next withdrawal sweep
-    if Uint64(len(withdrawals)) == MAX_WITHDRAWALS_PER_PAYLOAD:
+    if len(withdrawals) == MAX_WITHDRAWALS_PER_PAYLOAD:
         # Next sweep starts after the latest withdrawal's validator index
-        next_validator_index = ValidatorIndex(
-            (withdrawals[-1].validator_index + 1) % len(state.validators)
-        )
+        next_validator_index = (withdrawals[-1].validator_index + 1) % len(state.validators)
         state.next_withdrawal_validator_index = next_validator_index
     else:
         # Advance sweep by the max length of the sweep if there was not a full set of withdrawals
-        next_index = state.next_withdrawal_validator_index + ValidatorIndex(
-            MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP
-        )
-        next_validator_index = ValidatorIndex(next_index % len(state.validators))
+        next_index = state.next_withdrawal_validator_index + MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP
+        next_validator_index = next_index % len(state.validators)
         state.next_withdrawal_validator_index = next_validator_index
 ```
 
@@ -603,7 +599,7 @@ def process_execution_payload(
 ```python
 def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
     # Verify that outstanding deposits are processed up to the maximum number of deposits
-    assert Uint64(len(body.deposits)) == min(
+    assert len(body.deposits) == min(
         MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index
     )
 
@@ -628,7 +624,7 @@ def process_bls_to_execution_change(
 ) -> None:
     address_change = signed_address_change.message
 
-    assert address_change.validator_index < ValidatorIndex(len(state.validators))
+    assert address_change.validator_index < len(state.validators)
 
     validator = state.validators[address_change.validator_index]
 

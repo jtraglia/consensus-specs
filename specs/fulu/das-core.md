@@ -231,7 +231,7 @@ def get_custody_groups(node_id: NodeID, custody_group_count: Uint64) -> Sequence
 
 ```python
 def compute_columns_for_custody_group(custody_group: CustodyIndex) -> Sequence[ColumnIndex]:
-    assert custody_group < CustodyIndex(NUMBER_OF_CUSTODY_GROUPS)
+    assert custody_group < NUMBER_OF_CUSTODY_GROUPS
     columns_per_group = NUMBER_OF_COLUMNS // NUMBER_OF_CUSTODY_GROUPS
     return [
         ColumnIndex(NUMBER_OF_CUSTODY_GROUPS * Uint64(i) + Uint64(custody_group))

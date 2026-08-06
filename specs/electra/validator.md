@@ -265,7 +265,7 @@ def get_execution_requests(execution_requests_list: Sequence[bytes]) -> Executio
 
 ```python
 def compute_subnet_for_blob_sidecar(blob_index: BlobIndex) -> SubnetID:
-    return SubnetID(blob_index % BlobIndex(BLOB_SIDECAR_SUBNET_COUNT_ELECTRA))
+    return SubnetID(blob_index % BLOB_SIDECAR_SUBNET_COUNT_ELECTRA)
 ```
 
 ## Attesting

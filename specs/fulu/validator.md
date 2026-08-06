@@ -141,7 +141,7 @@ def get_validators_custody_requirement(
         (state.validators[index].effective_balance for index in validator_indices),
         Gwei(0),
     )
-    count = Uint64(total_node_balance // Gwei(BALANCE_PER_ADDITIONAL_CUSTODY_GROUP))
+    count = Uint64(total_node_balance // BALANCE_PER_ADDITIONAL_CUSTODY_GROUP)
     return min(max(count, VALIDATOR_CUSTODY_REQUIREMENT), NUMBER_OF_CUSTODY_GROUPS)
 ```
 

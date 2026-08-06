@@ -145,8 +145,7 @@ def get_forkchoice_store(anchor_state: BeaconState, anchor_block: BeaconBlock) -
     finalized_checkpoint = Checkpoint(epoch=anchor_epoch, root=anchor_root)
     proposer_boost_root = Root()
     return Store(
-        time=anchor_state.genesis_time
-        + SLOT_DURATION_MS * Uint64(anchor_state.slot) // Uint64(1000),
+        time=anchor_state.genesis_time + SLOT_DURATION_MS * Uint64(anchor_state.slot) // 1000,
         genesis_time=anchor_state.genesis_time,
         justified_checkpoint=justified_checkpoint,
         finalized_checkpoint=finalized_checkpoint,
@@ -193,7 +192,7 @@ def record_payload_inclusion_list_satisfaction(
     execution_engine: ExecutionEngine,
 ) -> None:
     inclusion_list_transactions = get_inclusion_list_transactions(
-        get_inclusion_list_store(), state, state.slot - Slot(1), only_timely=True
+        get_inclusion_list_store(), state, state.slot - 1, only_timely=True
     )
     is_inclusion_list_satisfied = execution_engine.is_inclusion_list_satisfied(
         payload, inclusion_list_transactions
@@ -227,7 +226,7 @@ not satisfy the inclusion list constraints.
 
 ```python
 def should_extend_payload(store: Store, root: Root) -> bool:
-    assert store.blocks[root].slot + Slot(1) == get_current_slot(store)
+    assert store.blocks[root].slot + 1 == get_current_slot(store)
     if not is_payload_verified(store, root):
         return False
     # [New in Heze:EIP7805]

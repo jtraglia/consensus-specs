@@ -96,7 +96,7 @@ def compute_max_request_blob_sidecars() -> Uint64:
     Return the maximum number of blob sidecars in a single request.
     """
     # [Modified in Electra:EIP7691]
-    return Uint64(MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK_ELECTRA)
+    return MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK_ELECTRA
 ```
 
 ### The gossip domain: gossipsub
@@ -161,7 +161,7 @@ def validate_beacon_block_gossip(
         raise GossipIgnore("block is not the first valid block for this slot and proposer")
 
     # [REJECT] The proposer index is a valid validator index
-    if block.proposer_index >= ValidatorIndex(len(state.validators)):
+    if block.proposer_index >= len(state.validators):
         raise GossipReject("proposer index out of range")
 
     # [REJECT] The proposer signature is valid
@@ -208,7 +208,7 @@ def validate_beacon_block_gossip(
 
     # [Modified in Electra:EIP7691]
     # [REJECT] The length of KZG commitments is less than or equal to the limit
-    if Uint64(len(block.body.blob_kzg_commitments)) > MAX_BLOBS_PER_BLOCK_ELECTRA:
+    if len(block.body.blob_kzg_commitments) > MAX_BLOBS_PER_BLOCK_ELECTRA:
         raise GossipReject("too many blob kzg commitments")
 
     # [REJECT] The block is proposed by the expected proposer for the slot
@@ -406,7 +406,7 @@ def validate_beacon_attestation_gossip(
     expected_subnet = compute_subnet_for_attestation(
         committees_per_slot, data.slot, committee_index
     )
-    if expected_subnet != SubnetID(subnet_id):
+    if expected_subnet != subnet_id:
         raise GossipReject("attestation is for wrong subnet")
 
     # [IGNORE] The attestation's slot is not from a future slot
@@ -510,7 +510,7 @@ def validate_blob_sidecar_gossip(
         raise GossipIgnore("blob sidecar is not from a slot greater than the latest finalized slot")
 
     # [REJECT] The proposer index is a valid validator index
-    if block_header.proposer_index >= ValidatorIndex(len(state.validators)):
+    if block_header.proposer_index >= len(state.validators):
         raise GossipReject("proposer index out of range")
 
     # [REJECT] The proposer signature of blob_sidecar.signed_block_header is valid

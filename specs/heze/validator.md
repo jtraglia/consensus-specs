@@ -168,7 +168,7 @@ def prepare_execution_payload(
         target_gas_limit=target_gas_limit,
         # [New in Heze:EIP7805]
         inclusion_list_transactions=get_inclusion_list_transactions(
-            get_inclusion_list_store(), state, state.slot - Slot(1), only_timely=False
+            get_inclusion_list_store(), state, state.slot - 1, only_timely=False
         ),
     )
     return execution_engine.notify_forkchoice_updated(

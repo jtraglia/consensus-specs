@@ -108,7 +108,7 @@ def compute_max_request_execution_proofs() -> Uint64:
     """
     Return the maximum number of execution proofs in a single request.
     """
-    return Uint64(MAX_REQUEST_BLOCKS_DENEB * MAX_EXECUTION_PROOFS_PER_PAYLOAD)
+    return MAX_REQUEST_BLOCKS_DENEB * MAX_EXECUTION_PROOFS_PER_PAYLOAD
 ```
 
 ## The gossip domain: gossipsub

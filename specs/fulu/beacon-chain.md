@@ -126,7 +126,7 @@ def process_execution_payload(
     # [Modified in Fulu:EIP7892]
     # Verify commitments are under limit
     assert (
-        Uint64(len(body.blob_kzg_commitments))
+        len(body.blob_kzg_commitments)
         <= get_blob_parameters(get_current_epoch(state)).max_blobs_per_block
     )
 
@@ -297,7 +297,7 @@ def get_blob_parameters(epoch: Epoch) -> BlobParameters:
     for entry in sorted(BLOB_SCHEDULE, key=lambda e: e["EPOCH"], reverse=True):
         if epoch >= Epoch(entry["EPOCH"]):
             return BlobParameters(Epoch(entry["EPOCH"]), Uint64(entry["MAX_BLOBS_PER_BLOCK"]))
-    return BlobParameters(Epoch(ELECTRA_FORK_EPOCH), Uint64(MAX_BLOBS_PER_BLOCK_ELECTRA))
+    return BlobParameters(ELECTRA_FORK_EPOCH, MAX_BLOBS_PER_BLOCK_ELECTRA)
 ```
 
 #### Modified `compute_fork_digest`
@@ -320,7 +320,7 @@ def compute_fork_digest(
     base_digest = compute_fork_data_root(fork_version, genesis_validators_root)
 
     # [New in Fulu:EIP7892]
-    if epoch < Epoch(FULU_FORK_EPOCH):
+    if epoch < FULU_FORK_EPOCH:
         return ForkDigest(base_digest[:4])
 
     # [Modified in Fulu:EIP7892]

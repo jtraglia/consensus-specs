@@ -601,9 +601,9 @@ def compute_proposer_index(
     while True:
         candidate_index = indices[compute_shuffled_index(i % total, total, seed)]
         # [Modified in Electra]
-        random_bytes = hash(seed + uint_to_bytes(i // Uint64(16)))
-        offset = i % Uint64(16) * Uint64(2)
-        random_value = Gwei(bytes_to_uint64(random_bytes[offset : offset + Uint64(2)]))
+        random_bytes = hash(seed + uint_to_bytes(i // 16))
+        offset = i % 16 * 2
+        random_value = Gwei(bytes_to_uint64(random_bytes[offset : offset + 2]))
         effective_balance = state.validators[candidate_index].effective_balance
         # [Modified in Electra:EIP7251]
         if effective_balance * MAX_RANDOM_VALUE >= MAX_EFFECTIVE_BALANCE_ELECTRA * random_value:
@@ -673,7 +673,7 @@ def is_fully_withdrawable_validator(validator: Validator, balance: Gwei, epoch: 
         # [Modified in Electra:EIP7251]
         has_execution_withdrawal_credential(validator)
         and validator.withdrawable_epoch <= epoch
-        and balance > Gwei(0)
+        and balance > 0
     )
 ```
 
@@ -781,7 +781,7 @@ def get_pending_balance_to_withdraw(state: BeaconState, validator_index: Validat
         (
             withdrawal.amount
             for withdrawal in state.pending_partial_withdrawals
-            if withdrawal.validator_index == ValidatorIndex(validator_index)
+            if withdrawal.validator_index == validator_index
         ),
         Gwei(0),
     )
@@ -839,9 +839,9 @@ def get_next_sync_committee_indices(state: BeaconState) -> Sequence[ValidatorInd
         )
         candidate_index = active_validator_indices[shuffled_index]
         # [Modified in Electra]
-        random_bytes = hash(seed + uint_to_bytes(i // Uint64(16)))
-        offset = i % Uint64(16) * Uint64(2)
-        random_value = Gwei(bytes_to_uint64(random_bytes[offset : offset + Uint64(2)]))
+        random_bytes = hash(seed + uint_to_bytes(i // 16))
+        offset = i % 16 * 2
+        random_value = Gwei(bytes_to_uint64(random_bytes[offset : offset + 2]))
         effective_balance = state.validators[candidate_index].effective_balance
         # [Modified in Electra:EIP7251]
         if effective_balance * MAX_RANDOM_VALUE >= MAX_EFFECTIVE_BALANCE_ELECTRA * random_value:
@@ -872,7 +872,7 @@ def initiate_validator_exit(state: BeaconState, index: ValidatorIndex) -> None:
 
     # Set validator exit epoch and withdrawable epoch
     validator.exit_epoch = exit_queue_epoch
-    validator.withdrawable_epoch = Epoch(validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
+    validator.withdrawable_epoch = validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
 ```
 
 #### New `switch_to_compounding_validator`
@@ -925,7 +925,7 @@ def compute_exit_epoch_and_update_churn(state: BeaconState, exit_balance: Gwei) 
     # Exit doesn't fit in the current earliest epoch.
     if exit_balance > exit_balance_to_consume:
         balance_to_process = exit_balance - exit_balance_to_consume
-        additional_epochs = (balance_to_process - Gwei(1)) // per_epoch_churn + Gwei(1)
+        additional_epochs = (balance_to_process - 1) // per_epoch_churn + Gwei(1)
         earliest_exit_epoch += Epoch(additional_epochs)
         exit_balance_to_consume += additional_epochs * per_epoch_churn
 
@@ -955,9 +955,7 @@ def compute_consolidation_epoch_and_update_churn(
     # Consolidation doesn't fit in the current earliest epoch.
     if consolidation_balance > consolidation_balance_to_consume:
         balance_to_process = consolidation_balance - consolidation_balance_to_consume
-        additional_epochs = (balance_to_process - Gwei(1)) // per_epoch_consolidation_churn + Gwei(
-            1
-        )
+        additional_epochs = (balance_to_process - 1) // per_epoch_consolidation_churn + Gwei(1)
         earliest_consolidation_epoch += Epoch(additional_epochs)
         consolidation_balance_to_consume += additional_epochs * per_epoch_consolidation_churn
 
@@ -994,7 +992,7 @@ def slash_validator(
     )
     state.slashings[epoch % EPOCHS_PER_SLASHINGS_VECTOR] += validator.effective_balance
     # [Modified in Electra:EIP7251]
-    slashing_penalty = validator.effective_balance // Gwei(MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA)
+    slashing_penalty = validator.effective_balance // MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA
     decrease_balance(state, slashed_index, slashing_penalty)
 
     # Apply proposer and whistleblower rewards
@@ -1002,10 +1000,8 @@ def slash_validator(
     if whistleblower_index is None:
         whistleblower_index = proposer_index
     # [Modified in Electra:EIP7251]
-    whistleblower_reward = validator.effective_balance // Gwei(
-        WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA
-    )
-    proposer_reward = whistleblower_reward * Gwei(PROPOSER_WEIGHT) // Gwei(WEIGHT_DENOMINATOR)
+    whistleblower_reward = validator.effective_balance // WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA
+    proposer_reward = whistleblower_reward * PROPOSER_WEIGHT // WEIGHT_DENOMINATOR
     increase_balance(state, proposer_index, proposer_reward)
     increase_balance(state, whistleblower_index, whistleblower_reward - proposer_reward)
 ```
@@ -1093,7 +1089,7 @@ def process_slashings(state: BeaconState) -> None:
     for index, validator in enumerate(state.validators):
         if (
             validator.slashed
-            and epoch + EPOCHS_PER_SLASHINGS_VECTOR // Epoch(2) == validator.withdrawable_epoch
+            and epoch + EPOCHS_PER_SLASHINGS_VECTOR // 2 == validator.withdrawable_epoch
         ):
             effective_balance_increments = validator.effective_balance // increment
             # [Modified in Electra:EIP7251]
@@ -1242,9 +1238,9 @@ def process_effective_balance_updates(state: BeaconState) -> None:
     # Update effective balances with hysteresis
     for index, validator in enumerate(state.validators):
         balance = state.balances[index]
-        HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT // Gwei(HYSTERESIS_QUOTIENT)
-        DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * Gwei(HYSTERESIS_DOWNWARD_MULTIPLIER)
-        UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * Gwei(HYSTERESIS_UPWARD_MULTIPLIER)
+        HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT // HYSTERESIS_QUOTIENT
+        DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER
+        UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER
         # [Modified in Electra:EIP7251]
         max_effective_balance = get_max_effective_balance(validator)
 
@@ -1377,17 +1373,17 @@ def get_pending_partial_withdrawals(
 ) -> Tuple[Sequence[Withdrawal], WithdrawalIndex, Uint64]:
     epoch = get_current_epoch(state)
     withdrawals_limit = min(
-        Uint64(len(prior_withdrawals)) + MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
-        MAX_WITHDRAWALS_PER_PAYLOAD - Uint64(1),
+        len(prior_withdrawals) + MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
+        MAX_WITHDRAWALS_PER_PAYLOAD - 1,
     )
-    assert Uint64(len(prior_withdrawals)) <= withdrawals_limit
+    assert len(prior_withdrawals) <= withdrawals_limit
 
     processed_count: Uint64 = 0
     withdrawals: list[Withdrawal] = []
     for withdrawal in state.pending_partial_withdrawals:
         all_withdrawals = list(prior_withdrawals) + withdrawals
         is_withdrawable = withdrawal.withdrawable_epoch <= epoch
-        has_reached_limit = Uint64(len(all_withdrawals)) >= withdrawals_limit
+        has_reached_limit = len(all_withdrawals) >= withdrawals_limit
         if not is_withdrawable or has_reached_limit:
             break
 
@@ -1426,7 +1422,7 @@ def get_validators_sweep_withdrawals(
     validators_limit = min(Uint64(len(state.validators)), MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
     withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD
     # There must be at least one space reserved for validator sweep withdrawals
-    assert Uint64(len(prior_withdrawals)) < withdrawals_limit
+    assert len(prior_withdrawals) < withdrawals_limit
 
     processed_count: Uint64 = 0
     withdrawals: list[Withdrawal] = []
@@ -1461,7 +1457,7 @@ def get_validators_sweep_withdrawals(
             )
             withdrawal_index += WithdrawalIndex(1)
 
-        validator_index = ValidatorIndex((validator_index + 1) % len(state.validators))
+        validator_index = (validator_index + 1) % len(state.validators)
         processed_count += 1
 
     return withdrawals, withdrawal_index, processed_count
@@ -1570,7 +1566,7 @@ def process_execution_payload(
     assert payload.timestamp == compute_time_at_slot(state, state.slot)
     # [Modified in Electra:EIP7691]
     # Verify commitments are under limit
-    assert Uint64(len(body.blob_kzg_commitments)) <= MAX_BLOBS_PER_BLOCK_ELECTRA
+    assert len(body.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK_ELECTRA
 
     # Compute list of versioned hashes
     versioned_hashes = [
@@ -1625,7 +1621,7 @@ def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
         state.eth1_data.deposit_count, state.deposit_requests_start_index
     )
     if state.eth1_deposit_index < eth1_deposit_index_limit:
-        assert Uint64(len(body.deposits)) == min(
+        assert len(body.deposits) == min(
             MAX_DEPOSITS, eth1_deposit_index_limit - state.eth1_deposit_index
         )
     else:
@@ -1826,7 +1822,7 @@ def process_deposit(state: BeaconState, deposit: Deposit) -> None:
         leaf=hash_tree_root(deposit.data),
         branch=deposit.proof,
         # Add 1 for the List length mix-in
-        depth=DEPOSIT_CONTRACT_TREE_DEPTH + Uint64(1),
+        depth=DEPOSIT_CONTRACT_TREE_DEPTH + 1,
         index=state.eth1_deposit_index,
         root=state.eth1_data.deposit_root,
     )
@@ -1887,7 +1883,7 @@ def process_withdrawal_request(state: BeaconState, withdrawal_request: Withdrawa
 
     # If partial withdrawal queue is full, only full exits are processed
     if (
-        Uint64(len(state.pending_partial_withdrawals)) == PENDING_PARTIAL_WITHDRAWALS_LIMIT
+        len(state.pending_partial_withdrawals) == PENDING_PARTIAL_WITHDRAWALS_LIMIT
         and not is_full_exit_request
     ):
         return
@@ -2028,7 +2024,7 @@ def process_consolidation_request(
     if consolidation_request.source_pubkey == consolidation_request.target_pubkey:
         return
     # If the pending consolidations queue is full, consolidation requests are ignored
-    if Uint64(len(state.pending_consolidations)) == PENDING_CONSOLIDATIONS_LIMIT:
+    if len(state.pending_consolidations) == PENDING_CONSOLIDATIONS_LIMIT:
         return
     # If there is too little available consolidation churn limit, consolidation requests are ignored
     if get_consolidation_churn_limit(state) <= MIN_ACTIVATION_BALANCE:
@@ -2081,7 +2077,7 @@ def process_consolidation_request(
     source_validator.exit_epoch = compute_consolidation_epoch_and_update_churn(
         state, source_validator.effective_balance
     )
-    source_validator.withdrawable_epoch = Epoch(
+    source_validator.withdrawable_epoch = (
         source_validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
     )
     state.pending_consolidations.append(

@@ -221,8 +221,7 @@ def get_forkchoice_store(anchor_state: BeaconState, anchor_block: BeaconBlock) -
     finalized_checkpoint = Checkpoint(epoch=anchor_epoch, root=anchor_root)
     proposer_boost_root = Root()
     return Store(
-        time=anchor_state.genesis_time
-        + SLOT_DURATION_MS * Uint64(anchor_state.slot) // Uint64(1000),
+        time=anchor_state.genesis_time + SLOT_DURATION_MS * Uint64(anchor_state.slot) // 1000,
         genesis_time=anchor_state.genesis_time,
         justified_checkpoint=justified_checkpoint,
         finalized_checkpoint=finalized_checkpoint,
@@ -421,7 +420,7 @@ def filter_block_tree(store: Store, block_root: Root, blocks: Dict[Root, BeaconB
     correct_justified = (
         store.justified_checkpoint.epoch == GENESIS_EPOCH
         or voting_source.epoch == store.justified_checkpoint.epoch
-        or voting_source.epoch + Epoch(2) >= current_epoch
+        or voting_source.epoch + 2 >= current_epoch
     )
 
     finalized_checkpoint_block = get_checkpoint_block(
@@ -542,9 +541,9 @@ def seconds_to_milliseconds(seconds: Uint64) -> Uint64:
     Convert seconds to milliseconds with overflow protection.
     Returns ``UINT64_MAX`` if the result would overflow.
     """
-    if seconds > UINT64_MAX // Uint64(1000):
+    if seconds > UINT64_MAX // 1000:
         return UINT64_MAX
-    return seconds * Uint64(1000)
+    return seconds * 1000
 ```
 
 #### `get_slot_component_duration_ms`
@@ -593,7 +592,7 @@ def is_head_late(store: Store, head_root: Root) -> bool:
 
 ```python
 def is_not_epoch_boundary(slot: Slot) -> bool:
-    return slot % SLOTS_PER_EPOCH != Slot(0)
+    return slot % SLOTS_PER_EPOCH != 0
 ```
 
 ##### `is_ffg_competitive`
@@ -709,8 +708,8 @@ def get_proposer_head(store: Store, head_node: ForkChoiceNode, slot: Slot) -> Fo
     proposing_on_time = is_proposing_on_time(store)
 
     # Only re-org a single slot at most.
-    parent_slot_ok = parent_block.slot + Slot(1) == head_block.slot
-    current_time_ok = head_block.slot + Slot(1) == slot
+    parent_slot_ok = parent_block.slot + 1 == head_block.slot
+    current_time_ok = head_block.slot + 1 == slot
     single_slot_reorg = parent_slot_ok and current_time_ok
 
     # Check that the head has few enough votes to be overpowered by our proposer boost.
@@ -835,7 +834,7 @@ def validate_on_attestation(store: Store, attestation: Attestation, is_from_bloc
 
     # Attestations can only affect the fork choice of subsequent slots.
     # Delay consideration in the fork choice until their slot is in the past.
-    assert get_current_slot(store) >= attestation.data.slot + Slot(1)
+    assert get_current_slot(store) >= attestation.data.slot + 1
 ```
 
 ##### `store_target_checkpoint_state`
@@ -924,11 +923,12 @@ def update_proposer_boost_root(store: Store, head: Root, root: Root) -> None:
 def on_tick(store: Store, time: Uint64) -> None:
     # If the ``store.time`` falls behind, while loop catches up slot by slot
     # to ensure that every previous slot is processed with ``on_tick_per_slot``
-    tick_slot = Slot((time - store.genesis_time) * Uint64(1000) // SLOT_DURATION_MS)
+    tick_slot = Slot((time - store.genesis_time) * 1000 // SLOT_DURATION_MS)
     while get_current_slot(store) < tick_slot:
-        previous_time = store.genesis_time + Uint64(
-            get_current_slot(store) + Slot(1)
-        ) * SLOT_DURATION_MS // Uint64(1000)
+        previous_time = (
+            store.genesis_time
+            + Uint64(get_current_slot(store) + Slot(1)) * SLOT_DURATION_MS // 1000
+        )
         on_tick_per_slot(store, previous_time)
     on_tick_per_slot(store, time)
 ```

@@ -299,7 +299,7 @@ def get_committee_assignment(
     for slot in range(start_slot, start_slot + SLOTS_PER_EPOCH):
         for index in range(committee_count_per_slot):
             committee = get_beacon_committee(state, Slot(slot), CommitteeIndex(index))
-            if ValidatorIndex(validator_index) in committee:
+            if validator_index in committee:
                 return committee, CommitteeIndex(index), Slot(slot)
     return None
 ```
@@ -460,18 +460,17 @@ An honest block proposer sets
 
 ```python
 def voting_period_start_time(state: BeaconState) -> Uint64:
-    eth1_voting_period_start_slot = Slot(
-        state.slot - state.slot % (Slot(EPOCHS_PER_ETH1_VOTING_PERIOD) * SLOTS_PER_EPOCH)
+    eth1_voting_period_start_slot = state.slot - state.slot % (
+        Slot(EPOCHS_PER_ETH1_VOTING_PERIOD) * SLOTS_PER_EPOCH
     )
     return compute_time_at_slot(state, eth1_voting_period_start_slot)
 ```
 
 ```python
 def is_candidate_block(block: Eth1Block, period_start: Uint64) -> bool:
-    return block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= Uint64(
-        period_start
-    ) and block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * Uint64(2) >= Uint64(
-        period_start
+    return (
+        block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= period_start
+        and block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * 2 >= period_start
     )
 ```
 
@@ -705,7 +704,7 @@ def compute_subnet_for_attestation(
     Compute the correct subnet for an attestation for Phase 0.
     Note, this mimics expected future behavior where attestations will be mapped to their shard subnet.
     """
-    slots_since_epoch_start = Uint64(Slot(slot) % SLOTS_PER_EPOCH)
+    slots_since_epoch_start = Uint64(slot % SLOTS_PER_EPOCH)
     committees_since_epoch_start = committees_per_slot * slots_since_epoch_start
 
     return SubnetID(
@@ -735,7 +734,7 @@ def is_aggregator(
     state: BeaconState, slot: Slot, index: CommitteeIndex, slot_signature: BLSSignature
 ) -> bool:
     committee = get_beacon_committee(state, slot, index)
-    modulo = max(Uint64(1), Uint64(len(committee)) // TARGET_AGGREGATORS_PER_COMMITTEE)
+    modulo = max(Uint64(1), len(committee) // TARGET_AGGREGATORS_PER_COMMITTEE)
     return bytes_to_uint64(hash(slot_signature)[0:8]) % modulo == Uint64(0)
 ```
 
