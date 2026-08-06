@@ -292,7 +292,7 @@ def get_validators_sweep_withdrawals(
     prior_withdrawals: Sequence[Withdrawal],
 ) -> Tuple[Sequence[Withdrawal], WithdrawalIndex, Uint64]:
     epoch = get_current_epoch(state)
-    validators_limit = min(Uint64(len(state.validators)), MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
+    validators_limit = min(len(state.validators), MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
     withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD
     # There must be at least one space reserved for validator sweep withdrawals
     assert len(prior_withdrawals) < withdrawals_limit
@@ -370,7 +370,7 @@ def process_set_sweep_threshold_request(
         return
     if request.threshold < state.balances[index]:
         return
-    if request.threshold % EFFECTIVE_BALANCE_INCREMENT != Gwei(0):
+    if request.threshold % EFFECTIVE_BALANCE_INCREMENT != 0:
         return
     if request.threshold < MIN_SWEEP_THRESHOLD:
         return

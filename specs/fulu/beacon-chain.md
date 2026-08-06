@@ -295,8 +295,8 @@ def get_blob_parameters(epoch: Epoch) -> BlobParameters:
     Return the blob parameters at a given epoch.
     """
     for entry in sorted(BLOB_SCHEDULE, key=lambda e: e["EPOCH"], reverse=True):
-        if epoch >= Epoch(entry["EPOCH"]):
-            return BlobParameters(Epoch(entry["EPOCH"]), Uint64(entry["MAX_BLOBS_PER_BLOCK"]))
+        if epoch >= entry["EPOCH"]:
+            return BlobParameters(entry["EPOCH"], entry["MAX_BLOBS_PER_BLOCK"])
     return BlobParameters(ELECTRA_FORK_EPOCH, MAX_BLOBS_PER_BLOCK_ELECTRA)
 ```
 
@@ -419,7 +419,7 @@ def process_pending_deposits(state: BeaconState) -> None:
     available_for_processing = state.deposit_balance_to_consume + get_activation_exit_churn_limit(
         state
     )
-    processed_amount = Gwei(0)
+    processed_amount = 0
     next_deposit_index = 0
     deposits_to_postpone = []
     is_churn_limit_reached = False

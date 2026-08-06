@@ -855,10 +855,10 @@ def validate_on_attestation(store: Store, attestation: Attestation, is_from_bloc
     # [New in Gloas:EIP7732]
     assert attestation.data.index in (CommitteeIndex(0), CommitteeIndex(1))
     if block_slot == attestation.data.slot:
-        assert attestation.data.index == CommitteeIndex(0)
+        assert attestation.data.index == 0
     # [New in Gloas:EIP7732]
     # If attesting for a full node, the payload must be known
-    if attestation.data.index == CommitteeIndex(1):
+    if attestation.data.index == 1:
         assert is_payload_verified(store, attestation.data.beacon_block_root)
 
     # LMD vote must be consistent with FFG vote target
@@ -885,7 +885,7 @@ def update_latest_messages(
 ) -> None:
     slot = attestation.data.slot
     beacon_block_root = attestation.data.beacon_block_root
-    payload_present = attestation.data.index == CommitteeIndex(1)
+    payload_present = attestation.data.index == 1
     non_equivocating_attesting_indices = [
         i for i in attesting_indices if i not in store.equivocating_indices
     ]

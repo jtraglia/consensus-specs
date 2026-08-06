@@ -283,7 +283,7 @@ def verify_data_column_sidecar(
     Verify if the data column sidecar is valid.
     """
     # The sidecar index must be within the valid range
-    if sidecar.index >= ColumnIndex(NUMBER_OF_COLUMNS):
+    if sidecar.index >= NUMBER_OF_COLUMNS:
         return False
 
     # [Modified in Gloas:EIP7732]
@@ -346,7 +346,7 @@ def is_gas_limit_target_compatible(
     Check if ``gas_limit`` is compatible with ``target_gas_limit`` under the
     EIP-1559 transition rule from ``parent_gas_limit``.
     """
-    max_gas_limit_difference = max(parent_gas_limit // 1024, Uint64(1)) - Uint64(1)
+    max_gas_limit_difference = max(parent_gas_limit // 1024, 1) - 1
     min_gas_limit = parent_gas_limit - max_gas_limit_difference
     max_gas_limit = parent_gas_limit + max_gas_limit_difference
 
@@ -420,10 +420,10 @@ def verify_attestation_payload_status(
     block = store.blocks[block_root]
 
     # [REJECT] For same-slot attestations, the payload cannot yet be present
-    if block.slot == data.slot and data.index != CommitteeIndex(0):
+    if block.slot == data.slot and data.index != 0:
         raise GossipReject("same-slot attestation must attest with index 0")
 
-    if data.index != CommitteeIndex(1):
+    if data.index != 1:
         return
 
     # [IGNORE] The corresponding execution payload envelope has been seen and verified
@@ -673,7 +673,7 @@ def validate_beacon_aggregate_and_proof_gossip(
 
     # [New in Gloas:EIP7732]
     # [REJECT] The aggregate attestation's data index is 0 or 1
-    if aggregate.data.index > CommitteeIndex(1):
+    if aggregate.data.index > 1:
         raise GossipReject("aggregate data index must be 0 or 1")
 
     # [REJECT] Exactly one committee is specified by the committee bits
@@ -684,7 +684,7 @@ def validate_beacon_aggregate_and_proof_gossip(
 
     # [REJECT] The committee index is within the expected range
     committee_count = get_committee_count_per_slot(state, aggregate.data.target.epoch)
-    if index >= CommitteeIndex(committee_count):
+    if index >= committee_count:
         raise GossipReject("committee index out of range")
 
     # [IGNORE] The aggregate attestation's slot is not from a future slot
@@ -819,7 +819,7 @@ def validate_execution_payload_envelope_gossip(
 
     # [IGNORE] The envelope is from a slot greater than or equal to the latest finalized slot
     finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
-    if payload.slot_number < Uint64(finalized_slot):
+    if payload.slot_number < finalized_slot:
         raise GossipIgnore("envelope is from a slot before the latest finalized slot")
 
     block = store.blocks[block_root]
@@ -1157,12 +1157,12 @@ def validate_beacon_attestation_gossip(
 
     # [New in Gloas:EIP7732]
     # [REJECT] The attestation's data index is 0 or 1
-    if data.index > CommitteeIndex(1):
+    if data.index > 1:
         raise GossipReject("attestation data index must be 0 or 1")
 
     # [REJECT] The committee index is within the expected range
     committees_per_slot = get_committee_count_per_slot(state, target_epoch)
-    if committee_index >= CommitteeIndex(committees_per_slot):
+    if committee_index >= committees_per_slot:
         raise GossipReject("committee index out of range")
 
     # [REJECT] The attestation is for the correct subnet

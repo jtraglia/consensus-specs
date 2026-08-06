@@ -187,7 +187,7 @@ def is_assigned_to_sync_committee(
     sync_committee_period = compute_sync_committee_period(epoch)
     current_epoch = get_current_epoch(state)
     current_sync_committee_period = compute_sync_committee_period(current_epoch)
-    next_sync_committee_period = current_sync_committee_period + Epoch(1)
+    next_sync_committee_period = current_sync_committee_period + 1
     assert sync_committee_period in (current_sync_committee_period, next_sync_committee_period)
 
     pubkey = state.validators[validator_index].pubkey
@@ -295,7 +295,7 @@ def process_sync_committee_contributions(
         subcommittee_index = contribution.subcommittee_index
         for index, participated in enumerate(contribution.aggregation_bits):
             if participated:
-                participant_index = sync_subcommittee_size * subcommittee_index + Uint64(index)
+                participant_index = sync_subcommittee_size * subcommittee_index + index
                 sync_aggregate.sync_committee_bits[participant_index] = True
         signatures.append(contribution.signature)
 
@@ -451,12 +451,12 @@ def get_sync_committee_selection_proof(
 ```python
 def is_sync_committee_aggregator(signature: BLSSignature) -> bool:
     modulo = max(
-        Uint64(1),
+        1,
         SYNC_COMMITTEE_SIZE
         // SYNC_COMMITTEE_SUBNET_COUNT
         // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE,
     )
-    return bytes_to_uint64(hash(signature)[0:8]) % modulo == Uint64(0)
+    return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
 ```
 
 *Note*: The set of aggregators generally changes every slot; however, the

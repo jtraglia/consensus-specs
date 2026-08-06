@@ -595,7 +595,7 @@ def compute_proposer_index(
     """
     assert len(indices) > 0
     # [Modified in Electra]
-    MAX_RANDOM_VALUE = Gwei(2**16 - 1)
+    MAX_RANDOM_VALUE = 2**16 - 1
     i = Uint64(0)
     total = Uint64(len(indices))
     while True:
@@ -603,12 +603,12 @@ def compute_proposer_index(
         # [Modified in Electra]
         random_bytes = hash(seed + uint_to_bytes(i // 16))
         offset = i % 16 * 2
-        random_value = Gwei(bytes_to_uint64(random_bytes[offset : offset + 2]))
+        random_value = bytes_to_uint64(random_bytes[offset : offset + 2])
         effective_balance = state.validators[candidate_index].effective_balance
         # [Modified in Electra:EIP7251]
         if effective_balance * MAX_RANDOM_VALUE >= MAX_EFFECTIVE_BALANCE_ELECTRA * random_value:
             return candidate_index
-        i += Uint64(1)
+        i += 1
 ```
 
 #### Modified `is_eligible_for_activation_queue`
@@ -827,7 +827,7 @@ def get_next_sync_committee_indices(state: BeaconState) -> Sequence[ValidatorInd
     epoch = get_current_epoch(state) + Epoch(1)
 
     # [Modified in Electra]
-    MAX_RANDOM_VALUE = Gwei(2**16 - 1)
+    MAX_RANDOM_VALUE = 2**16 - 1
     active_validator_indices = get_active_validator_indices(state, epoch)
     active_validator_count = Uint64(len(active_validator_indices))
     seed = get_seed(state, epoch, DOMAIN_SYNC_COMMITTEE)
@@ -841,12 +841,12 @@ def get_next_sync_committee_indices(state: BeaconState) -> Sequence[ValidatorInd
         # [Modified in Electra]
         random_bytes = hash(seed + uint_to_bytes(i // 16))
         offset = i % 16 * 2
-        random_value = Gwei(bytes_to_uint64(random_bytes[offset : offset + 2]))
+        random_value = bytes_to_uint64(random_bytes[offset : offset + 2])
         effective_balance = state.validators[candidate_index].effective_balance
         # [Modified in Electra:EIP7251]
         if effective_balance * MAX_RANDOM_VALUE >= MAX_EFFECTIVE_BALANCE_ELECTRA * random_value:
             sync_committee_indices.append(candidate_index)
-        i += Uint64(1)
+        i += 1
     return sync_committee_indices
 ```
 
@@ -925,8 +925,8 @@ def compute_exit_epoch_and_update_churn(state: BeaconState, exit_balance: Gwei) 
     # Exit doesn't fit in the current earliest epoch.
     if exit_balance > exit_balance_to_consume:
         balance_to_process = exit_balance - exit_balance_to_consume
-        additional_epochs = (balance_to_process - 1) // per_epoch_churn + Gwei(1)
-        earliest_exit_epoch += Epoch(additional_epochs)
+        additional_epochs = (balance_to_process - 1) // per_epoch_churn + 1
+        earliest_exit_epoch += additional_epochs
         exit_balance_to_consume += additional_epochs * per_epoch_churn
 
     # Consume the balance and update state variables.
@@ -955,8 +955,8 @@ def compute_consolidation_epoch_and_update_churn(
     # Consolidation doesn't fit in the current earliest epoch.
     if consolidation_balance > consolidation_balance_to_consume:
         balance_to_process = consolidation_balance - consolidation_balance_to_consume
-        additional_epochs = (balance_to_process - 1) // per_epoch_consolidation_churn + Gwei(1)
-        earliest_consolidation_epoch += Epoch(additional_epochs)
+        additional_epochs = (balance_to_process - 1) // per_epoch_consolidation_churn + 1
+        earliest_consolidation_epoch += additional_epochs
         consolidation_balance_to_consume += additional_epochs * per_epoch_consolidation_churn
 
     # Consume the balance and update state variables.
@@ -1056,7 +1056,7 @@ def process_registry_updates(state: BeaconState) -> None:
     for index, validator in enumerate(state.validators):
         # [Modified in Electra:EIP7251]
         if is_eligible_for_activation_queue(validator):
-            validator.activation_eligibility_epoch = current_epoch + Epoch(1)
+            validator.activation_eligibility_epoch = current_epoch + 1
         elif (
             is_active_validator(validator, current_epoch)
             and validator.effective_balance <= EJECTION_BALANCE
@@ -1135,7 +1135,7 @@ def process_pending_deposits(state: BeaconState) -> None:
     available_for_processing = state.deposit_balance_to_consume + get_activation_exit_churn_limit(
         state
     )
-    processed_amount = Gwei(0)
+    processed_amount = 0
     next_deposit_index = 0
     deposits_to_postpone = []
     is_churn_limit_reached = False
@@ -1419,7 +1419,7 @@ def get_validators_sweep_withdrawals(
     prior_withdrawals: Sequence[Withdrawal],
 ) -> Tuple[Sequence[Withdrawal], WithdrawalIndex, Uint64]:
     epoch = get_current_epoch(state)
-    validators_limit = min(Uint64(len(state.validators)), MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
+    validators_limit = min(len(state.validators), MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP)
     withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD
     # There must be at least one space reserved for validator sweep withdrawals
     assert len(prior_withdrawals) < withdrawals_limit
@@ -1661,11 +1661,11 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot
 
     # [Modified in Electra:EIP7549]
-    assert data.index == CommitteeIndex(0)
+    assert data.index == 0
     committee_indices = get_committee_indices(attestation.committee_bits)
     committee_offset = 0
     for committee_index in committee_indices:
-        assert Uint64(committee_index) < get_committee_count_per_slot(state, data.target.epoch)
+        assert committee_index < get_committee_count_per_slot(state, data.target.epoch)
         committee = get_beacon_committee(state, data.slot, committee_index)
         committee_attesters = {
             attester_index
@@ -1692,14 +1692,14 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     else:
         epoch_participation = state.previous_epoch_participation
 
-    proposer_reward_numerator = Gwei(0)
+    proposer_reward_numerator = 0
     for index in get_attesting_indices(state, attestation):
         for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
-            if Uint64(flag_index) in participation_flag_indices and not has_flag(
+            if flag_index in participation_flag_indices and not has_flag(
                 epoch_participation[index], flag_index
             ):
                 epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
-                proposer_reward_numerator += get_base_reward(state, index) * Gwei(weight)
+                proposer_reward_numerator += get_base_reward(state, index) * weight
 
     # Reward proposer
     proposer_reward_denominator = Gwei(
@@ -1828,7 +1828,7 @@ def process_deposit(state: BeaconState, deposit: Deposit) -> None:
     )
 
     # Deposits must be processed in order
-    state.eth1_deposit_index += Uint64(1)
+    state.eth1_deposit_index += 1
 
     # [Modified in Electra:EIP7251]
     apply_deposit(
@@ -1861,7 +1861,7 @@ def process_voluntary_exit(state: BeaconState, signed_voluntary_exit: SignedVolu
     assert get_current_epoch(state) >= validator.activation_epoch + SHARD_COMMITTEE_PERIOD
     # [New in Electra:EIP7251]
     # Only exit validator if it has no pending withdrawals in the queue
-    assert get_pending_balance_to_withdraw(state, voluntary_exit.validator_index) == Gwei(0)
+    assert get_pending_balance_to_withdraw(state, voluntary_exit.validator_index) == 0
     # Verify signature
     domain = compute_domain(
         DOMAIN_VOLUNTARY_EXIT, CAPELLA_FORK_VERSION, state.genesis_validators_root
@@ -1917,7 +1917,7 @@ def process_withdrawal_request(state: BeaconState, withdrawal_request: Withdrawa
 
     if is_full_exit_request:
         # Only exit validator if it has no pending withdrawals in the queue
-        if pending_balance_to_withdraw == Gwei(0):
+        if pending_balance_to_withdraw == 0:
             initiate_validator_exit(state, index)
         return
 
@@ -2070,7 +2070,7 @@ def process_consolidation_request(
     if current_epoch < source_validator.activation_epoch + SHARD_COMMITTEE_PERIOD:
         return
     # Verify the source has no pending withdrawals in the queue
-    if get_pending_balance_to_withdraw(state, source_index) > Gwei(0):
+    if get_pending_balance_to_withdraw(state, source_index) > 0:
         return
 
     # Initiate source validator exit and append pending consolidation

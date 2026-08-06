@@ -120,9 +120,9 @@ def upgrade_to_electra(pre: deneb.BeaconState) -> BeaconState:
 
     for index in pre_activation:
         balance = post.balances[index]
-        post.balances[index] = Gwei(0)
+        post.balances[index] = 0
         validator = post.validators[index]
-        validator.effective_balance = Gwei(0)
+        validator.effective_balance = 0
         validator.activation_eligibility_epoch = FAR_FUTURE_EPOCH
         # Use bls.G2_POINT_AT_INFINITY as a signature field placeholder
         # and GENESIS_SLOT to distinguish from a pending deposit request

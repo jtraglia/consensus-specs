@@ -39,10 +39,10 @@ def compute_weak_subjectivity_period(state: BeaconState) -> Uint64:
     t = get_total_active_balance(state)
     # [Modified in Gloas:EIP8061]
     delta = (
-        Gwei(2) * get_exit_churn_limit(state) // Gwei(3)
-        + get_activation_churn_limit(state) // Gwei(3)
+        2 * get_exit_churn_limit(state) // 3
+        + get_activation_churn_limit(state) // 3
         + get_consolidation_churn_limit(state)
     )
-    epochs_for_validator_set_churn = Uint64(Gwei(SAFETY_DECAY) * t // (Gwei(2) * delta * Gwei(100)))
-    return Uint64(MIN_VALIDATOR_WITHDRAWABILITY_DELAY) + epochs_for_validator_set_churn
+    epochs_for_validator_set_churn = SAFETY_DECAY * t // (2 * delta * 100)
+    return MIN_VALIDATOR_WITHDRAWABILITY_DELAY + epochs_for_validator_set_churn
 ```

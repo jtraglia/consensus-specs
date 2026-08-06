@@ -325,7 +325,7 @@ def get_attestation_participation_flag_indices(
     assert is_matching_source
 
     participation_flag_indices = []
-    if is_matching_source and inclusion_delay <= Slot(integer_squareroot(Uint64(SLOTS_PER_EPOCH))):
+    if is_matching_source and inclusion_delay <= integer_squareroot(SLOTS_PER_EPOCH):
         participation_flag_indices.append(TIMELY_SOURCE_FLAG_INDEX)
     # [Modified in Deneb:EIP7045]
     if is_matching_target:
@@ -452,7 +452,7 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     assert data.target.epoch == compute_epoch_at_slot(data.slot)
     # [Modified in Deneb:EIP7045]
     assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot
-    assert Uint64(data.index) < get_committee_count_per_slot(state, data.target.epoch)
+    assert data.index < get_committee_count_per_slot(state, data.target.epoch)
 
     committee = get_beacon_committee(state, data.slot, data.index)
     assert len(attestation.aggregation_bits) == len(committee)
@@ -471,14 +471,14 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     else:
         epoch_participation = state.previous_epoch_participation
 
-    proposer_reward_numerator = Gwei(0)
+    proposer_reward_numerator = 0
     for index in get_attesting_indices(state, attestation):
         for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
-            if Uint64(flag_index) in participation_flag_indices and not has_flag(
+            if flag_index in participation_flag_indices and not has_flag(
                 epoch_participation[index], flag_index
             ):
                 epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
-                proposer_reward_numerator += get_base_reward(state, index) * Gwei(weight)
+                proposer_reward_numerator += get_base_reward(state, index) * weight
 
     # Reward proposer
     proposer_reward_denominator = Gwei(
@@ -595,7 +595,7 @@ def process_registry_updates(state: BeaconState) -> None:
     # Process activation eligibility and ejections
     for index, validator in enumerate(state.validators):
         if is_eligible_for_activation_queue(validator):
-            validator.activation_eligibility_epoch = get_current_epoch(state) + Epoch(1)
+            validator.activation_eligibility_epoch = get_current_epoch(state) + 1
 
         if (
             is_active_validator(validator, get_current_epoch(state))

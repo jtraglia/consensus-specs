@@ -286,7 +286,7 @@ def is_ancestor(store: Store, node: ForkChoiceNode, ancestor: ForkChoiceNode) ->
 
 ```python
 def calculate_committee_fraction(state: BeaconState, committee_percent: Uint64) -> Gwei:
-    committee_weight = get_total_active_balance(state) // Uint64(SLOTS_PER_EPOCH)
+    committee_weight = get_total_active_balance(state) // SLOTS_PER_EPOCH
     return Gwei((committee_weight * committee_percent) // 100)
 ```
 
@@ -341,7 +341,7 @@ def get_attestation_score(store: Store, node: ForkChoiceNode, state: BeaconState
 
 ```python
 def compute_proposer_score(state: BeaconState) -> Gwei:
-    committee_weight = get_total_active_balance(state) // Uint64(SLOTS_PER_EPOCH)
+    committee_weight = get_total_active_balance(state) // SLOTS_PER_EPOCH
     return (committee_weight * PROPOSER_SCORE_BOOST) // 100
 ```
 

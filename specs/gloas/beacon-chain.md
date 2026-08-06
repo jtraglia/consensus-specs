@@ -1008,7 +1008,7 @@ def is_valid_indexed_attestation(
 
 ```python
 def is_builder_index(validator_index: ValidatorIndex) -> bool:
-    return (validator_index & ValidatorIndex(BUILDER_INDEX_FLAG)) != 0
+    return (validator_index & BUILDER_INDEX_FLAG) != 0
 ```
 
 #### New `is_active_builder`
@@ -1165,7 +1165,7 @@ def compute_balance_weighted_selection(
     are themselves sampled from ``indices`` by shuffling it, otherwise
     ``indices`` is traversed in order. The returned list can contain duplicates.
     """
-    MAX_RANDOM_VALUE = Gwei(2**16 - 1)
+    MAX_RANDOM_VALUE = 2**16 - 1
     total = Uint64(len(indices))
     assert total > 0
     effective_balances = [state.validators[index].effective_balance for index in indices]
@@ -1179,11 +1179,11 @@ def compute_balance_weighted_selection(
         if shuffle_indices:
             next_index = compute_shuffled_index(next_index, total, seed)
         weight = effective_balances[next_index] * MAX_RANDOM_VALUE
-        random_value = Gwei(bytes_to_uint64(random_bytes[offset : offset + 2]))
+        random_value = bytes_to_uint64(random_bytes[offset : offset + 2])
         threshold = MAX_EFFECTIVE_BALANCE_ELECTRA * random_value
         if weight >= threshold:
             selected.append(indices[next_index])
-        i += Uint64(1)
+        i += 1
     return selected
 ```
 
@@ -1313,12 +1313,12 @@ def get_attestation_participation_flag_indices(
 
     # [New in Gloas:EIP7732]
     if is_attestation_same_slot(state, data):
-        assert data.index == CommitteeIndex(0)
+        assert data.index == 0
         payload_matches = True
     else:
         slot_index = parent_slot % SLOTS_PER_HISTORICAL_ROOT
         payload_index = state.execution_payload_availability[slot_index]
-        payload_matches = data.index == CommitteeIndex(payload_index)
+        payload_matches = data.index == payload_index
 
     # Matching head
     head_root = get_block_root_at_slot(state, data.slot)
@@ -1329,7 +1329,7 @@ def get_attestation_participation_flag_indices(
     assert is_matching_source
 
     participation_flag_indices = []
-    if is_matching_source and inclusion_delay <= Slot(integer_squareroot(Uint64(SLOTS_PER_EPOCH))):
+    if is_matching_source and inclusion_delay <= integer_squareroot(SLOTS_PER_EPOCH):
         participation_flag_indices.append(TIMELY_SOURCE_FLAG_INDEX)
     if is_matching_target:
         participation_flag_indices.append(TIMELY_TARGET_FLAG_INDEX)
@@ -1349,7 +1349,7 @@ def get_ptc(state: BeaconState, slot: Slot) -> PTC:
     epoch = compute_epoch_at_slot(slot)
     state_epoch = get_current_epoch(state)
     if epoch < state_epoch:
-        assert epoch + Epoch(1) == state_epoch
+        assert epoch + 1 == state_epoch
         return state.ptc_window[slot % SLOTS_PER_EPOCH]
     assert epoch <= state_epoch + MIN_SEED_LOOKAHEAD
     offset = Slot(epoch - state_epoch + Epoch(1)) * SLOTS_PER_EPOCH
@@ -1384,8 +1384,8 @@ def get_builder_payment_quorum_threshold(state: BeaconState) -> Uint64:
     """
     Calculate the quorum threshold for builder payments.
     """
-    per_slot_balance = get_total_active_balance(state) // Gwei(SLOTS_PER_EPOCH)
-    quorum = per_slot_balance * Gwei(BUILDER_PAYMENT_THRESHOLD_NUMERATOR)
+    per_slot_balance = get_total_active_balance(state) // SLOTS_PER_EPOCH
+    quorum = per_slot_balance * BUILDER_PAYMENT_THRESHOLD_NUMERATOR
     return Uint64(quorum // Gwei(BUILDER_PAYMENT_THRESHOLD_DENOMINATOR))
 ```
 
@@ -1399,7 +1399,7 @@ def get_activation_churn_limit(state: BeaconState) -> Gwei:
     """
     churn = max(
         MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA,
-        get_total_active_balance(state) // Gwei(CHURN_LIMIT_QUOTIENT_GLOAS),
+        get_total_active_balance(state) // CHURN_LIMIT_QUOTIENT_GLOAS,
     )
     churn = churn - churn % EFFECTIVE_BALANCE_INCREMENT
     return min(MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS, churn)
@@ -1415,7 +1415,7 @@ def get_exit_churn_limit(state: BeaconState) -> Gwei:
     """
     churn = max(
         MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA,
-        get_total_active_balance(state) // Gwei(CHURN_LIMIT_QUOTIENT_GLOAS),
+        get_total_active_balance(state) // CHURN_LIMIT_QUOTIENT_GLOAS,
     )
     return churn - churn % EFFECTIVE_BALANCE_INCREMENT
 ```
@@ -1432,7 +1432,7 @@ def get_consolidation_churn_limit(state: BeaconState) -> Gwei:
     Derived from total active balance and rounded to
     ``EFFECTIVE_BALANCE_INCREMENT``.
     """
-    churn = get_total_active_balance(state) // Gwei(CONSOLIDATION_CHURN_LIMIT_QUOTIENT)
+    churn = get_total_active_balance(state) // CONSOLIDATION_CHURN_LIMIT_QUOTIENT
     return churn - churn % EFFECTIVE_BALANCE_INCREMENT
 ```
 
@@ -1457,8 +1457,8 @@ def compute_exit_epoch_and_update_churn(state: BeaconState, exit_balance: Gwei) 
     # Exit doesn't fit in the current earliest epoch.
     if exit_balance > exit_balance_to_consume:
         balance_to_process = exit_balance - exit_balance_to_consume
-        additional_epochs = (balance_to_process - 1) // per_epoch_churn + Gwei(1)
-        earliest_exit_epoch += Epoch(additional_epochs)
+        additional_epochs = (balance_to_process - 1) // per_epoch_churn + 1
+        earliest_exit_epoch += additional_epochs
         exit_balance_to_consume += additional_epochs * per_epoch_churn
 
     # Consume the balance and update state variables.
@@ -1571,7 +1571,7 @@ def process_pending_deposits(state: BeaconState) -> None:
     # [Modified in Gloas:EIP8061]
     # Deposits still consume the activation-only churn budget in Gloas.
     available_for_processing = state.deposit_balance_to_consume + get_activation_churn_limit(state)
-    processed_amount = Gwei(0)
+    processed_amount = 0
     next_deposit_index = 0
     deposits_to_postpone = []
     is_churn_limit_reached = False
@@ -1634,7 +1634,7 @@ def process_builder_pending_payments(state: BeaconState) -> None:
     """
     quorum = get_builder_payment_quorum_threshold(state)
     for payment in state.builder_pending_payments[:SLOTS_PER_EPOCH]:
-        if payment.weight >= Gwei(quorum):
+        if payment.weight >= quorum:
             state.builder_pending_withdrawals.append(payment.withdrawal)
 
     old_payments = list(state.builder_pending_payments[SLOTS_PER_EPOCH:])
@@ -1805,7 +1805,7 @@ def get_builders_sweep_withdrawals(
     prior_withdrawals: Sequence[Withdrawal],
 ) -> Tuple[Sequence[Withdrawal], WithdrawalIndex, Uint64]:
     epoch = get_current_epoch(state)
-    builders_limit = min(Uint64(len(state.builders)), MAX_BUILDERS_PER_WITHDRAWALS_SWEEP)
+    builders_limit = min(len(state.builders), MAX_BUILDERS_PER_WITHDRAWALS_SWEEP)
     withdrawals_limit = MAX_WITHDRAWALS_PER_PAYLOAD - 1
     assert len(prior_withdrawals) <= withdrawals_limit
 
@@ -2089,7 +2089,7 @@ def process_execution_payload_bid(
     # Record the pending payment if there is some payment
     if amount > 0:
         pending_payment = BuilderPendingPayment(
-            weight=Gwei(0),
+            weight=0,
             withdrawal=BuilderPendingWithdrawal(
                 fee_recipient=bid.fee_recipient,
                 amount=amount,
@@ -2272,7 +2272,7 @@ def process_builder_exit_request(state: BeaconState, request: BuilderExitRequest
         return
     if builder.execution_address != request.source_address:
         return
-    if get_pending_balance_to_withdraw_for_builder(state, builder_index) != Gwei(0):
+    if get_pending_balance_to_withdraw_for_builder(state, builder_index) != 0:
         return
 
     initiate_builder_exit(state, builder_index)
@@ -2300,11 +2300,11 @@ def process_attestation(
     assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot
 
     # [Modified in Gloas:EIP7732]
-    assert data.index < CommitteeIndex(2)
+    assert data.index < 2
     committee_indices = get_committee_indices(attestation.committee_bits)
     committee_offset = 0
     for committee_index in committee_indices:
-        assert Uint64(committee_index) < get_committee_count_per_slot(state, data.target.epoch)
+        assert committee_index < get_committee_count_per_slot(state, data.target.epoch)
         committee = get_beacon_committee(state, data.slot, committee_index)
         committee_attesters = {
             attester_index
@@ -2336,7 +2336,7 @@ def process_attestation(
         epoch_participation = state.previous_epoch_participation
         payment = state.builder_pending_payments[data.slot % SLOTS_PER_EPOCH]
 
-    proposer_reward_numerator = Gwei(0)
+    proposer_reward_numerator = 0
     for index in get_attesting_indices(state, attestation):
         # [New in Gloas:EIP7732]
         # For same-slot attestations, check if we are setting any new flags.
@@ -2344,11 +2344,11 @@ def process_attestation(
         will_set_new_flag = False
 
         for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
-            if Uint64(flag_index) in participation_flag_indices and not has_flag(
+            if flag_index in participation_flag_indices and not has_flag(
                 epoch_participation[index], flag_index
             ):
                 epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
-                proposer_reward_numerator += get_base_reward(state, index) * Gwei(weight)
+                proposer_reward_numerator += get_base_reward(state, index) * weight
                 # [New in Gloas:EIP7732]
                 will_set_new_flag = True
 

@@ -251,11 +251,11 @@ def is_finality_update(update: LightClientUpdate) -> bool:
 ```python
 def is_better_update(new_update: LightClientUpdate, old_update: LightClientUpdate) -> bool:
     # Compare supermajority (> 2/3) sync committee participation
-    max_active_participants = Uint64(len(new_update.sync_aggregate.sync_committee_bits))
+    max_active_participants = len(new_update.sync_aggregate.sync_committee_bits)
     new_num_active_participants = count_active_participants(new_update.sync_aggregate)
     old_num_active_participants = count_active_participants(old_update.sync_aggregate)
-    new_has_supermajority = new_num_active_participants * Uint64(3) >= max_active_participants * 2
-    old_has_supermajority = old_num_active_participants * Uint64(3) >= max_active_participants * 2
+    new_has_supermajority = new_num_active_participants * 3 >= max_active_participants * 2
+    old_has_supermajority = old_num_active_participants * 3 >= max_active_participants * 2
     if new_has_supermajority != old_has_supermajority:
         return new_has_supermajority
     if not new_has_supermajority and new_num_active_participants != old_num_active_participants:
@@ -387,8 +387,8 @@ def initialize_light_client_store(
         next_sync_committee=SyncCommittee(),
         best_valid_update=None,
         optimistic_header=bootstrap.header,
-        previous_max_active_participants=Uint64(0),
-        current_max_active_participants=Uint64(0),
+        previous_max_active_participants=0,
+        current_max_active_participants=0,
     )
 ```
 
@@ -429,7 +429,7 @@ def validate_light_client_update(
     store_period = compute_sync_committee_period_at_slot(store.finalized_header.beacon.slot)
     update_signature_period = compute_sync_committee_period_at_slot(update.signature_slot)
     if is_next_sync_committee_known(store):
-        assert update_signature_period in (store_period, store_period + Epoch(1))
+        assert update_signature_period in (store_period, store_period + 1)
     else:
         assert update_signature_period == store_period
 
@@ -507,11 +507,11 @@ def apply_light_client_update(store: LightClientStore, update: LightClientUpdate
     if not is_next_sync_committee_known(store):
         assert update_finalized_period == store_period
         store.next_sync_committee = update.next_sync_committee
-    elif update_finalized_period == store_period + Epoch(1):
+    elif update_finalized_period == store_period + 1:
         store.current_sync_committee = store.next_sync_committee
         store.next_sync_committee = update.next_sync_committee
         store.previous_max_active_participants = store.current_max_active_participants
-        store.current_max_active_participants = Uint64(0)
+        store.current_max_active_participants = 0
     if update.finalized_header.beacon.slot > store.finalized_header.beacon.slot:
         store.finalized_header = update.finalized_header
         if store.finalized_header.beacon.slot > store.optimistic_header.beacon.slot:

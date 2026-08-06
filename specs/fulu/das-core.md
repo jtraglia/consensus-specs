@@ -221,7 +221,7 @@ def get_custody_groups(node_id: NodeID, custody_group_count: Uint64) -> Sequence
             # Overflow prevention
             current_id = Uint256(0)
         else:
-            current_id += Uint256(1)
+            current_id += 1
 
     assert len(custody_groups) == len(set(custody_groups))
     return sorted(custody_groups)

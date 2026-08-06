@@ -425,7 +425,7 @@ def validate_beacon_aggregate_and_proof_gossip(
 
     # [REJECT] The committee index is within the expected range
     committee_count = get_committee_count_per_slot(state, aggregate.data.target.epoch)
-    if Uint64(index) >= committee_count:
+    if index >= committee_count:
         raise GossipReject("committee index out of range")
 
     # [New in Deneb:EIP7045]
@@ -611,7 +611,7 @@ def validate_beacon_attestation_gossip(
 
     # [REJECT] The committee index is within the expected range
     committees_per_slot = get_committee_count_per_slot(state, target_epoch)
-    if Uint64(committee_index) >= committees_per_slot:
+    if committee_index >= committees_per_slot:
         raise GossipReject("committee index out of range")
 
     # [REJECT] The attestation is for the correct subnet
@@ -708,7 +708,7 @@ def validate_blob_sidecar_gossip(
     block_header = blob_sidecar.signed_block_header.message
 
     # [REJECT] The sidecar's index is consistent with MAX_BLOBS_PER_BLOCK
-    if blob_sidecar.index >= BlobIndex(MAX_BLOBS_PER_BLOCK):
+    if blob_sidecar.index >= MAX_BLOBS_PER_BLOCK:
         raise GossipReject("blob index out of range")
 
     # [REJECT] The sidecar is for the correct subnet

@@ -324,7 +324,7 @@ def get_next_sync_committee_indices(state: BeaconState) -> Sequence[ValidatorInd
     """
     epoch = get_current_epoch(state) + Epoch(1)
 
-    MAX_RANDOM_BYTE = Gwei(2**8 - 1)
+    MAX_RANDOM_BYTE = 2**8 - 1
     active_validator_indices = get_active_validator_indices(state, epoch)
     active_validator_count = Uint64(len(active_validator_indices))
     seed = get_seed(state, epoch, DOMAIN_SYNC_COMMITTEE)
@@ -339,7 +339,7 @@ def get_next_sync_committee_indices(state: BeaconState) -> Sequence[ValidatorInd
         effective_balance = state.validators[candidate_index].effective_balance
         if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
             sync_committee_indices.append(candidate_index)
-        i += Uint64(1)
+        i += 1
     return sync_committee_indices
 ```
 
@@ -367,7 +367,7 @@ def get_base_reward_per_increment(state: BeaconState) -> Gwei:
     return (
         EFFECTIVE_BALANCE_INCREMENT
         * BASE_REWARD_FACTOR
-        // integer_squareroot(Uint64(get_total_active_balance(state)))
+        // integer_squareroot(get_total_active_balance(state))
     )
 ```
 
@@ -438,7 +438,7 @@ def get_attestation_participation_flag_indices(
     assert is_matching_source
 
     participation_flag_indices = []
-    if is_matching_source and inclusion_delay <= Slot(integer_squareroot(Uint64(SLOTS_PER_EPOCH))):
+    if is_matching_source and inclusion_delay <= integer_squareroot(SLOTS_PER_EPOCH):
         participation_flag_indices.append(TIMELY_SOURCE_FLAG_INDEX)
     if is_matching_target and inclusion_delay <= SLOTS_PER_EPOCH:
         participation_flag_indices.append(TIMELY_TARGET_FLAG_INDEX)
@@ -502,7 +502,7 @@ def get_inactivity_penalty_deltas(state: BeaconState) -> Tuple[Sequence[Gwei], S
             penalty_numerator = state.validators[index].effective_balance * Gwei(
                 state.inactivity_scores[index]
             )
-            penalty_denominator = Gwei(INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR)
+            penalty_denominator = INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR
             penalties[index] += penalty_numerator // penalty_denominator
     return rewards, penalties
 ```
@@ -572,7 +572,7 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
     assert data.target.epoch == compute_epoch_at_slot(data.slot)
     assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
-    assert Uint64(data.index) < get_committee_count_per_slot(state, data.target.epoch)
+    assert data.index < get_committee_count_per_slot(state, data.target.epoch)
 
     committee = get_beacon_committee(state, data.slot, data.index)
     assert len(attestation.aggregation_bits) == len(committee)
@@ -591,14 +591,14 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     else:
         epoch_participation = state.previous_epoch_participation
 
-    proposer_reward_numerator = Gwei(0)
+    proposer_reward_numerator = 0
     for index in get_attesting_indices(state, attestation):
         for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
-            if Uint64(flag_index) in participation_flag_indices and not has_flag(
+            if flag_index in participation_flag_indices and not has_flag(
                 epoch_participation[index], flag_index
             ):
                 epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
-                proposer_reward_numerator += get_base_reward(state, index) * Gwei(weight)
+                proposer_reward_numerator += get_base_reward(state, index) * weight
 
     # Reward proposer
     proposer_reward_denominator = Gwei(
@@ -767,7 +767,7 @@ def process_inactivity_updates(state: BeaconState) -> None:
         if index in get_unslashed_participating_indices(
             state, TIMELY_TARGET_FLAG_INDEX, get_previous_epoch(state)
         ):
-            state.inactivity_scores[index] -= min(Uint64(1), state.inactivity_scores[index])
+            state.inactivity_scores[index] -= min(1, state.inactivity_scores[index])
         else:
             state.inactivity_scores[index] += INACTIVITY_SCORE_BIAS
         # Decrease the inactivity score of all eligible validators during a leak-free epoch
@@ -843,7 +843,7 @@ def process_participation_flag_updates(state: BeaconState) -> None:
 ```python
 def process_sync_committee_updates(state: BeaconState) -> None:
     next_epoch = get_current_epoch(state) + Epoch(1)
-    if next_epoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD == Epoch(0):
+    if next_epoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD == 0:
         state.current_sync_committee = state.next_sync_committee
         state.next_sync_committee = get_next_sync_committee(state)
 ```

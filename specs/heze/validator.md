@@ -116,7 +116,7 @@ with respect to the proposer's inclusion list view, which comprises all valid
 and non-equivocating inclusion lists they have observed.
 
 - The `bid.inclusion_list_bits` must satisfy
-  `is_inclusion_list_bits_inclusive(get_inclusion_list_store(), state, slot - Slot(1), bid.inclusion_list_bits, only_timely=False)`.
+  `is_inclusion_list_bits_inclusive(get_inclusion_list_store(), state, slot - 1, bid.inclusion_list_bits, only_timely=False)`.
 
 ##### ExecutionPayload
 

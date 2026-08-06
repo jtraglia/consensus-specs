@@ -1436,7 +1436,7 @@ def get_committee_count_per_slot(state: BeaconState, epoch: Epoch) -> Uint64:
         min(
             MAX_COMMITTEES_PER_SLOT,
             Uint64(len(get_active_validator_indices(state, epoch)))
-            // Uint64(SLOTS_PER_EPOCH)
+            // SLOTS_PER_EPOCH
             // TARGET_COMMITTEE_SIZE,
         ),
     )
@@ -1457,7 +1457,7 @@ def get_beacon_committee(
         indices=get_active_validator_indices(state, epoch),
         seed=get_seed(state, epoch, DOMAIN_BEACON_ATTESTER),
         index=Uint64(slot % SLOTS_PER_EPOCH) * committees_per_slot + index,
-        count=committees_per_slot * Uint64(SLOTS_PER_EPOCH),
+        count=committees_per_slot * SLOTS_PER_EPOCH,
     )
 ```
 
@@ -1921,7 +1921,7 @@ def get_proposer_reward(state: BeaconState, attesting_index: ValidatorIndex) -> 
 
 ```python
 def get_finality_delay(state: BeaconState) -> Uint64:
-    return Uint64(get_previous_epoch(state) - state.finalized_checkpoint.epoch)
+    return get_previous_epoch(state) - state.finalized_checkpoint.epoch
 ```
 
 ```python
@@ -2277,7 +2277,7 @@ def process_eth1_data(state: BeaconState, body: BeaconBlockBody) -> None:
     state.eth1_data_votes.append(body.eth1_data)
     if (
         list(state.eth1_data_votes).count(body.eth1_data) * 2
-        > Uint64(EPOCHS_PER_ETH1_VOTING_PERIOD) * SLOTS_PER_EPOCH
+        > EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH
     ):
         state.eth1_data = body.eth1_data
 ```
