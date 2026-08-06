@@ -24,6 +24,7 @@ from eth_consensus_specs.test.helpers.light_client_data_collection import (
     select_new_head,
     setup_lc_data_collection_test,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 @with_light_client
@@ -40,7 +41,7 @@ def test_light_client_data_collection(spec, state):
 
     # Genesis block is post Altair and is finalized, so can be used as bootstrap
     genesis_bid = BlockID(
-        slot=state.slot, root=create_signed_genesis_block(spec, state).message.hash_tree_root()
+        slot=state.slot, root=hash_tree_root(create_signed_genesis_block(spec, state).message)
     )
     assert (
         get_lc_bootstrap_block_id(get_light_client_bootstrap(test, genesis_bid.root).data)
@@ -143,7 +144,7 @@ def test_light_client_data_collection(spec, state):
     assert get_lc_update_attested_block_id(get_light_client_optimistic_update(test).data) == bid_3
 
     # Branch A: epoch 1, slot 5
-    slot = spec_a.compute_start_slot_at_epoch(1) + 5
+    slot = spec_a.compute_start_slot_at_epoch(spec_a.Epoch(1)) + spec_a.Slot(5)
     spec_a, state_a, bid_1_5 = yield from add_new_block(
         test, spec_a, state_a, slot=slot, num_sync_participants=4
     )
@@ -159,7 +160,7 @@ def test_light_client_data_collection(spec, state):
     assert get_lc_update_attested_block_id(get_light_client_optimistic_update(test).data) == bid_7
 
     # Branch B: epoch 2, slot 4
-    slot = spec_b.compute_start_slot_at_epoch(2) + 4
+    slot = spec_b.compute_start_slot_at_epoch(spec_b.Epoch(2)) + spec_b.Slot(4)
     spec_b, state_b, bid_2_4 = yield from add_new_block(
         test, spec_b, state_b, slot=slot, num_sync_participants=5
     )
@@ -176,7 +177,7 @@ def test_light_client_data_collection(spec, state):
     assert get_lc_update_attested_block_id(get_light_client_optimistic_update(test).data) == bid_6
 
     # Branch A: epoch 3, slot 0
-    slot = spec_a.compute_start_slot_at_epoch(3) + 0
+    slot = spec_a.compute_start_slot_at_epoch(spec_a.Epoch(3)) + spec_a.Slot(0)
     spec_a, state_a, bid_3_0 = yield from add_new_block(
         test, spec_a, state_a, slot=slot, num_sync_participants=6
     )
@@ -213,11 +214,11 @@ def test_light_client_data_collection(spec, state):
             get_lc_update_attested_block_id(get_light_client_optimistic_update(test).data)
             == bid_1_5
         )
-    assert state_a.slot == spec_a.compute_start_slot_at_epoch(4) - 1
+    assert state_a.slot == spec_a.compute_start_slot_at_epoch(spec_a.Epoch(4)) - spec_a.Slot(1)
     bid_3_n = bid_a
 
     # Branch A: epoch 4, slot 0
-    slot = spec_a.compute_start_slot_at_epoch(4) + 0
+    slot = spec_a.compute_start_slot_at_epoch(spec_a.Epoch(4)) + spec_a.Slot(0)
     spec_a, state_a, bid_4_0 = yield from add_new_block(
         test, spec_a, state_a, slot=slot, num_sync_participants=6
     )
@@ -256,11 +257,11 @@ def test_light_client_data_collection(spec, state):
             get_lc_update_attested_block_id(get_light_client_optimistic_update(test).data)
             == bid_3_n
         )
-    assert state_a.slot == spec_a.compute_start_slot_at_epoch(5) - 1
+    assert state_a.slot == spec_a.compute_start_slot_at_epoch(spec_a.Epoch(5)) - spec_a.Slot(1)
     bid_4_n = bid_a
 
     # Branch A: epoch 6, slot 2
-    slot = spec_a.compute_start_slot_at_epoch(6) + 2
+    slot = spec_a.compute_start_slot_at_epoch(spec_a.Epoch(6)) + spec_a.Slot(2)
     spec_a, state_a, bid_6_2 = yield from add_new_block(
         test, spec_a, state_a, slot=slot, num_sync_participants=6
     )

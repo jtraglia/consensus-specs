@@ -24,6 +24,7 @@ from eth_consensus_specs.test.helpers.execution_payload import (
     compute_el_block_hash,
 )
 from eth_consensus_specs.utils import kzg
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def _run_blob_kzg_commitments_merkle_proof_test(spec, state, rng=None, blob_count=1):
@@ -39,8 +40,10 @@ def _run_blob_kzg_commitments_merkle_proof_test(spec, state, rng=None, blob_coun
             mode=RandomizationMode,
             chaos=True,
         )
-    block.body.blob_kzg_commitments = blob_kzg_commitments
-    block.body.execution_payload.transactions = [opaque_tx]
+    block.body.blob_kzg_commitments = spec.BlobKZGCommitments(data=blob_kzg_commitments)
+    block.body.execution_payload.transactions = spec.Transactions.of(
+        spec.Transaction(data=opaque_tx)
+    )
     block.body.execution_payload.block_hash = compute_el_block_hash(
         spec, block.body.execution_payload, state
     )
@@ -55,13 +58,13 @@ def _run_blob_kzg_commitments_merkle_proof_test(spec, state, rng=None, blob_coun
     yield (
         "proof",
         {
-            "leaf": "0x" + column_sidecar.kzg_commitments.hash_tree_root().hex(),
+            "leaf": "0x" + hash_tree_root(column_sidecar.kzg_commitments).hex(),
             "leaf_index": gindex,
             "branch": ["0x" + root.hex() for root in kzg_commitments_inclusion_proof],
         },
     )
     assert spec.is_valid_merkle_branch(
-        leaf=column_sidecar.kzg_commitments.hash_tree_root(),
+        leaf=hash_tree_root(column_sidecar.kzg_commitments),
         branch=column_sidecar.kzg_commitments_inclusion_proof,
         depth=spec.floorlog2(gindex),
         index=spec.get_subtree_index(gindex),
@@ -90,7 +93,9 @@ def test_blob_kzg_commitments_merkle_proof__random_block_1(spec, state):
 @with_all_phases_from_to(FULU, GLOAS)
 @spec_state_test
 def test_blob_kzg_commitments_merkle_proof__multiple_blobs(spec, state):
-    blob_count = spec.get_blob_parameters(spec.get_current_epoch(state)).max_blobs_per_block // 2
+    blob_count = (
+        int(spec.get_blob_parameters(spec.get_current_epoch(state)).max_blobs_per_block) // 2
+    )
     rng = random.Random(2222)
     yield from _run_blob_kzg_commitments_merkle_proof_test(
         spec, state, rng=rng, blob_count=blob_count

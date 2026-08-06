@@ -292,14 +292,12 @@ def get_inactivity_penalty_deltas(state: BeaconState) -> Tuple[Sequence[Gwei], S
     )
     for index in get_eligible_validator_indices(state):
         if index not in matching_target_indices:
-            penalty_numerator = state.validators[index].effective_balance * Gwei(
-                state.inactivity_scores[index]
+            penalty_numerator = (
+                state.validators[index].effective_balance * state.inactivity_scores[index]
             )
             # [Modified in Bellatrix]
-            penalty_denominator = Gwei(
-                INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_BELLATRIX
-            )
-            penalties[index] += penalty_numerator // penalty_denominator
+            penalty_denominator = INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_BELLATRIX
+            penalties[index] += Gwei(penalty_numerator // penalty_denominator)
     return rewards, penalties
 ```
 
@@ -335,10 +333,10 @@ def slash_validator(
     proposer_index = get_beacon_proposer_index(state)
     if whistleblower_index is None:
         whistleblower_index = proposer_index
-    whistleblower_reward = validator.effective_balance // WHISTLEBLOWER_REWARD_QUOTIENT
-    proposer_reward = whistleblower_reward * PROPOSER_WEIGHT // WEIGHT_DENOMINATOR
+    whistleblower_reward = Gwei(validator.effective_balance // WHISTLEBLOWER_REWARD_QUOTIENT)
+    proposer_reward = Gwei(whistleblower_reward * PROPOSER_WEIGHT // WEIGHT_DENOMINATOR)
     increase_balance(state, proposer_index, proposer_reward)
-    increase_balance(state, whistleblower_index, whistleblower_reward - proposer_reward)
+    increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
 ```
 
 ## Beacon chain state transition function
@@ -482,9 +480,9 @@ def process_slashings(state: BeaconState) -> None:
     epoch = get_current_epoch(state)
     total_balance = get_total_active_balance(state)
     adjusted_total_slashing_balance = min(
-        sum(state.slashings, Gwei(0))
+        sum(state.slashings)
         # [Modified in Bellatrix]
-        * Gwei(PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX),
+        * PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX,
         total_balance,
     )
     for index, validator in enumerate(state.validators):

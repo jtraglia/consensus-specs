@@ -17,7 +17,7 @@ def test_get_consolidation_churn_limit_independent(spec, state):
     """Consolidation churn uses its own quotient, independent of exit/activation."""
     churn = spec.get_consolidation_churn_limit(state)
     total = spec.get_total_active_balance(state)
-    expected = total // spec.config.CONSOLIDATION_CHURN_LIMIT_QUOTIENT
+    expected = total // spec.Gwei(spec.config.CONSOLIDATION_CHURN_LIMIT_QUOTIENT)
     expected = expected - expected % spec.EFFECTIVE_BALANCE_INCREMENT
     assert churn == expected
 
@@ -26,7 +26,9 @@ def test_get_consolidation_churn_limit_independent(spec, state):
 @spec_state_test
 def test_get_consolidation_churn_limit_rounded(spec, state):
     """Consolidation churn must be a multiple of EFFECTIVE_BALANCE_INCREMENT."""
-    assert spec.get_consolidation_churn_limit(state) % spec.EFFECTIVE_BALANCE_INCREMENT == 0
+    assert spec.get_consolidation_churn_limit(
+        state
+    ) % spec.EFFECTIVE_BALANCE_INCREMENT == spec.Gwei(0)
 
 
 @with_gloas_and_later
@@ -61,7 +63,9 @@ def test_exit_churn_approximately_double_consolidation(spec, state):
     exit churn should be approximately 2x consolidation churn (before rounding)."""
     exit_churn = spec.get_exit_churn_limit(state)
     consolidation_churn = spec.get_consolidation_churn_limit(state)
-    assert abs(exit_churn - 2 * consolidation_churn) <= 2 * spec.EFFECTIVE_BALANCE_INCREMENT
+    assert abs(int(exit_churn) - 2 * int(consolidation_churn)) <= 2 * int(
+        spec.EFFECTIVE_BALANCE_INCREMENT
+    )
 
 
 @with_gloas_and_later
@@ -73,9 +77,11 @@ def test_compute_weak_subjectivity_period_weighted_delta(spec, state):
     activation_churn = spec.get_activation_churn_limit(state)
     consolidation_churn = spec.get_consolidation_churn_limit(state)
 
-    expected_delta = 2 * exit_churn // 3 + activation_churn // 3 + consolidation_churn
-    expected_epochs = spec.SAFETY_DECAY * t // (2 * expected_delta * 100)
-    expected_wsp = spec.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY + expected_epochs
+    expected_delta = (
+        2 * int(exit_churn) // 3 + int(activation_churn) // 3 + int(consolidation_churn)
+    )
+    expected_epochs = int(spec.SAFETY_DECAY) * int(t) // (2 * expected_delta * 100)
+    expected_wsp = int(spec.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY) + expected_epochs
 
     actual_wsp = spec.compute_weak_subjectivity_period(state)
     assert actual_wsp == expected_wsp
@@ -100,9 +106,11 @@ def test_compute_weak_subjectivity_period_scaled(spec, state):
 
     t = spec.get_total_active_balance(state)
     consolidation_churn = spec.get_consolidation_churn_limit(state)
-    expected_delta = 2 * exit_churn // 3 + activation_churn // 3 + consolidation_churn
-    expected_epochs = spec.SAFETY_DECAY * t // (2 * expected_delta * 100)
-    expected_wsp = spec.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY + expected_epochs
+    expected_delta = (
+        2 * int(exit_churn) // 3 + int(activation_churn) // 3 + int(consolidation_churn)
+    )
+    expected_epochs = int(spec.SAFETY_DECAY) * int(t) // (2 * expected_delta * 100)
+    expected_wsp = int(spec.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY) + expected_epochs
 
     actual_wsp = spec.compute_weak_subjectivity_period(state)
     assert actual_wsp == expected_wsp
@@ -128,11 +136,13 @@ def test_compute_consolidation_epoch_uses_new_quotient(spec, state):
 
     epoch = spec.compute_consolidation_epoch_and_update_churn(state, consolidation_churn)
     assert epoch == earliest_consolidation_epoch
-    assert state.consolidation_balance_to_consume == 0
+    assert state.consolidation_balance_to_consume == spec.Gwei(0)
 
     state.earliest_consolidation_epoch = spec.Epoch(0)
     state.consolidation_balance_to_consume = spec.Gwei(0)
 
-    epoch = spec.compute_consolidation_epoch_and_update_churn(state, consolidation_churn + 1)
-    assert epoch == earliest_consolidation_epoch + 1
-    assert state.consolidation_balance_to_consume == consolidation_churn - 1
+    epoch = spec.compute_consolidation_epoch_and_update_churn(
+        state, consolidation_churn + spec.Gwei(1)
+    )
+    assert epoch == earliest_consolidation_epoch + spec.Epoch(1)
+    assert state.consolidation_balance_to_consume == consolidation_churn - spec.Gwei(1)

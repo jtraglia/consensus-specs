@@ -12,21 +12,21 @@ def test_execution_payload_availability_reset_from_set(spec, state):
     from 1 -> 0 for the next slot.
     """
     # Set the next slot's availability to 1 initially
-    next_slot_index = (state.slot + 1) % spec.SLOTS_PER_HISTORICAL_ROOT
+    next_slot_index = (state.slot + spec.Slot(1)) % spec.SLOTS_PER_HISTORICAL_ROOT
     state.execution_payload_availability[next_slot_index] = 0b1
 
     # Verify it's set to 1 before processing
-    assert state.execution_payload_availability[next_slot_index] == 0b1
+    assert state.execution_payload_availability[next_slot_index]
 
     yield "pre", state
     yield "slots", 1
 
     # Process one slot
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
 
     yield "post", state
 
-    assert state.execution_payload_availability[next_slot_index] == 0b0
+    assert not state.execution_payload_availability[next_slot_index]
 
 
 @with_gloas_and_later
@@ -37,18 +37,18 @@ def test_execution_payload_availability_reset_from_unset(spec, state):
     from 0 -> 0 for the next slot (no change when already unset).
     """
     # Set the next slot's availability to 0 initially
-    next_slot_index = (state.slot + 1) % spec.SLOTS_PER_HISTORICAL_ROOT
+    next_slot_index = (state.slot + spec.Slot(1)) % spec.SLOTS_PER_HISTORICAL_ROOT
     state.execution_payload_availability[next_slot_index] = 0b0
 
     # Verify it's set to 0 before processing
-    assert state.execution_payload_availability[next_slot_index] == 0b0
+    assert not state.execution_payload_availability[next_slot_index]
 
     yield "pre", state
     yield "slots", 1
 
     # Process one slot
-    spec.process_slots(state, state.slot + 1)
+    spec.process_slots(state, state.slot + spec.Slot(1))
 
     yield "post", state
 
-    assert state.execution_payload_availability[next_slot_index] == 0b0
+    assert not state.execution_payload_availability[next_slot_index]

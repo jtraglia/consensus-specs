@@ -36,7 +36,7 @@ def _template_test_at_fork_deactivate_validators_wo_block(
     @with_meta_tags(meta_tags)
     def test_after_fork_deactivate_validators_wo_block(spec, phases, state):
         current_epoch = spec.get_current_epoch(state)
-        fork_epoch = current_epoch + spec.MIN_SEED_LOOKAHEAD + 1
+        fork_epoch = current_epoch + spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1)
 
         exited_validators = []
         # Change the active validator set by exiting half of the validators in future epochs
@@ -48,16 +48,17 @@ def _template_test_at_fork_deactivate_validators_wo_block(
             validator.exit_epoch = fork_epoch
             exited_validators.append(validator_index)
 
-        while spec.get_current_epoch(state) < fork_epoch - 1:
+        while spec.get_current_epoch(state) < fork_epoch - spec.Epoch(1):
             spec.process_slots(
                 state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH)
             )
-            assert state.slot % spec.SLOTS_PER_EPOCH == 0
+            assert state.slot % spec.SLOTS_PER_EPOCH == spec.Slot(0)
 
         spec.process_slots(
-            state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
+            state,
+            state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - spec.Slot(1),
         )
-        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - 1
+        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
         state, _ = yield from do_fork_generate(
             state, spec, phases[post_spec], fork_epoch, with_block=False
@@ -95,7 +96,7 @@ def _template_test_at_fork_deactivate_validators(
     @with_meta_tags(meta_tags)
     def test_after_fork_deactivate_validators(spec, phases, state):
         current_epoch = spec.get_current_epoch(state)
-        fork_epoch = current_epoch + spec.MIN_SEED_LOOKAHEAD + 1
+        fork_epoch = current_epoch + spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1)
 
         exited_validators = []
         # Change the active validator set by exiting half of the validators in future epochs
@@ -107,16 +108,17 @@ def _template_test_at_fork_deactivate_validators(
             validator.exit_epoch = fork_epoch
             exited_validators.append(validator_index)
 
-        while spec.get_current_epoch(state) < fork_epoch - 1:
+        while spec.get_current_epoch(state) < fork_epoch - spec.Epoch(1):
             spec.process_slots(
                 state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH)
             )
-            assert state.slot % spec.SLOTS_PER_EPOCH == 0
+            assert state.slot % spec.SLOTS_PER_EPOCH == spec.Slot(0)
 
         spec.process_slots(
-            state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
+            state,
+            state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - spec.Slot(1),
         )
-        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - 1
+        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
         state, _ = yield from do_fork_generate(
             state, spec, phases[post_spec], fork_epoch, with_block=True
@@ -161,14 +163,14 @@ def _template_test_after_fork_new_validator_active_pre_electra(
 
         # As `prepare_state_and_deposit` changes the state, we need to create the block after calling it.
         deposit_block = build_empty_block_for_next_slot(spec, state)
-        deposit_block.body.deposits = [deposit]
+        deposit_block.body.deposits = spec.Deposits.of(deposit)
 
         _ = state_transition_and_sign_block(spec, state, deposit_block)
 
         next_epoch(spec, state)
         next_epoch(spec, state)
 
-        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - 1
+        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - spec.Epoch(1)
 
         next_epoch(spec, state)
 
@@ -186,15 +188,15 @@ def _template_test_after_fork_new_validator_active_pre_electra(
         ):
             next_epoch(spec, state)
 
-        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - 1
+        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - spec.Epoch(1)
 
         while state.validators[new_validator_index].activation_epoch == spec.FAR_FUTURE_EPOCH:
             next_epoch(spec, state)
 
         fork_epoch = state.validators[new_validator_index].activation_epoch
-        assert spec.get_current_epoch(state) < fork_epoch - 1
+        assert spec.get_current_epoch(state) < fork_epoch - spec.Epoch(1)
 
-        while spec.get_current_epoch(state) < fork_epoch - 1:
+        while spec.get_current_epoch(state) < fork_epoch - spec.Epoch(1):
             next_epoch(spec, state)
 
         new_validator = state.validators[new_validator_index]
@@ -204,9 +206,10 @@ def _template_test_after_fork_new_validator_active_pre_electra(
         )
 
         spec.process_slots(
-            state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
+            state,
+            state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - spec.Slot(1),
         )
-        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - 1
+        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
         state, _ = yield from do_fork_generate(state, spec, phases[post_spec], fork_epoch)
 
@@ -247,7 +250,7 @@ def _template_test_after_fork_new_validator_active_post_electra(
         # As `prepare_state_and_deposit` changes the state, we need to create the block after calling it.
         deposit_block = build_empty_block_for_next_slot(spec, state)
 
-        deposit_block.body.execution_requests.deposits = [deposit_request]
+        deposit_block.body.execution_requests.deposits = spec.DepositRequests.of(deposit_request)
         deposit_block.body.execution_payload.block_hash = compute_el_block_hash_for_block(
             spec, deposit_block
         )
@@ -261,16 +264,16 @@ def _template_test_after_fork_new_validator_active_post_electra(
             signature=deposit_request.signature,
             slot=deposit_block.slot,
         )
-        assert state.pending_deposits == [pending_deposit]
+        assert list(state.pending_deposits) == [pending_deposit]
 
         next_epoch(spec, state)
         next_epoch(spec, state)
 
-        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - 1
+        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - spec.Epoch(1)
 
         next_epoch(spec, state)
 
-        assert state.pending_deposits == []
+        assert list(state.pending_deposits) == []
 
         assert len(state.validators) == new_validator_index + 1
 
@@ -286,15 +289,15 @@ def _template_test_after_fork_new_validator_active_post_electra(
         ):
             next_epoch(spec, state)
 
-        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - 1
+        state.finalized_checkpoint.epoch = spec.get_current_epoch(state) - spec.Epoch(1)
 
         while state.validators[new_validator_index].activation_epoch == spec.FAR_FUTURE_EPOCH:
             next_epoch(spec, state)
 
         fork_epoch = state.validators[new_validator_index].activation_epoch
-        assert spec.get_current_epoch(state) < fork_epoch - 1
+        assert spec.get_current_epoch(state) < fork_epoch - spec.Epoch(1)
 
-        while spec.get_current_epoch(state) < fork_epoch - 1:
+        while spec.get_current_epoch(state) < fork_epoch - spec.Epoch(1):
             next_epoch(spec, state)
 
         new_validator = state.validators[new_validator_index]
@@ -304,9 +307,10 @@ def _template_test_after_fork_new_validator_active_post_electra(
         )
 
         spec.process_slots(
-            state, state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
+            state,
+            state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - spec.Slot(1),
         )
-        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - 1
+        assert state.slot % spec.SLOTS_PER_EPOCH == spec.SLOTS_PER_EPOCH - spec.Slot(1)
 
         state, _ = yield from do_fork_generate(state, spec, phases[post_spec], fork_epoch)
 

@@ -24,6 +24,7 @@ from eth_consensus_specs.test.helpers.gossip import (
 )
 from eth_consensus_specs.test.helpers.keys import privkeys
 from eth_consensus_specs.test.helpers.state import next_slot, state_transition_and_sign_block
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def create_signed_aggregate_and_proof(spec, state, attestation):
@@ -53,7 +54,7 @@ def create_signed_aggregate_and_proof(spec, state, attestation):
 def prepare_signed_aggregate(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = anchor_block.hash_tree_root()
+    anchor_root = hash_tree_root(anchor_block)
     next_slot(spec, state)
     attestation = get_valid_attestation(spec, state, signed=True, beacon_block_root=anchor_root)
     signed_agg = create_signed_aggregate_and_proof(spec, state, attestation)
@@ -64,7 +65,7 @@ def prepare_signed_aggregate(spec, state):
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__reject_data_index_too_high(spec, state):
     """An aggregate with data.index >= 2 is rejected."""
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "topic", "meta", "beacon_aggregate_and_proof"
     yield "state", anchor_state
 
@@ -82,7 +83,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_data_index_too_high(spec, sta
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -116,9 +117,9 @@ def prepare_same_slot_aggregate(spec, state, payload_index):
     signed_anchor = wrap_genesis_block(spec, anchor_block)
     block = build_empty_block_for_next_slot(spec, state)
     signed_block = state_transition_and_sign_block(spec, state, block)
-    block_root = signed_block.message.hash_tree_root()
+    block_root = hash_tree_root(signed_block.message)
     store.blocks[block_root] = signed_block.message
-    store.block_states[block_root] = state.copy()
+    store.block_states[block_root] = copy(state)
 
     attestation = get_valid_attestation(
         spec,
@@ -144,9 +145,9 @@ def prepare_past_slot_aggregate(spec, state, payload_index, install_payload=Fals
     signed_anchor = wrap_genesis_block(spec, anchor_block)
     block = build_empty_block_for_next_slot(spec, state)
     signed_block = state_transition_and_sign_block(spec, state, block)
-    block_root = signed_block.message.hash_tree_root()
+    block_root = hash_tree_root(signed_block.message)
     store.blocks[block_root] = signed_block.message
-    store.block_states[block_root] = state.copy()
+    store.block_states[block_root] = copy(state)
 
     signed_envelope = None
     if install_payload:
@@ -172,7 +173,7 @@ def prepare_past_slot_aggregate(spec, state, payload_index, install_payload=Fals
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__reject_same_slot_with_payload(spec, state):
     """A same-slot aggregate with data.index != 0 is rejected."""
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "topic", "meta", "beacon_aggregate_and_proof"
     yield "state", anchor_state
 
@@ -196,7 +197,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_same_slot_with_payload(spec, 
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -224,7 +225,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_same_slot_with_payload(spec, 
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__ignore_payload_envelope_unseen(spec, state):
     """A data.index=1 aggregate with no known payload envelope is ignored."""
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "topic", "meta", "beacon_aggregate_and_proof"
     yield "state", anchor_state
 
@@ -248,7 +249,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_payload_envelope_unseen(spec,
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -276,7 +277,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_payload_envelope_unseen(spec,
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__ignore_payload_pending_el_validation(spec, state):
     """A data.index=1 aggregate with an optimistic payload is ignored."""
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "topic", "meta", "beacon_aggregate_and_proof"
     yield "state", anchor_state
 
@@ -305,7 +306,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_payload_pending_el_validation
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -335,7 +336,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_payload_pending_el_validation
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__reject_payload_failed_el_validation(spec, state):
     """A data.index=1 aggregate whose payload was EL-invalidated is rejected."""
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "topic", "meta", "beacon_aggregate_and_proof"
     yield "state", anchor_state
 
@@ -364,7 +365,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_payload_failed_el_validation(
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -394,7 +395,7 @@ def test_gossip_beacon_aggregate_and_proof__reject_payload_failed_el_validation(
 @spec_state_test
 def test_gossip_beacon_aggregate_and_proof__valid_payload_validated(spec, state):
     """A data.index=1 aggregate whose payload passed EL validation is valid."""
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "topic", "meta", "beacon_aggregate_and_proof"
     yield "state", anchor_state
 
@@ -423,7 +424,7 @@ def test_gossip_beacon_aggregate_and_proof__valid_payload_validated(spec, state)
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
@@ -458,7 +459,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_payload_status_without_envelo
     ignored, since ``is_payload_verified`` is False, rather than accepted on the
     strength of a status entry alone.
     """
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "topic", "meta", "beacon_aggregate_and_proof"
     yield "state", anchor_state
 
@@ -486,7 +487,7 @@ def test_gossip_beacon_aggregate_and_proof__ignore_payload_status_without_envelo
     yield "current_time_ms", "meta", int(time_ms)
     messages = []
 
-    time_ms += 500
+    time_ms += spec.Uint64(500)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,

@@ -17,7 +17,9 @@ from eth_consensus_specs.test.phase0.unittests.validator.test_validator_unittest
 
 
 def inclusion_committee_balances(spec):
-    return [spec.MAX_EFFECTIVE_BALANCE] * spec.SLOTS_PER_EPOCH * spec.INCLUSION_LIST_COMMITTEE_SIZE
+    return [spec.MAX_EFFECTIVE_BALANCE] * (
+        int(spec.SLOTS_PER_EPOCH) * int(spec.INCLUSION_LIST_COMMITTEE_SIZE)
+    )
 
 
 def run_get_inclusion_list_committee_assignments(spec, state, epoch, valid=True):
@@ -25,12 +27,12 @@ def run_get_inclusion_list_committee_assignments(spec, state, epoch, valid=True)
 
     start_slot = spec.compute_start_slot_at_epoch(epoch)
     end_slot = start_slot + spec.SLOTS_PER_EPOCH
-    some_slots = rng.sample(range(start_slot, end_slot), 3)
+    some_slots = [spec.Slot(s) for s in rng.sample(range(start_slot, end_slot), 3)]
 
-    inclusion_assignments = [(None, None, len(state.validators))]
+    inclusion_assignments = [(None, None, spec.ValidatorIndex(len(state.validators)))]
     for slot in some_slots:
         committee = spec.get_inclusion_list_committee(state, slot)
-        for validator_index in rng.sample(committee, 3):
+        for validator_index in rng.sample(list(committee), 3):
             inclusion_assignments.append((slot, committee, validator_index))
 
     for slot, committee, validator_index in inclusion_assignments:
@@ -66,7 +68,7 @@ def test_get_inclusion_committee_assignment_current_epoch(spec, state):
 )
 @single_phase
 def test_get_inclusion_committee_assignment_next_epoch(spec, state):
-    epoch = spec.get_current_epoch(state) + 1
+    epoch = spec.get_current_epoch(state) + spec.Epoch(1)
     run_get_inclusion_list_committee_assignments(spec, state, epoch, valid=True)
 
 
@@ -77,7 +79,7 @@ def test_get_inclusion_committee_assignment_next_epoch(spec, state):
 )
 @single_phase
 def test_get_inclusion_committee_assignment_out_bound_epoch(spec, state):
-    epoch = spec.get_current_epoch(state) + 2
+    epoch = spec.get_current_epoch(state) + spec.Epoch(2)
     run_get_inclusion_list_committee_assignments(spec, state, epoch, valid=False)
 
 

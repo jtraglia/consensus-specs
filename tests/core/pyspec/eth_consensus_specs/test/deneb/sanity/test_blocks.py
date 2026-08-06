@@ -44,16 +44,16 @@ def run_block_with_blobs(
     blob_kzg_commitments = []
     for _ in range(tx_count):
         opaque_tx, _, commits, _ = get_sample_blob_tx(spec, blob_count=blob_count)
-        txs.append(opaque_tx)
+        txs.append(spec.Transaction(data=opaque_tx))
         blob_kzg_commitments += commits
 
     for _ in range(non_blob_tx_count):
-        txs.append(get_random_tx(rng))
+        txs.append(spec.Transaction(data=get_random_tx(rng)))
 
     rng.shuffle(txs)
 
-    block.body.blob_kzg_commitments = blob_kzg_commitments
-    block.body.execution_payload.transactions = txs
+    block.body.blob_kzg_commitments = spec.BlobKZGCommitments(data=blob_kzg_commitments)
+    block.body.execution_payload.transactions = spec.Transactions(data=txs)
     block.body.execution_payload.blob_gas_used = blob_gas_used
     block.body.execution_payload.excess_blob_gas = excess_blob_gas
     block.body.execution_payload.block_hash = compute_el_block_hash(
@@ -99,7 +99,7 @@ def test_one_blob_max_txs(spec, state):
 @spec_state_test
 def test_invalid_one_blob_max_plus_one_txs(spec, state):
     yield from run_block_with_blobs(
-        spec, state, blob_count=1, tx_count=get_max_blob_count(spec, state) + 1, valid=False
+        spec, state, blob_count=1, tx_count=int(get_max_blob_count(spec, state)) + 1, valid=False
     )
 
 
@@ -121,7 +121,7 @@ def test_invalid_max_blobs_per_block_two_txs(spec, state):
 @spec_state_test
 def test_invalid_exceed_max_blobs_per_block(spec, state):
     yield from run_block_with_blobs(
-        spec, state, blob_count=get_max_blob_count(spec, state) + 1, valid=False
+        spec, state, blob_count=int(get_max_blob_count(spec, state)) + 1, valid=False
     )
 
 

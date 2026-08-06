@@ -31,6 +31,7 @@ from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
     transition_to,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def build_signed_block_and_sidecars(spec, state, blob_count=1):
@@ -78,7 +79,7 @@ def test_gossip_data_column_sidecar__valid(spec, state):
 
     if not is_post_gloas(spec):
         state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -97,9 +98,9 @@ def test_gossip_data_column_sidecar__valid(spec, state):
     blocks_meta = [{"block": get_filename(signed_anchor)}]
     if is_post_gloas(spec):
         # gloas's validator requires the sidecar's referenced block to be in store.
-        block_root = signed_block.message.hash_tree_root()
+        block_root = hash_tree_root(signed_block.message)
         store.blocks[block_root] = signed_block.message
-        store.block_states[block_root] = state.copy()
+        store.block_states[block_root] = copy(state)
         yield get_filename(signed_block), signed_block
         blocks_meta.append({"block": get_filename(signed_block)})
     yield "blocks", "meta", blocks_meta
@@ -119,7 +120,7 @@ def test_gossip_data_column_sidecar__valid(spec, state):
         seen=seen,
         store=store,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
         **kwargs,
     )
@@ -147,7 +148,7 @@ def test_gossip_data_column_sidecar__reject_index_out_of_range(spec, state):
     yield "topic", "meta", "data_column_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -172,7 +173,7 @@ def test_gossip_data_column_sidecar__reject_index_out_of_range(spec, state):
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -200,7 +201,7 @@ def test_gossip_data_column_sidecar__reject_too_many_commitments(spec, state):
     yield "topic", "meta", "data_column_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -214,8 +215,10 @@ def test_gossip_data_column_sidecar__reject_too_many_commitments(spec, state):
     # Pad commitments past the blob limit. The verify_data_column_sidecar
     # check is independent of the inclusion proof, so we don't need a
     # consistent block here.
-    extra = get_max_blob_count(spec, state) + 1 - len(sidecar.kzg_commitments)
-    sidecar.kzg_commitments = list(sidecar.kzg_commitments) + [spec.KZGCommitment()] * extra
+    extra = int(get_max_blob_count(spec, state)) + 1 - len(sidecar.kzg_commitments)
+    sidecar.kzg_commitments = spec.BlobKZGCommitments(
+        data=list(sidecar.kzg_commitments) + [spec.KZGCommitment()] * extra
+    )
 
     yield get_filename(sidecar), sidecar
 
@@ -229,7 +232,7 @@ def test_gossip_data_column_sidecar__reject_too_many_commitments(spec, state):
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -258,7 +261,7 @@ def test_gossip_data_column_sidecar__reject_wrong_subnet(spec, state):
 
     if not is_post_gloas(spec):
         state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -271,9 +274,9 @@ def test_gossip_data_column_sidecar__reject_wrong_subnet(spec, state):
 
     blocks_meta = [{"block": get_filename(signed_anchor)}]
     if is_post_gloas(spec):
-        block_root = signed_block.message.hash_tree_root()
+        block_root = hash_tree_root(signed_block.message)
         store.blocks[block_root] = signed_block.message
-        store.block_states[block_root] = state.copy()
+        store.block_states[block_root] = copy(state)
         yield get_filename(signed_block), signed_block
         blocks_meta.append({"block": get_filename(signed_block)})
     yield "blocks", "meta", blocks_meta
@@ -286,7 +289,7 @@ def test_gossip_data_column_sidecar__reject_wrong_subnet(spec, state):
 
     expected_subnet = correct_subnet(spec, sidecar)
     wrong_subnet = spec.SubnetID(
-        (int(expected_subnet) + 1) % spec.config.DATA_COLUMN_SIDECAR_SUBNET_COUNT
+        (int(expected_subnet) + 1) % int(spec.config.DATA_COLUMN_SIDECAR_SUBNET_COUNT)
     )
     kwargs = {}
     if not is_post_gloas(spec):
@@ -296,7 +299,7 @@ def test_gossip_data_column_sidecar__reject_wrong_subnet(spec, state):
         seen=seen,
         store=store,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=wrong_subnet,
         **kwargs,
     )
@@ -326,7 +329,7 @@ def test_gossip_data_column_sidecar__ignore_future_slot(spec, state):
 
     if not is_post_gloas(spec):
         state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -342,7 +345,7 @@ def test_gossip_data_column_sidecar__ignore_future_slot(spec, state):
 
     sidecar_slot = sidecar.slot if is_post_gloas(spec) else sidecar.signed_block_header.message.slot
     slot_time_ms = spec.compute_time_at_slot_ms(store, sidecar_slot)
-    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - 1
+    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - spec.Uint64(1)
     yield "current_time_ms", "meta", int(current_time_ms)
 
     subnet_id = correct_subnet(spec, sidecar)
@@ -384,7 +387,7 @@ def test_gossip_data_column_sidecar__valid_slot_within_clock_disparity(spec, sta
 
     if not is_post_gloas(spec):
         state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -398,9 +401,9 @@ def test_gossip_data_column_sidecar__valid_slot_within_clock_disparity(spec, sta
     blocks_meta = [{"block": get_filename(signed_anchor)}]
     if is_post_gloas(spec):
         # gloas's validator requires the sidecar's referenced block to be in store.
-        block_root = signed_block.message.hash_tree_root()
+        block_root = hash_tree_root(signed_block.message)
         store.blocks[block_root] = signed_block.message
-        store.block_states[block_root] = state.copy()
+        store.block_states[block_root] = copy(state)
         yield get_filename(signed_block), signed_block
         blocks_meta.append({"block": get_filename(signed_block)})
     yield "blocks", "meta", blocks_meta
@@ -449,14 +452,14 @@ def test_gossip_data_column_sidecar__ignore_not_later_than_finalized_slot(spec, 
     yield "topic", "meta", "data_column_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     seen = get_seen(spec)
     store, anchor_block = setup_store_with_anchor(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
-    transition_to(spec, state, spec.Slot(spec.SLOTS_PER_EPOCH - 1))
+    transition_to(spec, state, spec.Slot(spec.SLOTS_PER_EPOCH - spec.Slot(1)))
     yield "state", anchor_state
 
     _, sidecars = build_signed_block_and_sidecars(spec, state, blob_count=1)
@@ -489,7 +492,7 @@ def test_gossip_data_column_sidecar__ignore_not_later_than_finalized_slot(spec, 
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "ignore"
@@ -517,7 +520,7 @@ def test_gossip_data_column_sidecar__reject_proposer_index_out_of_range(spec, st
     yield "topic", "meta", "data_column_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -542,7 +545,7 @@ def test_gossip_data_column_sidecar__reject_proposer_index_out_of_range(spec, st
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -571,7 +574,7 @@ def test_gossip_data_column_sidecar__reject_invalid_proposer_signature(spec, sta
     yield "topic", "meta", "data_column_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -596,7 +599,7 @@ def test_gossip_data_column_sidecar__reject_invalid_proposer_signature(spec, sta
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -624,7 +627,7 @@ def test_gossip_data_column_sidecar__ignore_parent_not_seen(spec, state):
     yield "topic", "meta", "data_column_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -652,7 +655,7 @@ def test_gossip_data_column_sidecar__ignore_parent_not_seen(spec, state):
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "ignore"
@@ -680,7 +683,7 @@ def test_gossip_data_column_sidecar__reject_parent_failed_validation(spec, state
     yield "topic", "meta", "data_column_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -691,7 +694,7 @@ def test_gossip_data_column_sidecar__reject_parent_failed_validation(spec, state
     # Build the failed parent on a separate state copy so the yielded anchor state stays
     # at slot 0 (its `latest_block_header` points at the genesis-equivalent anchor, not at
     # `signed_parent`)
-    parent_state = state.copy()
+    parent_state = copy(state)
     parent_block = build_empty_block_for_next_slot(spec, parent_state)
     signed_parent = state_transition_and_sign_block(spec, parent_state, parent_block)
 
@@ -699,7 +702,7 @@ def test_gossip_data_column_sidecar__reject_parent_failed_validation(spec, state
 
     # Add the parent block to store.blocks but not store.block_states, matching
     # the reference-test encoding of a failed block.
-    store.blocks[signed_parent.message.hash_tree_root()] = signed_parent.message
+    store.blocks[hash_tree_root(signed_parent.message)] = signed_parent.message
 
     yield (
         "blocks",
@@ -710,7 +713,7 @@ def test_gossip_data_column_sidecar__reject_parent_failed_validation(spec, state
         ],
     )
 
-    _, sidecars = build_signed_block_and_sidecars(spec, parent_state.copy(), blob_count=1)
+    _, sidecars = build_signed_block_and_sidecars(spec, copy(parent_state), blob_count=1)
     sidecar = sidecars[0]
 
     yield get_filename(sidecar), sidecar
@@ -725,7 +728,7 @@ def test_gossip_data_column_sidecar__reject_parent_failed_validation(spec, state
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -756,7 +759,7 @@ def test_gossip_data_column_sidecar__reject_slot_not_higher_than_parent(spec, st
     yield "topic", "meta", "data_column_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -764,14 +767,14 @@ def test_gossip_data_column_sidecar__reject_slot_not_higher_than_parent(spec, st
     signed_anchor = wrap_genesis_block(spec, anchor_block)
     yield get_filename(signed_anchor), signed_anchor
 
-    parent_state = state.copy()
+    parent_state = copy(state)
     parent_block = build_empty_block_for_next_slot(spec, parent_state)
     signed_parent = state_transition_and_sign_block(spec, parent_state, parent_block)
 
     yield get_filename(signed_parent), signed_parent
-    parent_root = signed_parent.message.hash_tree_root()
+    parent_root = hash_tree_root(signed_parent.message)
     store.blocks[parent_root] = signed_parent.message
-    store.block_states[parent_root] = parent_state.copy()
+    store.block_states[parent_root] = copy(parent_state)
     yield (
         "blocks",
         "meta",
@@ -781,7 +784,7 @@ def test_gossip_data_column_sidecar__reject_slot_not_higher_than_parent(spec, st
         ],
     )
 
-    _, sidecars = build_signed_block_and_sidecars(spec, parent_state.copy(), blob_count=1)
+    _, sidecars = build_signed_block_and_sidecars(spec, copy(parent_state), blob_count=1)
     sidecar = sidecars[0]
     sidecar.signed_block_header.message.slot = signed_parent.message.slot
     resign_sidecar_header(spec, parent_state, sidecar)
@@ -798,7 +801,7 @@ def test_gossip_data_column_sidecar__reject_slot_not_higher_than_parent(spec, st
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -826,7 +829,7 @@ def test_gossip_data_column_sidecar__reject_non_ancestor_finalized_checkpoint(sp
     yield "topic", "meta", "data_column_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -857,7 +860,7 @@ def test_gossip_data_column_sidecar__reject_non_ancestor_finalized_checkpoint(sp
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -885,7 +888,7 @@ def test_gossip_data_column_sidecar__reject_invalid_inclusion_proof(spec, state)
     yield "topic", "meta", "data_column_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -897,7 +900,9 @@ def test_gossip_data_column_sidecar__reject_invalid_inclusion_proof(spec, state)
     _, sidecars = build_signed_block_and_sidecars(spec, state, blob_count=1)
     sidecar = sidecars[0]
     # Corrupt the inclusion proof.
-    sidecar.kzg_commitments_inclusion_proof = spec.compute_merkle_proof(spec.BeaconBlockBody(), 0)
+    proof = list(sidecar.kzg_commitments_inclusion_proof)
+    proof[0] = spec.Bytes32(spec.hash(proof[0]))
+    sidecar.kzg_commitments_inclusion_proof = spec.KZGCommitmentsInclusionProof(data=proof)
 
     yield get_filename(sidecar), sidecar
 
@@ -911,7 +916,7 @@ def test_gossip_data_column_sidecar__reject_invalid_inclusion_proof(spec, state)
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -940,7 +945,7 @@ def test_gossip_data_column_sidecar__reject_invalid_kzg_proofs(spec, state):
 
     if not is_post_gloas(spec):
         state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -953,14 +958,14 @@ def test_gossip_data_column_sidecar__reject_invalid_kzg_proofs(spec, state):
     # Corrupt every KZG proof to the point at infinity, which won't verify
     # against the real commitments.
     bad_proof = spec.KZGProof(b"\xc0" + b"\x00" * 47)
-    sidecar.kzg_proofs = [bad_proof for _ in sidecar.kzg_proofs]
+    sidecar.kzg_proofs = spec.KZGProofs(data=[bad_proof for _ in sidecar.kzg_proofs])
 
     blocks_meta = [{"block": get_filename(signed_anchor)}]
     if is_post_gloas(spec):
         # gloas's validator requires the sidecar's referenced block to be in store.
-        block_root = signed_block.message.hash_tree_root()
+        block_root = hash_tree_root(signed_block.message)
         store.blocks[block_root] = signed_block.message
-        store.block_states[block_root] = state.copy()
+        store.block_states[block_root] = copy(state)
         yield get_filename(signed_block), signed_block
         blocks_meta.append({"block": get_filename(signed_block)})
     yield "blocks", "meta", blocks_meta
@@ -980,7 +985,7 @@ def test_gossip_data_column_sidecar__reject_invalid_kzg_proofs(spec, state):
         seen=seen,
         store=store,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
         **kwargs,
     )
@@ -1012,7 +1017,7 @@ def test_gossip_data_column_sidecar__ignore_already_seen(spec, state):
     yield "topic", "meta", "data_column_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     messages = []
@@ -1039,7 +1044,7 @@ def test_gossip_data_column_sidecar__ignore_already_seen(spec, state):
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "valid"
@@ -1059,7 +1064,7 @@ def test_gossip_data_column_sidecar__ignore_already_seen(spec, state):
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 600,
+        current_time_ms=block_time_ms + spec.Uint64(600),
         subnet_id=subnet_id,
     )
     assert result == "ignore"
@@ -1084,7 +1089,7 @@ def test_gossip_data_column_sidecar__reject_wrong_proposer_index(spec, state):
     yield "topic", "meta", "data_column_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -1113,7 +1118,7 @@ def test_gossip_data_column_sidecar__reject_wrong_proposer_index(spec, state):
         store=store,
         state=state,
         sidecar=sidecar,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         subnet_id=subnet_id,
     )
     assert result == "reject"

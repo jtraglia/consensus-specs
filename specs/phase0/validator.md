@@ -171,7 +171,7 @@ Withdrawal credentials with the BLS withdrawal prefix allow a BLS key pair
 `(bls_withdrawal_privkey, bls_withdrawal_pubkey)` to trigger withdrawals. The
 `withdrawal_credentials` field must be such that:
 
-- `Bytes1(withdrawal_credentials[:1]) == BLS_WITHDRAWAL_PREFIX`
+- `withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX`
 - `withdrawal_credentials[1:] == hash(bls_withdrawal_pubkey)[1:]`
 
 *Note*: The `bls_withdrawal_privkey` is not required for validating and can be
@@ -186,7 +186,7 @@ account or of a contract.
 
 The `withdrawal_credentials` field must be such that:
 
-- `Bytes1(withdrawal_credentials[:1]) == ETH1_ADDRESS_WITHDRAWAL_PREFIX`
+- `withdrawal_credentials[:1] == ETH1_ADDRESS_WITHDRAWAL_PREFIX`
 - `withdrawal_credentials[1:12] == b'\x00' * 11`
 - `withdrawal_credentials[12:] == eth1_withdrawal_address`
 
@@ -291,7 +291,7 @@ def get_committee_assignment(
         * ``assignment[2]`` is the slot at which the committee is assigned
     Return None if no assignment.
     """
-    next_epoch = get_current_epoch(state) + Epoch(1)
+    next_epoch = Epoch(get_current_epoch(state) + 1)
     assert epoch <= next_epoch
 
     start_slot = compute_start_slot_at_epoch(epoch)
@@ -460,8 +460,8 @@ An honest block proposer sets
 
 ```python
 def voting_period_start_time(state: BeaconState) -> Uint64:
-    eth1_voting_period_start_slot = state.slot - state.slot % (
-        Slot(EPOCHS_PER_ETH1_VOTING_PERIOD) * SLOTS_PER_EPOCH
+    eth1_voting_period_start_slot = Slot(
+        state.slot - state.slot % (Uint64(EPOCHS_PER_ETH1_VOTING_PERIOD) * SLOTS_PER_EPOCH)
     )
     return compute_time_at_slot(state, eth1_voting_period_start_slot)
 ```
@@ -494,7 +494,9 @@ def get_eth1_vote(state: BeaconState, eth1_chain: Sequence[Eth1Block]) -> Eth1Da
     # Default vote on latest eth1 block data in the period range unless eth1 chain is not live
     # Non-substantive casting for linter
     state_eth1_data: Eth1Data = state.eth1_data
-    default_vote = votes_to_consider[-1] if any(votes_to_consider) else state_eth1_data
+    default_vote = (
+        votes_to_consider[len(votes_to_consider) - 1] if any(votes_to_consider) else state_eth1_data
+    )
 
     return max(
         valid_votes,
@@ -580,7 +582,7 @@ root for this purpose:
 
 ```python
 def compute_new_state_root(state: BeaconState, block: BeaconBlock) -> Root:
-    temp_state: BeaconState = copy(state)
+    temp_state: BeaconState = state.copy()
     signed_block = SignedBeaconBlock(message=block)
     state_transition(temp_state, signed_block, validate_result=False)
     return hash_tree_root(temp_state)
@@ -707,9 +709,7 @@ def compute_subnet_for_attestation(
     slots_since_epoch_start = Uint64(slot % SLOTS_PER_EPOCH)
     committees_since_epoch_start = committees_per_slot * slots_since_epoch_start
 
-    return SubnetID(
-        (committees_since_epoch_start + Uint64(committee_index)) % ATTESTATION_SUBNET_COUNT
-    )
+    return SubnetID((committees_since_epoch_start + committee_index) % ATTESTATION_SUBNET_COUNT)
 ```
 
 ### Attestation aggregation
@@ -734,8 +734,8 @@ def is_aggregator(
     state: BeaconState, slot: Slot, index: CommitteeIndex, slot_signature: BLSSignature
 ) -> bool:
     committee = get_beacon_committee(state, slot, index)
-    modulo = max(Uint64(1), len(committee) // TARGET_AGGREGATORS_PER_COMMITTEE)
-    return bytes_to_uint64(hash(slot_signature)[0:8]) % modulo == Uint64(0)
+    modulo = max(1, len(committee) // TARGET_AGGREGATORS_PER_COMMITTEE)
+    return bytes_to_uint64(hash(slot_signature)[0:8]) % modulo == 0
 ```
 
 #### Construct aggregate

@@ -31,6 +31,7 @@ from eth_consensus_specs.test.helpers.gossip import (
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 @with_bellatrix_and_later
@@ -42,7 +43,7 @@ def test_gossip_beacon_block__valid_execution_enabled(spec, state):
     yield "topic", "meta", "beacon_block"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -70,7 +71,7 @@ def test_gossip_beacon_block__valid_execution_enabled(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         **kwargs,
     )
     assert result == "valid"
@@ -92,7 +93,7 @@ def test_gossip_beacon_block__valid_execution_disabled(spec, state):
     yield "topic", "meta", "beacon_block"
 
     state = build_state_with_incomplete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -118,7 +119,7 @@ def test_gossip_beacon_block__valid_execution_disabled(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         block_payload_statuses={},
     )
     assert result == "valid"
@@ -140,7 +141,7 @@ def test_gossip_beacon_block__reject_incorrect_execution_payload_timestamp(spec,
     yield "topic", "meta", "beacon_block"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -169,7 +170,7 @@ def test_gossip_beacon_block__reject_incorrect_execution_payload_timestamp(spec,
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         block_payload_statuses={},
     )
     assert result == "reject"
@@ -199,7 +200,7 @@ def test_gossip_beacon_block__reject_parent_consensus_failed_execution_not_verif
     yield "topic", "meta", "beacon_block"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -214,7 +215,7 @@ def test_gossip_beacon_block__reject_parent_consensus_failed_execution_not_verif
     yield get_filename(signed_block), signed_block
 
     # Add to store.blocks but NOT store.block_states (simulating failed consensus validation)
-    store.blocks[signed_block.message.hash_tree_root()] = signed_block.message
+    store.blocks[hash_tree_root(signed_block.message)] = signed_block.message
     # Parent payload status is NOT_VALIDATED, i.e. execution is not yet validated.
 
     yield (
@@ -231,16 +232,16 @@ def test_gossip_beacon_block__reject_parent_consensus_failed_execution_not_verif
     )
 
     # Build child block referencing the "failed" parent
-    child_slot = signed_block.message.slot + 1
-    temp_state = state.copy()
+    child_slot = signed_block.message.slot + spec.Slot(1)
+    temp_state = copy(state)
     spec.process_slots(temp_state, child_slot)
     proposer_index = spec.get_beacon_proposer_index(temp_state)
 
     child_block = spec.BeaconBlock(
         slot=child_slot,
         proposer_index=proposer_index,
-        parent_root=signed_block.message.hash_tree_root(),
-        state_root=temp_state.hash_tree_root(),
+        parent_root=hash_tree_root(signed_block.message),
+        state_root=hash_tree_root(temp_state),
     )
     child_block.body.execution_payload = build_empty_execution_payload(spec, temp_state)
     signed_child = sign_block(spec, temp_state, child_block, proposer_index=proposer_index)
@@ -257,10 +258,10 @@ def test_gossip_beacon_block__reject_parent_consensus_failed_execution_not_verif
         store=store,
         state=state,
         signed_beacon_block=signed_child,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         block_payload_statuses=get_spec_block_payload_statuses(
             spec,
-            {signed_block.message.hash_tree_root(): PAYLOAD_STATUS_NOT_VALIDATED},
+            {hash_tree_root(signed_block.message): PAYLOAD_STATUS_NOT_VALIDATED},
         ),
     )
     assert result == "reject"
@@ -290,7 +291,7 @@ def test_gossip_beacon_block__ignore_parent_consensus_failed_execution_known(spe
     yield "topic", "meta", "beacon_block"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -304,7 +305,7 @@ def test_gossip_beacon_block__ignore_parent_consensus_failed_execution_known(spe
 
     yield get_filename(signed_block), signed_block
 
-    parent_root = signed_block.message.hash_tree_root()
+    parent_root = hash_tree_root(signed_block.message)
 
     # Parent has a known execution status but failed consensus validation.
     store.blocks[parent_root] = signed_block.message
@@ -323,8 +324,8 @@ def test_gossip_beacon_block__ignore_parent_consensus_failed_execution_known(spe
         ],
     )
 
-    child_slot = signed_block.message.slot + 1
-    temp_state = state.copy()
+    child_slot = signed_block.message.slot + spec.Slot(1)
+    temp_state = copy(state)
     spec.process_slots(temp_state, child_slot)
     proposer_index = spec.get_beacon_proposer_index(temp_state)
 
@@ -332,7 +333,7 @@ def test_gossip_beacon_block__ignore_parent_consensus_failed_execution_known(spe
         slot=child_slot,
         proposer_index=proposer_index,
         parent_root=parent_root,
-        state_root=temp_state.hash_tree_root(),
+        state_root=hash_tree_root(temp_state),
     )
     child_block.body.execution_payload = build_empty_execution_payload(spec, temp_state)
     signed_child = sign_block(spec, temp_state, child_block, proposer_index=proposer_index)
@@ -349,7 +350,7 @@ def test_gossip_beacon_block__ignore_parent_consensus_failed_execution_known(spe
         store=store,
         state=state,
         signed_beacon_block=signed_child,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         block_payload_statuses=get_spec_block_payload_statuses(spec, block_payload_statuses),
     )
     assert result == "ignore"
@@ -379,7 +380,7 @@ def test_gossip_beacon_block__ignore_parent_execution_verified_invalid(spec, sta
     yield "topic", "meta", "beacon_block"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -393,12 +394,12 @@ def test_gossip_beacon_block__ignore_parent_execution_verified_invalid(spec, sta
 
     yield get_filename(signed_block), signed_block
 
-    parent_root = signed_block.message.hash_tree_root()
+    parent_root = hash_tree_root(signed_block.message)
 
     # Parent is in store.blocks and store.block_states (consensus passed),
     # but execution was verified as INVALID
     store.blocks[parent_root] = signed_block.message
-    store.block_states[parent_root] = state.copy()
+    store.block_states[parent_root] = copy(state)
     block_payload_statuses = {parent_root: PAYLOAD_STATUS_INVALIDATED}
 
     yield (
@@ -414,8 +415,8 @@ def test_gossip_beacon_block__ignore_parent_execution_verified_invalid(spec, sta
     )
 
     # Build child block
-    child_slot = signed_block.message.slot + 1
-    temp_state = state.copy()
+    child_slot = signed_block.message.slot + spec.Slot(1)
+    temp_state = copy(state)
     spec.process_slots(temp_state, child_slot)
     proposer_index = spec.get_beacon_proposer_index(temp_state)
 
@@ -423,7 +424,7 @@ def test_gossip_beacon_block__ignore_parent_execution_verified_invalid(spec, sta
         slot=child_slot,
         proposer_index=proposer_index,
         parent_root=parent_root,
-        state_root=temp_state.hash_tree_root(),
+        state_root=hash_tree_root(temp_state),
     )
     child_block.body.execution_payload = build_empty_execution_payload(spec, temp_state)
     signed_child = sign_block(spec, temp_state, child_block, proposer_index=proposer_index)
@@ -440,7 +441,7 @@ def test_gossip_beacon_block__ignore_parent_execution_verified_invalid(spec, sta
         store=store,
         state=state,
         signed_beacon_block=signed_child,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         block_payload_statuses=get_spec_block_payload_statuses(spec, block_payload_statuses),
     )
     assert result == "ignore"
@@ -470,7 +471,7 @@ def test_gossip_beacon_block__valid_parent_execution_verified_valid(spec, state)
     yield "topic", "meta", "beacon_block"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -484,11 +485,11 @@ def test_gossip_beacon_block__valid_parent_execution_verified_valid(spec, state)
 
     yield get_filename(signed_block), signed_block
 
-    parent_root = signed_block.message.hash_tree_root()
+    parent_root = hash_tree_root(signed_block.message)
 
     # Parent fully validated: consensus and execution both passed
     store.blocks[parent_root] = signed_block.message
-    store.block_states[parent_root] = state.copy()
+    store.block_states[parent_root] = copy(state)
     block_payload_statuses = {parent_root: PAYLOAD_STATUS_VALID}
 
     yield (
@@ -504,8 +505,8 @@ def test_gossip_beacon_block__valid_parent_execution_verified_valid(spec, state)
     )
 
     # Build child block
-    child_slot = signed_block.message.slot + 1
-    temp_state = state.copy()
+    child_slot = signed_block.message.slot + spec.Slot(1)
+    temp_state = copy(state)
     spec.process_slots(temp_state, child_slot)
     proposer_index = spec.get_beacon_proposer_index(temp_state)
 
@@ -513,7 +514,7 @@ def test_gossip_beacon_block__valid_parent_execution_verified_valid(spec, state)
         slot=child_slot,
         proposer_index=proposer_index,
         parent_root=parent_root,
-        state_root=temp_state.hash_tree_root(),
+        state_root=hash_tree_root(temp_state),
     )
     child_block.body.execution_payload = build_empty_execution_payload(spec, temp_state)
     signed_child = sign_block(spec, temp_state, child_block, proposer_index=proposer_index)
@@ -530,7 +531,7 @@ def test_gossip_beacon_block__valid_parent_execution_verified_valid(spec, state)
         store=store,
         state=state,
         signed_beacon_block=signed_child,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         block_payload_statuses=get_spec_block_payload_statuses(spec, block_payload_statuses),
     )
     assert result == "valid"
@@ -553,7 +554,7 @@ def test_gossip_beacon_block__valid_parent_optimistic(spec, state):
     yield "topic", "meta", "beacon_block"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = state.copy()
+    anchor_state = copy(state)
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -567,11 +568,11 @@ def test_gossip_beacon_block__valid_parent_optimistic(spec, state):
 
     yield get_filename(signed_block), signed_block
 
-    parent_root = signed_block.message.hash_tree_root()
+    parent_root = hash_tree_root(signed_block.message)
 
     # Parent passed consensus validation but execution not yet verified
     store.blocks[parent_root] = signed_block.message
-    store.block_states[parent_root] = state.copy()
+    store.block_states[parent_root] = copy(state)
     block_payload_statuses = {parent_root: PAYLOAD_STATUS_NOT_VALIDATED}
 
     yield (
@@ -587,8 +588,8 @@ def test_gossip_beacon_block__valid_parent_optimistic(spec, state):
     )
 
     # Build child block
-    child_slot = signed_block.message.slot + 1
-    temp_state = state.copy()
+    child_slot = signed_block.message.slot + spec.Slot(1)
+    temp_state = copy(state)
     spec.process_slots(temp_state, child_slot)
     proposer_index = spec.get_beacon_proposer_index(temp_state)
 
@@ -596,7 +597,7 @@ def test_gossip_beacon_block__valid_parent_optimistic(spec, state):
         slot=child_slot,
         proposer_index=proposer_index,
         parent_root=parent_root,
-        state_root=temp_state.hash_tree_root(),
+        state_root=hash_tree_root(temp_state),
     )
     child_block.body.execution_payload = build_empty_execution_payload(spec, temp_state)
     signed_child = sign_block(spec, temp_state, child_block, proposer_index=proposer_index)
@@ -613,7 +614,7 @@ def test_gossip_beacon_block__valid_parent_optimistic(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_child,
-        current_time_ms=block_time_ms + 500,
+        current_time_ms=block_time_ms + spec.Uint64(500),
         block_payload_statuses=get_spec_block_payload_statuses(spec, block_payload_statuses),
     )
     assert result == "valid"

@@ -47,6 +47,7 @@ from eth_consensus_specs.test.helpers.withdrawals import (
     set_parent_block_full,
     set_validator_fully_withdrawable,
 )
+from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def _setup_missed_payload_with_withdrawals(spec, state, num_withdrawal_validators=1):
@@ -76,7 +77,7 @@ def _setup_missed_payload_with_withdrawals(spec, state, num_withdrawal_validator
     assert len(get_expected_withdrawals(spec, state)) > 0
 
     # Save pre-state before any blocks
-    pre_state = state.copy()
+    pre_state = copy(state)
 
     # Process Block 1 — process_withdrawals runs (parent is full),
     # computes withdrawals W_1, applies balance changes, stores in payload_expected_withdrawals.
@@ -104,7 +105,7 @@ def _attempt_payload_with_withdrawals(spec, state, withdrawals):
 
     Returns True if accepted, False if rejected.
     """
-    test_state = state.copy()
+    test_state = copy(state)
     committed_bid = test_state.latest_execution_payload_bid
 
     # Build payload matching the committed bid in every field
@@ -119,14 +120,14 @@ def _attempt_payload_with_withdrawals(spec, state, withdrawals):
     )
 
     # Cache state root for beacon_block_root computation
-    header = test_state.latest_block_header.copy()
-    header.state_root = test_state.hash_tree_root()
+    header = copy(test_state.latest_block_header)
+    header.state_root = hash_tree_root(test_state)
 
     envelope = spec.ExecutionPayloadEnvelope(
         payload=payload,
         execution_requests=spec.ExecutionRequests(),
         builder_index=committed_bid.builder_index,
-        beacon_block_root=header.hash_tree_root(),
+        beacon_block_root=hash_tree_root(header),
         parent_beacon_block_root=test_state.latest_block_header.parent_root,
     )
 
@@ -162,7 +163,7 @@ def test_missed_payload_next_block_with_withdrawals_satisfying_payload(spec, sta
     """
     # Set up MAX + 1 validators. Block 1 processes exactly MAX, leaving 1 remaining.
     pre_state, signed_block_1, block_1_withdrawals = _setup_missed_payload_with_withdrawals(
-        spec, state, num_withdrawal_validators=spec.MAX_WITHDRAWALS_PER_PAYLOAD + 1
+        spec, state, num_withdrawal_validators=spec.MAX_WITHDRAWALS_PER_PAYLOAD + spec.Uint64(1)
     )
 
     # Process Block 2 (parent empty → process_withdrawals returns early)
@@ -179,7 +180,7 @@ def test_missed_payload_next_block_with_withdrawals_satisfying_payload(spec, sta
     assert list(current_expected) != block_1_withdrawals
 
     # A payload with Block 1's stale withdrawals (W_1) is accepted
-    satisfying = spec.ProgressiveList[spec.Withdrawal](block_1_withdrawals)
+    satisfying = spec.Withdrawals(data=block_1_withdrawals)
     assert _attempt_payload_with_withdrawals(spec, state, satisfying)
 
 
@@ -197,7 +198,7 @@ def test_missed_payload_recovery_resumes_with_remaining_withdrawals(spec, state)
     """
     # Set up MAX + 2 validators. Block 1 processes exactly MAX, leaving 2 remaining.
     pre_state, signed_block_1, block_1_withdrawals = _setup_missed_payload_with_withdrawals(
-        spec, state, num_withdrawal_validators=spec.MAX_WITHDRAWALS_PER_PAYLOAD + 2
+        spec, state, num_withdrawal_validators=spec.MAX_WITHDRAWALS_PER_PAYLOAD + spec.Uint64(2)
     )
 
     # Process Block 2 (parent empty -> process_withdrawals returns early)
@@ -205,7 +206,7 @@ def test_missed_payload_recovery_resumes_with_remaining_withdrawals(spec, state)
     signed_block_2 = state_transition_and_sign_block(spec, state, block_2)
 
     # Block 2 must still accept Block 1's stale withdrawals.
-    satisfying = spec.ProgressiveList[spec.Withdrawal](block_1_withdrawals)
+    satisfying = spec.Withdrawals(data=block_1_withdrawals)
     assert _attempt_payload_with_withdrawals(spec, state, satisfying)
 
     # Build Block 3 so block processing treats Block 2 as a FULL parent.
@@ -232,7 +233,7 @@ def test_missed_payload_recovery_resumes_with_remaining_withdrawals(spec, state)
     # Exactly two validators remained after Block 1's full payload-sized sweep.
     assert len(resumed_withdrawals) == 2
 
-    resumed = spec.ProgressiveList[spec.Withdrawal](resumed_withdrawals)
+    resumed = spec.Withdrawals(data=resumed_withdrawals)
     assert _attempt_payload_with_withdrawals(spec, state, resumed)
 
     # Once recovery resumes, Block 1's stale withdrawals must be rejected.
@@ -261,7 +262,7 @@ def test_missed_payload_recovery_resumes_without_remaining_withdrawals(spec, sta
     signed_block_2 = state_transition_and_sign_block(spec, state, block_2)
 
     # Block 2 must still accept Block 1's stale withdrawals.
-    satisfying = spec.ProgressiveList[spec.Withdrawal](block_1_withdrawals)
+    satisfying = spec.Withdrawals(data=block_1_withdrawals)
     assert _attempt_payload_with_withdrawals(spec, state, satisfying)
 
     # Build Block 3 so block processing treats Block 2 as a FULL parent.
@@ -284,7 +285,7 @@ def test_missed_payload_recovery_resumes_without_remaining_withdrawals(spec, sta
     resumed_withdrawals = list(state.payload_expected_withdrawals)
     assert resumed_withdrawals == []
 
-    empty_withdrawals = spec.ProgressiveList[spec.Withdrawal]()
+    empty_withdrawals = spec.Withdrawals()
     assert _attempt_payload_with_withdrawals(spec, state, empty_withdrawals)
 
     # Once recovery is complete, the stale Block 1 withdrawals must no longer be accepted.
@@ -302,7 +303,7 @@ def test_missed_payload_next_block_with_withdrawals_unsatisfying_payload(spec, s
     """
     # Set up MAX + 1 validators. Block 1 processes exactly MAX, leaving 1 remaining.
     pre_state, signed_block_1, block_1_withdrawals = _setup_missed_payload_with_withdrawals(
-        spec, state, num_withdrawal_validators=spec.MAX_WITHDRAWALS_PER_PAYLOAD + 1
+        spec, state, num_withdrawal_validators=spec.MAX_WITHDRAWALS_PER_PAYLOAD + spec.Uint64(1)
     )
 
     # Process Block 2 (parent empty → process_withdrawals returns early)
@@ -319,7 +320,7 @@ def test_missed_payload_next_block_with_withdrawals_unsatisfying_payload(spec, s
     assert list(current_expected) != block_1_withdrawals
 
     # A payload with fresh withdrawals (not W_1) is rejected
-    unsatisfying = spec.ProgressiveList[spec.Withdrawal](current_expected)
+    unsatisfying = spec.Withdrawals(data=current_expected)
     assert not _attempt_payload_with_withdrawals(spec, state, unsatisfying)
 
 
@@ -348,7 +349,7 @@ def test_missed_payload_next_block_without_withdrawals_satisfying_payload(spec, 
     assert len(current_expected) == 0
 
     # Despite no current withdrawals, payload must include W_1 — and it's accepted
-    satisfying = spec.ProgressiveList[spec.Withdrawal](block_1_withdrawals)
+    satisfying = spec.Withdrawals(data=block_1_withdrawals)
     assert _attempt_payload_with_withdrawals(spec, state, satisfying)
 
 
@@ -375,7 +376,7 @@ def test_missed_payload_next_block_without_withdrawals_unsatisfying_payload(spec
     assert len(current_expected) == 0
 
     # An empty payload is rejected — it must include W_1
-    empty_withdrawals = spec.ProgressiveList[spec.Withdrawal]()
+    empty_withdrawals = spec.Withdrawals()
     assert not _attempt_payload_with_withdrawals(spec, state, empty_withdrawals)
 
 
@@ -401,7 +402,7 @@ def test_invalid_payload_attestation_wrong_beacon_block_root(spec, state):
         payload_present=True,
         attesting_indices=ptc,
     )
-    block.body.payload_attestations = [payload_attestation]
+    block.body.payload_attestations = spec.PayloadAttestations.of(payload_attestation)
 
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 
@@ -441,7 +442,7 @@ def test_max_proposer_slashings(spec, state):
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.proposer_slashings = proposer_slashings
+    block.body.proposer_slashings = spec.ProposerSlashings(data=proposer_slashings)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
     yield "blocks", [signed_block]
@@ -451,13 +452,13 @@ def test_max_proposer_slashings(spec, state):
 @with_gloas_and_later
 @spec_state_test
 def test_invalid_too_many_proposer_slashings(spec, state):
-    num_slashings = spec.MAX_PROPOSER_SLASHINGS + 1
+    num_slashings = spec.MAX_PROPOSER_SLASHINGS + spec.Uint64(1)
     proposer_slashings = get_valid_proposer_slashings(spec, state, num_slashings)
 
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.proposer_slashings = proposer_slashings
+    block.body.proposer_slashings = spec.ProposerSlashings(data=proposer_slashings)
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 
     yield "blocks", [signed_block]
@@ -473,13 +474,13 @@ def test_invalid_payload_attestation_too_old_slot(spec, state):
     yield "pre", state
 
     # Advance state to slot 3
-    spec.process_slots(state, state.slot + 3)
+    spec.process_slots(state, state.slot + spec.Slot(3))
 
     block = build_empty_block_for_next_slot(spec, state)
 
-    ptc = spec.get_ptc(state, state.slot - 2)
+    ptc = spec.get_ptc(state, state.slot - spec.Slot(2))
 
-    parent_header = state.latest_block_header.copy()
+    parent_header = copy(state.latest_block_header)
     if parent_header.state_root == spec.Root():
         parent_header.state_root = spec.hash_tree_root(state)
     beacon_block_root = spec.hash_tree_root(parent_header)
@@ -487,12 +488,12 @@ def test_invalid_payload_attestation_too_old_slot(spec, state):
     payload_attestation = prepare_signed_payload_attestation(
         spec,
         state,
-        slot=state.slot - 2,  # Too old - should fail
+        slot=state.slot - spec.Slot(2),  # Too old - should fail
         beacon_block_root=beacon_block_root,
         payload_present=True,
         attesting_indices=ptc,
     )
-    block.body.payload_attestations = [payload_attestation]
+    block.body.payload_attestations = spec.PayloadAttestations.of(payload_attestation)
 
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 
@@ -505,7 +506,7 @@ def test_invalid_payload_attestation_too_old_slot(spec, state):
 def test_max_attester_slashings(spec, state):
     num_slashings = get_max_attester_slashings(spec)
     full_indices = spec.get_active_validator_indices(state, spec.get_current_epoch(state))[:8]
-    per_slashing_length = len(full_indices) // num_slashings
+    per_slashing_length = len(full_indices) // int(num_slashings)
     attester_slashings = [
         get_valid_attester_slashing_by_indices(
             spec,
@@ -520,7 +521,7 @@ def test_max_attester_slashings(spec, state):
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.attester_slashings = attester_slashings
+    block.body.attester_slashings = spec.AttesterSlashings(data=attester_slashings)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
     yield "blocks", [signed_block]
@@ -530,9 +531,9 @@ def test_max_attester_slashings(spec, state):
 @with_gloas_and_later
 @spec_state_test
 def test_invalid_too_many_attester_slashings(spec, state):
-    num_slashings = get_max_attester_slashings(spec) + 1
+    num_slashings = int(get_max_attester_slashings(spec)) + 1
     full_indices = spec.get_active_validator_indices(state, spec.get_current_epoch(state))[:8]
-    per_slashing_length = len(full_indices) // num_slashings
+    per_slashing_length = len(full_indices) // int(num_slashings)
     attester_slashings = [
         get_valid_attester_slashing_by_indices(
             spec,
@@ -547,7 +548,7 @@ def test_invalid_too_many_attester_slashings(spec, state):
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.attester_slashings = attester_slashings
+    block.body.attester_slashings = spec.AttesterSlashings(data=attester_slashings)
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 
     yield "blocks", [signed_block]
@@ -566,7 +567,7 @@ def test_max_attestations(spec, state):
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.attestations = attestations
+    block.body.attestations = spec.Attestations(data=attestations)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
     yield "blocks", [signed_block]
@@ -579,13 +580,13 @@ def test_invalid_too_many_attestations(spec, state):
     rng = Random(2000)
 
     next_epoch(spec, state)
-    num_attestations = get_max_attestations(spec) + 1
+    num_attestations = int(get_max_attestations(spec)) + 1
     attestations = get_random_attestations(spec, state, rng, num_attestations)
 
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.attestations = attestations
+    block.body.attestations = spec.Attestations(data=attestations)
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 
     yield "blocks", [signed_block]
@@ -598,7 +599,7 @@ def test_max_deposits(spec, state):
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.deposits = []
+    block.body.deposits = spec.Deposits()
     signed_block = state_transition_and_sign_block(spec, state, block)
 
     yield "blocks", [signed_block]
@@ -611,7 +612,7 @@ def test_invalid_too_many_deposits(spec, state):
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.deposits = [spec.Deposit()]
+    block.body.deposits = spec.Deposits.of(spec.Deposit())
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 
     yield "blocks", [signed_block]
@@ -621,7 +622,7 @@ def test_invalid_too_many_deposits(spec, state):
 @with_gloas_and_later
 @spec_state_test
 def test_max_voluntary_exits(spec, state):
-    next_slots(spec, state, spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH)
+    next_slots(spec, state, spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH)
     num_exits = spec.MAX_VOLUNTARY_EXITS
     full_indices = spec.get_active_validator_indices(state, spec.get_current_epoch(state))[
         :num_exits
@@ -631,7 +632,7 @@ def test_max_voluntary_exits(spec, state):
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.voluntary_exits = signed_exits
+    block.body.voluntary_exits = spec.VoluntaryExits(data=signed_exits)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
     yield "blocks", [signed_block]
@@ -641,8 +642,8 @@ def test_max_voluntary_exits(spec, state):
 @with_gloas_and_later
 @spec_state_test
 def test_invalid_too_many_voluntary_exits(spec, state):
-    next_slots(spec, state, spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH)
-    num_exits = spec.MAX_VOLUNTARY_EXITS + 1
+    next_slots(spec, state, spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH)
+    num_exits = spec.MAX_VOLUNTARY_EXITS + spec.Uint64(1)
     full_indices = spec.get_active_validator_indices(state, spec.get_current_epoch(state))[
         :num_exits
     ]
@@ -651,7 +652,7 @@ def test_invalid_too_many_voluntary_exits(spec, state):
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.voluntary_exits = signed_exits
+    block.body.voluntary_exits = spec.VoluntaryExits(data=signed_exits)
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 
     yield "blocks", [signed_block]
@@ -670,7 +671,7 @@ def test_max_bls_to_execution_changes(spec, state):
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.bls_to_execution_changes = signed_address_changes
+    block.body.bls_to_execution_changes = spec.BLSToExecutionChanges(data=signed_address_changes)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
     yield "blocks", [signed_block]
@@ -680,7 +681,7 @@ def test_max_bls_to_execution_changes(spec, state):
 @with_gloas_and_later
 @spec_state_test
 def test_invalid_too_many_bls_to_execution_changes(spec, state):
-    num_address_changes = spec.MAX_BLS_TO_EXECUTION_CHANGES + 1
+    num_address_changes = spec.MAX_BLS_TO_EXECUTION_CHANGES + spec.Uint64(1)
     signed_address_changes = [
         get_signed_address_change(spec, state, validator_index=i)
         for i in range(num_address_changes)
@@ -689,7 +690,7 @@ def test_invalid_too_many_bls_to_execution_changes(spec, state):
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.bls_to_execution_changes = signed_address_changes
+    block.body.bls_to_execution_changes = spec.BLSToExecutionChanges(data=signed_address_changes)
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 
     yield "blocks", [signed_block]
@@ -711,7 +712,7 @@ def test_max_payload_attestations(spec, state):
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.payload_attestations = payload_attestations
+    block.body.payload_attestations = spec.PayloadAttestations(data=payload_attestations)
     signed_block = state_transition_and_sign_block(spec, state, block)
 
     yield "blocks", [signed_block]
@@ -726,14 +727,14 @@ def test_invalid_too_many_payload_attestations(spec, state):
     state_transition_and_sign_block(spec, state, build_empty_block_for_next_slot(spec, state))
 
     payload_attestations = []
-    for _ in range(spec.MAX_PAYLOAD_ATTESTATIONS + 1):
+    for _ in range(spec.MAX_PAYLOAD_ATTESTATIONS + spec.Uint64(1)):
         payload_attestations.extend(get_random_payload_attestations(spec, state, rng))
     assert len(payload_attestations) > spec.MAX_PAYLOAD_ATTESTATIONS
 
     yield "pre", state
 
     block = build_empty_block_for_next_slot(spec, state)
-    block.body.payload_attestations = payload_attestations
+    block.body.payload_attestations = spec.PayloadAttestations(data=payload_attestations)
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 
     yield "blocks", [signed_block]
@@ -754,7 +755,7 @@ def test_invalid_payload_attestation_invalid_signature(spec, state):
     parent_slot = state.latest_block_header.slot
     ptc = spec.get_ptc(state, parent_slot)
 
-    parent_header = state.latest_block_header.copy()
+    parent_header = copy(state.latest_block_header)
     if parent_header.state_root == spec.Root():
         parent_header.state_root = spec.hash_tree_root(state)
     beacon_block_root = spec.hash_tree_root(parent_header)
@@ -768,7 +769,7 @@ def test_invalid_payload_attestation_invalid_signature(spec, state):
         attesting_indices=ptc,
         valid_signature=False,
     )
-    block.body.payload_attestations = [payload_attestation]
+    block.body.payload_attestations = spec.PayloadAttestations.of(payload_attestation)
 
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
 
@@ -786,7 +787,7 @@ def test_builder_payment_after_missed_epochs(spec, state):
     # Advance to get finalization
     for _ in range(4):
         next_epoch_with_full_participation(spec, state)
-    assert state.finalized_checkpoint.epoch == 2
+    assert state.finalized_checkpoint.epoch == spec.Epoch(2)
 
     # Build Block 1 with a non-zero value bid from a builder
     block_1 = build_empty_block_for_next_slot(spec, state)
@@ -823,8 +824,8 @@ def test_builder_payment_after_missed_epochs(spec, state):
     payment_idx = spec.SLOTS_PER_EPOCH + block_1.slot % spec.SLOTS_PER_EPOCH
     payment = state.builder_pending_payments[payment_idx]
     assert payment.withdrawal.amount == value
-    assert payment.withdrawal.builder_index == builder_index
-    assert payment.weight == 0
+    assert payment.withdrawal.builder_index == spec.BuilderIndex(builder_index)
+    assert payment.weight == spec.Gwei(0)
 
     pre_builder_balance = state.builders[builder_index].balance
 
@@ -836,7 +837,7 @@ def test_builder_payment_after_missed_epochs(spec, state):
     # runs. Since parent_epoch is older than previous_epoch, payment_index is None.
     # The fix creates the withdrawal directly from the bid in this case.
     block_1_epoch = spec.compute_epoch_at_slot(block_1.slot)
-    block_2_slot = (block_1_epoch + 2) * spec.SLOTS_PER_EPOCH + 1
+    block_2_slot = (int(block_1_epoch) + 2) * int(spec.SLOTS_PER_EPOCH) + 1
     block_2 = build_empty_block(spec, state, slot=block_2_slot)
     block_2.body.signed_execution_payload_bid.message.parent_block_hash = block_hash
     signed_block_2 = state_transition_and_sign_block(spec, state, block_2)
@@ -846,7 +847,7 @@ def test_builder_payment_after_missed_epochs(spec, state):
 
     # Verify apply_parent_execution_payload actually ran (parent was FULL)
     parent_slot_index = bid.slot % spec.SLOTS_PER_HISTORICAL_ROOT
-    assert state.execution_payload_availability[parent_slot_index] == 0b1
+    assert state.execution_payload_availability[parent_slot_index]
 
     # Verify the builder was charged — balance decreased by the bid value
     assert state.builders[builder_index].balance == pre_builder_balance - value
@@ -916,7 +917,7 @@ def test_attestations_after_missed_slot_use_applied_parent_payload_availability(
     child_slot = attestation_slot + spec.MIN_ATTESTATION_INCLUSION_DELAY
     block_2 = build_empty_block(spec, state, slot=child_slot)
     block_2.body.signed_execution_payload_bid.message.parent_block_hash = parent_block_hash
-    block_2.body.attestations = [matching_attestation, mismatching_attestation]
+    block_2.body.attestations = spec.Attestations.of(matching_attestation, mismatching_attestation)
     signed_block_2 = state_transition_and_sign_block(spec, state, block_2)
 
     yield "blocks", [signed_block_1, signed_block_2]
@@ -950,14 +951,14 @@ def test_voluntary_exit_fails_after_parent_payload_withdrawal_request(spec, stat
     validator_index = spec.get_active_validator_indices(state, spec.get_current_epoch(state))[-1]
 
     # Move state forward SHARD_COMMITTEE_PERIOD epochs so the validator can exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     # Set up the parent block as FULL with a bid that commits to a full-exit
     # withdrawal request for the validator.
     set_parent_block_full(spec, state)
     withdrawal_request = prepare_withdrawal_request(spec, state, validator_index)
     requests = spec.ExecutionRequests(
-        withdrawals=spec.ProgressiveList[spec.WithdrawalRequest]([withdrawal_request]),
+        withdrawals=spec.WithdrawalRequests.of(withdrawal_request),
     )
     state.latest_execution_payload_bid.execution_requests_root = spec.hash_tree_root(requests)
 
@@ -967,7 +968,7 @@ def test_voluntary_exit_fails_after_parent_payload_withdrawal_request(spec, stat
     signed_exits = prepare_signed_exits(spec, state, [validator_index])
     block = build_empty_block_for_next_slot(spec, state)
     block.body.parent_execution_requests = requests
-    block.body.voluntary_exits = signed_exits
+    block.body.voluntary_exits = spec.VoluntaryExits(data=signed_exits)
 
     yield "pre", state
     signed_block = state_transition_and_sign_block(spec, state, block, expect_fail=True)
@@ -985,7 +986,7 @@ def test_proposer_lookahead_excludes_slashed_validators(spec, state):
         next_epoch(spec, state)
 
     current_epoch = spec.get_current_epoch(state)
-    new_half_epoch = current_epoch + spec.MIN_SEED_LOOKAHEAD + 1
+    new_half_epoch = current_epoch + spec.MIN_SEED_LOOKAHEAD + spec.Epoch(1)
 
     # Slash some validators
     for validator_index in range(len(state.validators) // 2):
@@ -1003,7 +1004,7 @@ def test_proposer_lookahead_excludes_slashed_validators(spec, state):
     # not one of the validators we slashed so the block is valid
     epoch_n1_proposers = list(state.proposer_lookahead[spec.SLOTS_PER_EPOCH :])
     offset = next(i for i, p in enumerate(epoch_n1_proposers) if not state.validators[p].slashed)
-    block_slot = (current_epoch + 1) * spec.SLOTS_PER_EPOCH + offset
+    block_slot = (int(current_epoch) + 1) * int(spec.SLOTS_PER_EPOCH) + offset
 
     yield "pre", state
 
@@ -1014,5 +1015,5 @@ def test_proposer_lookahead_excludes_slashed_validators(spec, state):
     yield "post", state
 
     # The newly appended lookahead epoch matches the Gloas selection
-    last_epoch_start = len(state.proposer_lookahead) - spec.SLOTS_PER_EPOCH
+    last_epoch_start = len(state.proposer_lookahead) - int(spec.SLOTS_PER_EPOCH)
     assert list(state.proposer_lookahead[last_epoch_start:]) == list(proposers_in_gloas)

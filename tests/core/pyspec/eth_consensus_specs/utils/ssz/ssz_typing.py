@@ -118,10 +118,35 @@ class BytesN(ByteVector):
     """
     Base for the specs' fixed-width byte arrays.
 
-    The widths below are the only thing this adds. The library hashes a byte
-    array by content, matching how it compares them, so a ``Root`` and the
-    ``Bytes32`` a hash tree root comes back as land in the same bucket.
+    These compare by content, across every name declared here.
+
+    The library relates two byte arrays only by inheritance, so two names for
+    the same width are siblings and refuse each other. That reading is right
+    for a library, where a ``Root`` and a ``Hash32`` are different ideas. It is
+    wrong for the specs, where the same 32 bytes are called a ``Root`` in one
+    container, a ``Bytes32`` in another, and are compared across the two
+    constantly -- an ancestor lookup weighs a block root against a stored
+    ``Bytes32``, and both spell the same value.
+
+    Content is therefore the whole of it, and the hash agrees, so a value found
+    under one name is found under the other.
     """
+
+    def __eq__(self, other: object) -> bool:
+        """Equal when the bytes are equal, whatever each side is called."""
+        if isinstance(other, (ByteVector, bytes, bytearray)):
+            return bytes(self) == bytes(other)
+        return super().__eq__(other)
+
+    def __ne__(self, other: object) -> bool:
+        """The negation of the above, so both directions agree."""
+        if isinstance(other, (ByteVector, bytes, bytearray)):
+            return bytes(self) != bytes(other)
+        return super().__ne__(other)
+
+    def __hash__(self) -> int:
+        """Hash by content, so equal byte arrays of any width hash alike."""
+        return hash(bytes(self))
 
 
 class Bytes1(BytesN):

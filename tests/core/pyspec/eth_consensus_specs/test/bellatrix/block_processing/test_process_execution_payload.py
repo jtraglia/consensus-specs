@@ -20,6 +20,7 @@ from eth_consensus_specs.test.helpers.execution_payload import (
 )
 from eth_consensus_specs.test.helpers.forks import is_post_eip8025
 from eth_consensus_specs.test.helpers.state import next_slot
+from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 def run_execution_payload_processing(
@@ -224,9 +225,9 @@ def run_bad_timestamp_test(spec, state, is_future):
     # execution payload
     execution_payload = build_empty_execution_payload(spec, state)
     if is_future:
-        timestamp = execution_payload.timestamp + 1
+        timestamp = execution_payload.timestamp + spec.Uint64(1)
     else:
-        timestamp = execution_payload.timestamp - 1
+        timestamp = execution_payload.timestamp - spec.Uint64(1)
     execution_payload.timestamp = timestamp
     execution_payload.block_hash = compute_el_block_hash(spec, execution_payload, state)
 
@@ -265,7 +266,7 @@ def run_non_empty_extra_data_test(spec, state):
     next_slot(spec, state)
 
     execution_payload = build_empty_execution_payload(spec, state)
-    execution_payload.extra_data = b"\x45" * 12
+    execution_payload.extra_data = spec.ExtraData(data=b"\x45" * 12)
     execution_payload.block_hash = compute_el_block_hash(spec, execution_payload, state)
 
     yield from run_execution_payload_processing(spec, state, execution_payload)
@@ -291,16 +292,15 @@ def run_non_empty_transactions_test(spec, state):
 
     execution_payload = build_empty_execution_payload(spec, state)
     num_transactions = 2
-    execution_payload.transactions = [
-        spec.Transaction(b"\x99" * 128) for _ in range(num_transactions)
-    ]
+    execution_payload.transactions = spec.Transactions(
+        data=[spec.Transaction(data=b"\x99" * 128) for _ in range(num_transactions)]
+    )
     execution_payload.block_hash = compute_el_block_hash(spec, execution_payload, state)
 
     yield from run_execution_payload_processing(spec, state, execution_payload)
 
-    assert (
-        state.latest_execution_payload_header.transactions_root
-        == execution_payload.transactions.hash_tree_root()
+    assert state.latest_execution_payload_header.transactions_root == hash_tree_root(
+        execution_payload.transactions
     )
 
 
@@ -322,15 +322,14 @@ def run_zero_length_transaction_test(spec, state):
     next_slot(spec, state)
 
     execution_payload = build_empty_execution_payload(spec, state)
-    execution_payload.transactions = [spec.Transaction(b"")]
+    execution_payload.transactions = spec.Transactions.of(spec.Transaction())
     assert len(execution_payload.transactions[0]) == 0
     execution_payload.block_hash = compute_el_block_hash(spec, execution_payload, state)
 
     yield from run_execution_payload_processing(spec, state, execution_payload)
 
-    assert (
-        state.latest_execution_payload_header.transactions_root
-        == execution_payload.transactions.hash_tree_root()
+    assert state.latest_execution_payload_header.transactions_root == hash_tree_root(
+        execution_payload.transactions
     )
 
 

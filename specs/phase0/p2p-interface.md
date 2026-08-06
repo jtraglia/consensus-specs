@@ -364,7 +364,7 @@ def compute_time_at_slot_ms(store: Store, slot: Slot) -> Uint64:
     Return the time in milliseconds at the start of the given slot.
     """
     slots_since_genesis = slot - GENESIS_SLOT
-    return store.genesis_time * 1000 + Uint64(slots_since_genesis) * SLOT_DURATION_MS
+    return Uint64(store.genesis_time * 1000 + slots_since_genesis * SLOT_DURATION_MS)
 ```
 
 #### `is_future_slot`
@@ -399,7 +399,7 @@ def is_within_slot_range(
     start_time_ms = compute_time_at_slot_ms(store, slot)
     if current_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY < start_time_ms:
         return False
-    end_time_ms = compute_time_at_slot_ms(store, slot + slot_range + 1)
+    end_time_ms = compute_time_at_slot_ms(store, Slot(slot + slot_range + 1))
     if end_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY < current_time_ms:
         return False
     return True
@@ -412,7 +412,7 @@ def compute_attestation_subnet_prefix_bits() -> Uint64:
     """
     Return the number of NodeId bits to use when mapping to a subscribed subnet.
     """
-    return ceillog2(ATTESTATION_SUBNET_COUNT) + ATTESTATION_SUBNET_EXTRA_BITS
+    return Uint64(ceillog2(ATTESTATION_SUBNET_COUNT) + ATTESTATION_SUBNET_EXTRA_BITS)
 ```
 
 #### `compute_min_epochs_for_block_requests`
@@ -481,7 +481,7 @@ can carry according to the following functions:
 def max_compressed_len(n: Uint64) -> Uint64:
     # Worst-case compressed length for a given payload of size n when using snappy:
     # https://github.com/google/snappy/blob/32ded457c0b1fe78ceb8397632c416568d6714a0/snappy.cc#L218C1-L218C47
-    return 32 + n + n // 6
+    return Uint64(32 + n + n / 6)
 ```
 
 #### `max_message_size`
@@ -489,7 +489,7 @@ def max_compressed_len(n: Uint64) -> Uint64:
 ```python
 def max_message_size() -> Uint64:
     # Allow 1024 bytes for framing and encoding overhead but at least 1MiB in case MAX_PAYLOAD_SIZE is small.
-    return max(max_compressed_len(MAX_PAYLOAD_SIZE) + Uint64(1024), Uint64(1024 * 1024))
+    return max(max_compressed_len(MAX_PAYLOAD_SIZE) + 1024, 1024 * 1024)
 ```
 
 ### The gossip domain: gossipsub
@@ -681,7 +681,7 @@ def validate_beacon_block_gossip(
 
     # [REJECT] The block is proposed by the expected proposer for the slot
     # (if shuffling is not available, IGNORE instead and MAY be queued for later)
-    parent_state = copy(store.block_states[block.parent_root])
+    parent_state = store.block_states[block.parent_root].copy()
     process_slots(parent_state, block.slot)
     expected_proposer = get_beacon_proposer_index(parent_state)
     if block.proposer_index != expected_proposer:
@@ -717,7 +717,7 @@ def validate_beacon_aggregate_and_proof_gossip(
 
     # [REJECT] The committee index is within the expected range
     committee_count = get_committee_count_per_slot(state, aggregate.data.target.epoch)
-    if Uint64(index) >= committee_count:
+    if index >= committee_count:
         raise GossipReject("committee index out of range")
 
     # [IGNORE] The aggregate attestation's slot is within the propagation range
@@ -1016,7 +1016,7 @@ def validate_beacon_attestation_gossip(
 
     # [REJECT] The committee index is within the expected range
     committees_per_slot = get_committee_count_per_slot(state, target_epoch)
-    if Uint64(committee_index) >= committees_per_slot:
+    if committee_index >= committees_per_slot:
         raise GossipReject("committee index out of range")
 
     # [REJECT] The attestation is for the correct subnet
@@ -1048,6 +1048,8 @@ def validate_beacon_attestation_gossip(
         raise GossipReject("aggregation bits length does not match committee size")
 
     # [IGNORE] No other valid attestation seen for this target epoch and validator
+    # A bitfield holds Boolean, which will not compare against a bool, so the
+    # set bit is found by position rather than by searching for a value.
     participant_index = committee[next(i for i, bit in enumerate(aggregation_bits) if bit)]
     attestation_epoch_key = (target_epoch, participant_index)
     if attestation_epoch_key in seen.attestation_validator_epochs:
@@ -1799,15 +1801,17 @@ should:
 ```python
 def compute_subscribed_subnet(node_id: NodeID, epoch: Epoch, index: int) -> SubnetID:
     prefix_bits = int(compute_attestation_subnet_prefix_bits())
-    node_id_prefix = Uint64(node_id >> NodeID(int(NODE_ID_BITS) - prefix_bits))
-    node_offset = Epoch(node_id % NodeID(EPOCHS_PER_SUBNET_SUBSCRIPTION))
-    permutation_seed = hash(uint_to_bytes((epoch + node_offset) // EPOCHS_PER_SUBNET_SUBSCRIPTION))
+    node_id_prefix = node_id >> int(NODE_ID_BITS - prefix_bits)
+    node_offset = Uint64(node_id % Uint256(EPOCHS_PER_SUBNET_SUBSCRIPTION))
+    permutation_seed = hash(
+        uint_to_bytes(Uint64((epoch + node_offset) // EPOCHS_PER_SUBNET_SUBSCRIPTION))
+    )
     permutated_prefix = compute_shuffled_index(
         node_id_prefix,
-        Uint64(1 << prefix_bits),
+        1 << prefix_bits,
         permutation_seed,
     )
-    return SubnetID((permutated_prefix + Uint64(index)) % ATTESTATION_SUBNET_COUNT)
+    return SubnetID((permutated_prefix + index) % ATTESTATION_SUBNET_COUNT)
 ```
 
 ```python

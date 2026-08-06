@@ -28,11 +28,11 @@ def run_voluntary_exit_processing_test(spec, state, fork_version, is_before_fork
     voluntary_exit_epoch = 0 if is_before_fork_epoch else state.fork.epoch
 
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
-    state.slot += spec.config.SHARD_COMMITTEE_PERIOD * spec.SLOTS_PER_EPOCH
+    state.slot += spec.Slot(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = spec.get_active_validator_indices(state, current_epoch)[0]
-    privkey = pubkey_to_privkey[state.validators[validator_index].pubkey]
+    privkey = pubkey_to_privkey[bytes(state.validators[validator_index].pubkey)]
 
     voluntary_exit = spec.VoluntaryExit(
         epoch=voluntary_exit_epoch,
