@@ -24,7 +24,6 @@ from eth_consensus_specs.test.helpers.random import (
     randomize_state,
 )
 from eth_consensus_specs.test.utils import with_meta_tags
-from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 @with_phases(phases=[PHASE0], other_phases=[ALTAIR])
@@ -85,8 +84,8 @@ def test_altair_fork_random_mismatched_attestations(spec, phases, state):
     randomize_state(spec, state, rng=Random(2222))
 
     # Now make two copies
-    state_0 = copy(state)
-    state_1 = copy(state)
+    state_0 = state.copy()
+    state_1 = state.copy()
 
     # Randomize attestation participation of both
     randomize_attestation_participation(spec, state_0, rng=Random(3333))

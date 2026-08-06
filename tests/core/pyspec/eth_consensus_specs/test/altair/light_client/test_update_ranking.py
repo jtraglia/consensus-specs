@@ -14,7 +14,6 @@ from eth_consensus_specs.test.helpers.light_client import (
 from eth_consensus_specs.test.helpers.state import (
     next_slots,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def create_test_update(
@@ -43,52 +42,41 @@ def test_update_ranking(spec, state):
     # - `fin_finalized` / `fin_attested` --> Finalized header also in next sync committee period
     # - `lat_finalized` / `lat_attested` --> Like `fin`, but at a later `attested_header.beacon.slot`
     next_slots(
-        spec,
-        state,
-        spec.compute_start_slot_at_epoch(spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD - spec.Epoch(3))
-        - spec.Slot(1),
+        spec, state, spec.compute_start_slot_at_epoch(spec.EPOCHS_PER_SYNC_COMMITTEE_PERIOD - 3) - 1
     )
     sig_finalized_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
     _, _, state = next_slots_with_attestations(
-        spec, state, spec.SLOTS_PER_EPOCH - spec.Slot(1), fill_cur_epoch=True, fill_prev_epoch=True
+        spec, state, spec.SLOTS_PER_EPOCH - 1, fill_cur_epoch=True, fill_prev_epoch=True
     )
     att_finalized_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
     _, _, state = next_slots_with_attestations(
-        spec,
-        state,
-        spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(2),
-        fill_cur_epoch=True,
-        fill_prev_epoch=True,
+        spec, state, 2 * spec.SLOTS_PER_EPOCH - 2, fill_cur_epoch=True, fill_prev_epoch=True
     )
     sig_attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
-    sig_attested_state = copy(state)
+    sig_attested_state = state.copy()
     att_attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
-    att_attested_state = copy(state)
+    att_attested_state = state.copy()
     fin_finalized_block = att_attested_block
     _, _, state = next_slots_with_attestations(
-        spec,
-        state,
-        spec.Slot(2) * spec.SLOTS_PER_EPOCH - spec.Slot(1),
-        fill_cur_epoch=True,
-        fill_prev_epoch=True,
+        spec, state, 2 * spec.SLOTS_PER_EPOCH - 1, fill_cur_epoch=True, fill_prev_epoch=True
     )
     fin_attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
-    fin_attested_state = copy(state)
+    fin_attested_state = state.copy()
     lat_finalized_block = fin_finalized_block
     lat_attested_block = state_transition_with_full_block(
         spec, state, fill_cur_epoch=True, fill_prev_epoch=True
     )
-    lat_attested_state = copy(state)
+    lat_attested_state = state.copy()
     sig = (sig_attested_state, sig_attested_block, sig_finalized_block)
     att = (att_attested_state, att_attested_block, att_finalized_block)
     fin = (fin_attested_state, fin_attested_block, fin_finalized_block)
@@ -167,7 +155,7 @@ def test_update_ranking(spec, state):
             with_next=0,
             with_finality=0,
             participation_rate=0.2,
-            signature_slot=lat_attested_state.slot + spec.Slot(2),
+            signature_slot=lat_attested_state.slot + 2,
         ),
     ]
     yield "updates", updates

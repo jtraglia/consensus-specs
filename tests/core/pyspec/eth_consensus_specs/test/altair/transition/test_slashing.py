@@ -48,7 +48,7 @@ def test_transition_with_one_fourth_slashed_active_validators_pre_fork(
 
     transition_until_fork(spec, state, fork_epoch)
 
-    assert spec.get_current_epoch(state) < spec.Epoch(fork_epoch)
+    assert spec.get_current_epoch(state) < fork_epoch
 
     yield "pre", state
 

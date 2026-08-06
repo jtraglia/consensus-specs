@@ -53,7 +53,7 @@ def test_is_one_confirmed_passes_with_full_participation(spec, state):
     # Verify no empty slot gap (consecutive slots)
     block = store.blocks[block_b]
     parent_block = store.blocks[block.parent_root]
-    assert parent_block.slot + spec.Slot(1) == block.slot, "Test requires consecutive slots"
+    assert parent_block.slot + 1 == block.slot, "Test requires consecutive slots"
 
     # Get balance source
     balance_source = spec.get_current_balance_source(fcr_store)
@@ -70,9 +70,7 @@ def test_is_one_confirmed_passes_with_full_participation(spec, state):
     proposer_score = spec.compute_proposer_score(balance_source)
     total_active_balance = spec.get_total_active_balance(balance_source)
     maximum_support = spec.estimate_committee_weight_between_slots(
-        total_active_balance,
-        spec.Slot(parent_block.slot + spec.Slot(1)),
-        current_slot - spec.Slot(1),
+        total_active_balance, spec.Slot(parent_block.slot + 1), spec.Slot(current_slot - 1)
     )
     support_discount = spec.get_support_discount(store, balance_source, block_b)
     adversarial_weight = spec.get_adversarial_weight(store, balance_source, block_b)
@@ -121,7 +119,7 @@ def test_is_one_confirmed_fails_with_low_participation(spec, state):
     # Verify no empty slot gap
     block = store.blocks[block_b]
     parent_block = store.blocks[block.parent_root]
-    assert parent_block.slot + spec.Slot(1) == block.slot, "Test requires consecutive slots"
+    assert parent_block.slot + 1 == block.slot, "Test requires consecutive slots"
 
     # Get balance source
     balance_source = spec.get_current_balance_source(fcr_store)
@@ -138,9 +136,7 @@ def test_is_one_confirmed_fails_with_low_participation(spec, state):
     proposer_score = spec.compute_proposer_score(balance_source)
     total_active_balance = spec.get_total_active_balance(balance_source)
     maximum_support = spec.estimate_committee_weight_between_slots(
-        total_active_balance,
-        spec.Slot(parent_block.slot + spec.Slot(1)),
-        current_slot - spec.Slot(1),
+        total_active_balance, spec.Slot(parent_block.slot + 1), spec.Slot(current_slot - 1)
     )
     support_discount = spec.get_support_discount(store, balance_source, block_b)
     adversarial_weight = spec.get_adversarial_weight(store, balance_source, block_b)
@@ -245,7 +241,7 @@ def test_is_one_confirmed_slashing_non_supporters_helps(spec, state):
 
     block = store.blocks[block_b]
     parent_block = store.blocks[block.parent_root]
-    assert parent_block.slot + spec.Slot(1) == block.slot, "Test requires consecutive slots"
+    assert parent_block.slot + 1 == block.slot, "Test requires consecutive slots"
 
     balance_source = spec.get_current_balance_source(fcr_store)
 
@@ -328,7 +324,7 @@ def test_is_one_confirmed_empty_slot_discount(spec, state):
 
     block_a_data = store.blocks[block_a]
     parent_a = store.blocks[block_a_data.parent_root]
-    assert parent_a.slot + spec.Slot(1) == block_a_data.slot, "Block A must be consecutive"
+    assert parent_a.slot + 1 == block_a_data.slot, "Block A must be consecutive"
 
     balance_source = spec.get_current_balance_source(fcr_store)
 
@@ -354,7 +350,7 @@ def test_is_one_confirmed_empty_slot_discount(spec, state):
 
     block_b_data = store.blocks[block_b]
     parent_b = store.blocks[block_b_data.parent_root]
-    assert parent_b.slot + spec.Slot(1) < block_b_data.slot, "Block B must have an empty slot gap"
+    assert parent_b.slot + 1 < block_b_data.slot, "Block B must have an empty slot gap"
 
     balance_source = spec.get_current_balance_source(fcr_store)
 
@@ -369,16 +365,16 @@ def test_is_one_confirmed_empty_slot_discount(spec, state):
             store,
             balance_source,
             block_b_data.parent_root,
-            spec.Slot(parent_b.slot + spec.Slot(1)),
-            spec.Slot(block_b_data.slot - spec.Slot(1)),
+            spec.Slot(parent_b.slot + 1),
+            spec.Slot(block_b_data.slot - 1),
         )
     )
     adv_in_empty = int(
         spec.compute_adversarial_weight(
             store,
             balance_source,
-            spec.Slot(parent_b.slot + spec.Slot(1)),
-            spec.Slot(block_b_data.slot - spec.Slot(1)),
+            spec.Slot(parent_b.slot + 1),
+            spec.Slot(block_b_data.slot - 1),
         )
     )
     assert discount_b == parent_support_in_empty - adv_in_empty, (
@@ -406,9 +402,7 @@ def test_is_one_confirmed_empty_slot_discount(spec, state):
     total_active_balance = spec.get_total_active_balance(balance_source)
     max_support_b = int(
         spec.estimate_committee_weight_between_slots(
-            total_active_balance,
-            spec.Slot(parent_b.slot + spec.Slot(1)),
-            current_slot - spec.Slot(1),
+            total_active_balance, spec.Slot(parent_b.slot + 1), spec.Slot(current_slot - 1)
         )
     )
     adv_b = int(spec.get_adversarial_weight(store, balance_source, block_b))
@@ -542,14 +536,14 @@ def test_is_one_confirmed_epoch_crossing_block(spec, state):
     # Adversarial weight with epoch start (what the code does for epoch-crossing)
     adv_from_epoch_start = int(
         spec.compute_adversarial_weight(
-            store, balance_source, epoch_start, current_slot - spec.Slot(1)
+            store, balance_source, epoch_start, spec.Slot(current_slot - 1)
         )
     )
 
     # Adversarial weight with block slot (what the code would do without epoch-crossing logic)
     adv_from_block_slot = int(
         spec.compute_adversarial_weight(
-            store, balance_source, block.slot, current_slot - spec.Slot(1)
+            store, balance_source, block.slot, spec.Slot(current_slot - 1)
         )
     )
 
@@ -824,12 +818,12 @@ def test_is_one_confirmed_epoch_crossing_adversarial_range_matters(spec, state):
     # compute margins with correct vs wrong adversarial range
     adv_correct = int(
         spec.compute_adversarial_weight(
-            store, balance_source, epoch_start, current_slot - spec.Slot(1)
+            store, balance_source, epoch_start, spec.Slot(current_slot - 1)
         )
     )
     adv_wrong = int(
         spec.compute_adversarial_weight(
-            store, balance_source, block.slot, current_slot - spec.Slot(1)
+            store, balance_source, block.slot, spec.Slot(current_slot - 1)
         )
     )
 
@@ -838,8 +832,8 @@ def test_is_one_confirmed_epoch_crossing_adversarial_range_matters(spec, state):
     max_support = int(
         spec.estimate_committee_weight_between_slots(
             total_active_balance,
-            spec.Slot(parent_block.slot + spec.Slot(1)),
-            current_slot - spec.Slot(1),
+            spec.Slot(parent_block.slot + 1),
+            spec.Slot(current_slot - 1),
         )
     )
     proposer = int(spec.compute_proposer_score(balance_source))
@@ -1025,7 +1019,7 @@ def test_is_one_confirmed_fails_large_validator_slashed(spec, state):
         lambda spec: _balances_with_large_validators(
             spec,
             large_val_indices=[_large_validator_index],
-            custom_balance=spec.Gwei(66) * spec.EFFECTIVE_BALANCE_INCREMENT,
+            custom_balance=66 * spec.EFFECTIVE_BALANCE_INCREMENT,
         )
     ),
     threshold_fn=default_activation_threshold,
@@ -1147,12 +1141,12 @@ def test_is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slo
     store, fcr_store = fcr.initialize(state)
 
     # Move to Epoch 2 Slot 1
-    while fcr.current_slot() < spec.Slot(2) * spec.SLOTS_PER_EPOCH + spec.Slot(1):
+    while fcr.current_slot() < 2 * spec.SLOTS_PER_EPOCH + 1:
         fcr.next_slot_with_block_and_fast_confirmation(participation_rate=100)
 
     # Create a block with a large validator deposit
     new_val_index = len(state.validators)
-    new_val_balance = spec.Gwei(8) * spec.MIN_ACTIVATION_BALANCE
+    new_val_balance = 8 * spec.MIN_ACTIVATION_BALANCE
     withdrawal_credentials = spec.COMPOUNDING_WITHDRAWAL_PREFIX + b"\x00" * 11 + b"\x11" * 20
     deposit = prepare_deposit_request(
         spec,
@@ -1167,7 +1161,7 @@ def test_is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slo
     fcr.run_fast_confirmation()
 
     # Wait for a new validator to get onboarded
-    while fcr.current_slot() < spec.Slot(10) * spec.SLOTS_PER_EPOCH:
+    while fcr.current_slot() < 10 * spec.SLOTS_PER_EPOCH:
         fcr.next_slot_with_block_and_fast_confirmation(participation_rate=100)
     assert len(store.block_states[fcr.head_root()].validators) > new_val_index
 
@@ -1206,12 +1200,12 @@ def test_is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slo
         store,
         balance_source,
         p_root,
-        spec.get_block_slot(store, p_root) + spec.Slot(1),
-        fcr.current_slot() - spec.Slot(1),
+        spec.get_block_slot(store, p_root) + 1,
+        spec.Slot(fcr.current_slot() - 1),
     )
     # New validator's balance does not contribute to parent_support_in_empty_slots
     # as it's yet inactive in the view of the balance source
-    assert parent_support_in_empty_slots == (len(attesters) - 1) * int(spec.MIN_ACTIVATION_BALANCE)
+    assert parent_support_in_empty_slots == (len(attesters) - 1) * spec.MIN_ACTIVATION_BALANCE
 
     # Build a block in the next slot and attempt to confirm
     b_root = fcr.add_and_apply_block()
@@ -1250,13 +1244,13 @@ def test_is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slo
         store,
         balance_source,
         p_root,
-        spec.get_block_slot(store, p_root) + spec.Slot(1),
-        fcr.current_slot() - spec.Slot(1),
+        spec.get_block_slot(store, p_root) + 1,
+        spec.Slot(fcr.current_slot() - 1),
     )
     # New validator's balance now does contribute to parent_support_in_empty_slots
     assert (
         parent_support_in_empty_slots
-        == (len(attesters) - 1) * int(spec.MIN_ACTIVATION_BALANCE) + new_val_balance
+        == (len(attesters) - 1) * spec.MIN_ACTIVATION_BALANCE + new_val_balance
     )
 
     # Build a block in the next slot and attempt to confirm
@@ -1293,12 +1287,12 @@ def test_is_one_confirmed_passes_with_new_validator_activated_in_head_state(spec
     store, fcr_store = fcr.initialize(state)
 
     # Move to Epoch 2 Slot 1
-    while fcr.current_slot() < spec.Slot(2) * spec.SLOTS_PER_EPOCH + spec.Slot(1):
+    while fcr.current_slot() < 2 * spec.SLOTS_PER_EPOCH + 1:
         fcr.next_slot_with_block_and_fast_confirmation(participation_rate=100)
 
     # Create a block with a large validator deposit
     new_val_index = len(state.validators)
-    new_val_balance = spec.Gwei(8) * spec.MIN_ACTIVATION_BALANCE
+    new_val_balance = 8 * spec.MIN_ACTIVATION_BALANCE
     withdrawal_credentials = spec.COMPOUNDING_WITHDRAWAL_PREFIX + b"\x00" * 11 + b"\x11" * 20
     deposit = prepare_deposit_request(
         spec,
@@ -1313,7 +1307,7 @@ def test_is_one_confirmed_passes_with_new_validator_activated_in_head_state(spec
     fcr.run_fast_confirmation()
 
     # Wait for a new validator to get onboarded
-    while fcr.current_slot() < spec.Slot(10) * spec.SLOTS_PER_EPOCH:
+    while fcr.current_slot() < 10 * spec.SLOTS_PER_EPOCH:
         fcr.next_slot_with_block_and_fast_confirmation(participation_rate=100)
     assert len(store.block_states[fcr.head_root()].validators) > new_val_index
 
@@ -1365,7 +1359,7 @@ _consecutive_slots_val_idx = 35
         lambda spec: _balances_with_large_validators(
             spec,
             large_val_indices=[_consecutive_slots_val_idx],
-            custom_balance=spec.Gwei(352) * spec.EFFECTIVE_BALANCE_INCREMENT,
+            custom_balance=352 * spec.EFFECTIVE_BALANCE_INCREMENT,
         )
     ),
     threshold_fn=default_activation_threshold,
@@ -1432,7 +1426,7 @@ def test_is_one_confirmed_passes_with_empty_slot_and_attester_in_two_consecutive
         lambda spec: _balances_with_large_validators(
             spec,
             large_val_indices=[_consecutive_slots_val_idx],
-            custom_balance=spec.Gwei(352) * spec.EFFECTIVE_BALANCE_INCREMENT,
+            custom_balance=352 * spec.EFFECTIVE_BALANCE_INCREMENT,
         )
     ),
     threshold_fn=default_activation_threshold,

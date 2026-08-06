@@ -35,13 +35,10 @@ def test_fast_confirm_an_epoch(spec, state):
 def test_fast_confirm_with_low_participation(spec, state):
     fcr_test = FCRTest(spec, seed=1)
     store, fcr_store = fcr_test.initialize(state)
-    for _ in range(spec.Slot(3) * spec.SLOTS_PER_EPOCH):
+    for _ in range(3 * spec.SLOTS_PER_EPOCH):
         fcr_test.next_slot_with_block_and_fast_confirmation(participation_rate=90)
         # Ensure confirmed block is being advanced
-        assert (
-            spec.get_block_epoch(store, fcr_store.confirmed_root) + spec.Epoch(1)
-            >= fcr_test.current_epoch()
-        )
+        assert spec.get_block_epoch(store, fcr_store.confirmed_root) + 1 >= fcr_test.current_epoch()
 
     yield from fcr_test.get_test_artefacts()
 
@@ -56,13 +53,13 @@ def test_fast_confirm_with_asynchrony_at_epoch_boundary(spec, state):
     store, fcr_store = fcr_test.initialize(state)
 
     # Move closer to epoch boundary
-    while fcr_test.current_slot() < spec.SLOTS_PER_EPOCH - spec.Slot(2):
+    while fcr_test.current_slot() < spec.SLOTS_PER_EPOCH - 2:
         fcr_test.next_slot_with_block_and_fast_confirmation(participation_rate=100)
         # Ensure confirmed block is being advanced
         assert fcr_store.confirmed_root == fcr_test.head_root()
 
     # Run for a few slots with asynchrony
-    while fcr_test.current_slot() < spec.SLOTS_PER_EPOCH + spec.Slot(2):
+    while fcr_test.current_slot() < spec.SLOTS_PER_EPOCH + 2:
         fcr_test.next_slot_with_block_and_fast_confirmation(participation_rate=75)
         # Confirmed block is behind the head
         assert fcr_store.confirmed_root != fcr_test.head_root()
@@ -71,10 +68,7 @@ def test_fast_confirm_with_asynchrony_at_epoch_boundary(spec, state):
     for _ in range(spec.SLOTS_PER_EPOCH):
         fcr_test.next_slot_with_block_and_fast_confirmation(participation_rate=100)
         # Ensure confirmed block is being advanced
-        assert (
-            spec.get_block_epoch(store, fcr_store.confirmed_root) + spec.Epoch(1)
-            >= fcr_test.current_epoch()
-        )
+        assert spec.get_block_epoch(store, fcr_store.confirmed_root) + 1 >= fcr_test.current_epoch()
 
     # After asynchrony followed by a period of good participation FCR provides 1-slot delay
     fcr_test.next_slot_with_block_and_fast_confirmation(participation_rate=100)

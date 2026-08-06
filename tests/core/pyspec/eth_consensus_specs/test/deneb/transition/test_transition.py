@@ -62,7 +62,7 @@ def test_higher_churn_limit_to_lower(state, fork_epoch, spec, post_spec, pre_tag
     assert churn_limit_0 > post_spec.config.MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT
 
     # check pre state
-    assert spec.get_current_epoch(state) < spec.Epoch(fork_epoch)
+    assert spec.get_current_epoch(state) < fork_epoch
 
     yield "pre", state
 
@@ -72,7 +72,7 @@ def test_higher_churn_limit_to_lower(state, fork_epoch, spec, post_spec, pre_tag
     blocks.append(post_tag(block))
 
     # check post state
-    assert spec.get_current_epoch(state) == spec.Epoch(fork_epoch)
+    assert spec.get_current_epoch(state) == fork_epoch
 
     # continue regular state transition with new spec into next epoch
     transition_to_next_epoch_and_append_blocks(

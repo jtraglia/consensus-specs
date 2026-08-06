@@ -138,7 +138,7 @@ def test_inclusion_list_store_by_slot_and_committee_root__empty_slot(spec, state
             inclusion_list_store, state, state.slot
         )
         inclusion_list_transactions_slot_1 = spec.get_inclusion_list_transactions(
-            inclusion_list_store, state, state.slot + spec.Slot(1)
+            inclusion_list_store, state, state.slot + 1
         )
 
         assert set(inclusion_list_transactions_slot_0) == set(
@@ -169,9 +169,7 @@ def test_inclusion_list_store_by_slot_and_committee_root__different_committee_ro
             state,
             validator_index=inclusion_list_committee[1],
             # Reverse transaction bytes to ensure IL0 and IL1 have different transactions.
-            transactions=[
-                spec.Transaction(data=list(transaction)[::-1]) for transaction in transactions
-            ],
+            transactions=[transaction[::-1] for transaction in transactions],
         )
 
         # Make IL1 have a different committee root.
@@ -255,7 +253,7 @@ def test_inclusion_list_store_equivocation(spec, state):
 @with_heze_and_later
 @spec_test
 @with_custom_state(
-    balances_fn=lambda spec: [spec.MAX_EFFECTIVE_BALANCE] * (int(spec.SLOTS_PER_EPOCH) * 2),
+    balances_fn=lambda spec: [spec.MAX_EFFECTIVE_BALANCE] * spec.SLOTS_PER_EPOCH * 2,
     threshold_fn=default_activation_threshold,
 )
 @single_phase
@@ -286,8 +284,8 @@ def test_inclusion_list_store_equivocation_scope(spec, state):
 
         # Find a later slot where the equivocator rejoins under a different committee root.
         found_different_committee = False
-        for _ in range(spec.SLOTS_PER_EPOCH * spec.Slot(2)):
-            spec.process_slots(state, state.slot + spec.Slot(1))
+        for _ in range(spec.SLOTS_PER_EPOCH * 2):
+            spec.process_slots(state, state.slot + 1)
             committee = spec.get_inclusion_list_committee(state, state.slot)
             committee_root = spec.hash_tree_root(committee)
             if validator_index in committee and inclusion_list_committee_root != committee_root:
@@ -339,10 +337,8 @@ def test_inclusion_list_store_inclusion_list_due(spec, state):
         assert set(inclusion_list_transactions) == set(signed_inclusion_list_1.message.transactions)
 
         # Advance time to after the inclusion list due
-        inclusion_list_due_ceiling = spec.get_inclusion_list_due_ms() // spec.Uint64(
-            1000
-        ) + spec.Uint64(1)
-        assert inclusion_list_due_ceiling < spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+        inclusion_list_due_ceiling = spec.get_inclusion_list_due_ms() // 1000 + 1
+        assert inclusion_list_due_ceiling < spec.config.SLOT_DURATION_MS // 1000
 
         time = forkchoice_store.time + inclusion_list_due_ceiling
         spec.on_tick(forkchoice_store, time)

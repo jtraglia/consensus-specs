@@ -52,7 +52,6 @@ docs = [
   "zensical==0.0.52",
 ]
 
-
 [tool.setuptools]
 include-package-data = false
 

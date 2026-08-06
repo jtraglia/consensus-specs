@@ -34,13 +34,11 @@ class PreviousEpochTestSpecification:
     prev_head_vs_fresh: (
         bool  # get_voting_source(store, fcr_store.previous_slot_head).epoch + 2 >= current_epoch
     )
-    prev_head_uj_fresh: bool  # store.unrealized_justifications[fcr_store.previous_slot_head].epoch + spec.Epoch(1) >= current_epoch
+    prev_head_uj_fresh: bool  # store.unrealized_justifications[fcr_store.previous_slot_head].epoch + 1 >= current_epoch
     block_vs_fresh: (
         bool  # get_voting_source(store, tentative_confirmed_root).epoch + 2 >= current_epoch
     )
-    head_uj_fresh: (
-        bool  # store.unrealized_justifications[head].epoch + spec.Epoch(1) >= current_epoch
-    )
+    head_uj_fresh: bool  # store.unrealized_justifications[head].epoch + 1 >= current_epoch
 
     def get_prev_epoch_canonical_roots(self, spec, fcr_store):
         store = fcr_store.store
@@ -50,7 +48,7 @@ class PreviousEpochTestSpecification:
         return [
             root
             for root in canonical_roots
-            if spec.get_block_epoch(store, root) + spec.Epoch(1) == current_epoch
+            if spec.get_block_epoch(store, root) + 1 == current_epoch
         ]
 
     def verify_preconditions(self, spec, fcr_store):
@@ -68,13 +66,12 @@ class PreviousEpochTestSpecification:
         assert confirmed_epoch + 1 == current_epoch
         assert len(prev_epoch_canonical_roots) > 0
 
-        assert self.first_slot_call == (current_slot % spec.SLOTS_PER_EPOCH == spec.Slot(0))
+        assert self.first_slot_call == (current_slot % spec.SLOTS_PER_EPOCH == 0)
         assert self.head_uj_fresh == (
-            store.unrealized_justifications[head].epoch + spec.Epoch(1) >= current_epoch
+            store.unrealized_justifications[head].epoch + 1 >= current_epoch
         )
         assert self.prev_head_uj_fresh == (
-            store.unrealized_justifications[will_be_prev_slot_head].epoch + spec.Epoch(1)
-            >= current_epoch
+            store.unrealized_justifications[will_be_prev_slot_head].epoch + 1 >= current_epoch
         )
         assert self.prev_head_vs_fresh == (
             spec.get_voting_source(store, will_be_prev_slot_head).epoch + 2 >= current_epoch
@@ -143,7 +140,7 @@ class PreviousEpochTestBuilder:
         self.test_spec = test_spec
 
     def create_first_slot_call_runs(self):
-        target_slot = self.spec.SLOTS_PER_EPOCH - self.spec.Slot(3)
+        target_slot = self.spec.SLOTS_PER_EPOCH - 3
         # Run till the target slot with 100% participation
         runs = [
             SlotSequence(
@@ -206,7 +203,7 @@ class PreviousEpochTestBuilder:
         return runs
 
     def create_mid_epoch_call_runs(self):
-        target_slot = self.spec.SLOTS_PER_EPOCH - self.spec.Slot(2)
+        target_slot = self.spec.SLOTS_PER_EPOCH - 2
         # Run till the target slot with 100% participation
         runs = [
             SlotSequence(
@@ -313,7 +310,7 @@ class PreviousEpochTestBuilder:
     def create_stale_vs_and_uj_first_slot_runs(self):
         spec = self.spec
         test_spec = self.test_spec
-        target_slot = spec.Slot(3) * spec.SLOTS_PER_EPOCH - spec.Slot(3)
+        target_slot = 3 * spec.SLOTS_PER_EPOCH - 3
         target_epoch = spec.compute_epoch_at_slot(target_slot)
 
         if test_spec.prev_head_ancestor:
@@ -336,9 +333,7 @@ class PreviousEpochTestBuilder:
         def include_att_fn(block, attestation) -> bool:
             epoch = spec.compute_epoch_at_slot(block.slot)
             graffiti = graffiti_to_str(block.body.graffiti)
-            no_justification_boundary = (
-                epoch * spec.SLOTS_PER_EPOCH + spec.SLOTS_PER_EPOCH * spec.Slot(2) // 3
-            )
+            no_justification_boundary = epoch * spec.SLOTS_PER_EPOCH + spec.SLOTS_PER_EPOCH * 2 // 3
 
             if epoch == spec.GENESIS_EPOCH:
                 return True
@@ -475,17 +470,15 @@ class PreviousEpochTestBuilder:
         spec = self.spec
         test_spec = self.test_spec
         if test_spec.prev_head_ancestor:
-            target_slot = spec.Slot(3) * spec.SLOTS_PER_EPOCH - spec.Slot(3)
+            target_slot = 3 * spec.SLOTS_PER_EPOCH - 3
         else:
-            target_slot = spec.Slot(3) * spec.SLOTS_PER_EPOCH - spec.Slot(2)
+            target_slot = 3 * spec.SLOTS_PER_EPOCH - 2
         target_epoch = spec.compute_epoch_at_slot(target_slot)
 
         def include_att_fn(block, attestation) -> bool:
             epoch = spec.compute_epoch_at_slot(block.slot)
             graffiti = graffiti_to_str(block.body.graffiti)
-            no_justification_boundary = (
-                epoch * spec.SLOTS_PER_EPOCH + spec.SLOTS_PER_EPOCH * spec.Slot(2) // 3
-            )
+            no_justification_boundary = epoch * spec.SLOTS_PER_EPOCH + spec.SLOTS_PER_EPOCH * 2 // 3
 
             if epoch == spec.GENESIS_EPOCH:
                 return True

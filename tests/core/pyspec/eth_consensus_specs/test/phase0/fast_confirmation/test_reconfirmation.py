@@ -83,9 +83,7 @@ def test_reconfirmation_passes_with_empty_slots_prior_first_block(spec, state):
 
     # Compute slashed balance
     # 25% of 2 slots * (len(validators) // SLOTS_PER_EPOCH * effective_balance)
-    slashed_balance = 2 * (
-        len(state.validators) // S * state.validators[0].effective_balance // spec.Gwei(4)
-    )
+    slashed_balance = 2 * (len(state.validators) // S * state.validators[0].effective_balance // 4)
 
     # Add a half of slashed balance back to the safety threshold
     # and check the support would be lower than the threshold
@@ -153,7 +151,7 @@ def test_reconfirmation_fails_for_block_without_uj_checkpoint_in_chain(spec, sta
 
     # Check preconditions over confirmed_root
     # From fresh epoch
-    assert spec.get_block_epoch(store, confirmed_root) + spec.Epoch(1) >= fcr.current_epoch()
+    assert spec.get_block_epoch(store, confirmed_root) + 1 >= fcr.current_epoch()
     # Belongs to canonical chain
     assert spec.is_ancestor(store, fcr.head(), spec.get_node_for_root(confirmed_root))
     # Ancestor of the previous_epoch_greatest_unrealized_checkpoint block

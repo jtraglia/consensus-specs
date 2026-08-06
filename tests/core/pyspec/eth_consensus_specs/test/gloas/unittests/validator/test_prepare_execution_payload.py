@@ -20,7 +20,6 @@ from eth_consensus_specs.test.helpers.fork_choice import (
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 SAMPLE_PAYLOAD_ID = b"\x12" * 8
 
@@ -46,10 +45,7 @@ def _add_block_to_store(spec, state, execution_requests=None):
     """
     store, _ = get_genesis_forkchoice_store_and_block(spec, state)
 
-    current_time = (
-        spec.Uint64(state.slot) * (spec.config.SLOT_DURATION_MS // spec.Uint64(1000))
-        + store.genesis_time
-    )
+    current_time = state.slot * (spec.config.SLOT_DURATION_MS // 1000) + store.genesis_time
     spec.on_tick(store, current_time)
 
     block = build_empty_block_for_next_slot(spec, state)
@@ -64,12 +60,12 @@ def _add_block_to_store(spec, state, execution_requests=None):
             )
 
     signed_block = state_transition_and_sign_block(spec, state, block)
-    block_time = store.genesis_time + spec.Uint64(
-        signed_block.message.slot
-    ) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+    block_time = (
+        store.genesis_time + signed_block.message.slot * spec.config.SLOT_DURATION_MS // 1000
+    )
     spec.on_tick(store, block_time)
     run_on_block(spec, store, signed_block)
-    block_root = hash_tree_root(signed_block.message)
+    block_root = signed_block.message.hash_tree_root()
 
     return store, signed_block, block_root
 
@@ -86,12 +82,10 @@ def _setup_full_parent(spec, state):
 
 
 def _advance_to_proposal_slot(spec, state, store):
-    proposal_state = copy(state)
-    spec.process_slots(proposal_state, proposal_state.slot + spec.Slot(1))
+    proposal_state = state.copy()
+    spec.process_slots(proposal_state, proposal_state.slot + 1)
 
-    proposal_time = store.genesis_time + spec.Uint64(
-        proposal_state.slot
-    ) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+    proposal_time = store.genesis_time + proposal_state.slot * spec.config.SLOT_DURATION_MS // 1000
     spec.on_tick(store, proposal_time)
 
     return proposal_state
@@ -106,9 +100,7 @@ def test_prepare_execution_payload__extend_payload(spec, state):
     # not touch it.
     validator_index = 0
     consolidation_request = prepare_switch_to_compounding_request(spec, state, validator_index)
-    execution_requests = spec.ExecutionRequests(
-        consolidations=spec.ConsolidationRequests.of(consolidation_request)
-    )
+    execution_requests = spec.ExecutionRequests(consolidations=[consolidation_request])
 
     # Build block_1 with a bid that commits to the requests we will deliver
     # in the envelope. The bid's execution_requests_root must match
@@ -144,7 +136,7 @@ def test_prepare_execution_payload__extend_payload(spec, state):
     # validator would still look partially withdrawable and prepared
     # withdrawals would diverge from expected.
     proposal_state.balances[validator_index] = (
-        spec.MIN_ACTIVATION_BALANCE + spec.Gwei(3) * spec.EFFECTIVE_BALANCE_INCREMENT
+        spec.MIN_ACTIVATION_BALANCE + 3 * spec.EFFECTIVE_BALANCE_INCREMENT
     )
 
     engine = CaptureEngine()
@@ -163,7 +155,7 @@ def test_prepare_execution_payload__extend_payload(spec, state):
     assert payload_id == SAMPLE_PAYLOAD_ID
     assert engine.head_block_hash == parent_bid.block_hash
 
-    expected_state = copy(proposal_state)
+    expected_state = proposal_state.copy()
     spec.apply_parent_execution_payload(expected_state, envelope.message.execution_requests)
     expected_withdrawals = spec.get_expected_withdrawals(expected_state).withdrawals
     assert engine.payload_attributes.withdrawals == expected_withdrawals
@@ -171,7 +163,7 @@ def test_prepare_execution_payload__extend_payload(spec, state):
     # Confirm the scenario actually exercises apply_parent_execution_payload:
     # without it, validator[0] would remain 0x01 + excess and contribute a
     # partial withdrawal that is absent once the switch is applied.
-    skip_apply_withdrawals = spec.get_expected_withdrawals(copy(proposal_state)).withdrawals
+    skip_apply_withdrawals = spec.get_expected_withdrawals(proposal_state.copy()).withdrawals
     assert list(skip_apply_withdrawals) != list(expected_withdrawals)
 
 
@@ -209,7 +201,7 @@ def test_prepare_execution_payload__extend_payload_does_not_mutate_state(spec, s
     store, _, _ = _setup_full_parent(spec, state)
     proposal_state = _advance_to_proposal_slot(spec, state, store)
 
-    state_root_before = hash_tree_root(proposal_state)
+    state_root_before = proposal_state.hash_tree_root()
 
     engine = CaptureEngine()
     spec.prepare_execution_payload(
@@ -223,7 +215,7 @@ def test_prepare_execution_payload__extend_payload_does_not_mutate_state(spec, s
         execution_engine=engine,
     )
 
-    assert hash_tree_root(proposal_state) == state_root_before
+    assert proposal_state.hash_tree_root() == state_root_before
 
 
 @with_phases([GLOAS])
@@ -249,7 +241,7 @@ def test_prepare_execution_payload__payload_attributes(spec, state):
     assert attrs.prev_randao == spec.get_randao_mix(
         proposal_state, spec.get_current_epoch(proposal_state)
     )
-    assert attrs.parent_beacon_block_root == hash_tree_root(proposal_state.latest_block_header)
+    assert attrs.parent_beacon_block_root == proposal_state.latest_block_header.hash_tree_root()
     assert attrs.slot_number == proposal_state.slot
     assert attrs.suggested_fee_recipient == spec.ExecutionAddress()
     assert attrs.target_gas_limit == spec.Uint64(60_000_000)
@@ -260,10 +252,7 @@ def test_prepare_execution_payload__payload_attributes(spec, state):
 def test_prepare_execution_payload__block_passes_state_transition(spec, state):
     store, _ = get_genesis_forkchoice_store_and_block(spec, state)
 
-    current_time = (
-        spec.Uint64(state.slot) * (spec.config.SLOT_DURATION_MS // spec.Uint64(1000))
-        + store.genesis_time
-    )
+    current_time = state.slot * (spec.config.SLOT_DURATION_MS // 1000) + store.genesis_time
     spec.on_tick(store, current_time)
 
     proposal_state = _advance_to_proposal_slot(spec, state, store)

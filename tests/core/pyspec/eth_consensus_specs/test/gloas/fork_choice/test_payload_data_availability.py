@@ -60,7 +60,7 @@ def test_payload_data_availability_above_threshold_returns_true(spec, state):
         store,
         block_root,
         block_state,
-        positions=range(spec.DATA_AVAILABILITY_TIMELY_THRESHOLD + spec.Uint64(1)),
+        positions=range(spec.DATA_AVAILABILITY_TIMELY_THRESHOLD + 1),
         test_steps=test_steps,
     )
 

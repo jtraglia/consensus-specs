@@ -1,7 +1,6 @@
 from eth_consensus_specs.test.context import spec_state_test, with_fulu_and_later
 from eth_consensus_specs.test.helpers.epoch_processing import run_epoch_processing_with
 from eth_consensus_specs.test.helpers.state import next_epoch
-from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 @with_fulu_and_later
@@ -9,19 +8,20 @@ from eth_consensus_specs.utils.ssz.ssz_impl import copy
 def test_proposer_lookahead_in_state_matches_computed_lookahead(spec, state):
     """Test that the proposer lookahead in the state matches the computed lookahead."""
     # Transition few epochs to past the MIN_SEED_LOOKAHEAD
-    for _ in range(int(spec.MIN_SEED_LOOKAHEAD) + 1):
+    for _ in range(spec.MIN_SEED_LOOKAHEAD + 1):
         next_epoch(spec, state)
 
     # Get initial lookahead
-    initial_lookahead = copy(state.proposer_lookahead)
+    initial_lookahead = state.proposer_lookahead.copy()
 
     # Run epoch processing
     yield from run_epoch_processing_with(spec, state, "process_proposer_lookahead")
 
     # Verify lookahead was shifted correctly
-    assert list(
-        state.proposer_lookahead[: int(spec.SLOTS_PER_EPOCH) * int(spec.MIN_SEED_LOOKAHEAD)]
-    ) == list(initial_lookahead[spec.SLOTS_PER_EPOCH :])
+    assert (
+        state.proposer_lookahead[: spec.SLOTS_PER_EPOCH * spec.MIN_SEED_LOOKAHEAD]
+        == initial_lookahead[spec.SLOTS_PER_EPOCH :]
+    )
 
 
 @with_fulu_and_later
@@ -31,7 +31,7 @@ def test_proposer_lookahead_does_not_contain_exited_validators(spec, state):
     Test proposer lookahead does not contain exited validators.
     """
     # Transition few epochs to past the MIN_SEED_LOOKAHEAD
-    for _ in range(int(spec.MIN_SEED_LOOKAHEAD) + 1):
+    for _ in range(spec.MIN_SEED_LOOKAHEAD + 1):
         next_epoch(spec, state)
 
     # Exit first half of active validators
@@ -47,14 +47,14 @@ def test_proposer_lookahead_does_not_contain_exited_validators(spec, state):
     min_exit_epoch = min(exit_epochs)
 
     # Progress epoch until we reach the epoch with the first validator exit
-    while spec.get_current_epoch(state) < min_exit_epoch - spec.Epoch(1):
+    while spec.get_current_epoch(state) < min_exit_epoch - 1:
         next_epoch(spec, state)
 
     # Run epoch processing, many validators will exit in this epoch
     yield from run_epoch_processing_with(spec, state, "process_proposer_lookahead")
 
     # run_epoch_processing_with does not increment the slot
-    state.slot += spec.Slot(1)
+    state.slot += 1
 
     # Check that the proposer lookahead does not contain exited validators
     for validator_index in state.proposer_lookahead:

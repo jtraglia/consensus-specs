@@ -22,15 +22,15 @@ def test_success_top_up_to_withdrawn_validator(spec, state):
 
     # Fully withdraw validator
     set_validator_fully_withdrawable(spec, state, validator_index)
-    assert state.balances[validator_index] > spec.Gwei(0)
+    assert state.balances[validator_index] > 0
     next_epoch_via_block(spec, state)
-    assert state.balances[validator_index] == spec.Gwei(0)
-    assert state.validators[validator_index].effective_balance > spec.Gwei(0)
+    assert state.balances[validator_index] == 0
+    assert state.validators[validator_index].effective_balance > 0
     next_epoch_via_block(spec, state)
-    assert state.validators[validator_index].effective_balance == spec.Gwei(0)
+    assert state.validators[validator_index].effective_balance == 0
 
     # Make a top-up balance to validator
-    amount = spec.MAX_EFFECTIVE_BALANCE // spec.Gwei(4)
+    amount = spec.MAX_EFFECTIVE_BALANCE // 4
     deposit = prepare_state_and_deposit(spec, state, validator_index, amount, signed=True)
 
     yield from run_deposit_processing(spec, state, deposit, validator_index)
@@ -45,7 +45,7 @@ def test_success_top_up_to_withdrawn_validator(spec, state):
         assert pending_deposit.slot == spec.GENESIS_SLOT
     else:
         assert state.balances[validator_index] == amount
-        assert state.validators[validator_index].effective_balance == spec.Gwei(0)
+        assert state.validators[validator_index].effective_balance == 0
 
     validator = state.validators[validator_index]
     balance = state.balances[validator_index]
@@ -54,7 +54,7 @@ def test_success_top_up_to_withdrawn_validator(spec, state):
     if is_post_electra(spec):
         has_execution_withdrawal = spec.has_execution_withdrawal_credential(validator)
         is_withdrawable = validator.withdrawable_epoch <= current_epoch
-        has_non_zero_balance = pending_deposit.amount > spec.Gwei(0)
+        has_non_zero_balance = pending_deposit.amount > 0
         # NOTE: directly compute `is_fully_withdrawable_validator` conditions here
         # to work around how the epoch processing changed balance updates
         assert has_execution_withdrawal

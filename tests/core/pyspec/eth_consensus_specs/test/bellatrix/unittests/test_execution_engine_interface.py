@@ -9,7 +9,6 @@ from eth_consensus_specs.test.helpers.execution_payload import (
     build_empty_execution_payload,
 )
 from eth_consensus_specs.test.helpers.state import next_slot
-from eth_consensus_specs.utils.ssz.ssz_impl import copy
 from eth_consensus_specs.utils.ssz.ssz_typing import Bytes32
 
 
@@ -20,7 +19,7 @@ def test_noop_execution_engine_notify_forkchoice_updated(spec, state):
     Test NoopExecutionEngine.notify_forkchoice_updated returns None and doesn't modify state
     """
     engine = spec.NoopExecutionEngine()
-    pre_state = copy(state)
+    pre_state = state.copy()
 
     # Test notify_forkchoice_updated
     result = engine.notify_forkchoice_updated(
@@ -42,7 +41,7 @@ def test_noop_execution_engine_get_payload(spec, state):
     Test NoopExecutionEngine.get_payload raises NotImplementedError
     """
     engine = spec.NoopExecutionEngine()
-    pre_state = copy(state)
+    pre_state = state.copy()
 
     # Test get_payload raises NotImplementedError
     try:
@@ -62,7 +61,7 @@ def test_noop_execution_engine_verify_and_notify_new_payload(spec, state):
     Test NoopExecutionEngine.verify_and_notify_new_payload returns True and doesn't modify state
     """
     engine = spec.NoopExecutionEngine()
-    pre_state = copy(state)
+    pre_state = state.copy()
 
     result = engine.verify_and_notify_new_payload(new_payload_request=None)
 

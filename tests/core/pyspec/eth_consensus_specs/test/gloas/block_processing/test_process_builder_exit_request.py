@@ -1,14 +1,13 @@
 from eth_consensus_specs.test.context import spec_state_test, with_gloas_and_later
 from eth_consensus_specs.test.helpers.keys import builder_pubkeys
 from eth_consensus_specs.test.helpers.state import next_slots
-from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def advance_past_finalization(spec, state):
     """Advance slots and finalize so that genesis-epoch builders become active."""
     epoch = spec.get_current_epoch(state)
-    next_slots(spec, state, spec.SLOTS_PER_EPOCH * spec.Slot(3))
-    state.finalized_checkpoint.epoch = epoch + spec.Epoch(1)
+    next_slots(spec, state, spec.SLOTS_PER_EPOCH * 3)
+    state.finalized_checkpoint.epoch = epoch + 1
 
 
 def prepare_builder_exit_request(spec, state, builder_index, source_address=None):
@@ -35,7 +34,7 @@ def run_builder_exit_request_processing(spec, state, builder_exit_request, valid
     The function never raises. If valid is False, expect the request to be
     consumed without changing the state.
     """
-    pre_state = copy(state)
+    pre_state = state.copy()
 
     yield "pre", state
     yield "builder_exit_request", builder_exit_request
@@ -56,7 +55,7 @@ def test_process_builder_exit_request__success(spec, state):
 
     advance_past_finalization(spec, state)
     assert spec.is_active_builder(state, builder_index)
-    assert spec.get_pending_balance_to_withdraw_for_builder(state, builder_index) == spec.Gwei(0)
+    assert spec.get_pending_balance_to_withdraw_for_builder(state, builder_index) == 0
 
     current_epoch = spec.get_current_epoch(state)
     builder_exit_request = prepare_builder_exit_request(spec, state, builder_index)
@@ -75,10 +74,10 @@ def test_process_builder_exit_request__unknown_pubkey(spec, state):
     advance_past_finalization(spec, state)
 
     # Use a pubkey that is not in the builder registry
-    existing_pubkeys = {bytes(builder.pubkey) for builder in state.builders}
+    existing_pubkeys = {builder.pubkey for builder in state.builders}
     unknown_pubkey = None
     for pk in builder_pubkeys:
-        if bytes(pk) not in existing_pubkeys:
+        if pk not in existing_pubkeys:
             unknown_pubkey = pk
             break
     assert unknown_pubkey is not None
@@ -116,9 +115,7 @@ def test_process_builder_exit_request__already_exited(spec, state):
     builder_index = 0
 
     # Set builder's withdrawable epoch which indicates it has initiated an exit
-    state.builders[builder_index].withdrawable_epoch = spec.get_current_epoch(state) + spec.Epoch(
-        10
-    )
+    state.builders[builder_index].withdrawable_epoch = spec.get_current_epoch(state) + 10
 
     advance_past_finalization(spec, state)
     assert not spec.is_active_builder(state, builder_index)
@@ -184,7 +181,7 @@ def test_process_builder_exit_request__pending_payment(spec, state):
     # Add pending payment for this builder
     payment_amount = spec.MIN_ACTIVATION_BALANCE
     payment = spec.BuilderPendingPayment(
-        weight=spec.get_builder_payment_quorum_threshold(state) + spec.Uint64(1),
+        weight=spec.get_builder_payment_quorum_threshold(state) + 1,
         withdrawal=spec.BuilderPendingWithdrawal(
             fee_recipient=spec.ExecutionAddress(b"\x60" * 20),
             amount=payment_amount,

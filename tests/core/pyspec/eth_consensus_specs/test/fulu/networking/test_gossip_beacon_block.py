@@ -25,7 +25,6 @@ from eth_consensus_specs.test.helpers.gossip import (
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 @with_fulu_and_later
@@ -43,7 +42,7 @@ def test_gossip_beacon_block__valid_at_blob_parameters_limit(spec, state):
     yield "topic", "meta", "beacon_block"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -76,7 +75,7 @@ def test_gossip_beacon_block__valid_at_blob_parameters_limit(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + spec.Uint64(500),
+        current_time_ms=block_time_ms + 500,
         **kwargs,
     )
     assert result == "valid"

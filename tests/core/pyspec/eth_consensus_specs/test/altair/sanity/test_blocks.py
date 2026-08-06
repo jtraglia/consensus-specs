@@ -18,7 +18,6 @@ from eth_consensus_specs.test.helpers.state import (
 from eth_consensus_specs.test.helpers.sync_committee import (
     compute_aggregate_sync_committee_signature,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def run_sync_committee_sanity_test(spec, state, fraction_full=1.0, rng=None):
@@ -36,11 +35,11 @@ def run_sync_committee_sanity_test(spec, state, fraction_full=1.0, rng=None):
 
     block = build_empty_block_for_next_slot(spec, state)
     block.body.sync_aggregate = spec.SyncAggregate(
-        sync_committee_bits=spec.SyncCommitteeBits(data=sync_committee_bits),
+        sync_committee_bits=sync_committee_bits,
         sync_committee_signature=compute_aggregate_sync_committee_signature(
             spec,
             state,
-            block.slot - spec.Slot(1),
+            block.slot - 1,
             participants,
         ),
     )
@@ -98,7 +97,7 @@ def test_inactivity_scores_leaking(spec, state):
     randomize_inactivity_scores(spec, state, rng=Random(5252))
     assert len(set(state.inactivity_scores)) > 1
 
-    previous_inactivity_scores = copy(state.inactivity_scores)
+    previous_inactivity_scores = state.inactivity_scores.copy()
 
     yield "pre", state
 
@@ -124,7 +123,7 @@ def test_inactivity_scores_full_participation_leaking(spec, state):
     # Only set full participation for previous epoch to remain in leak
     set_full_participation_previous_epoch(spec, state)
 
-    previous_inactivity_scores = copy(state.inactivity_scores)
+    previous_inactivity_scores = state.inactivity_scores.copy()
 
     yield "pre", state
 
@@ -139,4 +138,4 @@ def test_inactivity_scores_full_participation_leaking(spec, state):
 
     # Full participation during a leak so all scores should decrease by 1
     for pre, post in zip(previous_inactivity_scores, state.inactivity_scores, strict=False):
-        assert post == pre - spec.Uint64(1)
+        assert post == pre - 1

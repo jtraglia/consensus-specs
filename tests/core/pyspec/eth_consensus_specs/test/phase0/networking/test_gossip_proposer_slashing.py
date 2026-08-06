@@ -7,7 +7,6 @@ from eth_consensus_specs.test.helpers.gossip import get_filename, get_seen, run_
 from eth_consensus_specs.test.helpers.proposer_slashings import (
     get_valid_proposer_slashing,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 @with_all_phases
@@ -97,7 +96,7 @@ def test_gossip_proposer_slashing__reject_slots_not_matching(spec, state):
 
     # Modify second header slot to not match
     proposer_slashing.signed_header_2.message.slot = (
-        proposer_slashing.signed_header_1.message.slot + spec.Slot(1)
+        proposer_slashing.signed_header_1.message.slot + 1
     )
 
     yield get_filename(proposer_slashing), proposer_slashing
@@ -137,7 +136,7 @@ def test_gossip_proposer_slashing__reject_proposer_indices_not_matching(spec, st
 
     # Modify second header proposer_index to not match
     proposer_slashing.signed_header_2.message.proposer_index = (
-        proposer_slashing.signed_header_1.message.proposer_index + spec.ValidatorIndex(1)
+        proposer_slashing.signed_header_1.message.proposer_index + 1
     )
 
     yield get_filename(proposer_slashing), proposer_slashing
@@ -176,7 +175,7 @@ def test_gossip_proposer_slashing__reject_headers_identical(spec, state):
     proposer_slashing = get_valid_proposer_slashing(spec, state, signed_1=True, signed_2=True)
 
     # Make headers identical by copying header_1 to header_2
-    proposer_slashing.signed_header_2 = copy(proposer_slashing.signed_header_1)
+    proposer_slashing.signed_header_2 = proposer_slashing.signed_header_1.copy()
 
     yield get_filename(proposer_slashing), proposer_slashing
 

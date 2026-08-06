@@ -22,7 +22,6 @@ from eth_consensus_specs.test.helpers.keys import builder_privkeys, privkeys
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def _build_invalid_envelope(spec, state, block_root, signed_block, **overrides):
@@ -182,7 +181,7 @@ def test_on_execution_payload_envelope_wrong_slot(spec, state):
         state,
         block_root,
         signed_block,
-        slot_number=state.slot + spec.Slot(1),
+        slot_number=state.slot + 1,
     )
     yield from add_execution_payload(spec, store, envelope, test_steps, valid=False)
 
@@ -245,17 +244,19 @@ def test_on_execution_payload_envelope_wrong_execution_requests_root(spec, state
 
     # Build envelope with non-empty requests but bid commits to empty requests
     non_empty_requests = spec.ExecutionRequests(
-        deposits=spec.DepositRequests.of(
-            spec.DepositRequest(
-                pubkey=spec.BLSPubkey(b"\x01" * 48),
-                withdrawal_credentials=spec.Bytes32(b"\x02" * 32),
-                amount=spec.Gwei(32000000000),
-                signature=spec.BLSSignature(b"\x03" * 96),
-                index=spec.Uint64(0),
-            )
+        deposits=spec.ProgressiveList[spec.DepositRequest](
+            [
+                spec.DepositRequest(
+                    pubkey=spec.BLSPubkey(b"\x01" * 48),
+                    withdrawal_credentials=spec.Bytes32(b"\x02" * 32),
+                    amount=spec.Gwei(32000000000),
+                    signature=spec.BLSSignature(b"\x03" * 96),
+                    index=spec.Uint64(0),
+                )
+            ]
         ),
-        withdrawals=spec.WithdrawalRequests(),
-        consolidations=spec.ConsolidationRequests(),
+        withdrawals=spec.ProgressiveList[spec.WithdrawalRequest](),
+        consolidations=spec.ProgressiveList[spec.ConsolidationRequest](),
     )
 
     envelope = _build_invalid_envelope(
@@ -288,7 +289,7 @@ def test_on_execution_payload_envelope_wrong_withdrawals(spec, state):
         state,
         block_root,
         signed_block,
-        withdrawals=spec.Withdrawals.of(wrong_withdrawal),
+        withdrawals=spec.ProgressiveList[spec.Withdrawal]([wrong_withdrawal]),
     )
     yield from add_execution_payload(spec, store, envelope, test_steps, valid=False)
 
@@ -309,7 +310,9 @@ def test_on_execution_payload_envelope_missing_expected_withdrawal(spec, state):
     expected_withdrawal = spec.Withdrawal(
         index=0, validator_index=0, address=b"\x22" * 20, amount=spec.Gwei(1)
     )
-    state.payload_expected_withdrawals = spec.Withdrawals.of(expected_withdrawal)
+    state.payload_expected_withdrawals = spec.ProgressiveList[spec.Withdrawal](
+        [expected_withdrawal]
+    )
 
     store, block_root, _, signed_block, test_steps = yield from setup_one_block_store(spec, state)
 
@@ -322,7 +325,7 @@ def test_on_execution_payload_envelope_missing_expected_withdrawal(spec, state):
         state,
         block_root,
         signed_block,
-        withdrawals=spec.Withdrawals(),
+        withdrawals=spec.ProgressiveList[spec.Withdrawal](),
     )
     yield from add_execution_payload(spec, store, envelope, test_steps, valid=False)
 
@@ -344,7 +347,7 @@ def test_on_execution_payload_envelope_wrong_gas_limit(spec, state):
         state,
         block_root,
         signed_block,
-        gas_limit=state.latest_execution_payload_bid.gas_limit + spec.Uint64(1),
+        gas_limit=state.latest_execution_payload_bid.gas_limit + 1,
     )
     yield from add_execution_payload(spec, store, envelope, test_steps, valid=False)
 
@@ -410,7 +413,7 @@ def test_on_execution_payload_envelope_wrong_timestamp(spec, state):
         state,
         block_root,
         signed_block,
-        timestamp=spec.compute_time_at_slot(state, state.slot) + spec.Uint64(1),
+        timestamp=spec.compute_time_at_slot(state, state.slot) + 1,
     )
     yield from add_execution_payload(spec, store, envelope, test_steps, valid=False)
 
@@ -440,11 +443,11 @@ def test_on_execution_payload_envelope_invalid_full_child(spec, state):
     )
     yield from add_execution_payload(spec, store, envelope, test_steps, valid=False)
 
-    tick_store_to_slot(spec, store, block_state.slot + spec.Slot(1), test_steps)
+    tick_store_to_slot(spec, store, block_state.slot + 1, test_steps)
 
     # Build a child that points its bid at parent.bid.block_hash so it claims
     # the parent is FULL
-    child_state = copy(block_state)
+    child_state = block_state.copy()
     child = build_empty_block_for_next_slot(spec, child_state)
     child.body.signed_execution_payload_bid.message.parent_block_hash = (
         signed_block.message.body.signed_execution_payload_bid.message.block_hash

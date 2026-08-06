@@ -23,7 +23,6 @@ from eth_consensus_specs.test.helpers.state import (
     next_slot,
     state_transition_and_sign_block,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def _setup_boost_scenario(spec, state, adjacent, weak, sibling):
@@ -51,10 +50,10 @@ def _setup_boost_scenario(spec, state, adjacent, weak, sibling):
     store, state, test_steps = yield from setup_finalized_store(spec, state)
 
     # --- parent (the re-org target) ---
-    parent_pre_state = copy(state)
+    parent_pre_state = state.copy()
     parent_block = build_empty_block_for_next_slot(spec, state)
     signed_parent = state_transition_and_sign_block(spec, state, parent_block)
-    parent_root = hash_tree_root(signed_parent.message)
+    parent_root = signed_parent.message.hash_tree_root()
     # Timely add: ticks to parent.slot start, so it is PTC-timely and attestation-timely
     yield from tick_and_add_block(spec, store, signed_parent, test_steps)
 
@@ -65,11 +64,11 @@ def _setup_boost_scenario(spec, state, adjacent, weak, sibling):
         # tiebreak on a weight tie. Graffiti only perturbs the block root; bounded
         # so a helper change can never spin forever.
         for graffiti_seed in range(256):
-            sibling_state = copy(parent_pre_state)
+            sibling_state = parent_pre_state.copy()
             sibling_block = build_empty_block(spec, sibling_state, slot=parent_block.slot)
             sibling_block.body.graffiti = spec.Bytes32(graffiti_seed.to_bytes(32, "little"))
             signed_sibling = state_transition_and_sign_block(spec, sibling_state, sibling_block)
-            sibling_root = hash_tree_root(signed_sibling.message)
+            sibling_root = signed_sibling.message.hash_tree_root()
             if sibling_root > parent_root:
                 break
         else:
@@ -83,12 +82,12 @@ def _setup_boost_scenario(spec, state, adjacent, weak, sibling):
         else:
             # Added past the PTC deadline -> block_timeliness[PTC] False -> NOT an
             # equivocation, but still a viable head competitor
-            ptc_due_s = spec.get_payload_attestation_due_ms() // spec.Uint64(1000)
+            ptc_due_s = spec.get_payload_attestation_due_ms() // 1000
             late_time = (
-                spec.Uint64(parent_block.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
+                parent_block.slot * spec.config.SLOT_DURATION_MS // 1000
                 + store.genesis_time
                 + ptc_due_s
-                + spec.Uint64(1)
+                + 1
             )
             on_tick_and_append_step(spec, store, late_time, test_steps)
             yield from add_block(spec, store, signed_sibling, test_steps)
@@ -108,13 +107,13 @@ def _setup_boost_scenario(spec, state, adjacent, weak, sibling):
 
     # --- boosted block on the parent ---
     if not adjacent:
-        # Leave parent.slot + spec.Slot(1) empty so the boosted block lands two slots after
-        # the parent: parent.slot + spec.Slot(1) < block.slot -> "not adjacent" escape.
+        # Leave parent.slot + 1 empty so the boosted block lands two slots after
+        # the parent: parent.slot + 1 < block.slot -> "not adjacent" escape.
         next_slot(spec, state)
 
     block = build_empty_block_for_next_slot(spec, state)
     signed_block = state_transition_and_sign_block(spec, state, block)
-    block_root = hash_tree_root(signed_block.message)
+    block_root = signed_block.message.hash_tree_root()
     # Timely add in the current slot -> sets store.proposer_boost_root = block
     yield from tick_and_add_block(spec, store, signed_block, test_steps)
 
@@ -135,8 +134,8 @@ def _assert_weight_reflects_boost(spec, store, block_root, boost_applied):
     boost_node = spec.ForkChoiceNode(root=block_root, payload_status=spec.PAYLOAD_STATUS_PENDING)
     attestation_score = spec.get_attestation_score(store, boost_node, justified_state)
     proposer_score = spec.get_proposer_score(store)
-    assert proposer_score > spec.Gwei(0)
-    expected = attestation_score + (proposer_score if boost_applied else spec.Gwei(0))
+    assert proposer_score > 0
+    expected = attestation_score + (proposer_score if boost_applied else 0)
     assert spec.get_weight(store, boost_node) == expected
 
 
@@ -147,7 +146,7 @@ def test_should_apply_proposer_boost_parent_not_adjacent(spec, state):
     """
     Parent is two slots back and weak -> the "not adjacent" escape applies the
     boost. (has_equiv is not applicable: the equivocation filter looks for a block
-    at block.slot - spec.Slot(1) with the parent's proposer, which does not exist when the
+    at block.slot - 1 with the parent's proposer, which does not exist when the
     parent is two slots back, and adjacency is checked first anyway.)
 
     Head-discriminating: a client that wrongly withholds here lets the weak parent

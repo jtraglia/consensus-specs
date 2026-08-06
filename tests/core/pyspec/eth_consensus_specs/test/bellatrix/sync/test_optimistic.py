@@ -30,7 +30,6 @@ from eth_consensus_specs.test.helpers.state import (
     next_epoch,
     state_transition_and_sign_block,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 @with_all_phases_from_to(BELLATRIX, GLOAS)
@@ -48,13 +47,8 @@ def test_from_syncing_to_invalid(spec, state):
     next_epoch(spec, state)
 
     current_time = (
-        spec.Uint64(
-            int(spec.SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY * spec.Slot(10) + state.slot)
-            * int(spec.config.SLOT_DURATION_MS)
-            // 1000
-        )
-        + fc_store.genesis_time
-    )
+        spec.SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY * 10 + state.slot
+    ) * spec.config.SLOT_DURATION_MS // 1000 + fc_store.genesis_time
     on_tick_and_append_step(spec, fc_store, current_time, test_steps)
 
     # Block 0
@@ -66,7 +60,7 @@ def test_from_syncing_to_invalid(spec, state):
     )
     assert spec.get_head(mega_store.fc_store).root == mega_store.opt_store.head_block_root
 
-    state_0 = copy(state)
+    state_0 = state.copy()
 
     # Create VALID chain `a`
     signed_blocks_a = []
@@ -75,9 +69,7 @@ def test_from_syncing_to_invalid(spec, state):
         block.body.execution_payload.parent_hash = (
             block_hashes[f"chain_a_{i - 1}"] if i != 0 else block_hashes["block_0"]
         )
-        block.body.execution_payload.extra_data = spec.ExtraData(
-            data=spec.hash(bytes(f"chain_a_{i}", "UTF-8"))
-        )
+        block.body.execution_payload.extra_data = spec.hash(bytes(f"chain_a_{i}", "UTF-8"))
         block.body.execution_payload.block_hash = compute_el_block_hash(
             spec, block.body.execution_payload, state
         )
@@ -88,19 +80,17 @@ def test_from_syncing_to_invalid(spec, state):
             spec, mega_store, signed_block, test_steps, status=PayloadStatusV1Status.VALID
         )
         assert spec.get_head(mega_store.fc_store).root == mega_store.opt_store.head_block_root
-        signed_blocks_a.append(copy(signed_block))
+        signed_blocks_a.append(signed_block.copy())
 
     # Create SYNCING chain `b`
     signed_blocks_b = []
-    state = copy(state_0)
+    state = state_0.copy()
     for i in range(3):
         block = build_empty_block_for_next_slot(spec, state)
         block.body.execution_payload.parent_hash = (
             block_hashes[f"chain_b_{i - 1}"] if i != 0 else block_hashes["block_0"]
         )
-        block.body.execution_payload.extra_data = spec.ExtraData(
-            data=spec.hash(bytes(f"chain_b_{i}", "UTF-8"))
-        )
+        block.body.execution_payload.extra_data = spec.hash(bytes(f"chain_b_{i}", "UTF-8"))
         block.body.execution_payload.block_hash = compute_el_block_hash(
             spec, block.body.execution_payload, state
         )
@@ -109,7 +99,7 @@ def test_from_syncing_to_invalid(spec, state):
         signed_block = state_transition_with_full_block(
             spec, state, fill_cur_epoch=True, fill_prev_epoch=True, block=block
         )
-        signed_blocks_b.append(copy(signed_block))
+        signed_blocks_b.append(signed_block.copy())
         yield from add_optimistic_block(
             spec, mega_store, signed_block, test_steps, status=PayloadStatusV1Status.SYNCING
         )
@@ -120,9 +110,7 @@ def test_from_syncing_to_invalid(spec, state):
     block.body.execution_payload.parent_hash = signed_blocks_b[
         -1
     ].message.body.execution_payload.block_hash
-    block.body.execution_payload.extra_data = spec.ExtraData(
-        data=spec.hash(bytes(f"chain_b_{i}", "UTF-8"))
-    )
+    block.body.execution_payload.extra_data = spec.hash(bytes(f"chain_b_{i}", "UTF-8"))
     block.body.execution_payload.block_hash = compute_el_block_hash(
         spec, block.body.execution_payload, state
     )
@@ -140,6 +128,6 @@ def test_from_syncing_to_invalid(spec, state):
     yield from add_optimistic_block(
         spec, mega_store, signed_block, test_steps, payload_status=payload_status
     )
-    assert mega_store.opt_store.head_block_root == hash_tree_root(signed_blocks_a[-1].message)
+    assert mega_store.opt_store.head_block_root == signed_blocks_a[-1].message.hash_tree_root()
 
     yield "steps", test_steps

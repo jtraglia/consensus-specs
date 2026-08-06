@@ -17,7 +17,6 @@ from eth_consensus_specs.test.helpers.gossip import (
     run_validate_gossip,
     wrap_genesis_block,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def setup_gloas_partial_sidecar(spec, state, blob_indices=None):
@@ -29,9 +28,9 @@ def setup_gloas_partial_sidecar(spec, state, blob_indices=None):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
     _, _, _, signed_block, sidecars, _ = get_block_with_blob_and_sidecars(spec, state, blob_count=1)
-    block_root = hash_tree_root(signed_block.message)
+    block_root = signed_block.message.hash_tree_root()
     store.blocks[block_root] = signed_block.message
-    store.block_states[block_root] = copy(state)
+    store.block_states[block_root] = state.copy()
 
     sidecar = sidecars[0]
     partial = make_partial_sidecar(spec, sidecar, blob_indices=blob_indices)
@@ -49,19 +48,19 @@ def setup_gloas_partial_failed_block_sidecar(spec, state):
     """
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    pre_state = copy(state)
+    pre_state = state.copy()
     _, _, _, signed_block, sidecars, _ = get_block_with_blob_and_sidecars(spec, state, blob_count=1)
 
     # Corrupt the block so it genuinely fails state transition.
-    failed_block = copy(signed_block.message)
+    failed_block = signed_block.message.copy()
     failed_block.state_root = spec.Root(b"\xab" * 32)
     signed_failed_block = sign_block(
         spec, state, failed_block, proposer_index=failed_block.proposer_index
     )
     expect_assertion_error(
-        lambda: spec.state_transition(copy(pre_state), signed_failed_block, validate_result=True)
+        lambda: spec.state_transition(pre_state.copy(), signed_failed_block, validate_result=True)
     )
-    failed_root = hash_tree_root(signed_failed_block.message)
+    failed_root = signed_failed_block.message.hash_tree_root()
     store.blocks[failed_root] = signed_failed_block.message
 
     sidecar = sidecars[0]
@@ -79,7 +78,7 @@ def test_gossip_partial_data_column_sidecar__valid(spec, state):
 
     # Capture the genesis anchor state before the setup helper advances it, so
     # the yielded anchor state matches the first (anchor) block for replay.
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     store, signed_anchor, signed_block, partial, group_id, column_index = (
         setup_gloas_partial_sidecar(spec, state)
     )
@@ -133,12 +132,12 @@ def test_gossip_partial_data_column_sidecar__reject_slot_mismatch(spec, state):
 
     # Capture the genesis anchor state before the setup helper advances it, so
     # the yielded anchor state matches the first (anchor) block for replay.
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     store, signed_anchor, signed_block, partial, group_id, column_index = (
         setup_gloas_partial_sidecar(spec, state)
     )
     # Bump the slot so it no longer matches.
-    group_id.slot = group_id.slot + spec.Slot(1)
+    group_id.slot = spec.Slot(group_id.slot + 1)
 
     yield "state", anchor_state
     yield get_filename(signed_anchor), signed_anchor
@@ -191,7 +190,7 @@ def test_gossip_partial_data_column_sidecar__ignore_block_unseen(spec, state):
 
     # Capture the genesis anchor state before the setup helper advances it, so
     # the yielded anchor state matches the first (anchor) block for replay.
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     store, signed_anchor, signed_block, partial, group_id, column_index = (
         setup_gloas_partial_sidecar(spec, state)
     )
@@ -252,7 +251,7 @@ def test_gossip_partial_data_column_sidecar__reject_block_failed_validation(spec
 
     # Capture the genesis anchor state before the setup helper advances it, so
     # the yielded anchor state matches the first (anchor) block for replay.
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     store, signed_anchor, signed_failed_block, partial, group_id, column_index = (
         setup_gloas_partial_failed_block_sidecar(spec, state)
     )

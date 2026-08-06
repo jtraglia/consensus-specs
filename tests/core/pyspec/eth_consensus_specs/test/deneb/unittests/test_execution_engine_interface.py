@@ -8,7 +8,6 @@ from eth_consensus_specs.test.helpers.execution_payload import (
     build_empty_execution_payload,
 )
 from eth_consensus_specs.test.helpers.state import next_slot
-from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 @with_deneb_and_later
@@ -18,7 +17,7 @@ def test_noop_execution_engine_is_valid_versioned_hashes(spec, state):
     Test NoopExecutionEngine.is_valid_versioned_hashes returns True and doesn't modify state
     """
     engine = spec.NoopExecutionEngine()
-    pre_state = copy(state)
+    pre_state = state.copy()
 
     # Test is_valid_versioned_hashes
     result = engine.is_valid_versioned_hashes(new_payload_request=None)

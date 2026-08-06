@@ -22,7 +22,6 @@ from eth_consensus_specs.test.helpers.gossip import (
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 @with_deneb_and_later
@@ -34,7 +33,7 @@ def test_gossip_beacon_block__valid_with_blob_kzg_commitments(spec, state):
     yield "topic", "meta", "beacon_block"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -62,7 +61,7 @@ def test_gossip_beacon_block__valid_with_blob_kzg_commitments(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + spec.Uint64(500),
+        current_time_ms=block_time_ms + 500,
         **kwargs,
     )
     assert result == "valid"
@@ -84,7 +83,7 @@ def test_gossip_beacon_block__reject_too_many_kzg_commitments(spec, state):
     yield "topic", "meta", "beacon_block"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -96,7 +95,7 @@ def test_gossip_beacon_block__reject_too_many_kzg_commitments(spec, state):
 
     rng = random.Random(1234)
     block, _, _, _ = get_block_with_blob(
-        spec, state, rng=rng, blob_count=int(get_max_blob_count(spec, state)) + 1
+        spec, state, rng=rng, blob_count=get_max_blob_count(spec, state) + 1
     )
     signed_block = sign_block(spec, state, block, proposer_index=block.proposer_index)
 
@@ -114,7 +113,7 @@ def test_gossip_beacon_block__reject_too_many_kzg_commitments(spec, state):
         store=store,
         state=state,
         signed_beacon_block=signed_block,
-        current_time_ms=block_time_ms + spec.Uint64(500),
+        current_time_ms=block_time_ms + 500,
         **kwargs,
     )
     assert result == "reject"

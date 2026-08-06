@@ -8,7 +8,6 @@ from eth_consensus_specs.test.helpers.light_client import (
     latest_finalized_root_gindex,
     latest_next_sync_committee_gindex,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 @with_test_suite_name("BeaconState")
@@ -21,17 +20,17 @@ def test_current_sync_committee_merkle_proof(spec, state):
     yield (
         "proof",
         {
-            "leaf": "0x" + hash_tree_root(state.current_sync_committee).hex(),
+            "leaf": "0x" + state.current_sync_committee.hash_tree_root().hex(),
             "leaf_index": gindex,
             "branch": ["0x" + root.hex() for root in branch],
         },
     )
     assert spec.is_valid_merkle_branch(
-        leaf=hash_tree_root(state.current_sync_committee),
+        leaf=state.current_sync_committee.hash_tree_root(),
         branch=branch,
         depth=spec.floorlog2(gindex),
         index=spec.get_subtree_index(gindex),
-        root=hash_tree_root(state),
+        root=state.hash_tree_root(),
     )
 
 
@@ -45,17 +44,17 @@ def test_next_sync_committee_merkle_proof(spec, state):
     yield (
         "proof",
         {
-            "leaf": "0x" + hash_tree_root(state.next_sync_committee).hex(),
+            "leaf": "0x" + state.next_sync_committee.hash_tree_root().hex(),
             "leaf_index": gindex,
             "branch": ["0x" + root.hex() for root in branch],
         },
     )
     assert spec.is_valid_merkle_branch(
-        leaf=hash_tree_root(state.next_sync_committee),
+        leaf=state.next_sync_committee.hash_tree_root(),
         branch=branch,
         depth=spec.floorlog2(gindex),
         index=spec.get_subtree_index(gindex),
-        root=hash_tree_root(state),
+        root=state.hash_tree_root(),
     )
 
 
@@ -80,5 +79,5 @@ def test_finality_root_merkle_proof(spec, state):
         branch=branch,
         depth=spec.floorlog2(gindex),
         index=spec.get_subtree_index(gindex),
-        root=hash_tree_root(state),
+        root=state.hash_tree_root(),
     )

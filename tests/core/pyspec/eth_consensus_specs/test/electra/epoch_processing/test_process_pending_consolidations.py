@@ -13,7 +13,6 @@ from eth_consensus_specs.test.helpers.withdrawals import (
     set_compounding_withdrawal_credential_with_balance,
     set_eth1_withdrawal_credential_with_balance,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 #  ***********************
 #  * CONSOLIDATION TESTS *
@@ -39,9 +38,9 @@ def test_basic_pending_consolidation(spec, state):
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
 
     # Pending consolidation was successfully processed
-    assert state.balances[target_index] == spec.Gwei(2) * spec.MIN_ACTIVATION_BALANCE
-    assert state.balances[source_index] == spec.Gwei(0)
-    assert list(state.pending_consolidations) == []
+    assert state.balances[target_index] == 2 * spec.MIN_ACTIVATION_BALANCE
+    assert state.balances[source_index] == 0
+    assert state.pending_consolidations == []
 
 
 @with_electra_and_later
@@ -60,8 +59,8 @@ def test_consolidation_not_yet_withdrawable_validator(spec, state):
     # Initiate exit of source validator
     spec.initiate_validator_exit(state, source_index)
 
-    pre_pending_consolidations = copy(state.pending_consolidations)
-    pre_balances = copy(state.balances)
+    pre_pending_consolidations = state.pending_consolidations.copy()
+    pre_balances = state.balances.copy()
 
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
 
@@ -105,8 +104,8 @@ def test_skip_consolidation_when_source_slashed(spec, state):
     assert state.balances[target0_index] == spec.MIN_ACTIVATION_BALANCE
     assert state.balances[source0_index] == spec.MIN_ACTIVATION_BALANCE
     # second pending consolidation should be processed: first one is skipped and doesn't block the queue
-    assert state.balances[target1_index] == spec.Gwei(2) * spec.MIN_ACTIVATION_BALANCE
-    assert state.balances[source1_index] == spec.Gwei(0)
+    assert state.balances[target1_index] == 2 * spec.MIN_ACTIVATION_BALANCE
+    assert state.balances[source1_index] == 0
 
 
 @with_electra_and_later
@@ -117,12 +116,10 @@ def test_all_consolidation_cases_together(spec, state):
     target_index = [
         spec.get_active_validator_indices(state, current_epoch)[4 + i] for i in range(4)
     ]
-    state.pending_consolidations = spec.PendingConsolidations(
-        data=[
-            spec.PendingConsolidation(source_index=source_index[i], target_index=target_index[i])
-            for i in range(4)
-        ]
-    )
+    state.pending_consolidations = [
+        spec.PendingConsolidation(source_index=source_index[i], target_index=target_index[i])
+        for i in range(4)
+    ]
     # Set withdrawable epoch to current epoch for first and last source validators
     for i in [0, 2]:
         state.validators[source_index[i]].withdrawable_epoch = current_epoch
@@ -135,19 +132,19 @@ def test_all_consolidation_cases_together(spec, state):
     # Initiate exit of third source validator
     spec.initiate_validator_exit(state, 2)
 
-    pre_balances = copy(state.balances)
-    pre_pending_consolidations = copy(state.pending_consolidations)
+    pre_balances = state.balances.copy()
+    pre_pending_consolidations = state.pending_consolidations.copy()
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
 
     # First consolidation is successfully processed
-    assert state.balances[target_index[0]] == spec.Gwei(2) * spec.MIN_ACTIVATION_BALANCE
-    assert state.balances[source_index[0]] == spec.Gwei(0)
+    assert state.balances[target_index[0]] == 2 * spec.MIN_ACTIVATION_BALANCE
+    assert state.balances[source_index[0]] == 0
     # All other consolidations are not processed
     for i in [1, 2, 3]:
         assert state.balances[source_index[i]] == pre_balances[source_index[i]]
         assert state.balances[target_index[i]] == pre_balances[target_index[i]]
     # First consolidation is processed, second is skipped, last two are left in the queue
-    state.pending_consolidations = spec.PendingConsolidations(data=pre_pending_consolidations[2:])
+    state.pending_consolidations = pre_pending_consolidations[2:]
 
 
 @with_electra_and_later
@@ -176,7 +173,7 @@ def test_pending_consolidation_future_epoch(spec, state):
         next_epoch_with_full_participation(spec, state)
 
     # Obtain state before the call to process_pending_consolidations
-    state_before_consolidation = copy(state)
+    state_before_consolidation = state.copy()
     run_epoch_processing_to(spec, state_before_consolidation, "process_pending_consolidations")
 
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
@@ -190,7 +187,7 @@ def test_pending_consolidation_future_epoch(spec, state):
     )
     assert state.balances[source_index] == expected_source_balance
     assert state.balances[target_index] == expected_target_balance
-    assert list(state.pending_consolidations) == []
+    assert state.pending_consolidations == []
 
 
 @with_electra_and_later
@@ -223,7 +220,7 @@ def test_pending_consolidation_compounding_creds(spec, state):
         next_epoch_with_full_participation(spec, state)
 
     # Obtain state before the call to process_pending_consolidations
-    state_before_consolidation = copy(state)
+    state_before_consolidation = state.copy()
     run_epoch_processing_to(spec, state_before_consolidation, "process_pending_consolidations")
 
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
@@ -238,7 +235,7 @@ def test_pending_consolidation_compounding_creds(spec, state):
     assert state.balances[source_index] == (
         state_before_consolidation.balances[source_index] - spec.MIN_ACTIVATION_BALANCE
     )
-    assert list(state.pending_consolidations) == []
+    assert state.pending_consolidations == []
 
     # Pending balance deposit to the target is not created,
     # because the target already has compounding credentials
@@ -283,7 +280,7 @@ def test_pending_consolidation_with_pending_deposit(spec, state):
         next_epoch_with_full_participation(spec, state)
 
     # Obtain state before the call to process_pending_balance_deposits
-    state_before_consolidation = copy(state)
+    state_before_consolidation = state.copy()
     run_epoch_processing_to(spec, state_before_consolidation, "process_pending_consolidations")
 
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
@@ -296,11 +293,11 @@ def test_pending_consolidation_with_pending_deposit(spec, state):
     assert state.balances[source_index] == (
         state_before_consolidation.balances[source_index] - spec.MIN_ACTIVATION_BALANCE
     )
-    assert list(state.pending_consolidations) == []
+    assert state.pending_consolidations == []
 
     # Pending deposit to the source was not processed.
     # It should only be processed in the next epoch transition
-    assert list(state.pending_deposits) == [pending_deposit]
+    assert state.pending_deposits == [pending_deposit]
 
 
 @with_electra_and_later
@@ -319,9 +316,9 @@ def test_pending_consolidation_source_balance_less_than_max_effective(spec, stat
     set_eth1_withdrawal_credential_with_balance(spec, state, source_index)
     set_eth1_withdrawal_credential_with_balance(spec, state, target_index)
     # Set the source balance to be less than effective_balance
-    pre_balance_source = state.validators[
-        source_index
-    ].effective_balance - spec.EFFECTIVE_BALANCE_INCREMENT // spec.Gwei(8)
+    pre_balance_source = (
+        state.validators[source_index].effective_balance - spec.EFFECTIVE_BALANCE_INCREMENT // 8
+    )
     state.balances[source_index] = pre_balance_source
 
     pre_balance_target = state.balances[target_index]
@@ -334,8 +331,8 @@ def test_pending_consolidation_source_balance_less_than_max_effective(spec, stat
 
     # Pending consolidation was successfully processed
     assert state.balances[target_index] == pre_balance_target + pre_balance_source
-    assert state.balances[source_index] == spec.Gwei(0)
-    assert list(state.pending_consolidations) == []
+    assert state.balances[source_index] == 0
+    assert state.pending_consolidations == []
 
 
 @with_electra_and_later
@@ -354,7 +351,7 @@ def test_pending_consolidation_source_balance_greater_than_max_effective(spec, s
     set_eth1_withdrawal_credential_with_balance(spec, state, source_index)
     set_eth1_withdrawal_credential_with_balance(spec, state, target_index)
     # Set the source balance to be greater than effective_balance
-    excess_source_balance = spec.EFFECTIVE_BALANCE_INCREMENT // spec.Gwei(8)
+    excess_source_balance = spec.EFFECTIVE_BALANCE_INCREMENT // 8
     pre_balance_source = state.validators[source_index].effective_balance + excess_source_balance
     state.balances[source_index] = pre_balance_source
 
@@ -368,7 +365,7 @@ def test_pending_consolidation_source_balance_greater_than_max_effective(spec, s
     # Pending consolidation was successfully processed
     assert state.balances[target_index] == pre_balance_target + source_max_effective_balance
     assert state.balances[source_index] == excess_source_balance
-    assert list(state.pending_consolidations) == []
+    assert state.pending_consolidations == []
 
 
 @with_electra_and_later
@@ -387,9 +384,9 @@ def test_pending_consolidation_source_balance_less_than_max_effective_compoundin
     set_compounding_withdrawal_credential_with_balance(spec, state, source_index)
     set_compounding_withdrawal_credential_with_balance(spec, state, target_index)
     # Set the source balance to be less than effective_balance
-    pre_balance_source = state.validators[
-        source_index
-    ].effective_balance - spec.EFFECTIVE_BALANCE_INCREMENT // spec.Gwei(8)
+    pre_balance_source = (
+        state.validators[source_index].effective_balance - spec.EFFECTIVE_BALANCE_INCREMENT // 8
+    )
     state.balances[source_index] = pre_balance_source
 
     pre_balance_target = state.balances[target_index]
@@ -402,8 +399,8 @@ def test_pending_consolidation_source_balance_less_than_max_effective_compoundin
 
     # Pending consolidation was successfully processed
     assert state.balances[target_index] == pre_balance_target + pre_balance_source
-    assert state.balances[source_index] == spec.Gwei(0)
-    assert list(state.pending_consolidations) == []
+    assert state.balances[source_index] == 0
+    assert state.pending_consolidations == []
 
 
 @with_electra_and_later
@@ -422,7 +419,7 @@ def test_pending_consolidation_source_balance_greater_than_max_effective_compoun
     set_compounding_withdrawal_credential_with_balance(spec, state, source_index)
     set_compounding_withdrawal_credential_with_balance(spec, state, target_index)
     # Set the source balance to be greater than effective_balance
-    excess_source_balance = spec.EFFECTIVE_BALANCE_INCREMENT // spec.Gwei(8)
+    excess_source_balance = spec.EFFECTIVE_BALANCE_INCREMENT // 8
     pre_balance_source = state.validators[source_index].effective_balance + excess_source_balance
     state.balances[source_index] = pre_balance_source
 
@@ -436,7 +433,7 @@ def test_pending_consolidation_source_balance_greater_than_max_effective_compoun
     # Pending consolidation was successfully processed
     assert state.balances[target_index] == pre_balance_target + source_max_effective_balance
     assert state.balances[source_index] == excess_source_balance
-    assert list(state.pending_consolidations) == []
+    assert state.pending_consolidations == []
 
 
 #  *******************************
@@ -479,20 +476,20 @@ def prepare_consolidation_and_state(
     elif eb_to_min_ab == "=":
         source.effective_balance = spec.MIN_ACTIVATION_BALANCE
     elif eb_to_max_eb == "<":
-        source.effective_balance = (max_eb - spec.MIN_ACTIVATION_BALANCE) // spec.Gwei(2)
+        source.effective_balance = (max_eb - spec.MIN_ACTIVATION_BALANCE) // 2
     else:
         # eb_to_max_eb == '='
         source.effective_balance = max_eb
 
     if balance_to_eb == "<":
         state.balances[source_index] = (
-            source.effective_balance - spec.EFFECTIVE_BALANCE_INCREMENT // spec.Gwei(2)
+            source.effective_balance - spec.EFFECTIVE_BALANCE_INCREMENT // 2
         )
     elif balance_to_eb == "=":
         state.balances[source_index] = source.effective_balance
     else:
         state.balances[source_index] = (
-            source.effective_balance + spec.EFFECTIVE_BALANCE_INCREMENT // spec.Gwei(2)
+            source.effective_balance + spec.EFFECTIVE_BALANCE_INCREMENT // 2
         )
 
 
@@ -513,7 +510,7 @@ def run_balance_computation_test(spec, state, instance_tuples):
         )
         max_index += 2
 
-    pre_state = copy(state)
+    pre_state = state.copy()
 
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
 

@@ -3,7 +3,6 @@ from eth_consensus_specs.test.context import (
     with_capella_and_later,
 )
 from eth_consensus_specs.test.helpers.epoch_processing import run_epoch_processing_with
-from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def run_process_historical_summaries_update(spec, state):
@@ -14,12 +13,12 @@ def run_process_historical_summaries_update(spec, state):
 @spec_state_test
 def test_historical_summaries_accumulator(spec, state):
     # skip ahead to near the end of the historical batch period (excl block before epoch processing)
-    state.slot = spec.SLOTS_PER_HISTORICAL_ROOT - spec.Slot(1)
-    pre_historical_summaries = copy(state.historical_summaries)
+    state.slot = spec.SLOTS_PER_HISTORICAL_ROOT - 1
+    pre_historical_summaries = state.historical_summaries.copy()
 
     yield from run_process_historical_summaries_update(spec, state)
 
     assert len(state.historical_summaries) == len(pre_historical_summaries) + 1
     summary = state.historical_summaries[len(state.historical_summaries) - 1]
-    assert summary.block_summary_root == hash_tree_root(state.block_roots)
-    assert summary.state_summary_root == hash_tree_root(state.state_roots)
+    assert summary.block_summary_root == state.block_roots.hash_tree_root()
+    assert summary.state_summary_root == state.state_roots.hash_tree_root()

@@ -38,6 +38,7 @@ RUNNERS: dict[str, RunnerConfig] = {
     "networking": {},
     "random": {},
     "rewards": {},
+    "ssz_generic": {},
     "ssz_static": {},
     "sync": {},
     # Operations: path has "block_processing", runner is "operations"

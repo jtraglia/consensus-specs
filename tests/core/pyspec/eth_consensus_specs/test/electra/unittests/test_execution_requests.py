@@ -21,7 +21,7 @@ def test_requests_serialization_round_trip__empty(spec):
 @single_phase
 def test_requests_serialization_round_trip__one_request(spec):
     execution_requests = spec.ExecutionRequests(
-        deposits=spec.DepositRequests.of(spec.DepositRequest()),
+        deposits=[spec.DepositRequest()],
     )
     serialized_execution_requests = spec.get_execution_requests_list(execution_requests)
     deserialized_execution_requests = spec.get_execution_requests(serialized_execution_requests)
@@ -33,9 +33,9 @@ def test_requests_serialization_round_trip__one_request(spec):
 @single_phase
 def test_requests_serialization_round_trip__multiple_requests(spec):
     execution_requests = spec.ExecutionRequests(
-        deposits=spec.DepositRequests.of(spec.DepositRequest()),
-        withdrawals=spec.WithdrawalRequests.of(spec.WithdrawalRequest()),
-        consolidations=spec.ConsolidationRequests.of(spec.ConsolidationRequest()),
+        deposits=[spec.DepositRequest()],
+        withdrawals=[spec.WithdrawalRequest()],
+        consolidations=[spec.ConsolidationRequest()],
     )
     serialized_execution_requests = spec.get_execution_requests_list(execution_requests)
     deserialized_execution_requests = spec.get_execution_requests(serialized_execution_requests)
@@ -47,15 +47,15 @@ def test_requests_serialization_round_trip__multiple_requests(spec):
 @single_phase
 def test_requests_serialization_round_trip__one_request_with_real_data(spec):
     execution_requests = spec.ExecutionRequests(
-        deposits=spec.DepositRequests.of(
+        deposits=[
             spec.DepositRequest(
                 pubkey=spec.BLSPubkey(48 * "aa"),
                 withdrawal_credentials=spec.Bytes32(32 * "bb"),
                 amount=spec.Gwei(11111111),
                 signature=spec.BLSSignature(96 * "cc"),
                 index=spec.Uint64(22222222),
-            )
-        )
+            ),
+        ]
     )
     serialized_execution_requests = spec.get_execution_requests_list(execution_requests)
     deserialized_execution_requests = spec.get_execution_requests(serialized_execution_requests)
@@ -82,7 +82,7 @@ def test_requests_deserialize__reject_out_of_order_requests(spec):
         spec.WITHDRAWAL_REQUEST_TYPE + 76 * b"\x0a",
         spec.DEPOSIT_REQUEST_TYPE + 192 * b"\x0b",
     ]
-    assert serialized_execution_requests[0][0] > serialized_execution_requests[1][0]
+    assert int(serialized_execution_requests[0][0]) > int(serialized_execution_requests[1][0])
     expect_assertion_error(lambda: spec.get_execution_requests(serialized_execution_requests))
 
 

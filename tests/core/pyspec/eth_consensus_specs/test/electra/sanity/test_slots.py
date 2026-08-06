@@ -12,17 +12,17 @@ def run_epoch_processing(spec, state, pending_deposits=None, pending_consolidati
     if pending_consolidations is None:
         pending_consolidations = []
     # Transition to the last slot of the epoch
-    slot = state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - spec.Slot(1)
+    slot = state.slot + spec.SLOTS_PER_EPOCH - (state.slot % spec.SLOTS_PER_EPOCH) - 1
     transition_to(spec, state, slot)
-    state.pending_deposits = spec.PendingDeposits(data=pending_deposits)
-    state.pending_consolidations = spec.PendingConsolidations(data=pending_consolidations)
+    state.pending_deposits = pending_deposits
+    state.pending_consolidations = pending_consolidations
     yield "pre", state
     yield "slots", 1
-    spec.process_slots(state, state.slot + spec.Slot(1))
+    spec.process_slots(state, state.slot + 1)
     yield "post", state
 
-    assert list(state.pending_deposits) == []
-    assert list(state.pending_consolidations) == []
+    assert state.pending_deposits == []
+    assert state.pending_consolidations == []
 
 
 @with_electra_and_later
@@ -58,7 +58,7 @@ def test_multiple_pending_deposits_same_pubkey(spec, state):
     yield from run_epoch_processing(spec, state, pending_deposits=pending_deposits)
 
     # Check deposit balance is applied correctly
-    assert state.balances[index] == sum((d.amount for d in pending_deposits), spec.Gwei(0))
+    assert state.balances[index] == sum(d.amount for d in pending_deposits)
     assert state.validators[index].effective_balance == spec.MIN_ACTIVATION_BALANCE
 
 
@@ -70,15 +70,12 @@ def test_multiple_pending_deposits_same_pubkey_different_signature(spec, state):
 
     # First deposit with valid signature
     deposit0 = prepare_pending_deposit(
-        spec, validator_index=index, amount=spec.MIN_ACTIVATION_BALANCE // spec.Gwei(2), signed=True
+        spec, validator_index=index, amount=spec.MIN_ACTIVATION_BALANCE // 2, signed=True
     )
 
     # Second deposit without signature
     deposit1 = prepare_pending_deposit(
-        spec,
-        validator_index=index,
-        amount=spec.MIN_ACTIVATION_BALANCE // spec.Gwei(2),
-        signed=False,
+        spec, validator_index=index, amount=spec.MIN_ACTIVATION_BALANCE // 2, signed=False
     )
 
     pending_deposits = [deposit0, deposit1]
@@ -107,7 +104,7 @@ def test_multiple_pending_deposits_same_pubkey_compounding(spec, state):
     yield from run_epoch_processing(spec, state, pending_deposits=pending_deposits)
 
     # Check deposit balance is applied correctly
-    assert state.balances[index] == sum((d.amount for d in pending_deposits), spec.Gwei(0))
+    assert state.balances[index] == sum(d.amount for d in pending_deposits)
     assert state.validators[index].effective_balance == state.balances[index]
 
 
@@ -130,7 +127,7 @@ def test_multiple_pending_deposits_same_pubkey_below_upward_threshold(spec, stat
     yield from run_epoch_processing(spec, state, pending_deposits=pending_deposits)
 
     # Check deposit balance is applied correctly
-    assert state.balances[index] == sum((d.amount for d in pending_deposits), spec.Gwei(0))
+    assert state.balances[index] == sum(d.amount for d in pending_deposits)
     assert state.validators[index].effective_balance == deposit_0.amount
 
 
@@ -145,9 +142,12 @@ def test_multiple_pending_deposits_same_pubkey_above_upward_threshold(spec, stat
         amount=(spec.MIN_ACTIVATION_BALANCE - spec.EFFECTIVE_BALANCE_INCREMENT),
         signed=True,
     )
-    amount = spec.EFFECTIVE_BALANCE_INCREMENT // spec.Gwei(spec.HYSTERESIS_QUOTIENT) * spec.Gwei(
-        spec.HYSTERESIS_UPWARD_MULTIPLIER
-    ) + spec.Gwei(1)
+    amount = (
+        spec.EFFECTIVE_BALANCE_INCREMENT
+        // spec.HYSTERESIS_QUOTIENT
+        * spec.HYSTERESIS_UPWARD_MULTIPLIER
+        + 1
+    )
     deposit_1 = prepare_pending_deposit(spec, validator_index=index, amount=amount, signed=True)
     pending_deposits = [deposit_0, deposit_1]
 
@@ -155,7 +155,7 @@ def test_multiple_pending_deposits_same_pubkey_above_upward_threshold(spec, stat
 
     # Check deposit balance is applied correctly
     balance = state.balances[index]
-    assert balance == sum((d.amount for d in pending_deposits), spec.Gwei(0))
+    assert balance == sum(d.amount for d in pending_deposits)
     assert (
         state.validators[index].effective_balance
         == balance - balance % spec.EFFECTIVE_BALANCE_INCREMENT
@@ -191,9 +191,7 @@ def test_pending_consolidation(spec, state):
     yield from run_epoch_processing(spec, state, pending_consolidations=pending_consolidations)
 
     # Check the consolidation is processed correctly
-    assert state.balances[source_index] == spec.Gwei(0)
-    assert state.validators[source_index].effective_balance == spec.Gwei(0)
-    assert state.balances[target_index] == spec.MIN_ACTIVATION_BALANCE * spec.Gwei(2)
-    assert state.validators[
-        target_index
-    ].effective_balance == spec.MIN_ACTIVATION_BALANCE * spec.Gwei(2)
+    assert state.balances[source_index] == 0
+    assert state.validators[source_index].effective_balance == 0
+    assert state.balances[target_index] == spec.MIN_ACTIVATION_BALANCE * 2
+    assert state.validators[target_index].effective_balance == spec.MIN_ACTIVATION_BALANCE * 2

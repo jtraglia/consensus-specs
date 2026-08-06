@@ -10,7 +10,6 @@ from eth_consensus_specs.test.helpers.constants import (
     CAPELLA,
     GLOAS,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 
 
 @with_test_suite_name("BeaconBlockBody")
@@ -27,15 +26,15 @@ def test_execution_merkle_proof(spec, state):
     yield (
         "proof",
         {
-            "leaf": "0x" + hash_tree_root(block.message.body.execution_payload).hex(),
+            "leaf": "0x" + block.message.body.execution_payload.hash_tree_root().hex(),
             "leaf_index": gindex,
             "branch": ["0x" + root.hex() for root in branch],
         },
     )
     assert spec.is_valid_merkle_branch(
-        leaf=hash_tree_root(block.message.body.execution_payload),
+        leaf=block.message.body.execution_payload.hash_tree_root(),
         branch=branch,
         depth=spec.floorlog2(gindex),
         index=spec.get_subtree_index(gindex),
-        root=hash_tree_root(block.message.body),
+        root=block.message.body.hash_tree_root(),
     )

@@ -25,7 +25,6 @@ from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
     transition_to,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def build_signed_block_and_sidecars(spec, state, rng=None, blob_count=1):
@@ -72,7 +71,7 @@ def test_gossip_blob_sidecar__valid(spec, state):
     yield "topic", "meta", "blob_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -98,7 +97,7 @@ def test_gossip_blob_sidecar__valid(spec, state):
         store=store,
         state=state,
         blob_sidecar=blob_sidecar,
-        current_time_ms=block_time_ms + spec.Uint64(500),
+        current_time_ms=block_time_ms + 500,
         subnet_id=subnet_id,
     )
     assert result == "valid"
@@ -125,7 +124,7 @@ def test_gossip_blob_sidecar__reject_index_out_of_range(spec, state):
     yield "topic", "meta", "blob_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -152,7 +151,7 @@ def test_gossip_blob_sidecar__reject_index_out_of_range(spec, state):
         store=store,
         state=state,
         blob_sidecar=blob_sidecar,
-        current_time_ms=block_time_ms + spec.Uint64(500),
+        current_time_ms=block_time_ms + 500,
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -180,7 +179,7 @@ def test_gossip_blob_sidecar__reject_wrong_subnet(spec, state):
     yield "topic", "meta", "blob_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -200,16 +199,14 @@ def test_gossip_blob_sidecar__reject_wrong_subnet(spec, state):
     yield "current_time_ms", "meta", int(block_time_ms)
 
     expected_subnet = correct_subnet(spec, blob_sidecar)
-    wrong_subnet = spec.SubnetID(
-        (int(expected_subnet) + 1) % int(spec.config.BLOB_SIDECAR_SUBNET_COUNT)
-    )
+    wrong_subnet = spec.SubnetID((int(expected_subnet) + 1) % spec.config.BLOB_SIDECAR_SUBNET_COUNT)
     result, reason = run_validate_gossip(
         spec,
         seen=seen,
         store=store,
         state=state,
         blob_sidecar=blob_sidecar,
-        current_time_ms=block_time_ms + spec.Uint64(500),
+        current_time_ms=block_time_ms + 500,
         subnet_id=wrong_subnet,
     )
     assert result == "reject"
@@ -238,7 +235,7 @@ def test_gossip_blob_sidecar__reject_invalid_proposer_signature(spec, state):
     yield "topic", "meta", "blob_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -266,7 +263,7 @@ def test_gossip_blob_sidecar__reject_invalid_proposer_signature(spec, state):
         store=store,
         state=state,
         blob_sidecar=blob_sidecar,
-        current_time_ms=block_time_ms + spec.Uint64(500),
+        current_time_ms=block_time_ms + 500,
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -294,7 +291,7 @@ def test_gossip_blob_sidecar__reject_invalid_inclusion_proof(spec, state):
     yield "topic", "meta", "blob_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -306,9 +303,9 @@ def test_gossip_blob_sidecar__reject_invalid_inclusion_proof(spec, state):
     _, sidecars = build_signed_block_and_sidecars(spec, state, blob_count=1)
     blob_sidecar = sidecars[0]
     # Corrupt the inclusion proof
-    proof = list(blob_sidecar.kzg_commitment_inclusion_proof)
-    proof[0] = spec.Bytes32(spec.hash(proof[0]))
-    blob_sidecar.kzg_commitment_inclusion_proof = spec.KZGCommitmentInclusionProof(data=proof)
+    blob_sidecar.kzg_commitment_inclusion_proof = spec.compute_merkle_proof(
+        spec.BeaconBlockBody(), 0
+    )
 
     yield get_filename(blob_sidecar), blob_sidecar
 
@@ -324,7 +321,7 @@ def test_gossip_blob_sidecar__reject_invalid_inclusion_proof(spec, state):
         store=store,
         state=state,
         blob_sidecar=blob_sidecar,
-        current_time_ms=block_time_ms + spec.Uint64(500),
+        current_time_ms=block_time_ms + 500,
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -352,7 +349,7 @@ def test_gossip_blob_sidecar__reject_invalid_kzg_proof(spec, state):
     yield "topic", "meta", "blob_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -380,7 +377,7 @@ def test_gossip_blob_sidecar__reject_invalid_kzg_proof(spec, state):
         store=store,
         state=state,
         blob_sidecar=blob_sidecar,
-        current_time_ms=block_time_ms + spec.Uint64(500),
+        current_time_ms=block_time_ms + 500,
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -408,7 +405,7 @@ def test_gossip_blob_sidecar__ignore_future_slot(spec, state):
     yield "topic", "meta", "blob_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -425,7 +422,7 @@ def test_gossip_blob_sidecar__ignore_future_slot(spec, state):
     slot_time_ms = spec.compute_time_at_slot_ms(
         store, blob_sidecar.signed_block_header.message.slot
     )
-    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - spec.Uint64(1)
+    current_time_ms = slot_time_ms - spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY - 1
     yield "current_time_ms", "meta", int(current_time_ms)
 
     subnet_id = correct_subnet(spec, blob_sidecar)
@@ -463,7 +460,7 @@ def test_gossip_blob_sidecar__valid_slot_within_clock_disparity(spec, state):
     yield "topic", "meta", "blob_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -517,14 +514,14 @@ def test_gossip_blob_sidecar__ignore_not_later_than_finalized_slot(spec, state):
     yield "topic", "meta", "blob_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     seen = get_seen(spec)
     store, anchor_block = setup_store_with_anchor(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
     yield get_filename(signed_anchor), signed_anchor
     yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
 
-    transition_to(spec, state, spec.Slot(spec.SLOTS_PER_EPOCH - spec.Slot(1)))
+    transition_to(spec, state, spec.Slot(spec.SLOTS_PER_EPOCH - 1))
     yield "state", anchor_state
 
     _, sidecars = build_signed_block_and_sidecars(spec, state, blob_count=1)
@@ -557,7 +554,7 @@ def test_gossip_blob_sidecar__ignore_not_later_than_finalized_slot(spec, state):
         store=store,
         state=state,
         blob_sidecar=blob_sidecar,
-        current_time_ms=block_time_ms + spec.Uint64(500),
+        current_time_ms=block_time_ms + 500,
         subnet_id=subnet_id,
     )
     assert result == "ignore"
@@ -585,7 +582,7 @@ def test_gossip_blob_sidecar__reject_proposer_index_out_of_range(spec, state):
     yield "topic", "meta", "blob_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -614,7 +611,7 @@ def test_gossip_blob_sidecar__reject_proposer_index_out_of_range(spec, state):
         store=store,
         state=state,
         blob_sidecar=blob_sidecar,
-        current_time_ms=block_time_ms + spec.Uint64(500),
+        current_time_ms=block_time_ms + 500,
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -642,7 +639,7 @@ def test_gossip_blob_sidecar__ignore_parent_not_seen(spec, state):
     yield "topic", "meta", "blob_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -672,7 +669,7 @@ def test_gossip_blob_sidecar__ignore_parent_not_seen(spec, state):
         store=store,
         state=state,
         blob_sidecar=blob_sidecar,
-        current_time_ms=block_time_ms + spec.Uint64(500),
+        current_time_ms=block_time_ms + 500,
         subnet_id=subnet_id,
     )
     assert result == "ignore"
@@ -700,7 +697,7 @@ def test_gossip_blob_sidecar__reject_parent_failed_validation(spec, state):
     yield "topic", "meta", "blob_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -711,7 +708,7 @@ def test_gossip_blob_sidecar__reject_parent_failed_validation(spec, state):
     # Build the failed parent on a separate state copy so the yielded anchor state stays
     # at slot 0 (its `latest_block_header` points at the genesis-equivalent anchor, not at
     # `signed_parent`)
-    parent_state = copy(state)
+    parent_state = state.copy()
     parent_block = build_empty_block_for_next_slot(spec, parent_state)
     signed_parent = state_transition_and_sign_block(spec, parent_state, parent_block)
 
@@ -719,7 +716,7 @@ def test_gossip_blob_sidecar__reject_parent_failed_validation(spec, state):
 
     # Add the parent block to store.blocks but not store.block_states, matching
     # the reference-test encoding of a failed block.
-    store.blocks[hash_tree_root(signed_parent.message)] = signed_parent.message
+    store.blocks[signed_parent.message.hash_tree_root()] = signed_parent.message
 
     yield (
         "blocks",
@@ -730,7 +727,7 @@ def test_gossip_blob_sidecar__reject_parent_failed_validation(spec, state):
         ],
     )
 
-    _, sidecars = build_signed_block_and_sidecars(spec, copy(parent_state), blob_count=1)
+    _, sidecars = build_signed_block_and_sidecars(spec, parent_state.copy(), blob_count=1)
     blob_sidecar = sidecars[0]
 
     yield get_filename(blob_sidecar), blob_sidecar
@@ -747,7 +744,7 @@ def test_gossip_blob_sidecar__reject_parent_failed_validation(spec, state):
         store=store,
         state=state,
         blob_sidecar=blob_sidecar,
-        current_time_ms=block_time_ms + spec.Uint64(500),
+        current_time_ms=block_time_ms + 500,
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -778,7 +775,7 @@ def test_gossip_blob_sidecar__ignore_already_seen(spec, state):
     yield "topic", "meta", "blob_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "state", anchor_state
 
     messages = []
@@ -807,7 +804,7 @@ def test_gossip_blob_sidecar__ignore_already_seen(spec, state):
         store=store,
         state=state,
         blob_sidecar=blob_sidecar,
-        current_time_ms=block_time_ms + spec.Uint64(500),
+        current_time_ms=block_time_ms + 500,
         subnet_id=subnet_id,
     )
     assert result == "valid"
@@ -827,7 +824,7 @@ def test_gossip_blob_sidecar__ignore_already_seen(spec, state):
         store=store,
         state=state,
         blob_sidecar=blob_sidecar,
-        current_time_ms=block_time_ms + spec.Uint64(600),
+        current_time_ms=block_time_ms + 600,
         subnet_id=subnet_id,
     )
     assert result == "ignore"
@@ -855,7 +852,7 @@ def test_gossip_blob_sidecar__reject_slot_not_higher_than_parent(spec, state):
     yield "topic", "meta", "blob_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -865,14 +862,14 @@ def test_gossip_blob_sidecar__reject_slot_not_higher_than_parent(spec, state):
 
     # Build the parent on a separate state copy so the yielded anchor state stays at
     # slot 0 with `latest_block_header` pointing at the genesis-equivalent anchor.
-    parent_state = copy(state)
+    parent_state = state.copy()
     parent_block = build_empty_block_for_next_slot(spec, parent_state)
     signed_parent = state_transition_and_sign_block(spec, parent_state, parent_block)
 
     yield get_filename(signed_parent), signed_parent
-    parent_root = hash_tree_root(signed_parent.message)
+    parent_root = signed_parent.message.hash_tree_root()
     store.blocks[parent_root] = signed_parent.message
-    store.block_states[parent_root] = copy(parent_state)
+    store.block_states[parent_root] = parent_state.copy()
     yield (
         "blocks",
         "meta",
@@ -882,7 +879,7 @@ def test_gossip_blob_sidecar__reject_slot_not_higher_than_parent(spec, state):
         ],
     )
 
-    _, sidecars = build_signed_block_and_sidecars(spec, copy(parent_state), blob_count=1)
+    _, sidecars = build_signed_block_and_sidecars(spec, parent_state.copy(), blob_count=1)
     blob_sidecar = sidecars[0]
     blob_sidecar.signed_block_header.message.slot = signed_parent.message.slot
     resign_blob_sidecar_header(spec, parent_state, blob_sidecar)
@@ -901,7 +898,7 @@ def test_gossip_blob_sidecar__reject_slot_not_higher_than_parent(spec, state):
         store=store,
         state=state,
         blob_sidecar=blob_sidecar,
-        current_time_ms=block_time_ms + spec.Uint64(500),
+        current_time_ms=block_time_ms + 500,
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -929,7 +926,7 @@ def test_gossip_blob_sidecar__reject_non_ancestor_finalized_checkpoint(spec, sta
     yield "topic", "meta", "blob_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -962,7 +959,7 @@ def test_gossip_blob_sidecar__reject_non_ancestor_finalized_checkpoint(spec, sta
         store=store,
         state=state,
         blob_sidecar=blob_sidecar,
-        current_time_ms=block_time_ms + spec.Uint64(500),
+        current_time_ms=block_time_ms + 500,
         subnet_id=subnet_id,
     )
     assert result == "reject"
@@ -990,7 +987,7 @@ def test_gossip_blob_sidecar__reject_wrong_proposer_index(spec, state):
     yield "topic", "meta", "blob_sidecar"
 
     state = build_state_with_complete_transition(spec, state)
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "state", anchor_state
 
     seen = get_seen(spec)
@@ -1021,7 +1018,7 @@ def test_gossip_blob_sidecar__reject_wrong_proposer_index(spec, state):
         store=store,
         state=state,
         blob_sidecar=blob_sidecar,
-        current_time_ms=block_time_ms + spec.Uint64(500),
+        current_time_ms=block_time_ms + 500,
         subnet_id=subnet_id,
     )
     assert result == "reject"

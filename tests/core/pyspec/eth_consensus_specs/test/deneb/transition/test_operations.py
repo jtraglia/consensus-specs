@@ -25,7 +25,6 @@ from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
     transition_to,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 #
 # BLSToExecutionChange
@@ -53,7 +52,7 @@ def test_transition_with_btec_right_after_fork(
         pre_tag,
         post_tag,
         operation_type=OperationType.BLS_TO_EXECUTION_CHANGE,
-        operation_at_slot=spec.Slot(fork_epoch) * spec.SLOTS_PER_EPOCH,
+        operation_at_slot=fork_epoch * spec.SLOTS_PER_EPOCH,
     )
 
 
@@ -78,7 +77,7 @@ def test_transition_with_btec_right_before_fork(
         pre_tag,
         post_tag,
         operation_type=OperationType.BLS_TO_EXECUTION_CHANGE,
-        operation_at_slot=spec.Slot(fork_epoch) * spec.SLOTS_PER_EPOCH - spec.Slot(1),
+        operation_at_slot=fork_epoch * spec.SLOTS_PER_EPOCH - 1,
     )
 
 
@@ -102,7 +101,7 @@ def test_transition_attestation_from_previous_fork_with_new_range(
         # NOTE: attestation format changes from Deneb to Electra
         # so the attestation must be made with the `post_spec`
         target_spec = post_spec
-        target_state = post_spec.upgrade_to_electra(copy(state))
+        target_state = post_spec.upgrade_to_electra(state.copy())
         target_state.fork = state.fork
     else:
         target_spec = spec
@@ -116,11 +115,9 @@ def test_transition_attestation_from_previous_fork_with_new_range(
     state, fork_block = do_fork(state, spec, post_spec, fork_epoch)
     attestation = upgrade_attestation_to_new_spec(spec, post_spec, attestation)
     current_epoch = spec.get_current_epoch(state)
-    assert current_epoch == spec.Epoch(fork_epoch)
+    assert current_epoch == fork_epoch
     # Transition to second to last slot in `fork_epoch`
-    penultimate_slot = post_spec.compute_start_slot_at_epoch(
-        current_epoch + post_spec.Epoch(1)
-    ) - spec.Slot(2)
+    penultimate_slot = post_spec.compute_start_slot_at_epoch(current_epoch + 1) - 2
     transition_to(post_spec, state, penultimate_slot)
 
     # Ensure the new state is in the increased EIP-7045 slot inclusion range

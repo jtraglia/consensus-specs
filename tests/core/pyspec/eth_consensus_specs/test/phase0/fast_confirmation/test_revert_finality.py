@@ -197,7 +197,7 @@ def test_fcr_reverts_to_finalized_when_confirmed_too_old_lower_participation(spe
     assert current_epoch == spec.Epoch(3)
 
     # Reset condition: pre-boundary confirmed was epoch 1, so 1 + 1 < 3.
-    assert spec.get_block_epoch(store, pre_boundary_confirmed) + spec.Epoch(1) < current_epoch
+    assert spec.get_block_epoch(store, pre_boundary_confirmed) + 1 < current_epoch
 
     # Must have reset to finalized at epoch 3 start.
     assert fcr_store.confirmed_root == store.finalized_checkpoint.root
@@ -459,9 +459,7 @@ def test_fcr_reverts_when_reconfirmation_fails_at_epoch_start_due_to_late_equivo
     assert is_ancestor(spec, store, fcr.head_root(), confirmed_before), (
         "Confirmed fell off head chain"
     )
-    assert spec.get_block_epoch(store, confirmed_before) + spec.Epoch(1) >= current_epoch, (
-        "Confirmed too old"
-    )
+    assert spec.get_block_epoch(store, confirmed_before) + 1 >= current_epoch, "Confirmed too old"
     assert is_ancestor(spec, store, confirmed_before, gu_prev.root), "Ancestry broke"
 
     # Reconfirmation fails
@@ -504,7 +502,7 @@ def test_reset_to_finality_but_no_restart_to_gu_because_gu_too_old_epoch(spec, s
 
     3. At epoch 3 start:
     - confirmed_root is 2+ epochs old → triggers reset
-    - GU is also too old (GU.epoch + spec.Epoch(1) < current_epoch) → blocks restart-to-GU
+    - GU is also too old (GU.epoch + 1 < current_epoch) → blocks restart-to-GU
     - finalized is strictly older than GU at the block level (slot(finalized) < slot(GU))
 
     Expected Behavior:
@@ -567,7 +565,7 @@ def test_reset_to_finality_but_no_restart_to_gu_because_gu_too_old_epoch(spec, s
     assert finalized_slot < gu_slot
 
     # GU is too old to allow restart-to-GU at epoch 3 start.
-    assert gu.epoch + spec.Epoch(1) < current_epoch, (
+    assert gu.epoch + 1 < current_epoch, (
         f"GU not old enough to block restart: gu={int(gu.epoch)}, current={int(current_epoch)}"
     )
 
@@ -699,7 +697,7 @@ def test_fcr_resets_when_bcand_not_descendant_of_gu_via_first_received_uj(spec, 
 
     # Last slot of epoch 3
     assert fcr.current_slot() == epoch4_start - 1
-    assert spec.is_start_slot_at_epoch(fcr.current_slot() + spec.Slot(1))
+    assert spec.is_start_slot_at_epoch(spec.Slot(fcr.current_slot() + 1))
 
     # Check GU snapshot = (C, 2) — use the snapshot field, not current_observed
     # (rotation hasn't happened yet, it happens at epoch 4 start inside FCR)

@@ -19,7 +19,6 @@ from eth_consensus_specs.test.helpers.state import (
     set_full_participation,
 )
 from eth_consensus_specs.test.helpers.voluntary_exits import exit_validators, get_exited_validators
-from eth_consensus_specs.utils.ssz.ssz_impl import copy
 
 
 def run_process_inactivity_updates(spec, state):
@@ -36,10 +35,8 @@ def test_genesis(spec, state):
 @spec_state_test
 def test_genesis_random_scores(spec, state):
     rng = Random(10102)
-    state.inactivity_scores = spec.InactivityScores(
-        data=[rng.randint(0, 100) for _ in state.inactivity_scores]
-    )
-    pre_scores = copy(state.inactivity_scores)
+    state.inactivity_scores = [rng.randint(0, 100) for _ in state.inactivity_scores]
+    pre_scores = state.inactivity_scores.copy()
 
     yield from run_process_inactivity_updates(spec, state)
 
@@ -79,7 +76,7 @@ def test_all_zero_inactivity_scores_empty_participation(spec, state):
     yield from run_inactivity_scores_test(
         spec, state, set_empty_participation, zero_inactivity_scores
     )
-    assert set(state.inactivity_scores) == {spec.Uint64(0)}
+    assert set(state.inactivity_scores) == {0}
 
 
 @with_altair_and_later
@@ -94,7 +91,7 @@ def test_all_zero_inactivity_scores_empty_participation_leaking(spec, state):
     assert spec.is_in_inactivity_leak(state)
 
     for score in state.inactivity_scores:
-        assert score > spec.Uint64(0)
+        assert score > 0
 
 
 @with_altair_and_later
@@ -107,7 +104,7 @@ def test_all_zero_inactivity_scores_random_participation(spec, state):
         zero_inactivity_scores,
         rng=Random(5555),
     )
-    assert set(state.inactivity_scores) == {spec.Uint64(0)}
+    assert set(state.inactivity_scores) == {0}
 
 
 @with_altair_and_later
@@ -126,7 +123,7 @@ def test_all_zero_inactivity_scores_random_participation_leaking(spec, state):
     # Check still in leak
     assert spec.is_in_inactivity_leak(state)
 
-    assert spec.Uint64(0) in state.inactivity_scores
+    assert 0 in state.inactivity_scores
     assert len(set(state.inactivity_scores)) > 1
 
 
@@ -140,7 +137,7 @@ def test_all_zero_inactivity_scores_full_participation(spec, state):
         zero_inactivity_scores,
     )
 
-    assert set(state.inactivity_scores) == {spec.Uint64(0)}
+    assert set(state.inactivity_scores) == {0}
 
 
 @with_altair_and_later
@@ -158,7 +155,7 @@ def test_all_zero_inactivity_scores_full_participation_leaking(spec, state):
     # Check still in leak
     assert spec.is_in_inactivity_leak(state)
 
-    assert set(state.inactivity_scores) == {spec.Uint64(0)}
+    assert set(state.inactivity_scores) == {0}
 
 
 @with_altair_and_later
@@ -253,7 +250,7 @@ def slash_some_validators_for_inactivity_scores_test(spec, state, rng=None):
     # ``run_inactivity_scores_test`` runs at the next epoch from `state`.
     # We retrieve the proposer of this future state to avoid
     # accidentally slashing that validator
-    future_state = copy(state)
+    future_state = state.copy()
     next_epoch_via_block(spec, future_state)
 
     proposer_index = spec.get_beacon_proposer_index(future_state)
@@ -274,7 +271,7 @@ def test_some_slashed_zero_scores_full_participation(spec, state):
         zero_inactivity_scores,
     )
 
-    assert set(state.inactivity_scores) == {spec.Uint64(0)}
+    assert set(state.inactivity_scores) == {0}
 
 
 @with_altair_and_later
@@ -295,9 +292,9 @@ def test_some_slashed_zero_scores_full_participation_leaking(spec, state):
     # Ensure some zero scores (non-slashed values) and non-zero scores (slashed vals) in there
     for score, validator in zip(state.inactivity_scores, state.validators, strict=False):
         if validator.slashed:
-            assert score > spec.Uint64(0)
+            assert score > 0
         else:
-            assert score == spec.Uint64(0)
+            assert score == 0
 
 
 @with_altair_and_later
@@ -358,7 +355,7 @@ def test_some_exited_full_random_leaking(spec, state):
         next_epoch(spec, state)
     assert len(get_exited_validators(spec, state)) == exit_count
 
-    previous_scores = copy(state.inactivity_scores)
+    previous_scores = state.inactivity_scores.copy()
 
     yield from run_inactivity_scores_test(
         spec,
@@ -404,7 +401,7 @@ def _run_randomized_state_test_for_inactivity_updates(spec, state, rng=None):
 
     pre_score_for_exited_validator = state.inactivity_scores[some_exited_validator]
 
-    assert pre_score_for_exited_validator != spec.Uint64(0)
+    assert pre_score_for_exited_validator != 0
 
     assert len(set(state.inactivity_scores)) > 1
 

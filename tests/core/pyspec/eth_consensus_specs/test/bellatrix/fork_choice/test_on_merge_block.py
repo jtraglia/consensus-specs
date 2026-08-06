@@ -21,7 +21,6 @@ from eth_consensus_specs.test.helpers.pow_block import (
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
-from eth_consensus_specs.utils.ssz.ssz_impl import hash_tree_root
 from eth_consensus_specs.utils.ssz.ssz_typing import Uint256
 
 
@@ -60,10 +59,7 @@ def test_all_valid(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = (
-        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
-        + store.genesis_time
-    )
+    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
@@ -85,7 +81,7 @@ def test_all_valid(spec, state):
         signed_block = state_transition_and_sign_block(spec, state, block)
         yield from tick_and_add_block(spec, store, signed_block, test_steps, merge_block=True)
         # valid
-        assert spec.get_head(store).root == hash_tree_root(signed_block.message)
+        assert spec.get_head(store).root == signed_block.message.hash_tree_root()
 
     yield from with_pow_block_patch(spec, pow_blocks, run_func)
     yield "steps", test_steps
@@ -100,10 +96,7 @@ def test_block_lookup_failed(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = (
-        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
-        + store.genesis_time
-    )
+    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
@@ -143,10 +136,7 @@ def test_too_early_for_merge(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = (
-        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
-        + store.genesis_time
-    )
+    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 
@@ -183,10 +173,7 @@ def test_too_late_for_merge(spec, state):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     yield "anchor_state", state
     yield "anchor_block", anchor_block
-    current_time = (
-        spec.Uint64(state.slot) * spec.config.SLOT_DURATION_MS // spec.Uint64(1000)
-        + store.genesis_time
-    )
+    current_time = state.slot * spec.config.SLOT_DURATION_MS // 1000 + store.genesis_time
     on_tick_and_append_step(spec, store, current_time, test_steps)
     assert store.time == current_time
 

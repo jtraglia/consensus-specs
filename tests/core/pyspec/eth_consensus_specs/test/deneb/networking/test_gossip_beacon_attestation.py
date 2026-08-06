@@ -18,7 +18,6 @@ from eth_consensus_specs.test.helpers.gossip import (
 )
 from eth_consensus_specs.test.helpers.keys import privkeys
 from eth_consensus_specs.test.helpers.state import transition_to
-from eth_consensus_specs.utils.ssz.ssz_impl import copy, hash_tree_root
 
 
 def get_correct_subnet_for_attestation(spec, state, attestation):
@@ -40,7 +39,7 @@ def build_unaggregated_attestation(spec, state, beacon_block_root):
     committee = spec.get_beacon_committee(state, attestation.data.slot, attestation.data.index)
     single_bit = [False] * len(committee)
     single_bit[0] = True
-    attestation.aggregation_bits = spec.AggregationBits(data=list(single_bit))
+    attestation.aggregation_bits = spec.BitList[spec.MAX_VALIDATORS_PER_COMMITTEE](*single_bit)
     attestation.signature = spec.get_attestation_signature(
         state, attestation.data, privkeys[committee[0]]
     )
@@ -50,7 +49,7 @@ def build_unaggregated_attestation(spec, state, beacon_block_root):
 def prepare_attestation(spec, state, slot):
     store, anchor_block = get_genesis_forkchoice_store_and_block(spec, state)
     signed_anchor = wrap_genesis_block(spec, anchor_block)
-    anchor_root = hash_tree_root(anchor_block)
+    anchor_root = anchor_block.hash_tree_root()
 
     transition_to(spec, state, slot)
     attestation = build_unaggregated_attestation(spec, state, anchor_root)
@@ -67,9 +66,7 @@ def epoch_window_open_time(spec, store, attestation_epoch):
 
 def epoch_window_close_time(spec, store, attestation_epoch):
     return (
-        spec.compute_time_at_slot_ms(
-            store, spec.compute_start_slot_at_epoch(attestation_epoch + spec.Epoch(2))
-        )
+        spec.compute_time_at_slot_ms(store, spec.compute_start_slot_at_epoch(attestation_epoch + 2))
         + spec.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY
     )
 
@@ -90,7 +87,7 @@ def build_message(attestation, subnet_id, current_time_ms, offset_ms, expected, 
 @spec_state_test
 def test_gossip_beacon_attestation__accepts_one_millisecond_before_slot_start(spec, state):
     """Test that an attestation is accepted one millisecond before its slot starts."""
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "topic", "meta", "beacon_attestation"
 
     store, signed_anchor, attestation = prepare_attestation(spec, state, spec.Slot(1))
@@ -99,7 +96,7 @@ def test_gossip_beacon_attestation__accepts_one_millisecond_before_slot_start(sp
     yield "state", anchor_state
     yield get_filename(attestation), attestation
 
-    current_time_ms = spec.compute_time_at_slot_ms(store, attestation.data.slot) - spec.Uint64(1)
+    current_time_ms = spec.compute_time_at_slot_ms(store, attestation.data.slot) - 1
     yield "current_time_ms", "meta", int(current_time_ms)
 
     subnet_id = get_correct_subnet_for_attestation(spec, state, attestation)
@@ -127,7 +124,7 @@ def test_gossip_beacon_attestation__accepts_one_millisecond_before_slot_start(sp
 @spec_state_test
 def test_gossip_beacon_attestation__accepts_at_slot_start(spec, state):
     """Test that an attestation is accepted exactly at its slot start."""
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "topic", "meta", "beacon_attestation"
 
     store, signed_anchor, attestation = prepare_attestation(spec, state, spec.Slot(1))
@@ -167,7 +164,7 @@ def test_gossip_beacon_attestation__ignores_first_slot_before_epoch_window_opens
     Test that a first-slot attestation is ignored just before the Deneb epoch
     window opens, with the future-slot check taking precedence.
     """
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "topic", "meta", "beacon_attestation"
 
     attestation_epoch = spec.Epoch(2)
@@ -179,7 +176,7 @@ def test_gossip_beacon_attestation__ignores_first_slot_before_epoch_window_opens
     yield "state", anchor_state
     yield get_filename(attestation), attestation
 
-    current_time_ms = epoch_window_open_time(spec, store, attestation_epoch) - spec.Uint64(1)
+    current_time_ms = epoch_window_open_time(spec, store, attestation_epoch) - 1
     yield "current_time_ms", "meta", int(current_time_ms)
 
     subnet_id = get_correct_subnet_for_attestation(spec, state, attestation)
@@ -211,7 +208,7 @@ def test_gossip_beacon_attestation__ignores_first_slot_before_epoch_window_opens
 @spec_state_test
 def test_gossip_beacon_attestation__accepts_first_slot_when_epoch_window_opens(spec, state):
     """Test that a first-slot attestation is accepted when the Deneb epoch window opens."""
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "topic", "meta", "beacon_attestation"
 
     attestation_epoch = spec.Epoch(2)
@@ -251,7 +248,7 @@ def test_gossip_beacon_attestation__accepts_first_slot_when_epoch_window_opens(s
 @spec_state_test
 def test_gossip_beacon_attestation__accepts_first_slot_when_epoch_window_closes(spec, state):
     """Test that a first-slot attestation is accepted at the last valid Deneb epoch time."""
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "topic", "meta", "beacon_attestation"
 
     attestation_epoch = spec.Epoch(2)
@@ -291,7 +288,7 @@ def test_gossip_beacon_attestation__accepts_first_slot_when_epoch_window_closes(
 @spec_state_test
 def test_gossip_beacon_attestation__ignores_first_slot_after_epoch_window_closes(spec, state):
     """Test that a first-slot attestation is ignored after the Deneb epoch window closes."""
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "topic", "meta", "beacon_attestation"
 
     attestation_epoch = spec.Epoch(2)
@@ -303,7 +300,7 @@ def test_gossip_beacon_attestation__ignores_first_slot_after_epoch_window_closes
     yield "state", anchor_state
     yield get_filename(attestation), attestation
 
-    current_time_ms = epoch_window_close_time(spec, store, attestation_epoch) + spec.Uint64(1)
+    current_time_ms = epoch_window_close_time(spec, store, attestation_epoch) + 1
     yield "current_time_ms", "meta", int(current_time_ms)
 
     subnet_id = get_correct_subnet_for_attestation(spec, state, attestation)
@@ -340,12 +337,12 @@ def test_gossip_beacon_attestation__accepts_last_slot_one_millisecond_before_slo
     Test that a last-slot attestation is accepted one millisecond before its
     slot starts.
     """
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "topic", "meta", "beacon_attestation"
 
     attestation_epoch = spec.Epoch(2)
     attestation_slot = (
-        spec.compute_start_slot_at_epoch(attestation_epoch) + spec.SLOTS_PER_EPOCH - spec.Slot(1)
+        spec.compute_start_slot_at_epoch(attestation_epoch) + spec.SLOTS_PER_EPOCH - 1
     )
     store, signed_anchor, attestation = prepare_attestation(spec, state, attestation_slot)
     yield get_filename(signed_anchor), signed_anchor
@@ -353,7 +350,7 @@ def test_gossip_beacon_attestation__accepts_last_slot_one_millisecond_before_slo
     yield "state", anchor_state
     yield get_filename(attestation), attestation
 
-    current_time_ms = spec.compute_time_at_slot_ms(store, attestation.data.slot) - spec.Uint64(1)
+    current_time_ms = spec.compute_time_at_slot_ms(store, attestation.data.slot) - 1
     yield "current_time_ms", "meta", int(current_time_ms)
 
     subnet_id = get_correct_subnet_for_attestation(spec, state, attestation)
@@ -381,12 +378,12 @@ def test_gossip_beacon_attestation__accepts_last_slot_one_millisecond_before_slo
 @spec_state_test
 def test_gossip_beacon_attestation__accepts_last_slot_at_slot_start(spec, state):
     """Test that a last-slot attestation is accepted exactly at its slot start."""
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "topic", "meta", "beacon_attestation"
 
     attestation_epoch = spec.Epoch(2)
     attestation_slot = (
-        spec.compute_start_slot_at_epoch(attestation_epoch) + spec.SLOTS_PER_EPOCH - spec.Slot(1)
+        spec.compute_start_slot_at_epoch(attestation_epoch) + spec.SLOTS_PER_EPOCH - 1
     )
     store, signed_anchor, attestation = prepare_attestation(spec, state, attestation_slot)
     yield get_filename(signed_anchor), signed_anchor
@@ -422,12 +419,12 @@ def test_gossip_beacon_attestation__accepts_last_slot_at_slot_start(spec, state)
 @spec_state_test
 def test_gossip_beacon_attestation__accepts_last_slot_when_epoch_window_closes(spec, state):
     """Test that a last-slot attestation is accepted at the last valid Deneb epoch time."""
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "topic", "meta", "beacon_attestation"
 
     attestation_epoch = spec.Epoch(2)
     attestation_slot = (
-        spec.compute_start_slot_at_epoch(attestation_epoch) + spec.SLOTS_PER_EPOCH - spec.Slot(1)
+        spec.compute_start_slot_at_epoch(attestation_epoch) + spec.SLOTS_PER_EPOCH - 1
     )
     store, signed_anchor, attestation = prepare_attestation(spec, state, attestation_slot)
     yield get_filename(signed_anchor), signed_anchor
@@ -463,12 +460,12 @@ def test_gossip_beacon_attestation__accepts_last_slot_when_epoch_window_closes(s
 @spec_state_test
 def test_gossip_beacon_attestation__ignores_last_slot_after_epoch_window_closes(spec, state):
     """Test that a last-slot attestation is ignored after the Deneb epoch window closes."""
-    anchor_state = copy(state)
+    anchor_state = state.copy()
     yield "topic", "meta", "beacon_attestation"
 
     attestation_epoch = spec.Epoch(2)
     attestation_slot = (
-        spec.compute_start_slot_at_epoch(attestation_epoch) + spec.SLOTS_PER_EPOCH - spec.Slot(1)
+        spec.compute_start_slot_at_epoch(attestation_epoch) + spec.SLOTS_PER_EPOCH - 1
     )
     store, signed_anchor, attestation = prepare_attestation(spec, state, attestation_slot)
     yield get_filename(signed_anchor), signed_anchor
@@ -476,7 +473,7 @@ def test_gossip_beacon_attestation__ignores_last_slot_after_epoch_window_closes(
     yield "state", anchor_state
     yield get_filename(attestation), attestation
 
-    current_time_ms = epoch_window_close_time(spec, store, attestation_epoch) + spec.Uint64(1)
+    current_time_ms = epoch_window_close_time(spec, store, attestation_epoch) + 1
     yield "current_time_ms", "meta", int(current_time_ms)
 
     subnet_id = get_correct_subnet_for_attestation(spec, state, attestation)
