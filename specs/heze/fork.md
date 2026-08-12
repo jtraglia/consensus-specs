@@ -1,5 +1,7 @@
 # Heze -- Fork Logic
 
+<!-- previous-fork: gloas -->
+
 *Note*: This document is a work-in-progress for researchers and implementers.
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->

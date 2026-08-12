@@ -1,5 +1,7 @@
 # Altair -- Fork Logic
 
+<!-- previous-fork: phase0 -->
+
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)

@@ -181,7 +181,7 @@ PYSPEC_DIR = $(TEST_LIBS_DIR)/pyspec
 # Create the pyspec for all phases.
 _pyspec: MAYBE_VERBOSE := $(if $(filter true,$(verbose)),--verbose)
 _pyspec: _sync
-	@$(UV_RUN) python -m pysetup.generate_specs --all-forks $(MAYBE_VERBOSE)
+	@$(UV_RUN) python -m compiler $(MAYBE_VERBOSE)
 
 ###############################################################################
 # Testing
@@ -258,8 +258,7 @@ serve_docs: _pyspec _copy_docs
 LINT_DIFF_BEFORE := .lint_diff_before
 LINT_DIFF_AFTER := .lint_diff_after
 MARKDOWN_FILES := $(shell find $(CURDIR) -name '*.md' -not -path '$(CURDIR)/.git/*' -not -path '$(CURDIR)/.venv/*')
-MYPY_PACKAGE_BASE := $(subst /,.,$(PYSPEC_DIR:$(CURDIR)/%=%))
-MYPY_SCOPE := $(foreach S,$(ALL_EXECUTABLE_SPEC_NAMES), -p $(MYPY_PACKAGE_BASE).eth_consensus_specs.$S)
+MYPY_SCOPE := $(foreach S,$(ALL_EXECUTABLE_SPEC_NAMES), -p eth_consensus_specs.$S)
 
 # Check for mistakes.
 lint: _pyspec
@@ -273,10 +272,10 @@ lint: _pyspec
 	@$(UV_RUN) python $(CURDIR)/scripts/check_markdown_headings.py
 	@$(UV_RUN) python $(CURDIR)/scripts/check_value_annotations.py
 	@$(UV_RUN) mdformat --number --wrap=80 $(MARKDOWN_FILES)
-	@$(UV_RUN) ruff check --fix --quiet $(CURDIR)/tests $(CURDIR)/pysetup $(CURDIR)/specs
-	@$(UV_RUN) ruff format --quiet $(CURDIR)/tests $(CURDIR)/pysetup
+	@$(UV_RUN) ruff check --fix --quiet $(CURDIR)/tests $(CURDIR)/pysetup $(CURDIR)/compiler $(CURDIR)/specs
+	@$(UV_RUN) ruff format --quiet $(CURDIR)/tests $(CURDIR)/pysetup $(CURDIR)/compiler
 	@$(UV_RUN) ruff format --preview --quiet $(CURDIR)/specs
-	@output="$$($(UV_RUN) mypy $(MYPY_SCOPE) 2>&1)" || \
+	@output="$$(MYPYPATH="$(CURDIR)/build/python:$(CURDIR)/tests/core/pyspec" $(UV_RUN) mypy $(MYPY_SCOPE) 2>&1)" || \
 		{ echo "$$output"; exit 1; }
 	@git diff > $(LINT_DIFF_AFTER)
 	@diff -q $(LINT_DIFF_BEFORE) $(LINT_DIFF_AFTER) >/dev/null 2>&1 || \

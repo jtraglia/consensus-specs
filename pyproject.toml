@@ -72,7 +72,7 @@ presets = ["**/*.yaml", "**/*.json"]
 specs = ["**/*.md"]
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
+pythonpath = [".", "tests/core/pyspec", "build/python"]
 testpaths = ["tests"]
 
 [tool.mypy]
@@ -85,9 +85,10 @@ ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 100
-namespace-packages = ["scripts"]
+namespace-packages = ["scripts", "tests/core/pyspec/eth_consensus_specs"]
 src = ["."]
 extend-exclude = [
+  "build",
   "tests/core/pyspec/eth_consensus_specs/phase0",
   "tests/core/pyspec/eth_consensus_specs/altair",
   "tests/core/pyspec/eth_consensus_specs/bellatrix",
@@ -148,6 +149,10 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "**/*.md" = [
   "F821", # https://docs.astral.sh/ruff/rules/undefined-name/
+]
+"tests/core/pyspec/eth_consensus_specs/runtime.py" = [
+  "F401",  # re-export prelude for compiled spec modules
+  "UP035", # specs still use typing.Dict / Set / Tuple / DefaultDict
 ]
 "!specs/**" = [
   "ARG", # https://docs.astral.sh/ruff/rules/#flake8-unused-arguments-arg

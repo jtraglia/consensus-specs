@@ -1,5 +1,7 @@
 # EIP-6914 -- The Beacon Chain
 
+<!-- previous-fork: capella -->
+
 *Note*: This document is a work-in-progress for researchers and implementers.
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->

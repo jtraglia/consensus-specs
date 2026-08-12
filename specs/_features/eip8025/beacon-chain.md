@@ -1,5 +1,7 @@
 # EIP-8025 -- The Beacon Chain
 
+<!-- previous-fork: gloas -->
+
 *Note*: This document is a work-in-progress for researchers and implementers.
 
 ## Table of contents
