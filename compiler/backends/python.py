@@ -43,42 +43,32 @@ def emit_python(
     fork: Fork,
     forks: dict[str, Fork],
     preset_name: str,
-    inherited: dict[str, str],
     removals: Removals,
 ) -> str:
     spec = _apply_removals(spec, removals)
     methods, functions = _split_protocol_methods(spec.functions)
     hoisted = [functions.pop(name) for name in HOISTED if name in functions]
     aliases, types, late = _split_classes(spec.classes, methods)
-
-    def render_class(name: str, source: str) -> str:
-        if name in inherited:
-            return f"{name}: TypeAlias = {inherited[name]}.{name}"
-        return source
-
-    rendered_types = {name: render_class(name, source) for name, source in types.items()}
     late_src = "\n\n\n".join(late.values())
     function_src = "\n\n\n".join(functions.values())
 
     for name in spec.configs:
         function_src = _rewrite_config_name(function_src, name)
-        rendered_types = {
-            key: _rewrite_config_name(source, name) for key, source in rendered_types.items()
-        }
+        types = {key: _rewrite_config_name(source, name) for key, source in types.items()}
         late_src = _rewrite_config_name(late_src, name)
 
     gindices, constants, after_presets, gindex_asserts = _partition_constants(
         spec.constants, spec.presets
     )
     preset_src, deferred_presets, preset_asserts = _emit_presets(spec.presets, preset_name)
-    early_types, late_types = _split_deferred_types(rendered_types, deferred_presets)
+    early_types, late_types = _split_deferred_types(types, deferred_presets)
 
     parts = [
         _imports(fork, forks, preset_name),
         f"fork = '{fork.name}'\n",
         "\n\n\n".join(hoisted),
         "\n".join(gindices),
-        "\n\n\n".join(render_class(n, s) for n, s in aliases.items()),
+        "\n\n\n".join(aliases.values()),
         "\n".join(constants),
         preset_src,
         "\n".join(after_presets),

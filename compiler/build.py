@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from compiler.backends.python import emit_python
-from compiler.combine import inherited_classes, order_classes
+from compiler.combine import order_classes
 from compiler.discover import (
     build_order,
     discover_forks,
@@ -81,15 +81,12 @@ def _build_fork(
         print(f"Building {fork.name} -> {dest}")
 
     spec.classes = order_classes(spec.classes)
-    own_names = set(_parse_sources(_own_sources(fork)).classes)
-    inherited = inherited_classes(fork.previous, own_names, spec.classes)
     for preset_name in PRESETS:
         spec_str = emit_python(
             spec=spec,
             fork=fork,
             forks=forks,
             preset_name=preset_name,
-            inherited=inherited,
             removals=removals,
         )
         output = dest / f"{preset_name}.py"

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ast
 import re
 
 
@@ -18,26 +17,6 @@ def order_classes(classes: dict[str, str]) -> dict[str, str]:
                 for item in [dep, name] + keys[keys.index(dep) + 1 :]:
                     ordered[item] = ordered.pop(item)
     return ordered
-
-
-def inherited_classes(
-    previous: str | None,
-    redefined: set[str],
-    classes: dict[str, str],
-) -> dict[str, str]:
-    """Unchanged classes, mapped to the previous fork's module name."""
-    if previous is None:
-        return {}
-    built_from = {
-        name: {node.id for node in ast.walk(ast.parse(source)) if isinstance(node, ast.Name)}
-        for name, source in classes.items()
-    }
-    changed = set(redefined)
-    candidates = set(classes) - changed
-    while newly := {name for name in candidates if built_from[name] & changed}:
-        candidates -= newly
-        changed |= newly
-    return dict.fromkeys(sorted(candidates), previous)
 
 
 def _class_dependencies(name: str, source: str, classes: dict[str, str]) -> list[str]:

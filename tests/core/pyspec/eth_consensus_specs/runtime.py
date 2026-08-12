@@ -18,7 +18,6 @@ from typing import (
     Protocol,
     Set,
     Tuple,
-    TypeAlias,
     TypeVar,
     Union as PyUnion,
 )
