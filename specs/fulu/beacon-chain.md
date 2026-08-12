@@ -84,12 +84,17 @@ The epoch value in each entry MUST be greater than or equal to
 than or equal to `MAX_BLOB_COMMITMENTS_PER_BLOCK`. The blob schedule entries
 SHOULD be sorted by epoch in ascending order. The blob schedule MAY be empty.
 
-<!-- list-of-records:blob_schedule -->
+<!-- list-of-records:blob_schedule:mainnet -->
 
-|  Epoch | Max Blobs Per Block |                             Date |
-| -----: | ------------------: | -------------------------------: |
-| 412672 |                  15 | December 9, 2025, 02:21:11pm UTC |
-| 419072 |                  21 |  January 7, 2026, 01:01:11am UTC |
+| Epoch  | Max Blobs Per Block | Date                             |
+| ------ | ------------------- | -------------------------------- |
+| 412672 | 15                  | December 9, 2025, 02:21:11pm UTC |
+| 419072 | 21                  | January 7, 2026, 01:01:11am UTC  |
+
+<!-- list-of-records:blob_schedule:minimal -->
+
+| Epoch | Max Blobs Per Block | Date |
+| ----- | ------------------- | ---- |
 
 ## Beacon chain state transition function
 

@@ -98,7 +98,7 @@ subtle change the reader might otherwise miss.
 
 ### Deprecations
 
-If an existing spec item is no longer needed in a newer spec, mark it as
-deprecated by adding its name to the deprecation list for that item's type in
-that spec's `SpecBuilder` class. Define a deprecation only in the spec where the
-item is first dropped. Later specs inherit it automatically.
+If an existing spec item is no longer needed in a newer spec, add its name to
+that fork's `removed.md` under the matching heading (`Functions`, `Containers`,
+`Constants`, `Presets`, `Aliases`, or `Types`). Define a removal only in the
+spec where the item is first dropped. Later specs inherit it automatically.

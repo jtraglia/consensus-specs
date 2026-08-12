@@ -11,6 +11,7 @@
 - [Protocols](#protocols)
   - [`ExecutionEngine`](#executionengine)
     - [New `get_inclusion_list`](#new-get_inclusion_list)
+    - [`NoopExecutionEngine`](#noopexecutionengine)
 - [Beacon chain responsibilities](#beacon-chain-responsibilities)
   - [Validator assignments](#validator-assignments)
     - [Inclusion list committee](#inclusion-list-committee)

@@ -242,19 +242,19 @@ this replaces the default runtime-config that comes with the otherwise
 compile-time preset settings.
 
 The format matches that of the `mainnet_config.yaml` and `minimal_config.yaml`,
-see the [`/configs`](../../configs/README.md#format) documentation. Config
-values that are introduced at a later fork may be omitted from tests of previous
-forks.
+see the generated `build/configs/` YAML (produced by `python -m compiler`).
+Config values that are introduced at a later fork may be omitted from tests of
+previous forks.
 
 ## Config sourcing
 
-The constants configurations are located in:
+The compiler writes comment-free configuration YAML to:
 
 ```
-<specs repo root>/configs/<config name>.yaml
+<specs repo root>/build/configs/<config name>.yaml
 ```
 
-And copied by CI for testing purposes to:
+CI copies that into the test vectors as:
 
 ```
 <tests repo root>/tests/<config name>/<config name>.yaml

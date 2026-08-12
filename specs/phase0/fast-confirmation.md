@@ -75,9 +75,9 @@ blocks can be reorged without any adversarial behavior and without slashing.
 
 ### Configuration
 
-| Name                               | Value        | Max. Value   | Description                                                                |
-| ---------------------------------- | ------------ | ------------ | -------------------------------------------------------------------------- |
-| `CONFIRMATION_BYZANTINE_THRESHOLD` | `Uint64(25)` | `Uint64(25)` | Assumed maximum percentage of Byzantine validators among the validator set |
+| Name                               | Mainnet      | Minimal      | Description  |
+| ---------------------------------- | ------------ | ------------ | ------------ |
+| `CONFIRMATION_BYZANTINE_THRESHOLD` | `Uint64(25)` | `Uint64(25)` | `Uint64(25)` |
 
 ### Helpers
 

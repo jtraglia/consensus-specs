@@ -587,44 +587,44 @@ same `Withdrawal` container can be used for validators and builders.
 
 ### Misc
 
-| Name       | Value                  |
-| ---------- | ---------------------- |
-| `PTC_SIZE` | `Uint64(2**9)` (= 512) |
+| Name       | Mainnet                | Minimal             |
+| ---------- | ---------------------- | ------------------- |
+| `PTC_SIZE` | `Uint64(2**9)` (= 512) | `Uint64(16)` (= 16) |
 
 ### Max operations per block
 
-| Name                       | Value                |
-| -------------------------- | -------------------- |
-| `MAX_PAYLOAD_ATTESTATIONS` | `Uint64(2**2)` (= 4) |
+| Name                       | Mainnet              | Minimal              |
+| -------------------------- | -------------------- | -------------------- |
+| `MAX_PAYLOAD_ATTESTATIONS` | `Uint64(2**2)` (= 4) | `Uint64(2**2)` (= 4) |
 
 ### Execution
 
-| Name                                       | Value                 |
-| ------------------------------------------ | --------------------- |
-| `MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD` | `Uint64(2**6)` (= 64) |
-| `MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD`    | `Uint64(2**4)` (= 16) |
+| Name                                       | Mainnet               | Minimal               |
+| ------------------------------------------ | --------------------- | --------------------- |
+| `MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD` | `Uint64(2**6)` (= 64) | `Uint64(2**6)` (= 64) |
+| `MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD`    | `Uint64(2**4)` (= 16) | `Uint64(2**4)` (= 16) |
 
 ### Withdrawals processing
 
-| Name                                 | Value                      |
-| ------------------------------------ | -------------------------- |
-| `MAX_BUILDERS_PER_WITHDRAWALS_SWEEP` | `Uint64(2**14)` (= 16,384) |
+| Name                                 | Mainnet                    | Minimal             |
+| ------------------------------------ | -------------------------- | ------------------- |
+| `MAX_BUILDERS_PER_WITHDRAWALS_SWEEP` | `Uint64(2**14)` (= 16,384) | `Uint64(16)` (= 16) |
 
 ## Configuration
 
 ### Validator cycle
 
-| Name                                         | Value                                    |
-| -------------------------------------------- | ---------------------------------------- |
-| `CHURN_LIMIT_QUOTIENT_GLOAS`                 | `Uint64(2**15)` (= 32,768)               |
-| `CONSOLIDATION_CHURN_LIMIT_QUOTIENT`         | `Uint64(2**16)` (= 65,536)               |
-| `MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS` | `Gwei(2**8 * 10**9)` (= 256,000,000,000) |
+| Name                                         | Mainnet                                  | Minimal                                  |
+| -------------------------------------------- | ---------------------------------------- | ---------------------------------------- |
+| `CHURN_LIMIT_QUOTIENT_GLOAS`                 | `Uint64(2**15)` (= 32,768)               | `Uint64(16)` (= 16)                      |
+| `CONSOLIDATION_CHURN_LIMIT_QUOTIENT`         | `Uint64(2**16)` (= 65,536)               | `Uint64(32)` (= 32)                      |
+| `MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS` | `Gwei(2**8 * 10**9)` (= 256,000,000,000) | `Gwei(128000000000)` (= 128,000,000,000) |
 
 ### Time parameters
 
-| Name                                | Value                |
-| ----------------------------------- | -------------------- |
-| `MIN_BUILDER_WITHDRAWABILITY_DELAY` | `Epoch(2**6)` (= 64) |
+| Name                                | Mainnet              | Minimal          |
+| ----------------------------------- | -------------------- | ---------------- |
+| `MIN_BUILDER_WITHDRAWABILITY_DELAY` | `Epoch(2**6)` (= 64) | `Epoch(2)` (= 2) |
 
 ## Containers
 

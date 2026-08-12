@@ -108,10 +108,10 @@ specifications before continuing and use as a reference throughout.
 
 ### Time parameters
 
-| Name                  | Value          | Duration                   |
-| --------------------- | -------------- | -------------------------- |
-| `ATTESTATION_DUE_BPS` | `Uint64(3333)` | ~33% of `SLOT_DURATION_MS` |
-| `AGGREGATE_DUE_BPS`   | `Uint64(6667)` | ~67% of `SLOT_DURATION_MS` |
+| Name                  | Mainnet        | Minimal        | Description                |
+| --------------------- | -------------- | -------------- | -------------------------- |
+| `ATTESTATION_DUE_BPS` | `Uint64(3333)` | `Uint64(3333)` | ~33% of `SLOT_DURATION_MS` |
+| `AGGREGATE_DUE_BPS`   | `Uint64(6667)` | `Uint64(6667)` | ~67% of `SLOT_DURATION_MS` |
 
 ## Containers
 

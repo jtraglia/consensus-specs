@@ -36,9 +36,9 @@ and the [Gloas networking specification](../p2p-interface.md).
 
 *[New in Gloas:EIP7688]*
 
-| Name                                   | Value                        |
-| -------------------------------------- | ---------------------------- |
-| `MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE` | `Uint64(8585741)` (= ~8 MiB) |
+| Name                                   | Mainnet                      | Minimal                      |
+| -------------------------------------- | ---------------------------- | ---------------------------- |
+| `MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE` | `Uint64(8585741)` (= ~8 MiB) | `Uint64(8585741)` (= ~8 MiB) |
 
 ## Types
 

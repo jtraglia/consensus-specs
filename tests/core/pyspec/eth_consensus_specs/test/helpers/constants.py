@@ -45,7 +45,7 @@ TESTGEN_FORKS = (*MAINNET_FORKS, GLOAS, HEZE)
 # Forks allowed in the test runner `--fork` flag, to fail fast in case of typos
 ALLOWED_TEST_RUNNER_FORKS = ALL_PHASES
 
-# NOTE: the same definition as in `pysetup/md_doc_paths.py`
+# NOTE: keep in sync with `<!-- previous-fork: -->` declarations in specs/
 PREVIOUS_FORK_OF = {
     # post_fork_name: pre_fork_name
     PHASE0: None,

@@ -16,7 +16,7 @@ def _find_trusted_setup_path() -> Path:
     Locate the trusted setup JSON by walking up from this file to the repo root.
     """
     for parent in Path(__file__).resolve().parents:
-        candidate = parent / "presets" / "mainnet" / "trusted_setups" / "trusted_setup_4096.json"
+        candidate = parent / "assets" / "trusted_setups" / "trusted_setup_4096.json"
         if candidate.exists():
             return candidate
     raise FileNotFoundError("could not locate trusted setup")

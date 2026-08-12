@@ -124,12 +124,12 @@ handlers must not modify `store`.
 
 ### Configuration
 
-| Name                                  | Value         |
-| ------------------------------------- | ------------- |
-| `PROPOSER_SCORE_BOOST`                | `Uint64(40)`  |
-| `REORG_HEAD_WEIGHT_THRESHOLD`         | `Uint64(20)`  |
-| `REORG_PARENT_WEIGHT_THRESHOLD`       | `Uint64(160)` |
-| `REORG_MAX_EPOCHS_SINCE_FINALIZATION` | `Epoch(2)`    |
+| Name                                  | Mainnet       | Minimal       |
+| ------------------------------------- | ------------- | ------------- |
+| `PROPOSER_SCORE_BOOST`                | `Uint64(40)`  | `Uint64(40)`  |
+| `REORG_HEAD_WEIGHT_THRESHOLD`         | `Uint64(20)`  | `Uint64(20)`  |
+| `REORG_PARENT_WEIGHT_THRESHOLD`       | `Uint64(160)` | `Uint64(160)` |
+| `REORG_MAX_EPOCHS_SINCE_FINALIZATION` | `Epoch(2)`    | `Epoch(2)`    |
 
 - The proposer score boost and re-org weight threshold are percentage values
   that are measured with respect to the weight of a single committee. See
@@ -137,9 +137,9 @@ handlers must not modify `store`.
 
 #### Time parameters
 
-| Name                        | Value          | Duration                   |
-| --------------------------- | -------------- | -------------------------- |
-| `PROPOSER_REORG_CUTOFF_BPS` | `Uint64(1667)` | ~17% of `SLOT_DURATION_MS` |
+| Name                        | Mainnet        | Minimal        | Description                |
+| --------------------------- | -------------- | -------------- | -------------------------- |
+| `PROPOSER_REORG_CUTOFF_BPS` | `Uint64(1667)` | `Uint64(1667)` | ~17% of `SLOT_DURATION_MS` |
 
 ### Helpers
 

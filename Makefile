@@ -272,8 +272,8 @@ lint: _pyspec
 	@$(UV_RUN) python $(CURDIR)/scripts/check_markdown_headings.py
 	@$(UV_RUN) python $(CURDIR)/scripts/check_value_annotations.py
 	@$(UV_RUN) mdformat --number --wrap=80 $(MARKDOWN_FILES)
-	@$(UV_RUN) ruff check --fix --quiet $(CURDIR)/tests $(CURDIR)/pysetup $(CURDIR)/compiler $(CURDIR)/specs
-	@$(UV_RUN) ruff format --quiet $(CURDIR)/tests $(CURDIR)/pysetup $(CURDIR)/compiler
+	@$(UV_RUN) ruff check --fix --quiet $(CURDIR)/tests $(CURDIR)/compiler $(CURDIR)/specs
+	@$(UV_RUN) ruff format --quiet $(CURDIR)/tests $(CURDIR)/compiler
 	@$(UV_RUN) ruff format --preview --quiet $(CURDIR)/specs
 	@output="$$(MYPYPATH="$(CURDIR)/build/python:$(CURDIR)/tests/core/pyspec" $(UV_RUN) mypy $(MYPY_SCOPE) 2>&1)" || \
 		{ echo "$$output"; exit 1; }

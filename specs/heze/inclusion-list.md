@@ -9,6 +9,7 @@
   - [New containers](#new-containers)
     - [`InclusionListStore`](#inclusionliststore)
 - [Helpers](#helpers)
+  - [New `cached_or_new_inclusion_list_store`](#new-cached_or_new_inclusion_list_store)
   - [New `get_inclusion_list_store`](#new-get_inclusion_list_store)
   - [New `process_inclusion_list`](#new-process_inclusion_list)
   - [New `get_inclusion_list_transactions`](#new-get_inclusion_list_transactions)

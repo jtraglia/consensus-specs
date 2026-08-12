@@ -58,7 +58,7 @@ operates.
 ```
 /tests/
   core/pyspec/eth_consensus_specs/
-    <fork>/              # Assembled pyspec (do not edit)
+    runtime.py           # Prelude imported by compiled modules
     test/<fork>/         # Test cases organized by fork
       block_processing/
       epoch_processing/
@@ -169,45 +169,32 @@ def test_example(spec, state):
 
 1. Add field to container definition in spec markdown
 2. Update any functions that construct or use the container
-3. Update preset/config if needed
+3. Update preset/config tables in the markdown if needed
 4. Run `make lint` to run checks
 
 ### Adding a new fork or feature
 
 Adding a new fork (e.g., "foobar") requires updates to many files:
 
-**1. Build system:**
+**1. Spec files:**
 
-- `Makefile` - Add to `ALL_EXECUTABLE_SPEC_NAMES`
+- `specs/foobar/` - For scheduled forks
+- `specs/_features/eipNNNN/` - For experimental features (must start with "eip")
+- `specs/foobar/fork.md` must declare `<!-- previous-fork: previous -->`
+- Optional `specs/foobar/removed.md` for names dropped in this fork
+- The compiler discovers the directory automatically
 
 **2. GitHub automation:**
 
 - `.github/labeler.yml` - Add label config for auto-labeling PRs
 - `.github/release-drafter.yml` - Add category for release notes
 
-**3. Spec generation (`pysetup/`):**
-
-- `pysetup/constants.py` - Add `FOOBAR = "foobar"`
-- `pysetup/md_doc_paths.py` - Import constant, add to `PREVIOUS_FORK_OF`
-- `pysetup/spec_builders/foobar.py` - Create SpecBuilder class
-- `pysetup/spec_builders/__init__.py` - Import and register the SpecBuilder
-
-**4. Test infrastructure (`tests/core/pyspec/eth_consensus_specs/test/`):**
+**3. Test infrastructure (`tests/core/pyspec/eth_consensus_specs/test/`):**
 
 - `helpers/constants.py` - Add constant, update `ALL_PHASES`,
   `PREVIOUS_FORK_OF`, `POST_FORK_OF`
 - `helpers/forks.py` - Add `is_post_foobar(spec)` function
 - `context.py` - Add `with_foobar_and_later` decorator
-
-**5. Spec files:**
-
-- `specs/foobar/` - For scheduled forks
-- `specs/_features/eipNNNN/` - For experimental features (must start with "eip")
-
-**6. Presets (if the fork has preset values):**
-
-- `presets/mainnet/foobar.yaml`
-- `presets/minimal/foobar.yaml`
 
 ## Important notes
 
@@ -219,9 +206,9 @@ how functions, containers, and logic actually behave before making changes.
 
 ### Fork inheritance
 
-Each fork inherits all specs from the previous fork. The chain is defined in
-`pysetup/md_doc_paths.py` via `PREVIOUS_FORK_OF`. When generating a fork's spec,
-all markdown files from ancestor forks are loaded first.
+Each fork inherits all specs from the previous fork. The chain is declared in
+each fork's own markdown via `<!-- previous-fork: name -->`. When generating a
+fork's spec, all markdown files from ancestor forks are loaded first.
 
 When adding to a new fork:
 

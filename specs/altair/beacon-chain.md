@@ -166,27 +166,27 @@ class SyncCommitteePubkeys(Vector[BLSPubkey]):
 This patch updates a few configuration values to move penalty parameters closer
 to their final, maximum security values.
 
-| Name                                      | Value                              |
-| ----------------------------------------- | ---------------------------------- |
-| `INACTIVITY_PENALTY_QUOTIENT_ALTAIR`      | `Uint64(3 * 2**24)` (= 50,331,648) |
-| `MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR`    | `Uint64(2**6)` (= 64)              |
-| `PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR` | `Uint64(2)`                        |
+| Name                                      | Mainnet                            | Minimal                            |
+| ----------------------------------------- | ---------------------------------- | ---------------------------------- |
+| `INACTIVITY_PENALTY_QUOTIENT_ALTAIR`      | `Uint64(3 * 2**24)` (= 50,331,648) | `Uint64(3 * 2**24)` (= 50,331,648) |
+| `MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR`    | `Uint64(2**6)` (= 64)              | `Uint64(2**6)` (= 64)              |
+| `PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR` | `Uint64(2)`                        | `Uint64(2)`                        |
 
 ### Sync committee
 
-| Name                               | Value                  |
-| ---------------------------------- | ---------------------- |
-| `SYNC_COMMITTEE_SIZE`              | `Uint64(2**9)` (= 512) |
-| `EPOCHS_PER_SYNC_COMMITTEE_PERIOD` | `Epoch(2**8)` (= 256)  |
+| Name                               | Mainnet                | Minimal             |
+| ---------------------------------- | ---------------------- | ------------------- |
+| `SYNC_COMMITTEE_SIZE`              | `Uint64(2**9)` (= 512) | `Uint64(32)` (= 32) |
+| `EPOCHS_PER_SYNC_COMMITTEE_PERIOD` | `Epoch(2**8)` (= 256)  | `Epoch(8)` (= 8)    |
 
 ## Configuration
 
 ### Inactivity penalties
 
-| Name                             | Value                 | Description                      |
-| -------------------------------- | --------------------- | -------------------------------- |
-| `INACTIVITY_SCORE_BIAS`          | `Uint64(2**2)` (= 4)  | Score points per inactive epoch  |
-| `INACTIVITY_SCORE_RECOVERY_RATE` | `Uint64(2**4)` (= 16) | Score points per leak-free epoch |
+| Name                             | Mainnet               | Minimal               | Description                      |
+| -------------------------------- | --------------------- | --------------------- | -------------------------------- |
+| `INACTIVITY_SCORE_BIAS`          | `Uint64(2**2)` (= 4)  | `Uint64(2**2)` (= 4)  | Score points per inactive epoch  |
+| `INACTIVITY_SCORE_RECOVERY_RATE` | `Uint64(2**4)` (= 16) | `Uint64(2**4)` (= 16) | Score points per leak-free epoch |
 
 ## Containers
 

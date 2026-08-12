@@ -38,6 +38,7 @@
     - [`notify_new_payload`](#notify_new_payload)
     - [`is_valid_block_hash`](#is_valid_block_hash)
     - [`verify_and_notify_new_payload`](#verify_and_notify_new_payload)
+    - [`NoopExecutionEngine`](#noopexecutionengine)
   - [Block processing](#block-processing)
     - [Execution payload](#execution-payload)
       - [`process_execution_payload`](#process_execution_payload)
@@ -120,30 +121,30 @@ class Transactions(List[Transaction]):
 Bellatrix updates a few configuration values to move penalty parameters to their
 final, maximum security values.
 
-| Name                                         | Value                          |
-| -------------------------------------------- | ------------------------------ |
-| `INACTIVITY_PENALTY_QUOTIENT_BELLATRIX`      | `Uint64(2**24)` (= 16,777,216) |
-| `MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX`    | `Uint64(2**5)` (= 32)          |
-| `PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX` | `Uint64(3)`                    |
+| Name                                         | Mainnet                        | Minimal                        |
+| -------------------------------------------- | ------------------------------ | ------------------------------ |
+| `INACTIVITY_PENALTY_QUOTIENT_BELLATRIX`      | `Uint64(2**24)` (= 16,777,216) | `Uint64(2**24)` (= 16,777,216) |
+| `MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX`    | `Uint64(2**5)` (= 32)          | `Uint64(2**5)` (= 32)          |
+| `PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX` | `Uint64(3)`                    | `Uint64(3)`                    |
 
 ### Execution
 
-| Name                           | Value                             |
-| ------------------------------ | --------------------------------- |
-| `MAX_BYTES_PER_TRANSACTION`    | `Uint64(2**30)` (= 1,073,741,824) |
-| `MAX_TRANSACTIONS_PER_PAYLOAD` | `Uint64(2**20)` (= 1,048,576)     |
-| `BYTES_PER_LOGS_BLOOM`         | `Uint64(2**8)` (= 256)            |
-| `MAX_EXTRA_DATA_BYTES`         | `Uint64(2**5)` (= 32)             |
+| Name                           | Mainnet                           | Minimal                           |
+| ------------------------------ | --------------------------------- | --------------------------------- |
+| `MAX_BYTES_PER_TRANSACTION`    | `Uint64(2**30)` (= 1,073,741,824) | `Uint64(2**30)` (= 1,073,741,824) |
+| `MAX_TRANSACTIONS_PER_PAYLOAD` | `Uint64(2**20)` (= 1,048,576)     | `Uint64(2**20)` (= 1,048,576)     |
+| `BYTES_PER_LOGS_BLOOM`         | `Uint64(2**8)` (= 256)            | `Uint64(2**8)` (= 256)            |
+| `MAX_EXTRA_DATA_BYTES`         | `Uint64(2**5)` (= 32)             | `Uint64(2**5)` (= 32)             |
 
 ## Configuration
 
 ### Transition settings
 
-| Name                                   | Value                              |
-| -------------------------------------- | ---------------------------------- |
-| `TERMINAL_TOTAL_DIFFICULTY`            | `Uint256(58750000000000000000000)` |
-| `TERMINAL_BLOCK_HASH`                  | `Hash32()`                         |
-| `TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH` | `Epoch(FAR_FUTURE_EPOCH)`          |
+| Name                                   | Mainnet                            | Minimal                                                                                                                                                                                               |
+| -------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TERMINAL_TOTAL_DIFFICULTY`            | `Uint256(58750000000000000000000)` | `Uint256(115792089237316195423570985008687907853269984665640564039457584007913129638912)` (= 115,792,089,237,316,195,423,570,985,008,687,907,853,269,984,665,640,564,039,457,584,007,913,129,638,912) |
+| `TERMINAL_BLOCK_HASH`                  | `Hash32()`                         | `Hash32('0x0000000000000000000000000000000000000000000000000000000000000000')`                                                                                                                        |
+| `TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH` | `Epoch(FAR_FUTURE_EPOCH)`          | `Epoch(18446744073709551615)` (= 18,446,744,073,709,551,615)                                                                                                                                          |
 
 ## Containers
 

@@ -69,18 +69,18 @@ These constants supersede
 [type-specific SSZ bounds](../phase0/p2p-interface.md#what-are-ssz-type-size-bounds)
 for the corresponding variable-size libp2p messages.
 
-| Name                                    | Value                         |
-| --------------------------------------- | ----------------------------- |
-| `MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE`   | `Uint64(16829)` (= ~16 KiB)   |
-| `MAX_ATTESTER_SLASHING_SIZE`            | `Uint64(2097616)` (= ~2 MiB)  |
-| `MAX_DATA_COLUMN_SIDECAR_SIZE`          | `Uint64(8585272)` (= ~8 MiB)  |
-| `MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE` | `Uint64(196932)` (= ~192 KiB) |
+| Name                                    | Mainnet                       | Minimal                       |
+| --------------------------------------- | ----------------------------- | ----------------------------- |
+| `MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE`   | `Uint64(16829)` (= ~16 KiB)   | `Uint64(1462)` (= 1,462)      |
+| `MAX_ATTESTER_SLASHING_SIZE`            | `Uint64(2097616)` (= ~2 MiB)  | `Uint64(131536)` (= 131,536)  |
+| `MAX_DATA_COLUMN_SIDECAR_SIZE`          | `Uint64(8585272)` (= ~8 MiB)  | `Uint64(8585272)` (= ~8 MiB)  |
+| `MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE` | `Uint64(196932)` (= ~192 KiB) | `Uint64(196932)` (= ~192 KiB) |
 
 ## Configuration
 
-| Name                   | Value                  |
-| ---------------------- | ---------------------- |
-| `MAX_REQUEST_PAYLOADS` | `Uint64(2**7)` (= 128) |
+| Name                   | Mainnet                | Minimal                |
+| ---------------------- | ---------------------- | ---------------------- |
+| `MAX_REQUEST_PAYLOADS` | `Uint64(2**7)` (= 128) | `Uint64(2**7)` (= 128) |
 
 ## Types
 

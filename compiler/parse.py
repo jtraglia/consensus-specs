@@ -67,29 +67,17 @@ TYPE_PREFIXES = (
     "Vector",
 )
 ANNOTATION_RE = re.compile(r"\(\s*=\s*([\d,]+)")
-LIST_OF_RECORDS_RE = re.compile(r"<!--\s*list-of-records:([a-zA-Z0-9_-]+)\s*-->")
+LIST_OF_RECORDS_RE = re.compile(
+    r"<!--\s*list-of-records:([a-zA-Z0-9_-]+)(?::(mainnet|minimal))?\s*-->"
+)
 
 
-def parse_file(
-    path: Path,
-    yaml_presets: dict[str, str],
-    yaml_configs: dict[str, str | list],
-    preset_name: str,
-) -> Spec:
-    return _Parser(path, yaml_presets, yaml_configs, preset_name).run()
+def parse_file(path: Path) -> Spec:
+    return _Parser(path).run()
 
 
 class _Parser:
-    def __init__(
-        self,
-        path: Path,
-        yaml_presets: dict[str, str],
-        yaml_configs: dict[str, str | list],
-        preset_name: str,
-    ) -> None:
-        self.yaml_presets = yaml_presets
-        self.yaml_configs = yaml_configs
-        self.preset_name = preset_name
+    def __init__(self, path: Path) -> None:
         self.spec = Spec()
         self.headings: list[tuple[int, str]] = []
         self.current_name: str | None = None
@@ -169,17 +157,24 @@ class _Parser:
 
     def _table(self, table: Table) -> None:
         kind = self._section_kind()
-        for row in table.children:
+        header = [_cell_text(cell).strip().lower() for cell in table.children[0].children]
+        two_col = len(header) >= 3 and header[1] == "mainnet" and header[2] == "minimal"
+        for row in table.children[1:]:
             if len(row.children) < 2:
                 continue
-            name, expression, description, annotation = _row_fields(row)
+            name, mainnet, minimal, description, ann_main, ann_min = _row_fields(row, two_col)
             if description is not None and description.startswith("<!-- predefined-type -->"):
                 continue
             if not _is_constant_name(name):
-                if expression.startswith(TYPE_PREFIXES):
-                    self.spec.classes[name] = f"class {name}({expression}):\n    pass"
+                if mainnet.startswith(TYPE_PREFIXES):
+                    self.spec.classes[name] = f"class {name}({mainnet}):\n    pass"
                 continue
-            value = Value(expression=expression, annotation=annotation)
+            value = Value(
+                mainnet=mainnet,
+                minimal=minimal,
+                annotation_mainnet=ann_main,
+                annotation_minimal=ann_min,
+            )
             if kind == "preset":
                 self.spec.presets[name] = value
             elif kind == "config":
@@ -198,39 +193,31 @@ class _Parser:
         table = self._next()
         if not isinstance(table, Table):
             raise ValueError(f"expected table after list-of-records, got {type(table)}")
-        self._list_of_records(table, match.group(1).upper())
+        variant = match.group(2) or "mainnet"
+        self._list_of_records(table, match.group(1).upper(), variant)
 
-    def _list_of_records(self, table: Table, name: str) -> None:
+    def _list_of_records(self, table: Table, name: str, variant: str) -> None:
         header = [
             re.sub(r"\s+", "_", _cell_text(cell).upper())
             for cell in table.children[0].children[:-1]
         ]
-        spec_rows = [
+        rows = [
             {header[i]: _cell_text(cell) for i, cell in enumerate(row.children[:-1])}
             for row in table.children[1:]
         ]
-        type_map: dict[str, str] = {}
-        typed = re.compile(r"^(\w+)\(.*\)$")
-        for row in spec_rows:
-            for key, raw in row.items():
-                match = typed.match(raw)
-                if match:
-                    type_map[key] = match.group(1)
-
-        entries = self.yaml_configs.get(name, spec_rows)
-        if not isinstance(entries, list):
-            raise ValueError(f"expected a list for {name} in config")
-        typed_rows = []
-        for entry in entries:
-            typed_rows.append(
-                {
-                    key: f"{type_map[key]}({raw})" if key in type_map else raw
-                    for key, raw in entry.items()
-                }
-            )
-        if self.preset_name == "mainnet" and spec_rows != typed_rows:
-            raise ValueError(f"list of records mismatch for {name}")
-        self.spec.configs[name] = Value(expression=_format_records(typed_rows))
+        existing = self.spec.configs.get(name)
+        mainnet = existing.records_mainnet if existing and existing.records_mainnet else []
+        minimal = existing.records_minimal if existing and existing.records_minimal else []
+        if variant == "minimal":
+            minimal = rows
+        else:
+            mainnet = rows
+        self.spec.configs[name] = Value(
+            mainnet=_format_records(mainnet),
+            minimal=_format_records(minimal),
+            records_mainnet=mainnet,
+            records_minimal=minimal,
+        )
 
 
 def _heading_text(heading: Heading) -> str:
@@ -287,17 +274,29 @@ def _is_constant_name(name: str) -> bool:
     return all(c in string.ascii_uppercase + "_" + string.digits for c in name[1:])
 
 
-def _row_fields(row: TableRow) -> tuple[str, str, str | None, int | None]:
+def _row_fields(
+    row: TableRow, two_col: bool
+) -> tuple[str, str, str, str | None, int | None, int | None]:
     cells = list(row.children)
     name = _cell_code(cells[0])
-    value_cell = cells[1]
-    expression = _cell_code(value_cell)
-    description = _cell_text(cells[2]) if len(cells) >= 3 else None
-    annotation = None
-    match = ANNOTATION_RE.search(_cell_text(value_cell))
+    mainnet = _cell_code(cells[1])
+    ann_main = _annotation(cells[1])
+    if two_col:
+        minimal = _cell_code(cells[2])
+        ann_min = _annotation(cells[2])
+        description = _cell_text(cells[3]) if len(cells) >= 4 else None
+    else:
+        minimal = mainnet
+        ann_min = ann_main
+        description = _cell_text(cells[2]) if len(cells) >= 3 else None
+    return name, mainnet, minimal, description, ann_main, ann_min
+
+
+def _annotation(cell: TableCell) -> int | None:
+    match = ANNOTATION_RE.search(_cell_text(cell))
     if match:
-        annotation = int(match.group(1).replace(",", ""))
-    return name, expression, description, annotation
+        return int(match.group(1).replace(",", ""))
+    return None
 
 
 def _cell_code(cell: TableCell) -> str:

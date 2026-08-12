@@ -31,9 +31,9 @@ validator records. Refers to
 
 ### Time parameters
 
-| Name                         | Value                     |
-| ---------------------------- | ------------------------- |
-| `SAFE_EPOCHS_TO_REUSE_INDEX` | `Epoch(2**16)` (= 65,536) |
+| Name                         | Mainnet                   | Minimal                   |
+| ---------------------------- | ------------------------- | ------------------------- |
+| `SAFE_EPOCHS_TO_REUSE_INDEX` | `Epoch(2**16)` (= 65,536) | `Epoch(2**16)` (= 65,536) |
 
 ## Helpers
 

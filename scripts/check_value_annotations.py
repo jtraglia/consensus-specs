@@ -154,10 +154,7 @@ def main():
         # Check specific files passed as arguments
         files_to_check = sys.argv[1:]
     else:
-        # Check all markdown files in specs and YAML files in configs/presets
         files_to_check = list(Path("specs").rglob("*.md"))
-        files_to_check += list(Path("configs").rglob("*.yaml"))
-        files_to_check += list(Path("presets").rglob("*.yaml"))
 
     all_violations = []
 

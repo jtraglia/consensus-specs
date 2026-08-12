@@ -127,21 +127,21 @@ class Withdrawals(List[Withdrawal]):
 
 ### Max operations per block
 
-| Name                           | Value                 |
-| ------------------------------ | --------------------- |
-| `MAX_BLS_TO_EXECUTION_CHANGES` | `Uint64(2**4)` (= 16) |
+| Name                           | Mainnet               | Minimal               |
+| ------------------------------ | --------------------- | --------------------- |
+| `MAX_BLS_TO_EXECUTION_CHANGES` | `Uint64(2**4)` (= 16) | `Uint64(2**4)` (= 16) |
 
 ### Execution
 
-| Name                          | Value                 | Description                                           |
-| ----------------------------- | --------------------- | ----------------------------------------------------- |
-| `MAX_WITHDRAWALS_PER_PAYLOAD` | `Uint64(2**4)` (= 16) | Maximum amount of withdrawals allowed in each payload |
+| Name                          | Mainnet               | Minimal           | Description                                           |
+| ----------------------------- | --------------------- | ----------------- | ----------------------------------------------------- |
+| `MAX_WITHDRAWALS_PER_PAYLOAD` | `Uint64(2**4)` (= 16) | `Uint64(4)` (= 4) | Maximum amount of withdrawals allowed in each payload |
 
 ### Withdrawals processing
 
-| Name                                   | Value                      |
-| -------------------------------------- | -------------------------- |
-| `MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP` | `Uint64(2**14)` (= 16,384) |
+| Name                                   | Mainnet                    | Minimal             |
+| -------------------------------------- | -------------------------- | ------------------- |
+| `MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP` | `Uint64(2**14)` (= 16,384) | `Uint64(16)` (= 16) |
 
 ## Containers
 

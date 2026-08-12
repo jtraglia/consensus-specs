@@ -11,7 +11,7 @@ GINDEX_ROW_RE = re.compile(
     r"\|\s*`([A-Z][A-Z0-9_]*)`\s*\|\s*`get_generalized_index[^`]*`\s*\(=\s*([\d,]+)"
 )
 
-# Prefer beacon-chain.md when collecting a fork's sources, matching pysetup.
+# Prefer beacon-chain.md when collecting a fork's sources.
 SOURCE_SORT_PRIORITY = ("beacon-chain",)
 
 SKIP_SOURCE_NAMES = frozenset({"removed.md"})
@@ -103,7 +103,7 @@ def source_files(fork: Fork, forks: dict[str, Fork]) -> list[Path]:
     """Markdown sources for this fork, ancestors first, beacon-chain first per fork."""
     paths: list[Path] = []
     for ancestor in reversed(fork.ancestors(forks)):
-        paths.extend(_fork_markdown_files(ancestor.directory))
+        paths.extend(fork_markdown_files(ancestor.directory))
     return paths
 
 
@@ -134,7 +134,7 @@ def _read_previous_fork(directory: Path) -> str | None:
     return declared[0][1]
 
 
-def _fork_markdown_files(directory: Path) -> list[Path]:
+def fork_markdown_files(directory: Path) -> list[Path]:
     files = [path for path in directory.rglob("*.md") if path.name not in SKIP_SOURCE_NAMES]
     return sorted(files, key=_source_sort_key)
 

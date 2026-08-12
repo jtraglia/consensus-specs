@@ -43,8 +43,6 @@ def emit_python(
     fork: Fork,
     forks: dict[str, Fork],
     preset_name: str,
-    yaml_presets: dict[str, str],
-    yaml_configs: dict[str, str | list],
     inherited: dict[str, str],
     removals: Removals,
 ) -> str:
@@ -71,7 +69,7 @@ def emit_python(
     gindices, constants, after_presets, gindex_asserts = _partition_constants(
         spec.constants, spec.presets
     )
-    preset_src, preset_asserts = _emit_presets(spec.presets, yaml_presets)
+    preset_src, preset_asserts = _emit_presets(spec.presets, preset_name)
 
     parts = [
         _imports(fork, forks, preset_name),
@@ -82,7 +80,7 @@ def emit_python(
         "\n".join(constants),
         preset_src,
         "\n".join(after_presets),
-        _emit_config(preset_name, spec.configs, yaml_configs),
+        _emit_config(preset_name, spec.configs),
         type_src,
         _emit_protocols(methods),
         function_src,
@@ -188,48 +186,76 @@ def _partition_constants(
     asserts: list[str] = []
     preset_names = list(presets)
     for name, value in constants.items():
-        if "get_generalized_index" in value.expression:
-            if value.annotation is None:
+        expr = value.mainnet
+        if "get_generalized_index" in expr:
+            if value.annotation_mainnet is None:
                 raise ValueError(f"{name}: get_generalized_index needs an (= N) annotation")
-            gindices.append(f"{name} = GeneralizedIndex({value.annotation})")
-            asserts.append(f"assert {name} == {value.expression}")
-        elif any(preset in value.expression for preset in preset_names):
-            after_presets.append(_assignment(name, value))
+            gindices.append(f"{name} = GeneralizedIndex({value.annotation_mainnet})")
+            asserts.append(f"assert {name} == {expr}")
+        elif any(preset in expr for preset in preset_names):
+            after_presets.append(_assignment(name, expr))
         else:
-            plain.append(_assignment(name, value))
+            plain.append(_assignment(name, expr))
     return gindices, plain, after_presets, asserts
 
 
-def _emit_presets(presets: dict[str, Value], yaml_presets: dict[str, str]) -> tuple[str, list[str]]:
+def _emit_presets(presets: dict[str, Value], preset_name: str) -> tuple[str, list[str]]:
     lines: list[str] = []
     asserts: list[str] = []
+    env: dict[str, int] = {}
+    pending: list[tuple[str, str]] = []
     for name, value in presets.items():
-        if "get_generalized_index" in value.expression:
-            rhs = yaml_presets.get(name)
-            if rhs is None:
-                if value.annotation is None:
-                    raise ValueError(f"{name}: computed preset needs YAML or (= N)")
-                rhs = str(value.annotation)
-            type_name, _ = _split_type(value.expression)
-            lines.append(f"{name} = {type_name}({rhs})" if type_name else f"{name} = {rhs}")
-            asserts.append(f"assert {name} == {value.expression}  # noqa: E501")
-        elif name in yaml_presets:
-            type_name, _ = _split_type(value.expression)
-            rhs = yaml_presets[name]
-            lines.append(f"{name} = {type_name}({rhs})" if type_name else f"{name} = {rhs}")
+        expr = value.select(preset_name)
+        if "get_generalized_index" in expr:
+            annotation = value.annotation(preset_name)
+            if annotation is None:
+                raise ValueError(f"{name}: computed preset needs an (= N) annotation")
+            type_name, _ = _split_type(expr)
+            lines.append(
+                f"{name} = {type_name}({annotation})" if type_name else f"{name} = {annotation}"
+            )
+            env[name] = annotation
+            asserts.append(f"assert {name} == {expr}  # noqa: E501")
+        elif any(other != name and other in expr for other in presets):
+            pending.append((name, expr))
         else:
-            lines.append(_assignment(name, value))
+            lines.append(_assignment(name, expr))
+            number = _literal_int(expr, value.annotation(preset_name))
+            if number is not None:
+                env[name] = number
+    for name, expr in pending:
+        type_name, inner = _split_type(expr)
+        try:
+            number = int(eval(inner, {"__builtins__": {}}, env))
+        except Exception:
+            lines.append(_assignment(name, expr))
+            continue
+        lines.append(f"{name} = {type_name}({number})" if type_name else f"{name} = {number}")
+        env[name] = number
     if not lines:
         return "", asserts
     return "# Presets\n" + "\n".join(lines), asserts
 
 
-def _assignment(name: str, value: Value) -> str:
+def _literal_int(expression: str, annotation: int | None) -> int | None:
+    if annotation is not None:
+        return annotation
+    _, inner = _split_type(expression)
+    try:
+        result = eval(inner, {"__builtins__": {}}, {})
+    except Exception:
+        return None
+    if isinstance(result, (int, float)):
+        return int(result)
+    return None
+
+
+def _assignment(name: str, expression: str) -> str:
     if name == "ENDIANNESS":
-        return f"{name}: Final = {value.expression}"
-    type_name, inner = _split_type(value.expression)
+        return f"{name}: Final = {expression}"
+    type_name, inner = _split_type(expression)
     if type_name is None:
-        return f"{name} = {value.expression}"
+        return f"{name} = {expression}"
     return f"{name} = {type_name}({inner})"
 
 
@@ -241,25 +267,19 @@ def _split_type(expression: str) -> tuple[str | None, str]:
     return expression[:index], expression[index + 1 : -1]
 
 
-def _emit_config(
-    preset_name: str,
-    configs: dict[str, Value],
-    yaml_configs: dict[str, str | list],
-) -> str:
+def _emit_config(preset_name: str, configs: dict[str, Value]) -> str:
     fields = ["    PRESET_BASE: str"]
     values = [f'    PRESET_BASE="{preset_name}",']
     for name, value in configs.items():
-        yaml_value = yaml_configs.get(name)
-        if value.expression.startswith("("):
-            fields.append("    " + f"{name}: tuple[frozendict[str, Any], ...]")
-            values.append(f"    {name}={value.expression},")
+        records = value.records(preset_name)
+        if records is not None:
+            fields.append(f"    {name}: tuple[frozendict[str, Any], ...]")
+            values.append(f"    {name}={value.select(preset_name)},")
             continue
-        type_name, inner = _split_type(value.expression)
+        expr = value.select(preset_name)
+        type_name, inner = _split_type(expr)
         fields.append(f"    {name}: {type_name or 'int'}")
-        if isinstance(yaml_value, str):
-            rhs = f"{type_name}({yaml_value})" if type_name else yaml_value
-        else:
-            rhs = value.expression if type_name is None else f"{type_name}({inner})"
+        rhs = expr if type_name is None else f"{type_name}({inner})"
         values.append(f"    {name}={rhs},")
     return (
         "class Configuration(NamedTuple):\n"

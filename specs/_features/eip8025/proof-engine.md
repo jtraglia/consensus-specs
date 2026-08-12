@@ -14,6 +14,7 @@
   - [New `notify_forkchoice_updated`](#new-notify_forkchoice_updated)
   - [New `ProofAttributes`](#new-proofattributes)
   - [New `request_proofs`](#new-request_proofs)
+  - [`NoopProofEngine`](#noopproofengine)
 
 <!-- mdformat-toc end -->
 

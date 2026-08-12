@@ -151,27 +151,27 @@ specification.
 
 ### Blob
 
-| Name                          | Value                                                    | Description                                              |
-| ----------------------------- | -------------------------------------------------------- | -------------------------------------------------------- |
-| `FIELD_ELEMENTS_PER_EXT_BLOB` | `2 * FIELD_ELEMENTS_PER_BLOB`                            | Number of field elements in a Reed-Solomon extended blob |
-| `FIELD_ELEMENTS_PER_CELL`     | `Uint64(64)`                                             | Number of field elements in a cell                       |
-| `CELLS_PER_EXT_BLOB`          | `FIELD_ELEMENTS_PER_EXT_BLOB // FIELD_ELEMENTS_PER_CELL` | The number of cells in an extended blob                  |
+| Name                          | Mainnet                                                  | Minimal                                                  | Description                                              |
+| ----------------------------- | -------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------- |
+| `FIELD_ELEMENTS_PER_EXT_BLOB` | `2 * FIELD_ELEMENTS_PER_BLOB`                            | `2 * FIELD_ELEMENTS_PER_BLOB`                            | Number of field elements in a Reed-Solomon extended blob |
+| `FIELD_ELEMENTS_PER_CELL`     | `Uint64(64)`                                             | `Uint64(64)`                                             | Number of field elements in a cell                       |
+| `CELLS_PER_EXT_BLOB`          | `FIELD_ELEMENTS_PER_EXT_BLOB // FIELD_ELEMENTS_PER_CELL` | `FIELD_ELEMENTS_PER_EXT_BLOB // FIELD_ELEMENTS_PER_CELL` | The number of cells in an extended blob                  |
 
 ### Size parameters
 
-| Name                | Value                                | Description                                   |
-| ------------------- | ------------------------------------ | --------------------------------------------- |
-| `NUMBER_OF_COLUMNS` | `Uint64(CELLS_PER_EXT_BLOB)` (= 128) | Number of columns in the extended data matrix |
+| Name                | Mainnet                              | Minimal                              | Description                                   |
+| ------------------- | ------------------------------------ | ------------------------------------ | --------------------------------------------- |
+| `NUMBER_OF_COLUMNS` | `Uint64(CELLS_PER_EXT_BLOB)` (= 128) | `Uint64(CELLS_PER_EXT_BLOB)` (= 128) | Number of columns in the extended data matrix |
 
 ## Configuration
 
 ### Custody setting
 
-| Name                       | Value         | Description                                                                       |
-| -------------------------- | ------------- | --------------------------------------------------------------------------------- |
-| `SAMPLES_PER_SLOT`         | `Uint64(8)`   | Minimum number of samples for an honest node                                      |
-| `NUMBER_OF_CUSTODY_GROUPS` | `Uint64(128)` | Number of custody groups available for nodes to custody                           |
-| `CUSTODY_REQUIREMENT`      | `Uint64(4)`   | Minimum number of custody groups an honest node custodies and serves samples from |
+| Name                       | Mainnet       | Minimal       | Description                                                                       |
+| -------------------------- | ------------- | ------------- | --------------------------------------------------------------------------------- |
+| `SAMPLES_PER_SLOT`         | `Uint64(8)`   | `Uint64(8)`   | Minimum number of samples for an honest node                                      |
+| `NUMBER_OF_CUSTODY_GROUPS` | `Uint64(128)` | `Uint64(128)` | Number of custody groups available for nodes to custody                           |
+| `CUSTODY_REQUIREMENT`      | `Uint64(4)`   | `Uint64(4)`   | Minimum number of custody groups an honest node custodies and serves samples from |
 
 ## Containers
 

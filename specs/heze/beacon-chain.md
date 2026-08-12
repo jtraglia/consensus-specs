@@ -76,9 +76,9 @@ class InclusionListCommittee(Vector[ValidatorIndex]):
 
 ### Inclusion list committee
 
-| Name                            | Value                 |
-| ------------------------------- | --------------------- |
-| `INCLUSION_LIST_COMMITTEE_SIZE` | `Uint64(2**4)` (= 16) |
+| Name                            | Mainnet               | Minimal               |
+| ------------------------------- | --------------------- | --------------------- |
+| `INCLUSION_LIST_COMMITTEE_SIZE` | `Uint64(2**4)` (= 16) | `Uint64(2**4)` (= 16) |
 
 ## Containers
 
