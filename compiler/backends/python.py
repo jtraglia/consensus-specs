@@ -98,7 +98,11 @@ def emit_python(
 
 def _apply_removals(spec: Spec, removals: Removals) -> Spec:
     return Spec(
-        functions={k: v for k, v in spec.functions.items() if k not in removals.functions},
+        functions={
+            key: source
+            for key, source in spec.functions.items()
+            if key not in removals.functions and key.rsplit(".", 1)[-1] not in removals.functions
+        },
         classes={k: v for k, v in spec.classes.items() if k not in removals.classes},
         assignments=spec.assignments,
         constants={k: v for k, v in spec.constants.items() if k not in removals.constants},
@@ -118,7 +122,8 @@ def _split_protocol_methods(
         if owner is None:
             leftover[name] = source
         else:
-            methods.setdefault(owner, {})[name] = source.replace(f"self: {owner}", "self")
+            method = name.rsplit(".", 1)[-1]
+            methods.setdefault(owner, {})[method] = source.replace(f"self: {owner}", "self")
     return methods, leftover
 
 

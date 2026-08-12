@@ -443,7 +443,9 @@ def verify_and_notify_new_payload(
 ```python
 class NoopExecutionEngine(ExecutionEngine):
     def notify_new_payload(
-        self, execution_payload: ExecutionPayload, parent_beacon_block_root: Root
+        self,
+        execution_payload: ExecutionPayload,  # noqa: ARG002
+        parent_beacon_block_root: Root,  # noqa: ARG002
     ) -> bool:
         return True
 
@@ -460,15 +462,18 @@ class NoopExecutionEngine(ExecutionEngine):
         raise NotImplementedError("no default block production")
 
     def is_valid_block_hash(
-        self, execution_payload: ExecutionPayload, parent_beacon_block_root: Root
+        self,
+        execution_payload: ExecutionPayload,  # noqa: ARG002
+        parent_beacon_block_root: Root,  # noqa: ARG002
     ) -> bool:
         return True
 
-    def is_valid_versioned_hashes(self, new_payload_request: NewPayloadRequest) -> bool:
+    def is_valid_versioned_hashes(self, new_payload_request: NewPayloadRequest) -> bool:  # noqa: ARG002
         return True
 
     def verify_and_notify_new_payload(
-        self, new_payload_request: NewPayloadRequest
+        self,
+        new_payload_request: NewPayloadRequest,  # noqa: ARG002
     ) -> bool:
         return True
 

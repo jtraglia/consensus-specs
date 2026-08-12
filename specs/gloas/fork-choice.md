@@ -248,7 +248,7 @@ def notify_ptc_messages(
 
 ```python
 def retrieve_column_sidecars_and_kzg_commitments(
-    beacon_block_root: Root,
+    beacon_block_root: Root,  # noqa: ARG001
 ) -> tuple[Sequence[DataColumnSidecar], BlobKZGCommitments]:
     return [], BlobKZGCommitments()
 ```

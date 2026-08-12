@@ -21,7 +21,9 @@ This is the modification of the fork choice accompanying Fulu.
 *Note*: The following is a reference-implementation stub.
 
 ```python
-def retrieve_column_sidecars(beacon_block_root: Root) -> Sequence[DataColumnSidecar]:
+def retrieve_column_sidecars(
+    beacon_block_root: Root,  # noqa: ARG001
+) -> Sequence[DataColumnSidecar]:
     return []
 ```
 

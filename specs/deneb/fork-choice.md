@@ -54,7 +54,7 @@ otherwise valid and available.
 
 ```python
 def retrieve_blobs_and_proofs(
-    beacon_block_root: Root,
+    beacon_block_root: Root,  # noqa: ARG001
 ) -> Tuple[Sequence[Blob], Sequence[KZGProof]]:
     return [], []
 ```

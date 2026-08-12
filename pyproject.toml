@@ -79,6 +79,14 @@ warn_unused_configs = true
 warn_redundant_casts = true
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = [
+  "eth_consensus_specs.utils.bls",
+  "eth_consensus_specs.utils.kzg",
+]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
 [tool.ruff]
 line-length = 100
 namespace-packages = ["scripts", "tests/core/pyspec/eth_consensus_specs"]

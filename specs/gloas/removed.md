@@ -25,4 +25,5 @@
 - `process_execution_payload`
 - `retrieve_column_sidecars`
 - `upgrade_to_fulu`
+- `verify_data_column_sidecar_inclusion_proof`
 - `verify_partial_data_column_header_inclusion_proof`

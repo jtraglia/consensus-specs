@@ -417,7 +417,7 @@ def verify_and_notify_new_payload(
 
 ```python
 class NoopExecutionEngine(ExecutionEngine):
-    def notify_new_payload(self, execution_payload: ExecutionPayload) -> bool:
+    def notify_new_payload(self, execution_payload: ExecutionPayload) -> bool:  # noqa: ARG002
         return True
 
     def notify_forkchoice_updated(
@@ -432,11 +432,12 @@ class NoopExecutionEngine(ExecutionEngine):
     def get_payload(self, payload_id: PayloadId) -> GetPayloadResponse:
         raise NotImplementedError("no default block production")
 
-    def is_valid_block_hash(self, execution_payload: ExecutionPayload) -> bool:
+    def is_valid_block_hash(self, execution_payload: ExecutionPayload) -> bool:  # noqa: ARG002
         return True
 
     def verify_and_notify_new_payload(
-        self, new_payload_request: NewPayloadRequest
+        self,
+        new_payload_request: NewPayloadRequest,  # noqa: ARG002
     ) -> bool:
         return True
 

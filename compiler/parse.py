@@ -134,7 +134,7 @@ class _Parser:
             )
             chunk = "\n".join(line.rstrip() for line in lines[start : element.end_lineno])
             if isinstance(element, ast.FunctionDef):
-                self.spec.functions[element.name] = chunk
+                self.spec.functions[_function_key(element)] = chunk
             elif isinstance(element, ast.ClassDef):
                 self._class(chunk, element)
             elif isinstance(element, ast.Assign) and len(element.targets) == 1:
@@ -268,6 +268,15 @@ def _bound_needs_helper(cls: ast.ClassDef) -> bool:
         if isinstance(statement, ast.Assign)
         for node in ast.walk(statement)
     )
+
+
+def _function_key(fn: ast.FunctionDef) -> str:
+    """Qualify Protocol methods so ``Engine.foo`` and ``Other.foo`` do not collide."""
+    if fn.args.args:
+        first = fn.args.args[0]
+        if first.arg == "self" and isinstance(first.annotation, ast.Name):
+            return f"{first.annotation.id}.{fn.name}"
+    return fn.name
 
 
 def _is_constant_name(name: str) -> bool:

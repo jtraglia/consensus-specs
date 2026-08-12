@@ -112,17 +112,17 @@ def request_proofs(
 
 ```python
 class NoopProofEngine(ProofEngine):
-    def verify_execution_proof(self, execution_proof: ExecutionProof) -> bool:
+    def verify_execution_proof(self, execution_proof: ExecutionProof) -> bool:  # noqa: ARG002
         return True
 
-    def notify_new_payload(self, new_payload_request: NewPayloadRequest) -> None:
+    def notify_new_payload(self, new_payload_request: NewPayloadRequest) -> None:  # noqa: ARG002
         return None
 
     def notify_forkchoice_updated(
         self,
-        head_block_hash: Hash32,
-        safe_block_hash: Hash32,
-        finalized_block_hash: Hash32,
+        head_block_hash: Hash32,  # noqa: ARG002
+        safe_block_hash: Hash32,  # noqa: ARG002
+        finalized_block_hash: Hash32,  # noqa: ARG002
     ) -> None:
         return None
 

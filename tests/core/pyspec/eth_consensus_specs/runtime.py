@@ -56,7 +56,7 @@ from eth_consensus_specs.utils.ssz.ssz_impl import (
 try:
     from eth_consensus_specs.utils import kzg
 except ImportError:
-    kzg = None  # type: ignore[misc, assignment]
+    kzg = None  # type: ignore[assignment]
 
 SSZObject = TypeVar("SSZObject", bound=SSZType)
 SSZVariableName = str

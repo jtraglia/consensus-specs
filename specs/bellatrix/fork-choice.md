@@ -137,9 +137,7 @@ information from an execution client.
 
 ```python
 def get_pow_block(hash: Bytes32) -> Optional[PowBlock]:
-    return PowBlock(
-        block_hash=hash, parent_hash=Bytes32(), total_difficulty=Uint256(0)
-    )
+    return PowBlock(block_hash=hash, parent_hash=Bytes32(), total_difficulty=Uint256(0))
 ```
 
 ### `is_valid_terminal_pow_block`
