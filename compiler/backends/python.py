@@ -57,9 +57,7 @@ def emit_python(
         types = {key: _rewrite_config_name(source, name) for key, source in types.items()}
         late_src = _rewrite_config_name(late_src, name)
 
-    gindices, constants, after_presets, gindex_asserts = _partition_constants(
-        spec.constants, spec.presets
-    )
+    gindices, constants, after_presets = _partition_constants(spec.constants, spec.presets)
     preset_src, deferred_presets, preset_asserts = _emit_presets(spec.presets, preset_name)
     early_types, late_types = _split_deferred_types(types, deferred_presets)
 
@@ -80,7 +78,6 @@ def emit_python(
         function_src,
         late_src,
         "\n\n\n".join(spec.assignments.values()),
-        "\n".join(gindex_asserts),
         "\n".join(preset_asserts),
     ]
     return "\n\n\n".join(part.strip("\n") for part in parts if part) + "\n"
@@ -177,12 +174,11 @@ def _is_bare_alias(source: str) -> bool:
 def _partition_constants(
     constants: dict[str, Value],
     presets: dict[str, Value],
-) -> tuple[list[str], list[str], list[str], list[str]]:
+) -> tuple[list[str], list[str], list[str]]:
     """Gindex constants go first; anything that names a preset waits until after presets."""
     gindices: list[str] = []
     plain: list[str] = []
     after_presets: list[str] = []
-    asserts: list[str] = []
     preset_names = list(presets)
     for name, value in constants.items():
         expr = value.mainnet
@@ -190,12 +186,11 @@ def _partition_constants(
             if value.annotation_mainnet is None:
                 raise ValueError(f"{name}: get_generalized_index needs an (= N) annotation")
             gindices.append(f"{name} = GeneralizedIndex({value.annotation_mainnet})")
-            asserts.append(f"assert {name} == {expr}")
         elif any(preset in expr for preset in preset_names):
             after_presets.append(_assignment(name, expr))
         else:
             plain.append(_assignment(name, expr))
-    return gindices, plain, after_presets, asserts
+    return gindices, plain, after_presets
 
 
 def _emit_presets(

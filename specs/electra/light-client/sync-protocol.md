@@ -8,8 +8,6 @@
   - [Modified `FinalityBranch`](#modified-finalitybranch)
   - [Modified `NextSyncCommitteeBranch`](#modified-nextsynccommitteebranch)
 - [Constants](#constants)
-  - [Frozen constants](#frozen-constants)
-  - [New constants](#new-constants)
 - [Helpers](#helpers)
   - [Modified `finalized_root_gindex_at_slot`](#modified-finalized_root_gindex_at_slot)
   - [Modified `current_sync_committee_gindex_at_slot`](#modified-current_sync_committee_gindex_at_slot)
@@ -69,19 +67,6 @@ class NextSyncCommitteeBranch(Vector[Bytes32]):
 ```
 
 ## Constants
-
-### Frozen constants
-
-Existing `GeneralizedIndex` constants are frozen at their
-[Altair](../../altair/light-client/sync-protocol.md#constants) values.
-
-| Name                            | Value                                                                               |
-| ------------------------------- | ----------------------------------------------------------------------------------- |
-| `FINALIZED_ROOT_GINDEX`         | `get_generalized_index(altair.BeaconState, 'finalized_checkpoint', 'root')` (= 105) |
-| `CURRENT_SYNC_COMMITTEE_GINDEX` | `get_generalized_index(altair.BeaconState, 'current_sync_committee')` (= 54)        |
-| `NEXT_SYNC_COMMITTEE_GINDEX`    | `get_generalized_index(altair.BeaconState, 'next_sync_committee')` (= 55)           |
-
-### New constants
 
 | Name                                    | Value                                                                        |
 | --------------------------------------- | ---------------------------------------------------------------------------- |

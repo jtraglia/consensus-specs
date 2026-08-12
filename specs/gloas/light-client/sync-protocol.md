@@ -9,8 +9,6 @@
   - [Modified `FinalityBranch`](#modified-finalitybranch)
   - [Modified `NextSyncCommitteeBranch`](#modified-nextsynccommitteebranch)
 - [Constants](#constants)
-  - [Frozen constants](#frozen-constants)
-  - [New constants](#new-constants)
 - [Containers](#containers)
   - [Modified `LightClientHeader`](#modified-lightclientheader)
 - [Helpers](#helpers)
@@ -89,19 +87,6 @@ class NextSyncCommitteeBranch(Vector[Bytes32]):
 ```
 
 ## Constants
-
-### Frozen constants
-
-Existing `GeneralizedIndex` constants are frozen at their pre-Gloas values.
-
-| Name                                    | Value                                                                                |
-| --------------------------------------- | ------------------------------------------------------------------------------------ |
-| `FINALIZED_ROOT_GINDEX_ELECTRA`         | `get_generalized_index(electra.BeaconState, 'finalized_checkpoint', 'root')` (= 169) |
-| `CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA` | `get_generalized_index(electra.BeaconState, 'current_sync_committee')` (= 86)        |
-| `NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA`    | `get_generalized_index(electra.BeaconState, 'next_sync_committee')` (= 87)           |
-| `EXECUTION_PAYLOAD_GINDEX`              | `get_generalized_index(capella.BeaconBlockBody, 'execution_payload')` (= 25)         |
-
-### New constants
 
 | Name                                  | Value                                                                                                              |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
