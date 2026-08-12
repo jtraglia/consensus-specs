@@ -6,6 +6,11 @@
 - `BlobSidecar`
 - `KZGCommitmentInclusionProof`
 
+## Types
+
+- `BlobIdentifiers`
+- `BlobSidecars`
+
 ## Functions
 
 - `apply_deposit`

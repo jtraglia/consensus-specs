@@ -3,10 +3,11 @@
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
+- [Aliases](#aliases)
+  - [New `WithdrawalIndex`](#new-withdrawalindex)
 - [Types](#types)
   - [New `BLSToExecutionChanges`](#new-blstoexecutionchanges)
   - [New `HistoricalSummaries`](#new-historicalsummaries)
-  - [New `WithdrawalIndex`](#new-withdrawalindex)
   - [New `Withdrawals`](#new-withdrawals)
 - [Constants](#constants)
   - [Domains](#domains)
@@ -68,6 +69,19 @@ accumulators, it becomes possible to validate the entire block history that led
 up to that particular state without any additional information beyond the state
 and the blocks.
 
+## Aliases
+
+We define the following Python type aliases for type hinting and readability:
+
+### New `WithdrawalIndex`
+
+```python
+class WithdrawalIndex(Uint64):
+    """
+    The index of a withdrawal, counting all withdrawals ever made.
+    """
+```
+
 ## Types
 
 We define the following Python custom types for type hinting and readability:
@@ -93,15 +107,6 @@ class HistoricalSummaries(List[HistoricalSummary]):
     """
 
     LIMIT = HISTORICAL_ROOTS_LIMIT
-```
-
-### New `WithdrawalIndex`
-
-```python
-class WithdrawalIndex(Uint64):
-    """
-    The index of a withdrawal, counting all withdrawals ever made.
-    """
 ```
 
 ### New `Withdrawals`

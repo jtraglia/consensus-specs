@@ -76,6 +76,37 @@ result can differ across presets, and the compiler evaluates the formula.
 
 Constants keep the two-column `Name | Value` form.
 
+## Aliases, types, and containers
+
+The heading is how the compiler classifies a class. Do not put an item under the
+wrong section and expect the compiler to guess from its base class.
+
+- **`## Aliases`** — named scalar or fixed-byte wrappers with no `LIMIT`,
+  `LENGTH`, or fields. They are emitted before constants so table values can use
+  them (`Slot(0)`, `Gwei(32 * 10**9)`).
+- **`## Types`** — collections and other SSZ types whose bound or element type
+  needs an alias, constant, or preset.
+- **`## Containers`** — SSZ containers (and progressive containers).
+
+```python
+class Slot(Uint64):
+    """A slot number."""
+
+class Blob(ByteVector):
+    LENGTH = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB
+
+class BeaconBlock(Container):
+    slot: Slot
+    parent_root: Root
+    state_root: Root
+    body: BeaconBlockBody
+```
+
+Module-level instances such as `EXECUTION_ENGINE = NoopExecutionEngine()` stay
+in the helper section that defines the class they construct. Protocol methods
+are free functions annotated `self: ExecutionEngine`; the compiler assembles
+them into a `Protocol` class.
+
 ## Documenting changes
 
 Changes in functionality between upgrades must be properly documented. Only

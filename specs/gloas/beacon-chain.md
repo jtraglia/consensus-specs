@@ -5,6 +5,8 @@
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
+- [Aliases](#aliases)
+  - [New `BuilderIndex`](#new-builderindex)
 - [Types](#types)
   - [Modified `AggregationBits`](#modified-aggregationbits)
   - [Modified `Attestations`](#modified-attestations)
@@ -31,7 +33,6 @@
   - [New `BlockAccessList`](#new-blockaccesslist)
   - [New `BuilderDepositRequests`](#new-builderdepositrequests)
   - [New `BuilderExitRequests`](#new-builderexitrequests)
-  - [New `BuilderIndex`](#new-builderindex)
   - [New `BuilderPendingPayments`](#new-builderpendingpayments)
   - [New `BuilderPendingWithdrawals`](#new-builderpendingwithdrawals)
   - [New `Builders`](#new-builders)
@@ -177,6 +178,19 @@ Gloas is a consensus-layer upgrade containing a number of features. Including:
 *Note*: These EIPs are in draft and may change or be removed. Each link above
 points to the specific version targeted by this specification, which may differ
 from the latest published version of the EIPs.
+
+## Aliases
+
+We define the following Python type aliases for type hinting and readability:
+
+### New `BuilderIndex`
+
+```python
+class BuilderIndex(Uint64):
+    """
+    The index of a builder in the builder registry.
+    """
+```
 
 ## Types
 
@@ -427,15 +441,6 @@ class BuilderDepositRequests(ProgressiveList[BuilderDepositRequest]):
 class BuilderExitRequests(ProgressiveList[BuilderExitRequest]):
     """
     The builder exit requests pertaining to a single execution payload.
-    """
-```
-
-### New `BuilderIndex`
-
-```python
-class BuilderIndex(Uint64):
-    """
-    The index of a builder in the builder registry.
     """
 ```
 

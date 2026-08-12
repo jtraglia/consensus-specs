@@ -2,16 +2,17 @@
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
-- [Types](#types)
-  - [`Cell`](#cell)
+- [Aliases](#aliases)
   - [`CellIndex`](#cellindex)
-  - [`Cells`](#cells)
   - [`ColumnIndex`](#columnindex)
   - [`CustodyIndex`](#custodyindex)
+  - [`RowIndex`](#rowindex)
+- [Types](#types)
+  - [`Cell`](#cell)
+  - [`Cells`](#cells)
   - [`DataColumn`](#datacolumn)
   - [`KZGCommitmentsInclusionProof`](#kzgcommitmentsinclusionproof)
   - [`Proofs`](#proofs)
-  - [`RowIndex`](#rowindex)
 - [Constants](#constants)
   - [Misc](#misc)
 - [Preset](#preset)
@@ -42,18 +43,9 @@
 
 <!-- mdformat-toc end -->
 
-## Types
+## Aliases
 
-### `Cell`
-
-```python
-class Cell(ByteVector):
-    """
-    The unit of extended blob data that has its own ``KZGProof``.
-    """
-
-    LENGTH = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL
-```
+We define the following Python type aliases for type hinting and readability:
 
 ### `CellIndex`
 
@@ -62,17 +54,6 @@ class CellIndex(Uint64):
     """
     The index of a cell within an extended blob.
     """
-```
-
-### `Cells`
-
-```python
-class Cells(Vector[Cell]):
-    """
-    The cells of a single extended blob.
-    """
-
-    LENGTH = CELLS_PER_EXT_BLOB
 ```
 
 ### `ColumnIndex`
@@ -91,6 +72,39 @@ class CustodyIndex(Uint64):
     """
     The index of a custody group.
     """
+```
+
+### `RowIndex`
+
+```python
+class RowIndex(Uint64):
+    """
+    The index of a row in the matrix of extended blob data.
+    """
+```
+
+## Types
+
+### `Cell`
+
+```python
+class Cell(ByteVector):
+    """
+    The unit of extended blob data that has its own ``KZGProof``.
+    """
+
+    LENGTH = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL
+```
+
+### `Cells`
+
+```python
+class Cells(Vector[Cell]):
+    """
+    The cells of a single extended blob.
+    """
+
+    LENGTH = CELLS_PER_EXT_BLOB
 ```
 
 ### `DataColumn`
@@ -125,15 +139,6 @@ class Proofs(Vector[KZGProof]):
     """
 
     LENGTH = CELLS_PER_EXT_BLOB
-```
-
-### `RowIndex`
-
-```python
-class RowIndex(Uint64):
-    """
-    The index of a row in the matrix of extended blob data.
-    """
 ```
 
 ## Constants

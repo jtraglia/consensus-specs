@@ -3,7 +3,7 @@
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
-- [Types](#types)
+- [Aliases](#aliases)
   - [`ExecutionAddress`](#executionaddress)
 - [Constants](#constants)
 - [Configuration](#configuration)
@@ -21,7 +21,7 @@
 This document represents the specification for the beacon-chain deposit
 contract, part of Phase 0.
 
-## Types
+## Aliases
 
 ### `ExecutionAddress`
 

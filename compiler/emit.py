@@ -1,158 +1,394 @@
-"""Emit one Python module from a Spec."""
+"""Emit Python modules and YAML from a Spec."""
 
 from __future__ import annotations
 
 import ast
+import importlib
 import re
+import sys
 import textwrap
 from typing import TYPE_CHECKING
 
-from compiler.models import Spec, Value
+from ruamel.yaml import YAML
 
 if TYPE_CHECKING:
-    from compiler.discover import Fork
-    from compiler.removals import Removals
+    from pathlib import Path
 
-HOISTED = ("ceillog2", "floorlog2")
-SCALAR_BASES = frozenset(
-    {
-        "Boolean",
-        "Byte",
-        "Bytes1",
-        "Bytes4",
-        "Bytes8",
-        "Bytes20",
-        "Bytes31",
-        "Bytes32",
-        "Bytes48",
-        "Bytes96",
-        "Uint8",
-        "Uint16",
-        "Uint32",
-        "Uint64",
-        "Uint128",
-        "Uint256",
-    }
-)
-LATE_BASES = frozenset({"Exception", "BaseException"})
+    from compiler.discover import Fork
+    from compiler.models import Removals, Spec, Value
+
+TYPE_RE = re.compile(r"^([A-Z_]\w*)\((.*)\)$")
+CONFIG_NAME_RE = r"(?<!['\"])\b{name}\b(?!['\"])"
+WORD_RE = r"\b{name}\b"
+
+
+class Emitter:
+    def __init__(
+        self,
+        spec: Spec,
+        fork: Fork,
+        forks: dict[str, Fork],
+        preset: str,
+        removals: Removals,
+    ) -> None:
+        self.spec = spec.without(removals)
+        self.fork = fork
+        self.forks = forks
+        self.preset = preset
+        self.methods: dict[str, dict[str, str]] = {}
+        self.functions: dict[str, str] = {}
+        for name, source in self.spec.functions.items():
+            owner = self_type(source)
+            if owner is None:
+                self.functions[name] = source
+            else:
+                method = name.rsplit(".", 1)[-1]
+                self.methods.setdefault(owner, {})[method] = source.replace(
+                    f"self: {owner}", "self"
+                )
+
+    def render(self) -> str:
+        types = order_types(self.spec.types)
+        protocols = set(self.methods)
+        implementors = {
+            name: source for name, source in types.items() if base_name(source) in protocols
+        }
+        types = {name: source for name, source in types.items() if name not in implementors}
+        constants, after_presets, deferred = self._constants()
+        preset_src, more_deferred = self._presets()
+        deferred.update(more_deferred)
+        hoist = self._referenced_functions(
+            [
+                *self.spec.aliases.values(),
+                *constants,
+                preset_src,
+                *after_presets,
+                *types.values(),
+                *deferred.values(),
+            ]
+        )
+        remaining = {name: src for name, src in self.functions.items() if name not in hoist}
+        early, late = split_by_deps(types, deferred)
+        parts = [
+            self._imports(),
+            f"fork = '{self.fork.name}'\n",
+            "\n\n\n".join(self.spec.aliases.values()),
+            "\n".join(constants),
+            preset_src,
+            "\n".join(after_presets),
+            self._config(),
+            "\n\n\n".join(self._qualify_configs(src) for src in hoist.values()),
+            "\n\n\n".join(self._qualify_configs(src) for src in early.values()),
+            "\n".join(deferred.values()),
+            "\n\n\n".join(self._qualify_configs(src) for src in late.values()),
+            self._protocols(),
+            self._qualify_configs("\n\n\n".join(remaining.values())),
+            "\n\n\n".join(self._qualify_configs(src) for src in implementors.values()),
+            "\n\n\n".join(self.spec.instances.values()),
+        ]
+        return "\n\n\n".join(part.strip("\n") for part in parts if part) + "\n"
+
+    def _referenced_functions(self, sources: list[str]) -> dict[str, str]:
+        used: dict[str, str] = {}
+        for source in sources:
+            for name, fn in self.functions.items():
+                if name not in used and re.search(WORD_RE.format(name=re.escape(name)), source):
+                    used[name] = fn
+        return used
+
+    def _constants(self) -> tuple[list[str], list[str], dict[str, str]]:
+        type_names = set(self.spec.types)
+        presets = list(self.spec.presets)
+        plain: list[str] = []
+        after: list[str] = []
+        deferred: dict[str, str] = {}
+        for name, value in self.spec.constants.items():
+            expr = value.mainnet
+            if references(expr, type_names):
+                deferred[name] = assign(name, expr)
+            elif any(preset in expr for preset in presets):
+                after.append(assign(name, expr))
+            else:
+                plain.append(assign(name, expr))
+        return plain, after, deferred
+
+    def _presets(self) -> tuple[str, dict[str, str]]:
+        type_names = set(self.spec.types)
+        lines: list[str] = []
+        deferred: dict[str, str] = {}
+        env: dict[str, int] = {}
+        pending: list[tuple[str, str]] = []
+        names = self.spec.presets
+        for name, value in names.items():
+            expr = value.select(self.preset)
+            if references(expr, type_names):
+                deferred[name] = assign(name, expr)
+            elif any(other != name and other in expr for other in names):
+                pending.append((name, expr))
+            else:
+                lines.append(assign(name, expr))
+                number = literal_int(expr)
+                if number is not None:
+                    env[name] = number
+        for name, expr in pending:
+            kind, inner = split_type(expr)
+            try:
+                number = int(eval(inner, {"__builtins__": {}}, env))
+            except Exception:
+                lines.append(assign(name, expr))
+                continue
+            lines.append(f"{name} = {kind}({number})" if kind else f"{name} = {number}")
+            env[name] = number
+        header = "# Presets\n" + "\n".join(lines) if lines else ""
+        return header, deferred
+
+    def _config(self) -> str:
+        fields = ["    PRESET_BASE: str"]
+        values = [f'    PRESET_BASE="{self.preset}",']
+        for name, value in self.spec.configs.items():
+            records = value.records(self.preset)
+            if records is not None:
+                fields.append(f"    {name}: tuple[frozendict[str, Any], ...]")
+                values.append(f"    {name}={value.select(self.preset)},")
+                continue
+            expr = value.select(self.preset)
+            kind, inner = split_type(expr)
+            fields.append(f"    {name}: {kind or 'int'}")
+            values.append(f"    {name}={expr if kind is None else f'{kind}({inner})'},")
+        return (
+            "class Configuration(NamedTuple):\n"
+            + "\n".join(fields)
+            + "\n\n\nconfig = Configuration(\n"
+            + "\n".join(values)
+            + "\n)\n"
+        )
+
+    def _protocols(self) -> str:
+        chunks = []
+        for name, fns in self.methods.items():
+            block = f"class {name}(Protocol):"
+            for source in fns.values():
+                block += "\n\n" + textwrap.indent(source, "    ")
+            chunks.append(block)
+        return "\n\n\n".join(chunks)
+
+    def _imports(self) -> str:
+        lines = ["from eth_consensus_specs.runtime import *"]
+        for ancestor in reversed(self.fork.ancestors(self.forks)):
+            if ancestor.previous is not None:
+                lines.append(
+                    f"from eth_consensus_specs.{ancestor.previous} "
+                    f"import {self.preset} as {ancestor.previous}"
+                )
+        return "\n\n".join(lines) + "\n"
+
+    def _qualify_configs(self, source: str) -> str:
+        for name in self.spec.configs:
+            source = re.sub(CONFIG_NAME_RE.format(name=name), "config." + name, source)
+        return source
 
 
 def emit_python(
-    *,
     spec: Spec,
     fork: Fork,
     forks: dict[str, Fork],
     preset_name: str,
     removals: Removals,
 ) -> str:
-    spec = _apply_removals(spec, removals)
-    methods, functions = _split_protocol_methods(spec.functions)
-    hoisted = [functions.pop(name) for name in HOISTED if name in functions]
-    aliases, types, late = _split_classes(spec.classes, methods)
-    late_src = "\n\n\n".join(late.values())
-    function_src = "\n\n\n".join(functions.values())
+    return Emitter(spec, fork, forks, preset_name, removals).render()
 
-    for name in spec.configs:
-        function_src = _rewrite_config_name(function_src, name)
-        types = {key: _rewrite_config_name(source, name) for key, source in types.items()}
-        late_src = _rewrite_config_name(late_src, name)
 
-    constants, after_presets, deferred_constants = _partition_constants(
-        spec.constants, spec.presets
+def write_preset_yaml(
+    path: Path,
+    presets: dict[str, Value],
+    preset_name: str,
+    env: dict[str, int],
+    *,
+    fork_name: str,
+    python_root: Path,
+    pyspec_root: Path,
+) -> dict[str, int]:
+    if not presets:
+        return env
+    env = dict(env)
+    data: dict[str, object] = {}
+    pending = [(name, value.select(preset_name)) for name, value in presets.items()]
+    progressed = True
+    while pending and progressed:
+        progressed = False
+        still: list[tuple[str, str]] = []
+        for name, expr in pending:
+            result = evaluate(expr, env)
+            if result is None:
+                still.append((name, expr))
+                continue
+            data[name] = result
+            if isinstance(result, int):
+                env[name] = result
+            progressed = True
+        pending = still
+    leftover = [name for name, _ in pending]
+    if leftover:
+        for entry in (str(python_root), str(pyspec_root)):
+            if entry not in sys.path:
+                sys.path.insert(0, entry)
+        module = importlib.import_module(f"eth_consensus_specs.{fork_name}.{preset_name}")
+        for name in leftover:
+            value = getattr(module, name)
+            data[name] = int(value) if isinstance(value, int) else value
+            if isinstance(data[name], int):
+                env[name] = data[name]
+    dump_yaml(path, data)
+    return env
+
+
+def write_config_yaml(path: Path, configs: dict[str, Value], preset_name: str) -> None:
+    data: dict = {"PRESET_BASE": preset_name, "CONFIG_NAME": preset_name}
+    for name, value in configs.items():
+        records = value.records(preset_name)
+        if records is None:
+            data[name] = yaml_value(value.select(preset_name))
+            continue
+        rows = []
+        for record in records:
+            row: dict[str, object] = {}
+            for key, raw in record.items():
+                if key == "DATE":
+                    continue
+                try:
+                    row[key] = int(raw.replace(",", ""))
+                except ValueError:
+                    row[key] = raw
+            rows.append(row)
+        data[name] = rows
+    dump_yaml(path, data)
+
+
+def assign(name: str, expression: str) -> str:
+    kind, inner = split_type(expression)
+    if kind is None:
+        stripped = expression.strip()
+        if stripped.startswith(("'", '"')):
+            return f"{name}: Final = {expression}"
+        return f"{name} = {expression}"
+    return f"{name} = {kind}({inner})"
+
+
+def split_type(expression: str) -> tuple[str | None, str]:
+    expression = expression.strip()
+    match = TYPE_RE.match(expression)
+    if match:
+        return match.group(1), match.group(2)
+    if "(" not in expression or not expression.endswith(")"):
+        return None, expression
+    index = expression.index("(")
+    kind = expression[:index]
+    if not kind or not kind[0].isupper():
+        return None, expression
+    return kind, expression[index + 1 : -1]
+
+
+def literal_int(expression: str) -> int | None:
+    return evaluate(expression, {})
+
+
+def evaluate(expression: str, env: dict[str, int]) -> object | None:
+    _, inner = split_type(expression)
+    inner = inner.strip()
+    if inner.startswith(("'", '"')):
+        return inner.strip("'\"")
+    try:
+        result = eval(inner, {"__builtins__": {}}, env)
+    except Exception:
+        return None
+    if isinstance(result, float) and result.is_integer():
+        return int(result)
+    return result
+
+
+def yaml_value(expression: str) -> object:
+    result = evaluate(expression, {})
+    if result is not None:
+        return result
+    _, inner = split_type(expression)
+    return inner.strip()
+
+
+def dump_yaml(path: Path, data: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    yaml = YAML()
+    yaml.default_flow_style = False
+    yaml.allow_unicode = True
+    with path.open("w") as handle:
+        yaml.dump(data, handle)
+
+
+def references(source: str, names: set[str]) -> bool:
+    return any(re.search(WORD_RE.format(name=re.escape(name)), source) for name in names)
+
+
+def split_by_deps(
+    types: dict[str, str], deferred: dict[str, str]
+) -> tuple[dict[str, str], dict[str, str]]:
+    if not deferred:
+        return types, {}
+    late = set(deferred)
+    changed = True
+    while changed:
+        changed = False
+        for name, source in types.items():
+            if name not in late and references(source, late):
+                late.add(name)
+                changed = True
+    return (
+        {name: src for name, src in types.items() if name not in late},
+        {name: src for name, src in types.items() if name in late},
     )
-    preset_src, deferred_presets, preset_asserts = _emit_presets(spec.presets, preset_name)
-    deferred = {**deferred_constants, **deferred_presets}
-    early_types, late_types = _split_deferred_types(types, deferred)
-
-    parts = [
-        _imports(fork, forks, preset_name),
-        f"fork = '{fork.name}'\n",
-        "\n\n\n".join(hoisted),
-        "\n\n\n".join(aliases.values()),
-        "\n".join(constants),
-        preset_src,
-        "\n".join(after_presets),
-        _emit_config(preset_name, spec.configs),
-        "\n\n\n".join(early_types.values()),
-        "\n".join(deferred.values()),
-        "\n\n\n".join(late_types.values()),
-        _emit_protocols(methods),
-        function_src,
-        late_src,
-        "\n\n\n".join(spec.assignments.values()),
-        "\n".join(preset_asserts),
-    ]
-    return "\n\n\n".join(part.strip("\n") for part in parts if part) + "\n"
 
 
-def _apply_removals(spec: Spec, removals: Removals) -> Spec:
-    return Spec(
-        functions={
-            key: source
-            for key, source in spec.functions.items()
-            if key not in removals.functions and key.rsplit(".", 1)[-1] not in removals.functions
-        },
-        classes={k: v for k, v in spec.classes.items() if k not in removals.classes},
-        assignments=spec.assignments,
-        constants={k: v for k, v in spec.constants.items() if k not in removals.constants},
-        presets={k: v for k, v in spec.presets.items() if k not in removals.presets},
-        configs=spec.configs,
+def order_types(types: dict[str, str]) -> dict[str, str]:
+    ordered = dict(types)
+    previous: dict[str, str] = {}
+    while list(previous) != list(ordered):
+        previous = dict(ordered)
+        for name, source in list(ordered.items()):
+            for dep in type_dependencies(name, source, ordered):
+                keys = list(ordered)
+                for item in [dep, name] + keys[keys.index(dep) + 1 :]:
+                    ordered[item] = ordered.pop(item)
+    return ordered
+
+
+def type_dependencies(name: str, source: str, types: dict[str, str]) -> list[str]:
+    lines = source.split("\n")
+    signature_end = next((i for i, line in enumerate(lines) if line.rstrip().endswith("):")), 0)
+    signature = " ".join(
+        line[: line.index("#")] if "#" in line else line for line in lines[: signature_end + 1]
     )
+    names: list[str] = []
+    for i, line in enumerate([signature, *lines[signature_end + 1 :]]):
+        match = re.match(r".+?\((.+)\):", line) if i == 0 else re.match(r"\s+\w+: (.+)", line)
+        if not match:
+            continue
+        expr = match.group(1)
+        if "#" in expr:
+            expr = expr[: expr.index("#")]
+        names.extend(re.findall(r"(\w+)", expr))
+    return [dep for dep in names if dep in types and dep != name]
 
 
-def _split_protocol_methods(
-    functions: dict[str, str],
-) -> tuple[dict[str, dict[str, str]], dict[str, str]]:
-    """Functions written as ``def foo(self: Engine, ...)`` become Protocol methods."""
-    methods: dict[str, dict[str, str]] = {}
-    leftover: dict[str, str] = {}
-    for name, source in functions.items():
-        owner = _self_annotation(source)
-        if owner is None:
-            leftover[name] = source
-        else:
-            method = name.rsplit(".", 1)[-1]
-            methods.setdefault(owner, {})[method] = source.replace(f"self: {owner}", "self")
-    return methods, leftover
-
-
-def _self_annotation(source: str) -> str | None:
-    module = ast.parse(source)
-    fn = module.body[0]
+def self_type(source: str) -> str | None:
+    fn = ast.parse(source).body[0]
     if not isinstance(fn, ast.FunctionDef) or not fn.args.args:
         return None
     first = fn.args.args[0]
-    if (
-        first.arg != "self"
-        or first.annotation is None
-        or not isinstance(first.annotation, ast.Name)
-    ):
+    if first.arg != "self" or not isinstance(getattr(first, "annotation", None), ast.Name):
         return None
     return first.annotation.id
 
 
-def _split_classes(
-    classes: dict[str, str],
-    methods: dict[str, dict[str, str]],
-) -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
-    aliases: dict[str, str] = {}
-    types: dict[str, str] = {}
-    late: dict[str, str] = {}
-    protocol_names = set(methods)
-    for name, source in classes.items():
-        parent = _class_parent(source)
-        if parent in SCALAR_BASES and _is_bare_alias(source):
-            aliases[name] = source
-        elif parent in LATE_BASES or parent in protocol_names:
-            late[name] = source
-        else:
-            types[name] = source
-    return aliases, types, late
-
-
-def _class_parent(source: str) -> str | None:
-    module = ast.parse(source)
-    cls = next((node for node in module.body if isinstance(node, ast.ClassDef)), None)
+def base_name(source: str) -> str | None:
+    cls = next((node for node in ast.parse(source).body if isinstance(node, ast.ClassDef)), None)
     if cls is None or not cls.bases:
         return None
     base = cls.bases[0]
@@ -163,162 +399,3 @@ def _class_parent(source: str) -> str | None:
     if isinstance(base, ast.Call):
         return base.func.id
     return None
-
-
-def _is_bare_alias(source: str) -> bool:
-    """True for ``class Slot(Uint64):`` with no LIMIT/LENGTH body bindings."""
-    module = ast.parse(source)
-    cls = module.body[0]
-    assert isinstance(cls, ast.ClassDef)
-    return not any(isinstance(node, ast.Assign) for node in cls.body)
-
-
-def _partition_constants(
-    constants: dict[str, Value],
-    presets: dict[str, Value],
-) -> tuple[list[str], list[str], dict[str, str]]:
-    """Anything that names a preset waits until after presets."""
-    plain: list[str] = []
-    after_presets: list[str] = []
-    deferred: dict[str, str] = {}
-    preset_names = list(presets)
-    for name, value in constants.items():
-        expr = value.mainnet
-        if "get_generalized_index" in expr:
-            deferred[name] = _assignment(name, expr)
-        elif any(preset in expr for preset in preset_names):
-            after_presets.append(_assignment(name, expr))
-        else:
-            plain.append(_assignment(name, expr))
-    return plain, after_presets, deferred
-
-
-def _emit_presets(
-    presets: dict[str, Value], preset_name: str
-) -> tuple[str, dict[str, str], list[str]]:
-    lines: list[str] = []
-    deferred: dict[str, str] = {}
-    env: dict[str, int] = {}
-    pending: list[tuple[str, str]] = []
-    for name, value in presets.items():
-        expr = value.select(preset_name)
-        if "get_generalized_index" in expr:
-            deferred[name] = _assignment(name, expr)
-        elif any(other != name and other in expr for other in presets):
-            pending.append((name, expr))
-        else:
-            lines.append(_assignment(name, expr))
-            number = _literal_int(expr)
-            if number is not None:
-                env[name] = number
-    for name, expr in pending:
-        type_name, inner = _split_type(expr)
-        try:
-            number = int(eval(inner, {"__builtins__": {}}, env))
-        except Exception:
-            lines.append(_assignment(name, expr))
-            continue
-        lines.append(f"{name} = {type_name}({number})" if type_name else f"{name} = {number}")
-        env[name] = number
-    simple = "# Presets\n" + "\n".join(lines) if lines else ""
-    return simple, deferred, []
-
-
-def _literal_int(expression: str) -> int | None:
-    _, inner = _split_type(expression)
-    try:
-        result = eval(inner, {"__builtins__": {}}, {})
-    except Exception:
-        return None
-    if isinstance(result, (int, float)):
-        return int(result)
-    return None
-
-
-def _split_deferred_types(
-    types: dict[str, str], deferred: dict[str, str]
-) -> tuple[dict[str, str], dict[str, str]]:
-    """Types that name a deferred preset (or another late type) come after those assignments."""
-    if not deferred:
-        return types, {}
-    late_names = set(deferred)
-    changed = True
-    while changed:
-        changed = False
-        for name, source in types.items():
-            if name in late_names:
-                continue
-            if any(re.search(rf"\b{re.escape(dep)}\b", source) for dep in late_names):
-                late_names.add(name)
-                changed = True
-    early = {name: source for name, source in types.items() if name not in late_names}
-    late = {name: source for name, source in types.items() if name in late_names}
-    return early, late
-
-
-def _assignment(name: str, expression: str) -> str:
-    if name == "ENDIANNESS":
-        return f"{name}: Final = {expression}"
-    type_name, inner = _split_type(expression)
-    if type_name is None:
-        return f"{name} = {expression}"
-    return f"{name} = {type_name}({inner})"
-
-
-def _split_type(expression: str) -> tuple[str | None, str]:
-    expression = expression.strip()
-    if "(" not in expression or not expression.endswith(")"):
-        return None, expression
-    index = expression.index("(")
-    type_name = expression[:index]
-    if not type_name or not type_name[0].isupper():
-        return None, expression
-    return type_name, expression[index + 1 : -1]
-
-
-def _emit_config(preset_name: str, configs: dict[str, Value]) -> str:
-    fields = ["    PRESET_BASE: str"]
-    values = [f'    PRESET_BASE="{preset_name}",']
-    for name, value in configs.items():
-        records = value.records(preset_name)
-        if records is not None:
-            fields.append(f"    {name}: tuple[frozendict[str, Any], ...]")
-            values.append(f"    {name}={value.select(preset_name)},")
-            continue
-        expr = value.select(preset_name)
-        type_name, inner = _split_type(expr)
-        fields.append(f"    {name}: {type_name or 'int'}")
-        rhs = expr if type_name is None else f"{type_name}({inner})"
-        values.append(f"    {name}={rhs},")
-    return (
-        "class Configuration(NamedTuple):\n"
-        + "\n".join(fields)
-        + "\n\n\nconfig = Configuration(\n"
-        + "\n".join(values)
-        + "\n)\n"
-    )
-
-
-def _emit_protocols(methods: dict[str, dict[str, str]]) -> str:
-    chunks = []
-    for name, fns in methods.items():
-        block = f"class {name}(Protocol):"
-        for source in fns.values():
-            block += "\n\n" + textwrap.indent(source, "    ")
-        chunks.append(block)
-    return "\n\n\n".join(chunks)
-
-
-def _imports(fork: Fork, forks: dict[str, Fork], preset_name: str) -> str:
-    lines = ["from eth_consensus_specs.runtime import *"]
-    for ancestor in reversed(fork.ancestors(forks)):
-        if ancestor.previous is not None:
-            lines.append(
-                f"from eth_consensus_specs.{ancestor.previous} "
-                f"import {preset_name} as {ancestor.previous}"
-            )
-    return "\n\n".join(lines) + "\n"
-
-
-def _rewrite_config_name(source: str, name: str) -> str:
-    return re.sub(rf"(?<!['\"])\b{name}\b(?!['\"])", "config." + name, source)

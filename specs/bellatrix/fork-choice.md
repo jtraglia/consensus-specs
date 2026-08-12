@@ -3,7 +3,7 @@
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
-- [Types](#types)
+- [Aliases](#aliases)
   - [New `PayloadId`](#new-payloadid)
 - [Protocols](#protocols)
   - [`ExecutionEngine`](#executionengine)
@@ -31,7 +31,7 @@ Unless stated explicitly, all prior functionality from
 *Note*: It introduces the process of transition from the last PoW block to the
 first PoS block.
 
-## Types
+## Aliases
 
 ### New `PayloadId`
 

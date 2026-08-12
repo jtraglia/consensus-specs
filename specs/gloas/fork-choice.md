@@ -5,7 +5,7 @@
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
-- [Types](#types)
+- [Aliases](#aliases)
   - [New `PayloadStatus`](#new-payloadstatus)
 - [Constants](#constants)
 - [Protocols](#protocols)
@@ -67,7 +67,7 @@
 
 This is the modification of the fork-choice accompanying the Gloas upgrade.
 
-## Types
+## Aliases
 
 ### New `PayloadStatus`
 

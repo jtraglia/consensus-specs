@@ -20,65 +20,30 @@ if TYPE_CHECKING:
 
     from marko.element import Element
 
-COLLECTION_BASES = frozenset(
-    {
-        "BitList",
-        "BitVector",
-        "ByteList",
-        "ByteVector",
-        "List",
-        "ProgressiveBitList",
-        "ProgressiveList",
-        "Vector",
-    }
-)
-SCALAR_BASES = frozenset(
-    {
-        "Boolean",
-        "Byte",
-        "Bytes1",
-        "Bytes4",
-        "Bytes8",
-        "Bytes20",
-        "Bytes31",
-        "Bytes32",
-        "Bytes48",
-        "Bytes96",
-        "Uint8",
-        "Uint16",
-        "Uint32",
-        "Uint64",
-        "Uint128",
-        "Uint256",
-    }
-)
-BOUND_SAFE_CALLS = frozenset({"active_fields", "ceillog2", "floorlog2", *SCALAR_BASES})
-TYPE_PREFIXES = (
-    "Uint",
-    "BitList",
-    "BitVector",
-    "ByteList",
-    "ByteVector",
-    "Bytes",
-    "List",
-    "ProgressiveBitList",
-    "ProgressiveList",
-    "Union",
-    "Vector",
-)
 ANNOTATION_RE = re.compile(r"\(\s*=\s*([\d,]+)")
 LIST_OF_RECORDS_RE = re.compile(
     r"<!--\s*list-of-records:([a-zA-Z0-9_-]+)(?::(mainnet|minimal))?\s*-->"
 )
-# Reserved Minimal-column token: copy the Mainnet expression and annotation.
 SAME_TOKEN = "same"
+SECTION_KINDS = {
+    "alias": "alias",
+    "aliases": "alias",
+    "type": "type",
+    "types": "type",
+    "container": "container",
+    "containers": "container",
+    "preset": "preset",
+    "configuration": "config",
+    "constant": "constant",
+    "constants": "constant",
+}
 
 
 def parse_file(path: Path) -> Spec:
-    return _Parser(path).run()
+    return Parser(path).run()
 
 
-class _Parser:
+class Parser:
     def __init__(self, path: Path) -> None:
         self.spec = Spec()
         self.headings: list[tuple[int, str]] = []
@@ -106,19 +71,18 @@ class _Parser:
             return None
 
     def _heading(self, heading: Heading) -> None:
-        title = _heading_text(heading)
+        title = _text(heading)
         self.headings = [(level, text) for level, text in self.headings if level < heading.level]
         self.headings.append((heading.level, title))
-        self.current_name = _heading_code_name(heading)
+        last = heading.children[-1]
+        self.current_name = last.children if isinstance(last, CodeSpan) else None
 
-    def _section_kind(self) -> str:
+    def _section_kind(self) -> str | None:
         for _, title in reversed(self.headings):
-            key = title.strip("`").split()[0].lower() if title.strip() else ""
-            if key == "preset":
-                return "preset"
-            if key == "configuration":
-                return "config"
-        return "constant"
+            word = title.strip("`").split()[0].lower() if title.strip() else ""
+            if word in SECTION_KINDS:
+                return SECTION_KINDS[word]
+        return None
 
     def _code(self, block: FencedCode) -> None:
         if block.lang != "python":
@@ -141,35 +105,29 @@ class _Parser:
                 target = element.targets[0]
                 if not isinstance(target, ast.Name):
                     raise ValueError(f"unsupported assignment: {source}")
-                self.spec.assignments[target.id] = chunk
+                self.spec.instances[target.id] = chunk
             else:
                 raise ValueError(f"unrecognized python: {source}")
 
     def _class(self, source: str, cls: ast.ClassDef) -> None:
         if self.current_name is not None and cls.name != self.current_name:
             raise ValueError(f"class {cls.name} does not match heading {self.current_name}")
-        parent = _parent_class(cls)
-        if parent in SCALAR_BASES and isinstance(cls.bases[0], ast.Name):
-            self.spec.classes[cls.name] = source
-            return
-        if parent in COLLECTION_BASES or parent == "ProgressiveContainer":
-            if _bound_needs_helper(cls):
-                return
-        self.spec.classes[cls.name] = source
+        if self._section_kind() == "alias":
+            self.spec.aliases[cls.name] = source
+        else:
+            self.spec.types[cls.name] = source
 
     def _table(self, table: Table) -> None:
         kind = self._section_kind()
-        header = [_cell_text(cell).strip().lower() for cell in table.children[0].children]
+        if kind not in ("preset", "config", "constant", None):
+            return
+        header = [_text(cell).strip().lower() for cell in table.children[0].children]
         two_col = len(header) >= 3 and header[1] == "mainnet" and header[2] == "minimal"
         for row in table.children[1:]:
             if len(row.children) < 2:
                 continue
-            name, mainnet, minimal, description, ann_main, ann_min = _row_fields(row, two_col)
-            if description is not None and description.startswith("<!-- predefined-type -->"):
-                continue
+            name, mainnet, minimal, ann_main, ann_min = _row_fields(row, two_col)
             if not _is_constant_name(name):
-                if mainnet.startswith(TYPE_PREFIXES):
-                    self.spec.classes[name] = f"class {name}({mainnet}):\n    pass"
                 continue
             value = Value(
                 mainnet=mainnet,
@@ -200,11 +158,10 @@ class _Parser:
 
     def _list_of_records(self, table: Table, name: str, variant: str) -> None:
         header = [
-            re.sub(r"\s+", "_", _cell_text(cell).upper())
-            for cell in table.children[0].children[:-1]
+            re.sub(r"\s+", "_", _text(cell).upper()) for cell in table.children[0].children[:-1]
         ]
         rows = [
-            {header[i]: _cell_text(cell) for i, cell in enumerate(row.children[:-1])}
+            {header[i]: _text(cell) for i, cell in enumerate(row.children[:-1])}
             for row in table.children[1:]
         ]
         existing = self.spec.configs.get(name)
@@ -222,56 +179,25 @@ class _Parser:
         )
 
 
-def _heading_text(heading: Heading) -> str:
+def _text(node: object) -> str:
     parts: list[str] = []
 
-    def walk(node: object) -> None:
-        if isinstance(node, str):
-            parts.append(node)
+    def walk(item: object) -> None:
+        if isinstance(item, str):
+            parts.append(item)
             return
-        children = getattr(node, "children", None)
+        children = getattr(item, "children", None)
         if isinstance(children, str):
             parts.append(children)
         elif children:
             for child in children:
                 walk(child)
 
-    walk(heading)
+    walk(node)
     return "".join(parts).strip()
 
 
-def _heading_code_name(heading: Heading) -> str | None:
-    last = heading.children[-1]
-    if isinstance(last, CodeSpan):
-        return last.children
-    return None
-
-
-def _parent_class(cls: ast.ClassDef) -> str | None:
-    if not cls.bases:
-        return None
-    base = cls.bases[0]
-    if isinstance(base, ast.Name):
-        return base.id
-    if isinstance(base, ast.Subscript):
-        return base.value.id
-    if isinstance(base, ast.Call):
-        return base.func.id
-    return None
-
-
-def _bound_needs_helper(cls: ast.ClassDef) -> bool:
-    return any(
-        isinstance(node, ast.Call)
-        and not (isinstance(node.func, ast.Name) and node.func.id in BOUND_SAFE_CALLS)
-        for statement in cls.body
-        if isinstance(statement, ast.Assign)
-        for node in ast.walk(statement)
-    )
-
-
 def _function_key(fn: ast.FunctionDef) -> str:
-    """Qualify Protocol methods so ``Engine.foo`` and ``Other.foo`` do not collide."""
     if fn.args.args:
         first = fn.args.args[0]
         if first.arg == "self" and isinstance(first.annotation, ast.Name):
@@ -285,44 +211,32 @@ def _is_constant_name(name: str) -> bool:
     return all(c in string.ascii_uppercase + "_" + string.digits for c in name[1:])
 
 
-def _row_fields(
-    row: TableRow, two_col: bool
-) -> tuple[str, str, str, str | None, int | None, int | None]:
+def _row_fields(row: TableRow, two_col: bool) -> tuple[str, str, str, int | None, int | None]:
     cells = list(row.children)
     name = _cell_code(cells[0])
     mainnet = _cell_code(cells[1])
     ann_main = _annotation(cells[1])
     if two_col:
-        if _is_same_token(_cell_text(cells[1])):
+        if _is_same(_text(cells[1])):
             raise ValueError(f"{name}: Mainnet column cannot use *{SAME_TOKEN}*")
-        if _is_same_token(_cell_text(cells[2])):
-            minimal = mainnet
-            ann_min = ann_main
-        else:
-            minimal = _cell_code(cells[2])
-            ann_min = _annotation(cells[2])
-        description = _cell_text(cells[3]) if len(cells) >= 4 else None
-    else:
-        minimal = mainnet
-        ann_min = ann_main
-        description = _cell_text(cells[2]) if len(cells) >= 3 else None
-    return name, mainnet, minimal, description, ann_main, ann_min
+        if _is_same(_text(cells[2])):
+            return name, mainnet, mainnet, ann_main, ann_main
+        return name, mainnet, _cell_code(cells[2]), ann_main, _annotation(cells[2])
+    return name, mainnet, mainnet, ann_main, ann_main
 
 
-def _is_same_token(text: str) -> bool:
+def _is_same(text: str) -> bool:
     return text.strip().lower() == SAME_TOKEN
 
 
 def _annotation(cell: TableCell) -> int | None:
-    match = ANNOTATION_RE.search(_cell_text(cell))
+    match = ANNOTATION_RE.search(_text(cell))
     if match:
         return int(match.group(1).replace(",", ""))
     return None
 
 
 def _cell_code(cell: TableCell) -> str:
-    text = _cell_text(cell)
-    # Prefer the first inline code span if present.
     if cell.children:
         first = cell.children[0]
         if isinstance(first, CodeSpan):
@@ -337,25 +251,7 @@ def _cell_code(cell: TableCell) -> str:
                     return child.children
                 if hasattr(child, "children") and isinstance(child.children, str):
                     return child.children
-    return text
-
-
-def _cell_text(cell: TableCell) -> str:
-    parts: list[str] = []
-
-    def walk(node: object) -> None:
-        if isinstance(node, str):
-            parts.append(node)
-            return
-        children = getattr(node, "children", None)
-        if isinstance(children, str):
-            parts.append(children)
-        elif children:
-            for child in children:
-                walk(child)
-
-    walk(cell)
-    return "".join(parts).strip()
+    return _text(cell)
 
 
 def _format_records(records: list[dict[str, str]]) -> str:

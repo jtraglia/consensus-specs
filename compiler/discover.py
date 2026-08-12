@@ -1,4 +1,4 @@
-"""Discover forks from specs/ and specs/_features/. No compiler-side registry."""
+"""Discover forks from specs/ and specs/_features/."""
 
 from __future__ import annotations
 
@@ -6,11 +6,9 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from compiler.models import Removals
+
 PREVIOUS_FORK_RE = re.compile(r"<!--\s*previous-fork:\s*([a-z][a-z0-9_]*)\s*-->")
-
-# Prefer beacon-chain.md when collecting a fork's sources.
-SOURCE_SORT_PRIORITY = ("beacon-chain",)
-
 SKIP_SOURCE_NAMES = frozenset({"removed.md"})
 
 
@@ -22,7 +20,6 @@ class Fork:
     feature: bool
 
     def ancestors(self, forks: dict[str, Fork]) -> list[Fork]:
-        """This fork first, then each parent up to phase0."""
         chain = [self]
         current = self
         seen = {self.name}
@@ -38,6 +35,22 @@ class Fork:
             seen.add(current.name)
             chain.append(current)
         return chain
+
+    def lineage(self, forks: dict[str, Fork]) -> list[Fork]:
+        return list(reversed(self.ancestors(forks)))
+
+    def markdown_files(self) -> list[Path]:
+        return sorted(
+            path for path in self.directory.rglob("*.md") if path.name not in SKIP_SOURCE_NAMES
+        )
+
+    def removals(self, forks: dict[str, Fork]) -> Removals:
+        combined = Removals()
+        for ancestor in reversed(self.ancestors(forks)):
+            path = ancestor.directory / "removed.md"
+            if path.exists():
+                combined.update(Removals.from_path(path))
+        return combined
 
 
 def repo_root() -> Path:
@@ -73,12 +86,14 @@ def discover_forks(root: Path | None = None) -> dict[str, Fork]:
                 previous=previous,
                 feature=feature,
             )
-    _validate_graph(found)
+    if "phase0" not in found:
+        raise ValueError("no specs/phase0 directory found")
+    for fork in found.values():
+        fork.ancestors(found)
     return found
 
 
 def build_order(forks: dict[str, Fork]) -> list[Fork]:
-    """Parents before children."""
     ordered: list[Fork] = []
     remaining = set(forks)
 
@@ -96,19 +111,10 @@ def build_order(forks: dict[str, Fork]) -> list[Fork]:
     return ordered
 
 
-def source_files(fork: Fork, forks: dict[str, Fork]) -> list[Path]:
-    """Markdown sources for this fork, ancestors first, beacon-chain first per fork."""
-    paths: list[Path] = []
-    for ancestor in reversed(fork.ancestors(forks)):
-        paths.extend(fork_markdown_files(ancestor.directory))
-    return paths
-
-
 def _read_previous_fork(directory: Path) -> str | None:
     declared: list[tuple[Path, str]] = []
     for path in sorted(directory.glob("*.md")):
-        text = path.read_text()
-        matches = PREVIOUS_FORK_RE.findall(text)
+        matches = PREVIOUS_FORK_RE.findall(path.read_text())
         if len(matches) > 1:
             raise ValueError(f"{path} declares previous-fork more than once")
         if len(matches) == 1:
@@ -119,23 +125,3 @@ def _read_previous_fork(directory: Path) -> str | None:
     if not declared:
         return None
     return declared[0][1]
-
-
-def fork_markdown_files(directory: Path) -> list[Path]:
-    files = [path for path in directory.rglob("*.md") if path.name not in SKIP_SOURCE_NAMES]
-    return sorted(files, key=_source_sort_key)
-
-
-def _source_sort_key(path: Path) -> tuple[int, str]:
-    text = str(path)
-    for index, token in enumerate(SOURCE_SORT_PRIORITY):
-        if token in text:
-            return (index, text)
-    return (len(SOURCE_SORT_PRIORITY), text)
-
-
-def _validate_graph(forks: dict[str, Fork]) -> None:
-    if "phase0" not in forks:
-        raise ValueError("no specs/phase0 directory found")
-    for fork in forks.values():
-        fork.ancestors(forks)

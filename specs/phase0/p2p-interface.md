@@ -9,13 +9,14 @@
   - [Protocol negotiation](#protocol-negotiation)
   - [Multiplexing](#multiplexing)
 - [Consensus-layer network interaction domains](#consensus-layer-network-interaction-domains)
+  - [Aliases](#aliases)
+    - [`NodeID`](#nodeid)
+    - [`SubnetID`](#subnetid)
   - [Types](#types)
     - [`Attnets`](#attnets)
     - [`BeaconBlockRoots`](#beaconblockroots)
     - [`ErrorMessage`](#errormessage)
-    - [`NodeID`](#nodeid)
     - [`SignedBeaconBlocks`](#signedbeaconblocks)
-    - [`SubnetID`](#subnetid)
   - [Constants](#constants)
   - [Configuration](#configuration)
   - [Helpers](#helpers)
@@ -219,6 +220,28 @@ the [Rationale](#design-decision-rationale) section below for tradeoffs.
 
 ## Consensus-layer network interaction domains
 
+### Aliases
+
+We define the following Python type aliases for type hinting and readability:
+
+#### `NodeID`
+
+```python
+class NodeID(Uint256):
+    """
+    A node identifier on the discovery network.
+    """
+```
+
+#### `SubnetID`
+
+```python
+class SubnetID(Uint64):
+    """
+    The identifier of a gossip subnet, like an attestation subnet.
+    """
+```
+
 ### Types
 
 We define the following Python custom types for type hinting and readability:
@@ -256,15 +279,6 @@ class ErrorMessage(List[Byte]):
     LIMIT = 256
 ```
 
-#### `NodeID`
-
-```python
-class NodeID(Uint256):
-    """
-    A node identifier on the discovery network.
-    """
-```
-
 #### `SignedBeaconBlocks`
 
 ```python
@@ -275,15 +289,6 @@ class SignedBeaconBlocks(List[SignedBeaconBlock]):
     """
 
     LIMIT = MAX_REQUEST_BLOCKS
-```
-
-#### `SubnetID`
-
-```python
-class SubnetID(Uint64):
-    """
-    The identifier of a gossip subnet, like an attestation subnet.
-    """
 ```
 
 ### Constants

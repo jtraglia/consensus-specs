@@ -3,7 +3,7 @@
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
-- [Types](#types)
+- [Aliases](#aliases)
   - [New `PayloadValidationStatus`](#new-payloadvalidationstatus)
 - [Constants](#constants)
 - [Helpers](#helpers)
@@ -39,7 +39,7 @@ document" and "Altair document" respectively, hereafter. Readers should
 understand the Phase 0 and Altair documents and use them as a basis to
 understand the changes outlined in this document.
 
-## Types
+## Aliases
 
 ### New `PayloadValidationStatus`
 

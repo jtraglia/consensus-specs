@@ -10,9 +10,10 @@
 
 - [Table of contents](#table-of-contents)
 - [Introduction](#introduction)
+- [Aliases](#aliases)
+  - [New `ProofType`](#new-prooftype)
 - [Types](#types)
   - [New `ProofData`](#new-proofdata)
-  - [New `ProofType`](#new-prooftype)
 - [Constants](#constants)
   - [Execution](#execution)
   - [Domains](#domains)
@@ -34,6 +35,19 @@ validation of execution payloads through execution proofs.
 *Note*: This specification is built upon [Gloas](../../gloas/beacon-chain.md)
 and imports proof types from [proof-engine.md](./proof-engine.md).
 
+## Aliases
+
+We define the following Python type aliases for type hinting and readability:
+
+### New `ProofType`
+
+```python
+class ProofType(Uint8):
+    """
+    The identifier of the proof system that produced an execution proof.
+    """
+```
+
 ## Types
 
 ### New `ProofData`
@@ -42,15 +56,6 @@ and imports proof types from [proof-engine.md](./proof-engine.md).
 class ProofData(ProgressiveList[Byte]):
     """
     The opaque proof bytes of an execution proof.
-    """
-```
-
-### New `ProofType`
-
-```python
-class ProofType(Uint8):
-    """
-    The identifier of the proof system that produced an execution proof.
     """
 ```
 

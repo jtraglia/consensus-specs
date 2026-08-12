@@ -4,6 +4,20 @@
 
 - [Introduction](#introduction)
 - [Notation](#notation)
+- [Aliases](#aliases)
+  - [`BLSPubkey`](#blspubkey)
+  - [`BLSSignature`](#blssignature)
+  - [`CommitteeIndex`](#committeeindex)
+  - [`Domain`](#domain)
+  - [`DomainType`](#domaintype)
+  - [`Epoch`](#epoch)
+  - [`ForkDigest`](#forkdigest)
+  - [`Gwei`](#gwei)
+  - [`Hash32`](#hash32)
+  - [`Root`](#root)
+  - [`Slot`](#slot)
+  - [`ValidatorIndex`](#validatorindex)
+  - [`Version`](#version)
 - [Types](#types)
   - [`AggregationBits`](#aggregationbits)
   - [`Attestations`](#attestations)
@@ -11,31 +25,18 @@
   - [`AttestingIndices`](#attestingindices)
   - [`Balances`](#balances)
   - [`BlockRoots`](#blockroots)
-  - [`BLSPubkey`](#blspubkey)
-  - [`BLSSignature`](#blssignature)
-  - [`CommitteeIndex`](#committeeindex)
   - [`DepositDataList`](#depositdatalist)
   - [`DepositProof`](#depositproof)
   - [`Deposits`](#deposits)
-  - [`Domain`](#domain)
-  - [`DomainType`](#domaintype)
-  - [`Epoch`](#epoch)
   - [`Eth1DataVotes`](#eth1datavotes)
-  - [`ForkDigest`](#forkdigest)
-  - [`Gwei`](#gwei)
-  - [`Hash32`](#hash32)
   - [`HistoricalRoots`](#historicalroots)
   - [`JustificationBits`](#justificationbits)
   - [`PendingAttestations`](#pendingattestations)
   - [`ProposerSlashings`](#proposerslashings)
   - [`RandaoMixes`](#randaomixes)
-  - [`Root`](#root)
   - [`Slashings`](#slashings)
-  - [`Slot`](#slot)
   - [`StateRoots`](#stateroots)
-  - [`ValidatorIndex`](#validatorindex)
   - [`Validators`](#validators)
-  - [`Version`](#version)
   - [`VoluntaryExits`](#voluntaryexits)
 - [Constants](#constants)
   - [Misc](#misc)
@@ -191,6 +192,129 @@ block (in a later upgrade) and proof-of-stake votes for a beacon block (Phase
 
 Code snippets appearing in `this style` are to be interpreted as Python 3 code.
 
+## Aliases
+
+We define the following Python type aliases for type hinting and readability:
+
+### `BLSPubkey`
+
+```python
+class BLSPubkey(Bytes48):
+    """
+    A BLS12-381 public key, a compressed point in the ``G1`` group.
+    """
+```
+
+### `BLSSignature`
+
+```python
+class BLSSignature(Bytes96):
+    """
+    A BLS12-381 signature, a compressed point in the ``G2`` group.
+    """
+```
+
+### `CommitteeIndex`
+
+```python
+class CommitteeIndex(Uint64):
+    """
+    The index of a committee within a slot.
+    """
+```
+
+### `Domain`
+
+```python
+class Domain(Bytes32):
+    """
+    A signature domain.
+    """
+```
+
+### `DomainType`
+
+```python
+class DomainType(Bytes4):
+    """
+    A signature domain type, identifying the kind of message being signed.
+    """
+```
+
+### `Epoch`
+
+```python
+class Epoch(Uint64):
+    """
+    An epoch number. An epoch is a span of ``SLOTS_PER_EPOCH`` slots.
+    """
+```
+
+### `ForkDigest`
+
+```python
+class ForkDigest(Bytes4):
+    """
+    A short digest of the current fork data.
+    """
+```
+
+### `Gwei`
+
+```python
+class Gwei(Uint64):
+    """
+    An amount in Gwei, the smallest unit of Ether on the beacon chain. One
+    Ether is equal to ``10**9`` Gwei, and one Gwei is equal to ``10**9`` Wei.
+    """
+```
+
+### `Hash32`
+
+```python
+class Hash32(Bytes32):
+    """
+    A 256-bit hash that is not a Merkle root, like the hash of an
+    execution-layer block.
+    """
+```
+
+### `Root`
+
+```python
+class Root(Bytes32):
+    """
+    A Merkle root, usually the hash tree root of an SSZ object.
+    """
+```
+
+### `Slot`
+
+```python
+class Slot(Uint64):
+    """
+    A slot number. Time is divided into fixed-length slots.
+    """
+```
+
+### `ValidatorIndex`
+
+```python
+class ValidatorIndex(Uint64):
+    """
+    The index of a validator in the validator registry.
+    """
+```
+
+### `Version`
+
+```python
+class Version(Bytes4):
+    """
+    A fork version number.
+    """
+```
+
 ## Types
 
 We define the following Python custom types for type hinting and readability:
@@ -263,33 +387,6 @@ class BlockRoots(Vector[Root]):
     LENGTH = SLOTS_PER_HISTORICAL_ROOT
 ```
 
-### `BLSPubkey`
-
-```python
-class BLSPubkey(Bytes48):
-    """
-    A BLS12-381 public key, a compressed point in the ``G1`` group.
-    """
-```
-
-### `BLSSignature`
-
-```python
-class BLSSignature(Bytes96):
-    """
-    A BLS12-381 signature, a compressed point in the ``G2`` group.
-    """
-```
-
-### `CommitteeIndex`
-
-```python
-class CommitteeIndex(Uint64):
-    """
-    The index of a committee within a slot.
-    """
-```
-
 ### `DepositDataList`
 
 ```python
@@ -324,33 +421,6 @@ class Deposits(List[Deposit]):
     LIMIT = MAX_DEPOSITS
 ```
 
-### `Domain`
-
-```python
-class Domain(Bytes32):
-    """
-    A signature domain.
-    """
-```
-
-### `DomainType`
-
-```python
-class DomainType(Bytes4):
-    """
-    A signature domain type, identifying the kind of message being signed.
-    """
-```
-
-### `Epoch`
-
-```python
-class Epoch(Uint64):
-    """
-    An epoch number. An epoch is a span of ``SLOTS_PER_EPOCH`` slots.
-    """
-```
-
 ### `Eth1DataVotes`
 
 ```python
@@ -360,35 +430,6 @@ class Eth1DataVotes(List[Eth1Data]):
     """
 
     LIMIT = Uint64(EPOCHS_PER_ETH1_VOTING_PERIOD) * Uint64(SLOTS_PER_EPOCH)
-```
-
-### `ForkDigest`
-
-```python
-class ForkDigest(Bytes4):
-    """
-    A short digest of the current fork data.
-    """
-```
-
-### `Gwei`
-
-```python
-class Gwei(Uint64):
-    """
-    An amount in Gwei, the smallest unit of Ether on the beacon chain. One
-    Ether is equal to ``10**9`` Gwei, and one Gwei is equal to ``10**9`` Wei.
-    """
-```
-
-### `Hash32`
-
-```python
-class Hash32(Bytes32):
-    """
-    A 256-bit hash that is not a Merkle root, like the hash of an
-    execution-layer block.
-    """
 ```
 
 ### `HistoricalRoots`
@@ -447,15 +488,6 @@ class RandaoMixes(Vector[Bytes32]):
     LENGTH = EPOCHS_PER_HISTORICAL_VECTOR
 ```
 
-### `Root`
-
-```python
-class Root(Bytes32):
-    """
-    A Merkle root, usually the hash tree root of an SSZ object.
-    """
-```
-
 ### `Slashings`
 
 ```python
@@ -466,15 +498,6 @@ class Slashings(Vector[Gwei]):
     """
 
     LENGTH = EPOCHS_PER_SLASHINGS_VECTOR
-```
-
-### `Slot`
-
-```python
-class Slot(Uint64):
-    """
-    A slot number. Time is divided into fixed-length slots.
-    """
 ```
 
 ### `StateRoots`
@@ -489,15 +512,6 @@ class StateRoots(Vector[Root]):
     LENGTH = SLOTS_PER_HISTORICAL_ROOT
 ```
 
-### `ValidatorIndex`
-
-```python
-class ValidatorIndex(Uint64):
-    """
-    The index of a validator in the validator registry.
-    """
-```
-
 ### `Validators`
 
 ```python
@@ -507,15 +521,6 @@ class Validators(List[Validator]):
     """
 
     LIMIT = VALIDATOR_REGISTRY_LIMIT
-```
-
-### `Version`
-
-```python
-class Version(Bytes4):
-    """
-    A fork version number.
-    """
 ```
 
 ### `VoluntaryExits`

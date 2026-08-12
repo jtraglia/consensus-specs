@@ -3,13 +3,14 @@
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
-- [Types](#types)
-  - [New `Blob`](#new-blob)
+- [Aliases](#aliases)
   - [New `BlobIndex`](#new-blobindex)
-  - [New `BlobKZGCommitments`](#new-blobkzgcommitments)
   - [New `KZGCommitment`](#new-kzgcommitment)
   - [New `KZGProof`](#new-kzgproof)
   - [New `VersionedHash`](#new-versionedhash)
+- [Types](#types)
+  - [New `Blob`](#new-blob)
+  - [New `BlobKZGCommitments`](#new-blobkzgcommitments)
 - [Constants](#constants)
   - [Blob](#blob)
 - [Preset](#preset)
@@ -64,18 +65,9 @@ Deneb is a consensus-layer upgrade containing a number of features. Including:
   Inclusion Slot
 - [EIP-7514](https://eips.ethereum.org/EIPS/eip-7514): Add Max Epoch Churn Limit
 
-## Types
+## Aliases
 
-### New `Blob`
-
-```python
-class Blob(ByteVector):
-    """
-    A blob of data, encoded as a sequence of BLS scalar field elements.
-    """
-
-    LENGTH = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB
-```
+We define the following Python type aliases for type hinting and readability:
 
 ### New `BlobIndex`
 
@@ -84,17 +76,6 @@ class BlobIndex(Uint64):
     """
     The index of a blob within a block.
     """
-```
-
-### New `BlobKZGCommitments`
-
-```python
-class BlobKZGCommitments(List[KZGCommitment]):
-    """
-    The KZG commitments to the blobs of a beacon block.
-    """
-
-    LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
 ```
 
 ### New `KZGCommitment`
@@ -123,6 +104,30 @@ class VersionedHash(Bytes32):
     """
     A versioned hash of a blob's KZG commitment.
     """
+```
+
+## Types
+
+### New `Blob`
+
+```python
+class Blob(ByteVector):
+    """
+    A blob of data, encoded as a sequence of BLS scalar field elements.
+    """
+
+    LENGTH = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB
+```
+
+### New `BlobKZGCommitments`
+
+```python
+class BlobKZGCommitments(List[KZGCommitment]):
+    """
+    The KZG commitments to the blobs of a beacon block.
+    """
+
+    LIMIT = MAX_BLOB_COMMITMENTS_PER_BLOCK
 ```
 
 ## Constants

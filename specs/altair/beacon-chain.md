@@ -3,10 +3,11 @@
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
+- [Aliases](#aliases)
+  - [New `ParticipationFlags`](#new-participationflags)
 - [Types](#types)
   - [New `EpochParticipation`](#new-epochparticipation)
   - [New `InactivityScores`](#new-inactivityscores)
-  - [New `ParticipationFlags`](#new-participationflags)
   - [New `SyncCommitteeBits`](#new-synccommitteebits)
   - [New `SyncCommitteePubkeys`](#new-synccommitteepubkeys)
 - [Constants](#constants)
@@ -66,6 +67,19 @@ Altair is the first beacon-chain upgrade. Its main features are:
 - Incentive accounting reforms to reduce specification complexity
 - Penalty parameter updates towards their planned maximally punitive values
 
+## Aliases
+
+We define the following Python type aliases for type hinting and readability:
+
+### New `ParticipationFlags`
+
+```python
+class ParticipationFlags(Uint8):
+    """
+    A validator's participation flags for an epoch, one bit per timely duty.
+    """
+```
+
 ## Types
 
 ### New `EpochParticipation`
@@ -88,15 +102,6 @@ class InactivityScores(List[Uint64]):
     """
 
     LIMIT = VALIDATOR_REGISTRY_LIMIT
-```
-
-### New `ParticipationFlags`
-
-```python
-class ParticipationFlags(Uint8):
-    """
-    A validator's participation flags for an epoch, one bit per timely duty.
-    """
 ```
 
 ### New `SyncCommitteeBits`
