@@ -587,9 +587,9 @@ same `Withdrawal` container can be used for validators and builders.
 
 ### Misc
 
-| Name       | Mainnet                | Minimal             |
-| ---------- | ---------------------- | ------------------- |
-| `PTC_SIZE` | `Uint64(2**9)` (= 512) | `Uint64(16)` (= 16) |
+| Name       | Mainnet                | Minimal               |
+| ---------- | ---------------------- | --------------------- |
+| `PTC_SIZE` | `Uint64(2**9)` (= 512) | `Uint64(2**4)` (= 16) |
 
 ### Max operations per block
 
@@ -606,9 +606,9 @@ same `Withdrawal` container can be used for validators and builders.
 
 ### Withdrawals processing
 
-| Name                                 | Mainnet                    | Minimal             |
-| ------------------------------------ | -------------------------- | ------------------- |
-| `MAX_BUILDERS_PER_WITHDRAWALS_SWEEP` | `Uint64(2**14)` (= 16,384) | `Uint64(16)` (= 16) |
+| Name                                 | Mainnet                    | Minimal               |
+| ------------------------------------ | -------------------------- | --------------------- |
+| `MAX_BUILDERS_PER_WITHDRAWALS_SWEEP` | `Uint64(2**14)` (= 16,384) | `Uint64(2**4)` (= 16) |
 
 ## Configuration
 
@@ -616,15 +616,15 @@ same `Withdrawal` container can be used for validators and builders.
 
 | Name                                         | Mainnet                                  | Minimal                                  |
 | -------------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| `CHURN_LIMIT_QUOTIENT_GLOAS`                 | `Uint64(2**15)` (= 32,768)               | `Uint64(16)` (= 16)                      |
-| `CONSOLIDATION_CHURN_LIMIT_QUOTIENT`         | `Uint64(2**16)` (= 65,536)               | `Uint64(32)` (= 32)                      |
-| `MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS` | `Gwei(2**8 * 10**9)` (= 256,000,000,000) | `Gwei(128000000000)` (= 128,000,000,000) |
+| `CHURN_LIMIT_QUOTIENT_GLOAS`                 | `Uint64(2**15)` (= 32,768)               | `Uint64(2**4)` (= 16)                    |
+| `CONSOLIDATION_CHURN_LIMIT_QUOTIENT`         | `Uint64(2**16)` (= 65,536)               | `Uint64(2**5)` (= 32)                    |
+| `MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS` | `Gwei(2**8 * 10**9)` (= 256,000,000,000) | `Gwei(2**7 * 10**9)` (= 128,000,000,000) |
 
 ### Time parameters
 
-| Name                                | Mainnet              | Minimal          |
-| ----------------------------------- | -------------------- | ---------------- |
-| `MIN_BUILDER_WITHDRAWABILITY_DELAY` | `Epoch(2**6)` (= 64) | `Epoch(2)` (= 2) |
+| Name                                | Mainnet              | Minimal             |
+| ----------------------------------- | -------------------- | ------------------- |
+| `MIN_BUILDER_WITHDRAWABILITY_DELAY` | `Epoch(2**6)` (= 64) | `Epoch(2**1)` (= 2) |
 
 ## Containers
 

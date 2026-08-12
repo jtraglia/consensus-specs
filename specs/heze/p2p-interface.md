@@ -43,11 +43,11 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 
 ## Configuration
 
-| Name                                        | Mainnet                   | Minimal | Description                                                     |
-| ------------------------------------------- | ------------------------- | ------- | --------------------------------------------------------------- |
-| `MAX_REQUEST_INCLUSION_LIST`                | `Uint64(2**4)` (= 16)     | *same*  | Maximum number of inclusion lists in a single request           |
-| `MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS`    | `Slot(1)`                 | *same*  | Minimum slot range over which a node must serve inclusion lists |
-| `MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST` | `Uint64(2**13)` (= 8,192) | *same*  | Maximum size of the inclusion list's transactions in bytes      |
+| Name                                        | Mainnet                   | Minimal |
+| ------------------------------------------- | ------------------------- | ------- |
+| `MAX_REQUEST_INCLUSION_LIST`                | `Uint64(2**4)` (= 16)     | *same*  |
+| `MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS`    | `Slot(1)`                 | *same*  |
+| `MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST` | `Uint64(2**13)` (= 8,192) | *same*  |
 
 ## Types
 

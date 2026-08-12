@@ -137,9 +137,9 @@ handlers must not modify `store`.
 
 #### Time parameters
 
-| Name                        | Mainnet        | Minimal | Description                |
-| --------------------------- | -------------- | ------- | -------------------------- |
-| `PROPOSER_REORG_CUTOFF_BPS` | `Uint64(1667)` | *same*  | ~17% of `SLOT_DURATION_MS` |
+| Name                        | Mainnet        | Minimal |
+| --------------------------- | -------------- | ------- |
+| `PROPOSER_REORG_CUTOFF_BPS` | `Uint64(1667)` | *same*  |
 
 ### Helpers
 

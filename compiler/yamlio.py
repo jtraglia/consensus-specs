@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import importlib
 import re
+import sys
 from typing import TYPE_CHECKING
 
 from ruamel.yaml import YAML
@@ -12,7 +14,7 @@ if TYPE_CHECKING:
 
     from compiler.models import Value
 
-TYPE_RE = re.compile(r"^([A-Za-z_]\w*)\((.*)\)$")
+TYPE_RE = re.compile(r"^([A-Z_]\w*)\((.*)\)$")
 
 
 def _split_type(expression: str) -> tuple[str | None, str]:
@@ -22,27 +24,29 @@ def _split_type(expression: str) -> tuple[str | None, str]:
     return match.group(1), match.group(2)
 
 
-def write_preset_yaml(path: Path, presets: dict[str, Value], preset_name: str) -> None:
+def write_preset_yaml(
+    path: Path,
+    presets: dict[str, Value],
+    preset_name: str,
+    env: dict[str, int],
+    *,
+    fork_name: str,
+    python_root: Path,
+    pyspec_root: Path,
+) -> dict[str, int]:
     if not presets:
-        return
-    data: dict[str, object] = {}
-    env: dict[str, int] = {}
-    pending: list[tuple[str, Value]] = []
-    for name, value in presets.items():
-        expr = value.select(preset_name)
-        if any(other != name and other in expr for other in presets):
-            pending.append((name, value))
-            continue
-        data[name] = _to_yaml(expr, value.annotation(preset_name))
-        if isinstance(data[name], int):
-            env[name] = data[name]
-    for name, value in pending:
-        _, inner = _split_type(value.select(preset_name))
-        try:
-            data[name] = int(eval(inner, {"__builtins__": {}}, env))
-        except Exception:
-            data[name] = _to_yaml(value.select(preset_name), value.annotation(preset_name))
+        return env
+    data, env, leftover = _evaluate_presets(presets, preset_name, env)
+    if leftover:
+        live = _values_from_module(
+            fork_name, preset_name, leftover, python_root=python_root, pyspec_root=pyspec_root
+        )
+        data.update(live)
+        for name, value in live.items():
+            if isinstance(value, int):
+                env[name] = value
     _dump(path, data)
+    return env
 
 
 def write_config_yaml(path: Path, configs: dict[str, Value], preset_name: str) -> None:
@@ -55,24 +59,77 @@ def write_config_yaml(path: Path, configs: dict[str, Value], preset_name: str) -
         if records is not None:
             data[name] = _records_to_yaml(records)
         else:
-            data[name] = _to_yaml(value.select(preset_name), value.annotation(preset_name))
+            data[name] = _to_yaml(value.select(preset_name), {})
     _dump(path, data)
 
 
-def _to_yaml(expression: str, annotation: int | None) -> object:
+def _evaluate_presets(
+    presets: dict[str, Value], preset_name: str, env: dict[str, int]
+) -> tuple[dict[str, object], dict[str, int], list[str]]:
+    env = dict(env)
+    data: dict[str, object] = {}
+    leftover: list[str] = []
+    pending = [(name, value.select(preset_name)) for name, value in presets.items()]
+    progressed = True
+    while pending and progressed:
+        progressed = False
+        still: list[tuple[str, str]] = []
+        for name, expr in pending:
+            if "get_generalized_index" in expr:
+                leftover.append(name)
+                continue
+            result = _try_eval(expr, env)
+            if result is None:
+                still.append((name, expr))
+                continue
+            data[name] = result
+            if isinstance(result, int):
+                env[name] = result
+            progressed = True
+        pending = still
+    leftover.extend(name for name, _ in pending)
+    return data, env, leftover
+
+
+def _try_eval(expression: str, env: dict[str, int]) -> object | None:
     _, inner = _split_type(expression)
     inner = inner.strip()
     if inner.startswith(("'", '"')):
         return inner.strip("'\"")
-    if annotation is not None:
-        return annotation
     try:
-        result = eval(inner, {"__builtins__": {}}, {})
+        result = eval(inner, {"__builtins__": {}}, env)
     except Exception:
-        return inner
+        return None
     if isinstance(result, float) and result.is_integer():
         return int(result)
     return result
+
+
+def _to_yaml(expression: str, env: dict[str, int]) -> object:
+    result = _try_eval(expression, env)
+    if result is not None:
+        return result
+    _, inner = _split_type(expression)
+    return inner.strip()
+
+
+def _values_from_module(
+    fork_name: str,
+    preset_name: str,
+    names: list[str],
+    *,
+    python_root: Path,
+    pyspec_root: Path,
+) -> dict[str, object]:
+    for entry in (str(python_root), str(pyspec_root)):
+        if entry not in sys.path:
+            sys.path.insert(0, entry)
+    module = importlib.import_module(f"eth_consensus_specs.{fork_name}.{preset_name}")
+    out: dict[str, object] = {}
+    for name in names:
+        value = getattr(module, name)
+        out[name] = int(value) if isinstance(value, int) else value
+    return out
 
 
 def _records_to_yaml(records: list[dict[str, str]]) -> list[dict[str, object]]:

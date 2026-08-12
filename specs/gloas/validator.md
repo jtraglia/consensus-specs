@@ -38,14 +38,14 @@ validator" to implement Gloas.
 
 ### Time parameters
 
-| Name                          | Mainnet        | Minimal | Description               |
-| ----------------------------- | -------------- | ------- | ------------------------- |
-| `ATTESTATION_DUE_BPS_GLOAS`   | `Uint64(2500)` | *same*  | 25% of `SLOT_DURATION_MS` |
-| `AGGREGATE_DUE_BPS_GLOAS`     | `Uint64(5000)` | *same*  | 50% of `SLOT_DURATION_MS` |
-| `SYNC_MESSAGE_DUE_BPS_GLOAS`  | `Uint64(2500)` | *same*  | 25% of `SLOT_DURATION_MS` |
-| `CONTRIBUTION_DUE_BPS_GLOAS`  | `Uint64(5000)` | *same*  | 50% of `SLOT_DURATION_MS` |
-| `PAYLOAD_DUE_BPS`             | `Uint64(5000)` | *same*  | 50% of `SLOT_DURATION_MS` |
-| `PAYLOAD_ATTESTATION_DUE_BPS` | `Uint64(7500)` | *same*  | 75% of `SLOT_DURATION_MS` |
+| Name                          | Mainnet        | Minimal |
+| ----------------------------- | -------------- | ------- |
+| `ATTESTATION_DUE_BPS_GLOAS`   | `Uint64(2500)` | *same*  |
+| `AGGREGATE_DUE_BPS_GLOAS`     | `Uint64(5000)` | *same*  |
+| `SYNC_MESSAGE_DUE_BPS_GLOAS`  | `Uint64(2500)` | *same*  |
+| `CONTRIBUTION_DUE_BPS_GLOAS`  | `Uint64(5000)` | *same*  |
+| `PAYLOAD_DUE_BPS`             | `Uint64(5000)` | *same*  |
+| `PAYLOAD_ATTESTATION_DUE_BPS` | `Uint64(7500)` | *same*  |
 
 ## Validator assignment
 

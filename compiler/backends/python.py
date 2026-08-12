@@ -56,32 +56,36 @@ def emit_python(
             return f"{name}: TypeAlias = {inherited[name]}.{name}"
         return source
 
-    alias_src = "\n\n\n".join(render_class(n, s) for n, s in aliases.items())
-    type_src = "\n\n\n".join(render_class(n, s) for n, s in types.items())
+    rendered_types = {name: render_class(name, source) for name, source in types.items()}
     late_src = "\n\n\n".join(late.values())
     function_src = "\n\n\n".join(functions.values())
 
     for name in spec.configs:
         function_src = _rewrite_config_name(function_src, name)
-        type_src = _rewrite_config_name(type_src, name)
+        rendered_types = {
+            key: _rewrite_config_name(source, name) for key, source in rendered_types.items()
+        }
         late_src = _rewrite_config_name(late_src, name)
 
     gindices, constants, after_presets, gindex_asserts = _partition_constants(
         spec.constants, spec.presets
     )
-    preset_src, preset_asserts = _emit_presets(spec.presets, preset_name)
+    preset_src, deferred_presets, preset_asserts = _emit_presets(spec.presets, preset_name)
+    early_types, late_types = _split_deferred_types(rendered_types, deferred_presets)
 
     parts = [
         _imports(fork, forks, preset_name),
         f"fork = '{fork.name}'\n",
         "\n\n\n".join(hoisted),
         "\n".join(gindices),
-        alias_src,
+        "\n\n\n".join(render_class(n, s) for n, s in aliases.items()),
         "\n".join(constants),
         preset_src,
         "\n".join(after_presets),
         _emit_config(preset_name, spec.configs),
-        type_src,
+        "\n\n\n".join(early_types.values()),
+        "\n".join(deferred_presets.values()),
+        "\n\n\n".join(late_types.values()),
         _emit_protocols(methods),
         function_src,
         late_src,
@@ -199,28 +203,22 @@ def _partition_constants(
     return gindices, plain, after_presets, asserts
 
 
-def _emit_presets(presets: dict[str, Value], preset_name: str) -> tuple[str, list[str]]:
+def _emit_presets(
+    presets: dict[str, Value], preset_name: str
+) -> tuple[str, dict[str, str], list[str]]:
     lines: list[str] = []
-    asserts: list[str] = []
+    deferred: dict[str, str] = {}
     env: dict[str, int] = {}
     pending: list[tuple[str, str]] = []
     for name, value in presets.items():
         expr = value.select(preset_name)
         if "get_generalized_index" in expr:
-            annotation = value.annotation(preset_name)
-            if annotation is None:
-                raise ValueError(f"{name}: computed preset needs an (= N) annotation")
-            type_name, _ = _split_type(expr)
-            lines.append(
-                f"{name} = {type_name}({annotation})" if type_name else f"{name} = {annotation}"
-            )
-            env[name] = annotation
-            asserts.append(f"assert {name} == {expr}  # noqa: E501")
+            deferred[name] = _assignment(name, expr)
         elif any(other != name and other in expr for other in presets):
             pending.append((name, expr))
         else:
             lines.append(_assignment(name, expr))
-            number = _literal_int(expr, value.annotation(preset_name))
+            number = _literal_int(expr)
             if number is not None:
                 env[name] = number
     for name, expr in pending:
@@ -232,14 +230,11 @@ def _emit_presets(presets: dict[str, Value], preset_name: str) -> tuple[str, lis
             continue
         lines.append(f"{name} = {type_name}({number})" if type_name else f"{name} = {number}")
         env[name] = number
-    if not lines:
-        return "", asserts
-    return "# Presets\n" + "\n".join(lines), asserts
+    simple = "# Presets\n" + "\n".join(lines) if lines else ""
+    return simple, deferred, []
 
 
-def _literal_int(expression: str, annotation: int | None) -> int | None:
-    if annotation is not None:
-        return annotation
+def _literal_int(expression: str) -> int | None:
     _, inner = _split_type(expression)
     try:
         result = eval(inner, {"__builtins__": {}}, {})
@@ -248,6 +243,27 @@ def _literal_int(expression: str, annotation: int | None) -> int | None:
     if isinstance(result, (int, float)):
         return int(result)
     return None
+
+
+def _split_deferred_types(
+    types: dict[str, str], deferred: dict[str, str]
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Types that name a deferred preset (or another late type) come after those assignments."""
+    if not deferred:
+        return types, {}
+    late_names = set(deferred)
+    changed = True
+    while changed:
+        changed = False
+        for name, source in types.items():
+            if name in late_names:
+                continue
+            if any(re.search(rf"\b{re.escape(dep)}\b", source) for dep in late_names):
+                late_names.add(name)
+                changed = True
+    early = {name: source for name, source in types.items() if name not in late_names}
+    late = {name: source for name, source in types.items() if name in late_names}
+    return early, late
 
 
 def _assignment(name: str, expression: str) -> str:
@@ -264,7 +280,10 @@ def _split_type(expression: str) -> tuple[str | None, str]:
     if "(" not in expression or not expression.endswith(")"):
         return None, expression
     index = expression.index("(")
-    return expression[:index], expression[index + 1 : -1]
+    type_name = expression[:index]
+    if not type_name or not type_name[0].isupper():
+        return None, expression
+    return type_name, expression[index + 1 : -1]
 
 
 def _emit_config(preset_name: str, configs: dict[str, Value]) -> str:

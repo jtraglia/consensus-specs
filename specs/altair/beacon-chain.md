@@ -174,19 +174,19 @@ to their final, maximum security values.
 
 ### Sync committee
 
-| Name                               | Mainnet                | Minimal             |
-| ---------------------------------- | ---------------------- | ------------------- |
-| `SYNC_COMMITTEE_SIZE`              | `Uint64(2**9)` (= 512) | `Uint64(32)` (= 32) |
-| `EPOCHS_PER_SYNC_COMMITTEE_PERIOD` | `Epoch(2**8)` (= 256)  | `Epoch(8)` (= 8)    |
+| Name                               | Mainnet                | Minimal               |
+| ---------------------------------- | ---------------------- | --------------------- |
+| `SYNC_COMMITTEE_SIZE`              | `Uint64(2**9)` (= 512) | `Uint64(2**5)` (= 32) |
+| `EPOCHS_PER_SYNC_COMMITTEE_PERIOD` | `Epoch(2**8)` (= 256)  | `Epoch(2**3)` (= 8)   |
 
 ## Configuration
 
 ### Inactivity penalties
 
-| Name                             | Mainnet               | Minimal | Description                      |
-| -------------------------------- | --------------------- | ------- | -------------------------------- |
-| `INACTIVITY_SCORE_BIAS`          | `Uint64(2**2)` (= 4)  | *same*  | Score points per inactive epoch  |
-| `INACTIVITY_SCORE_RECOVERY_RATE` | `Uint64(2**4)` (= 16) | *same*  | Score points per leak-free epoch |
+| Name                             | Mainnet               | Minimal |
+| -------------------------------- | --------------------- | ------- |
+| `INACTIVITY_SCORE_BIAS`          | `Uint64(2**2)` (= 4)  | *same*  |
+| `INACTIVITY_SCORE_RECOVERY_RATE` | `Uint64(2**4)` (= 16) | *same*  |
 
 ## Containers
 

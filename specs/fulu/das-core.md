@@ -151,27 +151,27 @@ specification.
 
 ### Blob
 
-| Name                          | Mainnet                                                  | Minimal | Description                                              |
-| ----------------------------- | -------------------------------------------------------- | ------- | -------------------------------------------------------- |
-| `FIELD_ELEMENTS_PER_EXT_BLOB` | `2 * FIELD_ELEMENTS_PER_BLOB`                            | *same*  | Number of field elements in a Reed-Solomon extended blob |
-| `FIELD_ELEMENTS_PER_CELL`     | `Uint64(64)`                                             | *same*  | Number of field elements in a cell                       |
-| `CELLS_PER_EXT_BLOB`          | `FIELD_ELEMENTS_PER_EXT_BLOB // FIELD_ELEMENTS_PER_CELL` | *same*  | The number of cells in an extended blob                  |
+| Name                          | Mainnet                                                  | Minimal |
+| ----------------------------- | -------------------------------------------------------- | ------- |
+| `FIELD_ELEMENTS_PER_EXT_BLOB` | `2 * FIELD_ELEMENTS_PER_BLOB`                            | *same*  |
+| `FIELD_ELEMENTS_PER_CELL`     | `Uint64(64)`                                             | *same*  |
+| `CELLS_PER_EXT_BLOB`          | `FIELD_ELEMENTS_PER_EXT_BLOB // FIELD_ELEMENTS_PER_CELL` | *same*  |
 
 ### Size parameters
 
-| Name                | Mainnet                              | Minimal | Description                                   |
-| ------------------- | ------------------------------------ | ------- | --------------------------------------------- |
-| `NUMBER_OF_COLUMNS` | `Uint64(CELLS_PER_EXT_BLOB)` (= 128) | *same*  | Number of columns in the extended data matrix |
+| Name                | Mainnet                      | Minimal |
+| ------------------- | ---------------------------- | ------- |
+| `NUMBER_OF_COLUMNS` | `Uint64(CELLS_PER_EXT_BLOB)` | *same*  |
 
 ## Configuration
 
 ### Custody setting
 
-| Name                       | Mainnet       | Minimal | Description                                                                       |
-| -------------------------- | ------------- | ------- | --------------------------------------------------------------------------------- |
-| `SAMPLES_PER_SLOT`         | `Uint64(8)`   | *same*  | Minimum number of samples for an honest node                                      |
-| `NUMBER_OF_CUSTODY_GROUPS` | `Uint64(128)` | *same*  | Number of custody groups available for nodes to custody                           |
-| `CUSTODY_REQUIREMENT`      | `Uint64(4)`   | *same*  | Minimum number of custody groups an honest node custodies and serves samples from |
+| Name                       | Mainnet       | Minimal |
+| -------------------------- | ------------- | ------- |
+| `SAMPLES_PER_SLOT`         | `Uint64(8)`   | *same*  |
+| `NUMBER_OF_CUSTODY_GROUPS` | `Uint64(128)` | *same*  |
+| `CUSTODY_REQUIREMENT`      | `Uint64(4)`   | *same*  |
 
 ## Containers
 

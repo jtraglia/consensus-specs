@@ -138,23 +138,23 @@ class VersionedHash(Bytes32):
 
 ### Blob
 
-| Name                      | Mainnet        | Minimal | Description                        |
-| ------------------------- | -------------- | ------- | ---------------------------------- |
-| `FIELD_ELEMENTS_PER_BLOB` | `Uint64(4096)` | *same*  | Number of field elements in a blob |
+| Name                      | Mainnet        | Minimal |
+| ------------------------- | -------------- | ------- |
+| `FIELD_ELEMENTS_PER_BLOB` | `Uint64(4096)` | *same*  |
 
 ### Execution
 
-| Name                             | Mainnet                   | Minimal | Description                                                                     |
-| -------------------------------- | ------------------------- | ------- | ------------------------------------------------------------------------------- |
-| `MAX_BLOB_COMMITMENTS_PER_BLOCK` | `Uint64(2**12)` (= 4,096) | *same*  | Upgrade independent fixed theoretical limit same as `TARGET_BLOB_GAS_PER_BLOCK` |
+| Name                             | Mainnet                   | Minimal |
+| -------------------------------- | ------------------------- | ------- |
+| `MAX_BLOB_COMMITMENTS_PER_BLOCK` | `Uint64(2**12)` (= 4,096) | *same*  |
 
 ## Configuration
 
 ### Execution
 
-| Name                  | Mainnet     | Minimal | Description                                                                           |
-| --------------------- | ----------- | ------- | ------------------------------------------------------------------------------------- |
-| `MAX_BLOBS_PER_BLOCK` | `Uint64(6)` | *same*  | Maximum number of blobs in a single block limited by `MAX_BLOB_COMMITMENTS_PER_BLOCK` |
+| Name                  | Mainnet     | Minimal |
+| --------------------- | ----------- | ------- |
+| `MAX_BLOBS_PER_BLOCK` | `Uint64(6)` | *same*  |
 
 *Note*: The blob transactions are packed into the execution payload by the
 EL/builder with their corresponding blobs being independently transmitted and
@@ -163,9 +163,9 @@ independently defined by `MAX_BLOBS_PER_BLOCK`.
 
 ### Validator cycle
 
-| Name                                   | Mainnet              | Minimal           |
-| -------------------------------------- | -------------------- | ----------------- |
-| `MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT` | `Uint64(2**3)` (= 8) | `Uint64(4)` (= 4) |
+| Name                                   | Mainnet              | Minimal              |
+| -------------------------------------- | -------------------- | -------------------- |
+| `MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT` | `Uint64(2**3)` (= 8) | `Uint64(2**2)` (= 4) |
 
 ## Containers
 

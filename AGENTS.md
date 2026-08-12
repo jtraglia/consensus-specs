@@ -169,9 +169,8 @@ def test_example(spec, state):
 
 1. Add field to container definition in spec markdown
 2. Update any functions that construct or use the container
-3. Update preset/config tables in the markdown if needed. Minimal uses
-   *same* when it matches Mainnet; write an explicit value only when it
-   differs.
+3. Update preset/config tables in the markdown if needed. Minimal uses *same*
+   when it matches Mainnet; write an explicit value only when it differs.
 4. Run `make lint` to run checks
 
 ### Adding a new fork or feature

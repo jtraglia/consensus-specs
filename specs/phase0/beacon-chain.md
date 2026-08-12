@@ -582,15 +582,15 @@ Minimal column uses *same* when it matches Mainnet.
 
 ### Misc
 
-| Name                             | Mainnet                   | Minimal             |
-| -------------------------------- | ------------------------- | ------------------- |
-| `MAX_COMMITTEES_PER_SLOT`        | `Uint64(2**6)` (= 64)     | `Uint64(4)` (= 4)   |
-| `TARGET_COMMITTEE_SIZE`          | `Uint64(2**7)` (= 128)    | `Uint64(4)` (= 4)   |
-| `MAX_VALIDATORS_PER_COMMITTEE`   | `Uint64(2**11)` (= 2,048) | *same*              |
-| `SHUFFLE_ROUND_COUNT`            | `Uint64(90)`              | `Uint64(10)` (= 10) |
-| `HYSTERESIS_QUOTIENT`            | `Uint64(4)`               | *same*              |
-| `HYSTERESIS_DOWNWARD_MULTIPLIER` | `Uint64(1)`               | *same*              |
-| `HYSTERESIS_UPWARD_MULTIPLIER`   | `Uint64(5)`               | *same*              |
+| Name                             | Mainnet                   | Minimal              |
+| -------------------------------- | ------------------------- | -------------------- |
+| `MAX_COMMITTEES_PER_SLOT`        | `Uint64(2**6)` (= 64)     | `Uint64(2**2)` (= 4) |
+| `TARGET_COMMITTEE_SIZE`          | `Uint64(2**7)` (= 128)    | `Uint64(2**2)` (= 4) |
+| `MAX_VALIDATORS_PER_COMMITTEE`   | `Uint64(2**11)` (= 2,048) | *same*               |
+| `SHUFFLE_ROUND_COUNT`            | `Uint64(90)`              | `Uint64(10)`         |
+| `HYSTERESIS_QUOTIENT`            | `Uint64(4)`               | *same*               |
+| `HYSTERESIS_DOWNWARD_MULTIPLIER` | `Uint64(1)`               | *same*               |
+| `HYSTERESIS_UPWARD_MULTIPLIER`   | `Uint64(5)`               | *same*               |
 
 - For the safety of committees, `TARGET_COMMITTEE_SIZE` exceeds
   [the recommended minimum committee size of 111](http://web.archive.org/web/20190504131341/https://vitalik.ca/files/Ithaca201807_Sharding.pdf);
@@ -610,35 +610,35 @@ Minimal column uses *same* when it matches Mainnet.
 
 ### Time parameters
 
-| Name                               | Mainnet                 | Minimal           |
-| ---------------------------------- | ----------------------- | ----------------- |
-| `MIN_ATTESTATION_INCLUSION_DELAY`  | `Slot(2**0)` (= 1)      | *same*            |
-| `SLOTS_PER_EPOCH`                  | `Slot(2**5)` (= 32)     | `Slot(8)` (= 8)   |
-| `MIN_SEED_LOOKAHEAD`               | `Epoch(2**0)` (= 1)     | *same*            |
-| `MAX_SEED_LOOKAHEAD`               | `Epoch(2**2)` (= 4)     | *same*            |
-| `MIN_EPOCHS_TO_INACTIVITY_PENALTY` | `Epoch(2**2)` (= 4)     | *same*            |
-| `EPOCHS_PER_ETH1_VOTING_PERIOD`    | `Epoch(2**6)` (= 64)    | `Epoch(4)` (= 4)  |
-| `SLOTS_PER_HISTORICAL_ROOT`        | `Slot(2**13)` (= 8,192) | `Slot(64)` (= 64) |
+| Name                               | Mainnet                 | Minimal             |
+| ---------------------------------- | ----------------------- | ------------------- |
+| `MIN_ATTESTATION_INCLUSION_DELAY`  | `Slot(2**0)` (= 1)      | *same*              |
+| `SLOTS_PER_EPOCH`                  | `Slot(2**5)` (= 32)     | `Slot(2**3)` (= 8)  |
+| `MIN_SEED_LOOKAHEAD`               | `Epoch(2**0)` (= 1)     | *same*              |
+| `MAX_SEED_LOOKAHEAD`               | `Epoch(2**2)` (= 4)     | *same*              |
+| `MIN_EPOCHS_TO_INACTIVITY_PENALTY` | `Epoch(2**2)` (= 4)     | *same*              |
+| `EPOCHS_PER_ETH1_VOTING_PERIOD`    | `Epoch(2**6)` (= 64)    | `Epoch(2**2)` (= 4) |
+| `SLOTS_PER_HISTORICAL_ROOT`        | `Slot(2**13)` (= 8,192) | `Slot(2**6)` (= 64) |
 
 ### State list lengths
 
-| Name                           | Mainnet                               | Minimal            |
-| ------------------------------ | ------------------------------------- | ------------------ |
-| `EPOCHS_PER_HISTORICAL_VECTOR` | `Epoch(2**16)` (= 65,536)             | `Epoch(64)` (= 64) |
-| `EPOCHS_PER_SLASHINGS_VECTOR`  | `Epoch(2**13)` (= 8,192)              | `Epoch(64)` (= 64) |
-| `HISTORICAL_ROOTS_LIMIT`       | `Uint64(2**24)` (= 16,777,216)        | *same*             |
-| `VALIDATOR_REGISTRY_LIMIT`     | `Uint64(2**40)` (= 1,099,511,627,776) | *same*             |
+| Name                           | Mainnet                               | Minimal              |
+| ------------------------------ | ------------------------------------- | -------------------- |
+| `EPOCHS_PER_HISTORICAL_VECTOR` | `Epoch(2**16)` (= 65,536)             | `Epoch(2**6)` (= 64) |
+| `EPOCHS_PER_SLASHINGS_VECTOR`  | `Epoch(2**13)` (= 8,192)              | `Epoch(2**6)` (= 64) |
+| `HISTORICAL_ROOTS_LIMIT`       | `Uint64(2**24)` (= 16,777,216)        | *same*               |
+| `VALIDATOR_REGISTRY_LIMIT`     | `Uint64(2**40)` (= 1,099,511,627,776) | *same*               |
 
 ### Rewards and penalties
 
-| Name                               | Mainnet                        | Minimal                           |
-| ---------------------------------- | ------------------------------ | --------------------------------- |
-| `BASE_REWARD_FACTOR`               | `Uint64(2**6)` (= 64)          | *same*                            |
-| `WHISTLEBLOWER_REWARD_QUOTIENT`    | `Uint64(2**9)` (= 512)         | *same*                            |
-| `PROPOSER_REWARD_QUOTIENT`         | `Uint64(2**3)` (= 8)           | *same*                            |
-| `INACTIVITY_PENALTY_QUOTIENT`      | `Uint64(2**26)` (= 67,108,864) | `Uint64(33554432)` (= 33,554,432) |
-| `MIN_SLASHING_PENALTY_QUOTIENT`    | `Uint64(2**7)` (= 128)         | `Uint64(64)` (= 64)               |
-| `PROPORTIONAL_SLASHING_MULTIPLIER` | `Uint64(1)`                    | `Uint64(2)` (= 2)                 |
+| Name                               | Mainnet                        | Minimal                        |
+| ---------------------------------- | ------------------------------ | ------------------------------ |
+| `BASE_REWARD_FACTOR`               | `Uint64(2**6)` (= 64)          | *same*                         |
+| `WHISTLEBLOWER_REWARD_QUOTIENT`    | `Uint64(2**9)` (= 512)         | *same*                         |
+| `PROPOSER_REWARD_QUOTIENT`         | `Uint64(2**3)` (= 8)           | *same*                         |
+| `INACTIVITY_PENALTY_QUOTIENT`      | `Uint64(2**26)` (= 67,108,864) | `Uint64(2**25)` (= 33,554,432) |
+| `MIN_SLASHING_PENALTY_QUOTIENT`    | `Uint64(2**7)` (= 128)         | `Uint64(2**6)` (= 64)          |
+| `PROPORTIONAL_SLASHING_MULTIPLIER` | `Uint64(1)`                    | `Uint64(2)`                    |
 
 - The `INACTIVITY_PENALTY_QUOTIENT` equals `INVERSE_SQRT_E_DROP_TIME**2` where
   `INVERSE_SQRT_E_DROP_TIME := 2**13` epochs is the time it takes the inactivity
@@ -674,30 +674,30 @@ different configuration.
 
 ### Genesis settings
 
-| Name                                 | Mainnet                                      | Minimal                                |
-| ------------------------------------ | -------------------------------------------- | -------------------------------------- |
-| `MIN_GENESIS_ACTIVE_VALIDATOR_COUNT` | `Uint64(2**14)` (= 16,384)                   | `Uint64(64)` (= 64)                    |
-| `MIN_GENESIS_TIME`                   | `Uint64(1606824000)` (Dec 1, 2020, 12pm UTC) | `Uint64(1578009600)` (= 1,578,009,600) |
-| `GENESIS_FORK_VERSION`               | `Version('0x00000000')`                      | `Version('0x00000001')`                |
-| `GENESIS_DELAY`                      | `Uint64(604800)` (7 days)                    | `Uint64(300)` (= 300)                  |
+| Name                                 | Mainnet                                      | Minimal                                      |
+| ------------------------------------ | -------------------------------------------- | -------------------------------------------- |
+| `MIN_GENESIS_ACTIVE_VALIDATOR_COUNT` | `Uint64(2**14)` (= 16,384)                   | `Uint64(2**6)` (= 64)                        |
+| `MIN_GENESIS_TIME`                   | `Uint64(1606824000)` (Dec 1, 2020, 12pm UTC) | `Uint64(1578009600)` (Jan 3, 2020, 12am UTC) |
+| `GENESIS_FORK_VERSION`               | `Version('0x00000000')`                      | `Version('0x00000001')`                      |
+| `GENESIS_DELAY`                      | `Uint64(604800)` (7 days)                    | `Uint64(300)` (5 minutes)                    |
 
 ### Time parameters
 
-| Name                                  | Mainnet                   | Minimal                  |
-| ------------------------------------- | ------------------------- | ------------------------ |
-| `SLOT_DURATION_MS`                    | `Uint64(12000)`           | `Uint64(6000)` (= 6,000) |
-| `SECONDS_PER_ETH1_BLOCK`              | `Uint64(14)`              | *same*                   |
-| `MIN_VALIDATOR_WITHDRAWABILITY_DELAY` | `Epoch(2**8)` (= 256)     | *same*                   |
-| `SHARD_COMMITTEE_PERIOD`              | `Epoch(2**8)` (= 256)     | `Epoch(64)` (= 64)       |
-| `ETH1_FOLLOW_DISTANCE`                | `Uint64(2**11)` (= 2,048) | `Uint64(16)` (= 16)      |
+| Name                                  | Mainnet                   | Minimal               |
+| ------------------------------------- | ------------------------- | --------------------- |
+| `SLOT_DURATION_MS`                    | `Uint64(12000)`           | `Uint64(6000)`        |
+| `SECONDS_PER_ETH1_BLOCK`              | `Uint64(14)`              | *same*                |
+| `MIN_VALIDATOR_WITHDRAWABILITY_DELAY` | `Epoch(2**8)` (= 256)     | *same*                |
+| `SHARD_COMMITTEE_PERIOD`              | `Epoch(2**8)` (= 256)     | `Epoch(2**6)` (= 64)  |
+| `ETH1_FOLLOW_DISTANCE`                | `Uint64(2**11)` (= 2,048) | `Uint64(2**4)` (= 16) |
 
 ### Validator cycle
 
-| Name                        | Mainnet                                 | Minimal             |
-| --------------------------- | --------------------------------------- | ------------------- |
-| `EJECTION_BALANCE`          | `Gwei(2**4 * 10**9)` (= 16,000,000,000) | *same*              |
-| `MIN_PER_EPOCH_CHURN_LIMIT` | `Uint64(2**2)` (= 4)                    | `Uint64(2)` (= 2)   |
-| `CHURN_LIMIT_QUOTIENT`      | `Uint64(2**16)` (= 65,536)              | `Uint64(32)` (= 32) |
+| Name                        | Mainnet                                 | Minimal               |
+| --------------------------- | --------------------------------------- | --------------------- |
+| `EJECTION_BALANCE`          | `Gwei(2**4 * 10**9)` (= 16,000,000,000) | *same*                |
+| `MIN_PER_EPOCH_CHURN_LIMIT` | `Uint64(2**2)` (= 4)                    | `Uint64(2**1)` (= 2)  |
+| `CHURN_LIMIT_QUOTIENT`      | `Uint64(2**16)` (= 65,536)              | `Uint64(2**5)` (= 32) |
 
 ## Containers
 

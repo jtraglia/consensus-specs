@@ -297,10 +297,10 @@ specification.
 
 ### Gwei values
 
-| Name                            | Mainnet                                     | Minimal | Description                                           |
-| ------------------------------- | ------------------------------------------- | ------- | ----------------------------------------------------- |
-| `MIN_ACTIVATION_BALANCE`        | `Gwei(2**5 * 10**9)` (= 32,000,000,000)     | *same*  | Minimum balance for a validator to become active      |
-| `MAX_EFFECTIVE_BALANCE_ELECTRA` | `Gwei(2**11 * 10**9)` (= 2,048,000,000,000) | *same*  | Maximum effective balance for a compounding validator |
+| Name                            | Mainnet                                     | Minimal |
+| ------------------------------- | ------------------------------------------- | ------- |
+| `MIN_ACTIVATION_BALANCE`        | `Gwei(2**5 * 10**9)` (= 32,000,000,000)     | *same*  |
+| `MAX_EFFECTIVE_BALANCE_ELECTRA` | `Gwei(2**11 * 10**9)` (= 2,048,000,000,000) | *same*  |
 
 ### Rewards and penalties
 
@@ -311,11 +311,11 @@ specification.
 
 ### State list lengths
 
-| Name                                | Mainnet                         | Minimal             |
-| ----------------------------------- | ------------------------------- | ------------------- |
-| `PENDING_DEPOSITS_LIMIT`            | `Uint64(2**27)` (= 134,217,728) | *same*              |
-| `PENDING_PARTIAL_WITHDRAWALS_LIMIT` | `Uint64(2**27)` (= 134,217,728) | `Uint64(64)` (= 64) |
-| `PENDING_CONSOLIDATIONS_LIMIT`      | `Uint64(2**18)` (= 262,144)     | `Uint64(64)` (= 64) |
+| Name                                | Mainnet                         | Minimal               |
+| ----------------------------------- | ------------------------------- | --------------------- |
+| `PENDING_DEPOSITS_LIMIT`            | `Uint64(2**27)` (= 134,217,728) | *same*                |
+| `PENDING_PARTIAL_WITHDRAWALS_LIMIT` | `Uint64(2**27)` (= 134,217,728) | `Uint64(2**6)` (= 64) |
+| `PENDING_CONSOLIDATIONS_LIMIT`      | `Uint64(2**18)` (= 262,144)     | `Uint64(2**6)` (= 64) |
 
 ### Max operations per block
 
@@ -326,38 +326,38 @@ specification.
 
 ### Execution
 
-| Name                                     | Mainnet                   | Minimal | Description                                                              |
-| ---------------------------------------- | ------------------------- | ------- | ------------------------------------------------------------------------ |
-| `MAX_DEPOSIT_REQUESTS_PER_PAYLOAD`       | `Uint64(2**13)` (= 8,192) | *same*  | Maximum number of execution-layer deposit requests in each payload       |
-| `MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD`    | `Uint64(2**4)` (= 16)     | *same*  | Maximum number of execution-layer withdrawal requests in each payload    |
-| `MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD` | `Uint64(2**1)` (= 2)      | *same*  | Maximum number of execution-layer consolidation requests in each payload |
+| Name                                     | Mainnet                   | Minimal |
+| ---------------------------------------- | ------------------------- | ------- |
+| `MAX_DEPOSIT_REQUESTS_PER_PAYLOAD`       | `Uint64(2**13)` (= 8,192) | *same*  |
+| `MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD`    | `Uint64(2**4)` (= 16)     | *same*  |
+| `MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD` | `Uint64(2**1)` (= 2)      | *same*  |
 
 ### Withdrawals processing
 
-| Name                                         | Mainnet              | Minimal           | Description                                                          |
-| -------------------------------------------- | -------------------- | ----------------- | -------------------------------------------------------------------- |
-| `MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP` | `Uint64(2**3)` (= 8) | `Uint64(2)` (= 2) | Maximum number of pending partial withdrawals to process per payload |
+| Name                                         | Mainnet              | Minimal              |
+| -------------------------------------------- | -------------------- | -------------------- |
+| `MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP` | `Uint64(2**3)` (= 8) | `Uint64(2**1)` (= 2) |
 
 ### Pending deposits processing
 
-| Name                             | Mainnet               | Minimal | Description                                             |
-| -------------------------------- | --------------------- | ------- | ------------------------------------------------------- |
-| `MAX_PENDING_DEPOSITS_PER_EPOCH` | `Uint64(2**4)` (= 16) | *same*  | Maximum number of pending deposits to process per epoch |
+| Name                             | Mainnet               | Minimal |
+| -------------------------------- | --------------------- | ------- |
+| `MAX_PENDING_DEPOSITS_PER_EPOCH` | `Uint64(2**4)` (= 16) | *same*  |
 
 ## Configuration
 
 ### Execution
 
-| Name                          | Mainnet     | Minimal | Description                                                                           |
-| ----------------------------- | ----------- | ------- | ------------------------------------------------------------------------------------- |
-| `MAX_BLOBS_PER_BLOCK_ELECTRA` | `Uint64(9)` | *same*  | Maximum number of blobs in a single block limited by `MAX_BLOB_COMMITMENTS_PER_BLOCK` |
+| Name                          | Mainnet     | Minimal |
+| ----------------------------- | ----------- | ------- |
+| `MAX_BLOBS_PER_BLOCK_ELECTRA` | `Uint64(9)` | *same*  |
 
 ### Validator cycle
 
 | Name                                        | Mainnet                                  | Minimal                                  |
 | ------------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| `MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA`         | `Gwei(2**7 * 10**9)` (= 128,000,000,000) | `Gwei(64000000000)` (= 64,000,000,000)   |
-| `MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT` | `Gwei(2**8 * 10**9)` (= 256,000,000,000) | `Gwei(128000000000)` (= 128,000,000,000) |
+| `MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA`         | `Gwei(2**7 * 10**9)` (= 128,000,000,000) | `Gwei(2**6 * 10**9)` (= 64,000,000,000)  |
+| `MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT` | `Gwei(2**8 * 10**9)` (= 256,000,000,000) | `Gwei(2**7 * 10**9)` (= 128,000,000,000) |
 
 ## Containers
 

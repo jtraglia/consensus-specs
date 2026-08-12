@@ -296,19 +296,19 @@ class SubnetID(Uint64):
 
 This section outlines configurations that are used in this specification.
 
-| Name                                 | Mainnet                                     | Minimal | Description                                                                       |
-| ------------------------------------ | ------------------------------------------- | ------- | --------------------------------------------------------------------------------- |
-| `MAX_PAYLOAD_SIZE`                   | `Uint64(10 * 2**20)` (= 10,485,760, 10 MiB) | *same*  | Maximum allowed size of uncompressed payload in gossipsub messages and RPC chunks |
-| `MAX_REQUEST_BLOCKS`                 | `Uint64(2**10)` (= 1,024)                   | *same*  | Maximum number of blocks in a single request                                      |
-| `EPOCHS_PER_SUBNET_SUBSCRIPTION`     | `Epoch(2**8)` (= 256)                       | *same*  | Number of epochs on a subnet subscription                                         |
-| `ATTESTATION_PROPAGATION_SLOT_RANGE` | `Slot(32)`                                  | *same*  | Maximum number of slots during which an attestation can be propagated             |
-| `MAXIMUM_GOSSIP_CLOCK_DISPARITY`     | `Uint64(500)`                               | *same*  | Maximum **milliseconds** of clock disparity assumed between honest nodes          |
-| `MESSAGE_DOMAIN_INVALID_SNAPPY`      | `DomainType('0x00000000')`                  | *same*  | 4-byte domain for gossip message-id isolation of *invalid* snappy messages        |
-| `MESSAGE_DOMAIN_VALID_SNAPPY`        | `DomainType('0x01000000')`                  | *same*  | 4-byte domain for gossip message-id isolation of *valid* snappy messages          |
-| `SUBNETS_PER_NODE`                   | `Uint64(2)`                                 | *same*  | Number of long-lived subnets a beacon node should be subscribed to                |
-| `ATTESTATION_SUBNET_COUNT`           | `Uint64(2**6)` (= 64)                       | *same*  | Number of attestation subnets used in the gossipsub protocol                      |
-| `ATTESTATION_SUBNET_EXTRA_BITS`      | `Uint64(0)`                                 | *same*  | Number of extra bits of a NodeId to use when mapping to a subscribed subnet       |
-| `MAX_CONCURRENT_REQUESTS`            | `Uint64(2)`                                 | *same*  | Maximum number of concurrent requests per protocol ID that a client may issue     |
+| Name                                 | Mainnet                                     | Minimal |
+| ------------------------------------ | ------------------------------------------- | ------- |
+| `MAX_PAYLOAD_SIZE`                   | `Uint64(10 * 2**20)` (= 10,485,760, 10 MiB) | *same*  |
+| `MAX_REQUEST_BLOCKS`                 | `Uint64(2**10)` (= 1,024)                   | *same*  |
+| `EPOCHS_PER_SUBNET_SUBSCRIPTION`     | `Epoch(2**8)` (= 256)                       | *same*  |
+| `ATTESTATION_PROPAGATION_SLOT_RANGE` | `Slot(32)`                                  | *same*  |
+| `MAXIMUM_GOSSIP_CLOCK_DISPARITY`     | `Uint64(500)`                               | *same*  |
+| `MESSAGE_DOMAIN_INVALID_SNAPPY`      | `DomainType('0x00000000')`                  | *same*  |
+| `MESSAGE_DOMAIN_VALID_SNAPPY`        | `DomainType('0x01000000')`                  | *same*  |
+| `SUBNETS_PER_NODE`                   | `Uint64(2)`                                 | *same*  |
+| `ATTESTATION_SUBNET_COUNT`           | `Uint64(2**6)` (= 64)                       | *same*  |
+| `ATTESTATION_SUBNET_EXTRA_BITS`      | `Uint64(0)`                                 | *same*  |
+| `MAX_CONCURRENT_REQUESTS`            | `Uint64(2)`                                 | *same*  |
 
 ### Helpers
 

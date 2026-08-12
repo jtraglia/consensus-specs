@@ -40,16 +40,22 @@ def build(
         raise ValueError(f"unknown fork: {only}")
 
     python_root = root / "build" / "python" / "eth_consensus_specs"
+    pyspec_root = root / "tests" / "core" / "pyspec"
     configs_acc: dict[str, Value] = {}
+    preset_env: dict[str, dict[str, int]] = {name: {} for name in PRESETS}
     for fork in targets:
         own = _parse_sources(source_files(fork, forks))
         _build_fork(fork, forks, python_root, own, removals_for(fork, forks), verbose)
         own_only = _parse_sources(_own_sources(fork))
         for preset_name in PRESETS:
-            write_preset_yaml(
+            preset_env[preset_name] = write_preset_yaml(
                 root / "build" / "presets" / preset_name / f"{fork.name}.yaml",
                 own_only.presets,
                 preset_name,
+                preset_env[preset_name],
+                fork_name=fork.name,
+                python_root=python_root.parent,
+                pyspec_root=pyspec_root,
             )
         configs_acc = {**configs_acc, **own_only.configs}
 
