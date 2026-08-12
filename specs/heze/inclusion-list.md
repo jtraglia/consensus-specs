@@ -41,6 +41,15 @@ class InclusionListStore:
 
 ## Helpers
 
+### New `cached_or_new_inclusion_list_store`
+
+*Note*: The following is a reference-implementation stub.
+
+```python
+def cached_or_new_inclusion_list_store() -> InclusionListStore:
+    return InclusionListStore()
+```
+
 ### New `get_inclusion_list_store`
 
 ```python

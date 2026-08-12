@@ -452,8 +452,19 @@ against `state.eth1_data.deposit_root`.
 Let `Eth1Block` be an abstract object representing Eth1 blocks with the
 `timestamp` and deposit contract data available.
 
-Let `get_eth1_data(block: Eth1Block) -> Eth1Data` be the function that returns
-the Eth1 data for a given Eth1 block.
+*Note*: The following is a reference-implementation stub.
+
+```python
+def get_eth1_data(block: Eth1Block) -> Eth1Data:
+    """
+    Return the Eth1 data for a given Eth1 block.
+    """
+    return Eth1Data(
+        deposit_root=block.deposit_root,
+        deposit_count=block.deposit_count,
+        block_hash=hash_tree_root(block),
+    )
+```
 
 An honest block proposer sets
 `block.body.eth1_data = get_eth1_vote(state, eth1_chain)` where:

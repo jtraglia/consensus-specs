@@ -50,6 +50,15 @@ pruned.
 valid blobs) received on the p2p network MUST NOT invalidate a block that is
 otherwise valid and available.
 
+*Note*: The following is a reference-implementation stub.
+
+```python
+def retrieve_blobs_and_proofs(
+    beacon_block_root: Root,
+) -> Tuple[Sequence[Blob], Sequence[KZGProof]]:
+    return [], []
+```
+
 ```python
 def is_data_available(
     beacon_block_root: Root, blob_kzg_commitments: Sequence[KZGCommitment]

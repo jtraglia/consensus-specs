@@ -18,6 +18,13 @@ This is the modification of the fork choice accompanying Fulu.
 
 ### Modified `is_data_available`
 
+*Note*: The following is a reference-implementation stub.
+
+```python
+def retrieve_column_sidecars(beacon_block_root: Root) -> Sequence[DataColumnSidecar]:
+    return []
+```
+
 ```python
 def is_data_available(beacon_block_root: Root) -> bool:
     # `retrieve_column_sidecars` is implementation and context dependent, replacing

@@ -28,7 +28,8 @@ This function return the Merkle proof of the given SSZ object `object` at
 generalized index `index`.
 
 ```python
-def compute_merkle_proof(object: SSZObject, index: GeneralizedIndex) -> Sequence[Bytes32]: ...
+def compute_merkle_proof(object: SSZObject, index: GeneralizedIndex) -> Sequence[Bytes32]:
+    return build_proof(object, index)
 ```
 
 ### `block_to_light_client_header`

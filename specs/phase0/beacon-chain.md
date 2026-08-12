@@ -968,6 +968,24 @@ necessarily optimal implementations.
 
 ### Math
 
+#### `ceillog2`
+
+```python
+def ceillog2(x: int) -> Uint64:
+    if x < 1:
+        raise ValueError(f"ceillog2 accepts only positive values, x={x}")
+    return Uint64((x - 1).bit_length())
+```
+
+#### `floorlog2`
+
+```python
+def floorlog2(x: int) -> Uint64:
+    if x < 1:
+        raise ValueError(f"floorlog2 accepts only positive values, x={x}")
+    return Uint64(x.bit_length() - 1)
+```
+
 #### `get_set_bit_count`
 
 ```python

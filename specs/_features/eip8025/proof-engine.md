@@ -104,3 +104,34 @@ def request_proofs(
     generation request.
     """
 ```
+
+### `NoopProofEngine`
+
+*Note*: The following is a reference-implementation stub.
+
+```python
+class NoopProofEngine(ProofEngine):
+    def verify_execution_proof(self, execution_proof: ExecutionProof) -> bool:
+        return True
+
+    def notify_new_payload(self, new_payload_request: NewPayloadRequest) -> None:
+        return None
+
+    def notify_forkchoice_updated(
+        self,
+        head_block_hash: Hash32,
+        safe_block_hash: Hash32,
+        finalized_block_hash: Hash32,
+    ) -> None:
+        return None
+
+    def request_proofs(
+        self,
+        new_payload_request: NewPayloadRequest,
+        proof_attributes: ProofAttributes,
+    ) -> Root:
+        raise NotImplementedError("no default proof generation")
+
+
+PROOF_ENGINE = NoopProofEngine()
+```

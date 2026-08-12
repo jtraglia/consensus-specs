@@ -244,6 +244,15 @@ def notify_ptc_messages(
 
 ### Modified `is_data_available`
 
+*Note*: The following is a reference-implementation stub.
+
+```python
+def retrieve_column_sidecars_and_kzg_commitments(
+    beacon_block_root: Root,
+) -> tuple[Sequence[DataColumnSidecar], BlobKZGCommitments]:
+    return [], BlobKZGCommitments()
+```
+
 ```python
 def is_data_available(beacon_block_root: Root) -> bool:
     # `retrieve_column_sidecars_and_kzg_commitments` is implementation and

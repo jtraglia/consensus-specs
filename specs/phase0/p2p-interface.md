@@ -310,6 +310,24 @@ This section outlines configurations that are used in this specification.
 
 ### Helpers
 
+#### `GossipIgnore`
+
+```python
+class GossipIgnore(Exception):
+    """
+    The message failed a gossip condition that does not warrant ``REJECT``.
+    """
+```
+
+#### `GossipReject`
+
+```python
+class GossipReject(Exception):
+    """
+    The message is invalid and should be rejected by gossip validation.
+    """
+```
+
 #### `Seen`
 
 The `Seen` class tracks network deduplication state for gossip validation. It

@@ -1342,6 +1342,52 @@ def verify_and_notify_new_payload(
     return True
 ```
 
+#### `NoopExecutionEngine`
+
+*Note*: The following is a reference-implementation stub.
+
+```python
+class NoopExecutionEngine(ExecutionEngine):
+    def notify_new_payload(
+        self,
+        execution_payload: ExecutionPayload,
+        parent_beacon_block_root: Root,
+        execution_requests_list: Sequence[bytes],
+    ) -> bool:
+        return True
+
+    def notify_forkchoice_updated(
+        self,
+        head_block_hash: Hash32,
+        safe_block_hash: Hash32,
+        finalized_block_hash: Hash32,
+        payload_attributes: Optional[PayloadAttributes],
+    ) -> Optional[PayloadId]:
+        pass
+
+    def get_payload(self, payload_id: PayloadId) -> GetPayloadResponse:
+        raise NotImplementedError("no default block production")
+
+    def is_valid_block_hash(
+        self,
+        execution_payload: ExecutionPayload,
+        parent_beacon_block_root: Root,
+        execution_requests_list: Sequence[bytes],
+    ) -> bool:
+        return True
+
+    def is_valid_versioned_hashes(self, new_payload_request: NewPayloadRequest) -> bool:
+        return True
+
+    def verify_and_notify_new_payload(
+        self, new_payload_request: NewPayloadRequest
+    ) -> bool:
+        return True
+
+
+EXECUTION_ENGINE = NoopExecutionEngine()
+```
+
 ### Block processing
 
 ```python

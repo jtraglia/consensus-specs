@@ -24,7 +24,6 @@ from typing import (
 )
 
 from frozendict import frozendict
-from lru import LRU
 from ssz.bitfields import BitList, BitVector, ProgressiveBitList
 from ssz.boolean import Boolean
 from ssz.byte_arrays import ByteList, ByteVector
@@ -58,3 +57,8 @@ try:
     from eth_consensus_specs.utils import kzg
 except ImportError:
     kzg = None  # type: ignore[misc, assignment]
+
+SSZObject = TypeVar("SSZObject", bound=SSZType)
+SSZVariableName = str
+GeneralizedIndex = int
+ExecutionState = Any
