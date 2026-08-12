@@ -5,14 +5,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from compiler.backends.python import emit_python
-from compiler.combine import order_classes
+from compiler.combine import order_classes, qualify_inherited_gindices
 from compiler.discover import (
     build_order,
     discover_forks,
     fork_markdown_files,
     repo_root,
-    source_files,
 )
+from compiler.models import Spec
 from compiler.parse import parse_file
 from compiler.removals import removals_for
 from compiler.yamlio import write_config_yaml, write_preset_yaml
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from compiler.discover import Fork
-    from compiler.models import Spec, Value
+    from compiler.models import Value
     from compiler.removals import Removals
 
 PRESETS = ("minimal", "mainnet")
@@ -44,7 +44,7 @@ def build(
     configs_acc: dict[str, Value] = {}
     preset_env: dict[str, dict[str, int]] = {name: {} for name in PRESETS}
     for fork in targets:
-        own = _parse_sources(source_files(fork, forks))
+        own = _parse_fork(fork, forks)
         _build_fork(fork, forks, python_root, own, removals_for(fork, forks), verbose)
         own_only = _parse_sources(_own_sources(fork))
         for preset_name in PRESETS:
@@ -94,6 +94,17 @@ def _build_fork(
         if verbose:
             print(f"  wrote {output} ({len(spec_str):,} bytes)")
     (dest / "__init__.py").write_text("")
+
+
+def _parse_fork(fork: Fork, forks: dict[str, Fork]) -> Spec:
+    spec = Spec()
+    previous: str | None = None
+    for ancestor in reversed(fork.ancestors(forks)):
+        if previous is not None:
+            spec = qualify_inherited_gindices(spec, previous)
+        spec = spec.merge(_parse_sources(fork_markdown_files(ancestor.directory)))
+        previous = ancestor.name
+    return spec
 
 
 def _parse_sources(sources: list[Path]) -> Spec:

@@ -57,22 +57,24 @@ def emit_python(
         types = {key: _rewrite_config_name(source, name) for key, source in types.items()}
         late_src = _rewrite_config_name(late_src, name)
 
-    gindices, constants, after_presets = _partition_constants(spec.constants, spec.presets)
+    constants, after_presets, deferred_constants = _partition_constants(
+        spec.constants, spec.presets
+    )
     preset_src, deferred_presets, preset_asserts = _emit_presets(spec.presets, preset_name)
-    early_types, late_types = _split_deferred_types(types, deferred_presets)
+    deferred = {**deferred_constants, **deferred_presets}
+    early_types, late_types = _split_deferred_types(types, deferred)
 
     parts = [
         _imports(fork, forks, preset_name),
         f"fork = '{fork.name}'\n",
         "\n\n\n".join(hoisted),
-        "\n".join(gindices),
         "\n\n\n".join(aliases.values()),
         "\n".join(constants),
         preset_src,
         "\n".join(after_presets),
         _emit_config(preset_name, spec.configs),
         "\n\n\n".join(early_types.values()),
-        "\n".join(deferred_presets.values()),
+        "\n".join(deferred.values()),
         "\n\n\n".join(late_types.values()),
         _emit_protocols(methods),
         function_src,
@@ -174,23 +176,21 @@ def _is_bare_alias(source: str) -> bool:
 def _partition_constants(
     constants: dict[str, Value],
     presets: dict[str, Value],
-) -> tuple[list[str], list[str], list[str]]:
-    """Gindex constants go first; anything that names a preset waits until after presets."""
-    gindices: list[str] = []
+) -> tuple[list[str], list[str], dict[str, str]]:
+    """Anything that names a preset waits until after presets."""
     plain: list[str] = []
     after_presets: list[str] = []
+    deferred: dict[str, str] = {}
     preset_names = list(presets)
     for name, value in constants.items():
         expr = value.mainnet
         if "get_generalized_index" in expr:
-            if value.annotation_mainnet is None:
-                raise ValueError(f"{name}: get_generalized_index needs an (= N) annotation")
-            gindices.append(f"{name} = GeneralizedIndex({value.annotation_mainnet})")
+            deferred[name] = _assignment(name, expr)
         elif any(preset in expr for preset in preset_names):
             after_presets.append(_assignment(name, expr))
         else:
             plain.append(_assignment(name, expr))
-    return gindices, plain, after_presets
+    return plain, after_presets, deferred
 
 
 def _emit_presets(

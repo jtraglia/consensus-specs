@@ -7,9 +7,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 PREVIOUS_FORK_RE = re.compile(r"<!--\s*previous-fork:\s*([a-z][a-z0-9_]*)\s*-->")
-GINDEX_ROW_RE = re.compile(
-    r"\|\s*`([A-Z][A-Z0-9_]*)`\s*\|\s*`get_generalized_index[^`]*`\s*\(=\s*([\d,]+)"
-)
 
 # Prefer beacon-chain.md when collecting a fork's sources.
 SOURCE_SORT_PRIORITY = ("beacon-chain",)
@@ -105,16 +102,6 @@ def source_files(fork: Fork, forks: dict[str, Fork]) -> list[Path]:
     for ancestor in reversed(fork.ancestors(forks)):
         paths.extend(fork_markdown_files(ancestor.directory))
     return paths
-
-
-def parse_gindex_annotations(paths: list[Path]) -> dict[str, int]:
-    """Map constant names to the `(= N)` annotation beside get_generalized_index."""
-    values: dict[str, int] = {}
-    for path in paths:
-        text = path.read_text()
-        for match in GINDEX_ROW_RE.finditer(text):
-            values[match.group(1)] = int(match.group(2).replace(",", ""))
-    return values
 
 
 def _read_previous_fork(directory: Path) -> str | None:
