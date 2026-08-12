@@ -6,9 +6,7 @@ import re
 
 from compiler.models import Spec, Value
 
-GINDEX_UNQUALIFIED_RE = re.compile(
-    r"(get_generalized_index\(\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*,)"
-)
+GINDEX_UNQUALIFIED_RE = re.compile(r"(get_generalized_index\(\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*,)")
 
 
 def order_classes(classes: dict[str, str]) -> dict[str, str]:

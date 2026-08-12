@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from compiler.backends.python import emit_python
 from compiler.combine import order_classes, qualify_inherited_gindices
 from compiler.discover import (
     build_order,
@@ -12,6 +11,7 @@ from compiler.discover import (
     fork_markdown_files,
     repo_root,
 )
+from compiler.emit import emit_python
 from compiler.models import Spec
 from compiler.parse import parse_file
 from compiler.removals import removals_for

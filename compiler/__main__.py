@@ -10,7 +10,7 @@ from compiler.build import build
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Compile consensus-spec markdown into build/ artifacts",
+        description="Compile consensus-spec markdown files",
     )
     parser.add_argument("--fork", type=str, default=None, help="Build only this fork")
     parser.add_argument("--verbose", action="store_true")
