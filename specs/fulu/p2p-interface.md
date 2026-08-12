@@ -56,18 +56,18 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 
 ## Preset
 
-| Name                                    | Mainnet                                                                                   | Minimal                                                                                   | Description                                                       |
-| --------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH` | `Uint64(floorlog2(get_generalized_index(BeaconBlockBody, 'blob_kzg_commitments')))` (= 4) | `Uint64(floorlog2(get_generalized_index(BeaconBlockBody, 'blob_kzg_commitments')))` (= 4) | <!-- predefined --> Merkle proof index for `blob_kzg_commitments` |
+| Name                                    | Mainnet                                                                                   | Minimal | Description                                                       |
+| --------------------------------------- | ----------------------------------------------------------------------------------------- | ------- | ----------------------------------------------------------------- |
+| `KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH` | `Uint64(floorlog2(get_generalized_index(BeaconBlockBody, 'blob_kzg_commitments')))` (= 4) | *same*  | <!-- predefined --> Merkle proof index for `blob_kzg_commitments` |
 
 ## Configuration
 
 *[New in Fulu:EIP7594]*
 
-| Name                                           | Mainnet                  | Minimal                  | Description                                                           |
-| ---------------------------------------------- | ------------------------ | ------------------------ | --------------------------------------------------------------------- |
-| `DATA_COLUMN_SIDECAR_SUBNET_COUNT`             | `Uint64(2**7)` (= 128)   | `Uint64(2**7)` (= 128)   | Number of data column sidecar subnets used in the gossipsub protocol  |
-| `MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS` | `Epoch(2**12)` (= 4,096) | `Epoch(2**12)` (= 4,096) | Minimum epoch range over which a node must serve data column sidecars |
+| Name                                           | Mainnet                  | Minimal | Description                                                           |
+| ---------------------------------------------- | ------------------------ | ------- | --------------------------------------------------------------------- |
+| `DATA_COLUMN_SIDECAR_SUBNET_COUNT`             | `Uint64(2**7)` (= 128)   | *same*  | Number of data column sidecar subnets used in the gossipsub protocol  |
+| `MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS` | `Epoch(2**12)` (= 4,096) | *same*  | Minimum epoch range over which a node must serve data column sidecars |
 
 ## Types
 

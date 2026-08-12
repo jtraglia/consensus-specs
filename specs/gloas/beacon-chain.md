@@ -593,16 +593,16 @@ same `Withdrawal` container can be used for validators and builders.
 
 ### Max operations per block
 
-| Name                       | Mainnet              | Minimal              |
-| -------------------------- | -------------------- | -------------------- |
-| `MAX_PAYLOAD_ATTESTATIONS` | `Uint64(2**2)` (= 4) | `Uint64(2**2)` (= 4) |
+| Name                       | Mainnet              | Minimal |
+| -------------------------- | -------------------- | ------- |
+| `MAX_PAYLOAD_ATTESTATIONS` | `Uint64(2**2)` (= 4) | *same*  |
 
 ### Execution
 
-| Name                                       | Mainnet               | Minimal               |
-| ------------------------------------------ | --------------------- | --------------------- |
-| `MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD` | `Uint64(2**6)` (= 64) | `Uint64(2**6)` (= 64) |
-| `MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD`    | `Uint64(2**4)` (= 16) | `Uint64(2**4)` (= 16) |
+| Name                                       | Mainnet               | Minimal |
+| ------------------------------------------ | --------------------- | ------- |
+| `MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD` | `Uint64(2**6)` (= 64) | *same*  |
+| `MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD`    | `Uint64(2**4)` (= 16) | *same*  |
 
 ### Withdrawals processing
 

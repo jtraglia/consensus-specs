@@ -20,10 +20,10 @@ This document describes the process of the EIP-8148 upgrade.
 
 Warning: this configuration is not definitive.
 
-| Name                   | Mainnet                               | Minimal                               |
-| ---------------------- | ------------------------------------- | ------------------------------------- |
-| `EIP8148_FORK_VERSION` | `Version('0xe8148000')`               | `Version('0xe8148000')`               |
-| `EIP8148_FORK_EPOCH`   | `Epoch(18446744073709551615)` **TBD** | `Epoch(18446744073709551615)` **TBD** |
+| Name                   | Mainnet                               | Minimal |
+| ---------------------- | ------------------------------------- | ------- |
+| `EIP8148_FORK_VERSION` | `Version('0xe8148000')`               | *same*  |
+| `EIP8148_FORK_EPOCH`   | `Epoch(18446744073709551615)` **TBD** | *same*  |
 
 ## Fork to EIP-8148
 

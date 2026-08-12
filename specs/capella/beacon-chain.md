@@ -127,9 +127,9 @@ class Withdrawals(List[Withdrawal]):
 
 ### Max operations per block
 
-| Name                           | Mainnet               | Minimal               |
-| ------------------------------ | --------------------- | --------------------- |
-| `MAX_BLS_TO_EXECUTION_CHANGES` | `Uint64(2**4)` (= 16) | `Uint64(2**4)` (= 16) |
+| Name                           | Mainnet               | Minimal |
+| ------------------------------ | --------------------- | ------- |
+| `MAX_BLS_TO_EXECUTION_CHANGES` | `Uint64(2**4)` (= 16) | *same*  |
 
 ### Execution
 

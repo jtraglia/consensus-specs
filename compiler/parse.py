@@ -70,6 +70,8 @@ ANNOTATION_RE = re.compile(r"\(\s*=\s*([\d,]+)")
 LIST_OF_RECORDS_RE = re.compile(
     r"<!--\s*list-of-records:([a-zA-Z0-9_-]+)(?::(mainnet|minimal))?\s*-->"
 )
+# Reserved Minimal-column token: copy the Mainnet expression and annotation.
+SAME_TOKEN = "same"
 
 
 def parse_file(path: Path) -> Spec:
@@ -282,14 +284,24 @@ def _row_fields(
     mainnet = _cell_code(cells[1])
     ann_main = _annotation(cells[1])
     if two_col:
-        minimal = _cell_code(cells[2])
-        ann_min = _annotation(cells[2])
+        if _is_same_token(_cell_text(cells[1])):
+            raise ValueError(f"{name}: Mainnet column cannot use *{SAME_TOKEN}*")
+        if _is_same_token(_cell_text(cells[2])):
+            minimal = mainnet
+            ann_min = ann_main
+        else:
+            minimal = _cell_code(cells[2])
+            ann_min = _annotation(cells[2])
         description = _cell_text(cells[3]) if len(cells) >= 4 else None
     else:
         minimal = mainnet
         ann_min = ann_main
         description = _cell_text(cells[2]) if len(cells) >= 3 else None
     return name, mainnet, minimal, description, ann_main, ann_min
+
+
+def _is_same_token(text: str) -> bool:
+    return text.strip().lower() == SAME_TOKEN
 
 
 def _annotation(cell: TableCell) -> int | None:

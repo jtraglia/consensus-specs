@@ -33,9 +33,9 @@ This is the modification of the fork choice accompanying the Heze upgrade.
 
 ### Time parameters
 
-| Name                     | Mainnet        | Minimal        | Description                |
-| ------------------------ | -------------- | -------------- | -------------------------- |
-| `INCLUSION_LIST_DUE_BPS` | `Uint64(6667)` | `Uint64(6667)` | ~67% of `SLOT_DURATION_MS` |
+| Name                     | Mainnet        | Minimal | Description                |
+| ------------------------ | -------------- | ------- | -------------------------- |
+| `INCLUSION_LIST_DUE_BPS` | `Uint64(6667)` | *same*  | ~67% of `SLOT_DURATION_MS` |
 
 ## Protocols
 

@@ -56,6 +56,22 @@ Asserts signal an impossible situation or something that is not allowed.
 Implementations are expected to handle these cases with proper error handling.
 Do not use assert messages.
 
+## Preset and configuration tables
+
+Preset and configuration values use a `Name | Mainnet | Minimal` table, with an
+optional `Description` column. The Minimal column uses the reserved token
+*same* when it matches Mainnet. Write an explicit expression only when Minimal
+differs.
+
+```markdown
+| Name                      | Mainnet                | Minimal     |
+| ------------------------- | ---------------------- | ----------- |
+| `MAX_COMMITTEES_PER_SLOT` | `Uint64(2**6)` (= 64)  | `Uint64(4)` |
+| `HYSTERESIS_QUOTIENT`     | `Uint64(4)`            | *same*      |
+```
+
+Constants keep the two-column `Name | Value` form.
+
 ## Documenting changes
 
 Changes in functionality between upgrades must be properly documented. Only

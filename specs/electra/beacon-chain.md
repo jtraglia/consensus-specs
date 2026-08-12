@@ -297,40 +297,40 @@ specification.
 
 ### Gwei values
 
-| Name                            | Mainnet                                     | Minimal                                     | Description                                           |
-| ------------------------------- | ------------------------------------------- | ------------------------------------------- | ----------------------------------------------------- |
-| `MIN_ACTIVATION_BALANCE`        | `Gwei(2**5 * 10**9)` (= 32,000,000,000)     | `Gwei(2**5 * 10**9)` (= 32,000,000,000)     | Minimum balance for a validator to become active      |
-| `MAX_EFFECTIVE_BALANCE_ELECTRA` | `Gwei(2**11 * 10**9)` (= 2,048,000,000,000) | `Gwei(2**11 * 10**9)` (= 2,048,000,000,000) | Maximum effective balance for a compounding validator |
+| Name                            | Mainnet                                     | Minimal | Description                                           |
+| ------------------------------- | ------------------------------------------- | ------- | ----------------------------------------------------- |
+| `MIN_ACTIVATION_BALANCE`        | `Gwei(2**5 * 10**9)` (= 32,000,000,000)     | *same*  | Minimum balance for a validator to become active      |
+| `MAX_EFFECTIVE_BALANCE_ELECTRA` | `Gwei(2**11 * 10**9)` (= 2,048,000,000,000) | *same*  | Maximum effective balance for a compounding validator |
 
 ### Rewards and penalties
 
-| Name                                    | Mainnet                   | Minimal                   |
-| --------------------------------------- | ------------------------- | ------------------------- |
-| `MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA` | `Uint64(2**12)` (= 4,096) | `Uint64(2**12)` (= 4,096) |
-| `WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA` | `Uint64(2**12)` (= 4,096) | `Uint64(2**12)` (= 4,096) |
+| Name                                    | Mainnet                   | Minimal |
+| --------------------------------------- | ------------------------- | ------- |
+| `MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA` | `Uint64(2**12)` (= 4,096) | *same*  |
+| `WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA` | `Uint64(2**12)` (= 4,096) | *same*  |
 
 ### State list lengths
 
-| Name                                | Mainnet                         | Minimal                         |
-| ----------------------------------- | ------------------------------- | ------------------------------- |
-| `PENDING_DEPOSITS_LIMIT`            | `Uint64(2**27)` (= 134,217,728) | `Uint64(2**27)` (= 134,217,728) |
-| `PENDING_PARTIAL_WITHDRAWALS_LIMIT` | `Uint64(2**27)` (= 134,217,728) | `Uint64(64)` (= 64)             |
-| `PENDING_CONSOLIDATIONS_LIMIT`      | `Uint64(2**18)` (= 262,144)     | `Uint64(64)` (= 64)             |
+| Name                                | Mainnet                         | Minimal             |
+| ----------------------------------- | ------------------------------- | ------------------- |
+| `PENDING_DEPOSITS_LIMIT`            | `Uint64(2**27)` (= 134,217,728) | *same*              |
+| `PENDING_PARTIAL_WITHDRAWALS_LIMIT` | `Uint64(2**27)` (= 134,217,728) | `Uint64(64)` (= 64) |
+| `PENDING_CONSOLIDATIONS_LIMIT`      | `Uint64(2**18)` (= 262,144)     | `Uint64(64)` (= 64) |
 
 ### Max operations per block
 
-| Name                             | Mainnet              | Minimal              |
-| -------------------------------- | -------------------- | -------------------- |
-| `MAX_ATTESTER_SLASHINGS_ELECTRA` | `Uint64(2**0)` (= 1) | `Uint64(2**0)` (= 1) |
-| `MAX_ATTESTATIONS_ELECTRA`       | `Uint64(2**3)` (= 8) | `Uint64(2**3)` (= 8) |
+| Name                             | Mainnet              | Minimal |
+| -------------------------------- | -------------------- | ------- |
+| `MAX_ATTESTER_SLASHINGS_ELECTRA` | `Uint64(2**0)` (= 1) | *same*  |
+| `MAX_ATTESTATIONS_ELECTRA`       | `Uint64(2**3)` (= 8) | *same*  |
 
 ### Execution
 
-| Name                                     | Mainnet                   | Minimal                   | Description                                                              |
-| ---------------------------------------- | ------------------------- | ------------------------- | ------------------------------------------------------------------------ |
-| `MAX_DEPOSIT_REQUESTS_PER_PAYLOAD`       | `Uint64(2**13)` (= 8,192) | `Uint64(2**13)` (= 8,192) | Maximum number of execution-layer deposit requests in each payload       |
-| `MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD`    | `Uint64(2**4)` (= 16)     | `Uint64(2**4)` (= 16)     | Maximum number of execution-layer withdrawal requests in each payload    |
-| `MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD` | `Uint64(2**1)` (= 2)      | `Uint64(2**1)` (= 2)      | Maximum number of execution-layer consolidation requests in each payload |
+| Name                                     | Mainnet                   | Minimal | Description                                                              |
+| ---------------------------------------- | ------------------------- | ------- | ------------------------------------------------------------------------ |
+| `MAX_DEPOSIT_REQUESTS_PER_PAYLOAD`       | `Uint64(2**13)` (= 8,192) | *same*  | Maximum number of execution-layer deposit requests in each payload       |
+| `MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD`    | `Uint64(2**4)` (= 16)     | *same*  | Maximum number of execution-layer withdrawal requests in each payload    |
+| `MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD` | `Uint64(2**1)` (= 2)      | *same*  | Maximum number of execution-layer consolidation requests in each payload |
 
 ### Withdrawals processing
 
@@ -340,17 +340,17 @@ specification.
 
 ### Pending deposits processing
 
-| Name                             | Mainnet               | Minimal               | Description                                             |
-| -------------------------------- | --------------------- | --------------------- | ------------------------------------------------------- |
-| `MAX_PENDING_DEPOSITS_PER_EPOCH` | `Uint64(2**4)` (= 16) | `Uint64(2**4)` (= 16) | Maximum number of pending deposits to process per epoch |
+| Name                             | Mainnet               | Minimal | Description                                             |
+| -------------------------------- | --------------------- | ------- | ------------------------------------------------------- |
+| `MAX_PENDING_DEPOSITS_PER_EPOCH` | `Uint64(2**4)` (= 16) | *same*  | Maximum number of pending deposits to process per epoch |
 
 ## Configuration
 
 ### Execution
 
-| Name                          | Mainnet     | Minimal     | Description                                                                           |
-| ----------------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------- |
-| `MAX_BLOBS_PER_BLOCK_ELECTRA` | `Uint64(9)` | `Uint64(9)` | Maximum number of blobs in a single block limited by `MAX_BLOB_COMMITMENTS_PER_BLOCK` |
+| Name                          | Mainnet     | Minimal | Description                                                                           |
+| ----------------------------- | ----------- | ------- | ------------------------------------------------------------------------------------- |
+| `MAX_BLOBS_PER_BLOCK_ELECTRA` | `Uint64(9)` | *same*  | Maximum number of blobs in a single block limited by `MAX_BLOB_COMMITMENTS_PER_BLOCK` |
 
 ### Validator cycle
 

@@ -108,10 +108,10 @@ class NextSyncCommitteeBranch(Vector[Bytes32]):
 
 ### Misc
 
-| Name                              | Mainnet                                                    | Minimal                                                    |
-| --------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------- |
-| `MIN_SYNC_COMMITTEE_PARTICIPANTS` | `Uint64(1)`                                                | `Uint64(1)`                                                |
-| `UPDATE_TIMEOUT`                  | `Slot(SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)` | `Slot(SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)` |
+| Name                              | Mainnet                                                    | Minimal |
+| --------------------------------- | ---------------------------------------------------------- | ------- |
+| `MIN_SYNC_COMMITTEE_PARTICIPANTS` | `Uint64(1)`                                                | *same*  |
+| `UPDATE_TIMEOUT`                  | `Slot(SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)` | *same*  |
 
 ## Containers
 

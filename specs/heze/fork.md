@@ -21,10 +21,10 @@ This document describes the process of the Heze upgrade.
 
 Warning: this configuration is not definitive.
 
-| Name                | Mainnet                               | Minimal                               |
-| ------------------- | ------------------------------------- | ------------------------------------- |
-| `HEZE_FORK_VERSION` | `Version('0x08000000')`               | `Version('0x08000001')`               |
-| `HEZE_FORK_EPOCH`   | `Epoch(18446744073709551615)` **TBD** | `Epoch(18446744073709551615)` **TBD** |
+| Name                | Mainnet                               | Minimal                 |
+| ------------------- | ------------------------------------- | ----------------------- |
+| `HEZE_FORK_VERSION` | `Version('0x08000000')`               | `Version('0x08000001')` |
+| `HEZE_FORK_EPOCH`   | `Epoch(18446744073709551615)` **TBD** | *same*                  |
 
 ## Fork to Heze
 

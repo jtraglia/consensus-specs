@@ -75,9 +75,9 @@ blocks can be reorged without any adversarial behavior and without slashing.
 
 ### Configuration
 
-| Name                               | Mainnet      | Minimal      | Description  |
-| ---------------------------------- | ------------ | ------------ | ------------ |
-| `CONFIRMATION_BYZANTINE_THRESHOLD` | `Uint64(25)` | `Uint64(25)` | `Uint64(25)` |
+| Name                               | Mainnet      | Minimal | Description  |
+| ---------------------------------- | ------------ | ------- | ------------ |
+| `CONFIRMATION_BYZANTINE_THRESHOLD` | `Uint64(25)` | *same*  | `Uint64(25)` |
 
 ### Helpers
 

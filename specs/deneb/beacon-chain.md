@@ -138,23 +138,23 @@ class VersionedHash(Bytes32):
 
 ### Blob
 
-| Name                      | Mainnet        | Minimal        | Description                        |
-| ------------------------- | -------------- | -------------- | ---------------------------------- |
-| `FIELD_ELEMENTS_PER_BLOB` | `Uint64(4096)` | `Uint64(4096)` | Number of field elements in a blob |
+| Name                      | Mainnet        | Minimal | Description                        |
+| ------------------------- | -------------- | ------- | ---------------------------------- |
+| `FIELD_ELEMENTS_PER_BLOB` | `Uint64(4096)` | *same*  | Number of field elements in a blob |
 
 ### Execution
 
-| Name                             | Mainnet                   | Minimal                   | Description                                                                     |
-| -------------------------------- | ------------------------- | ------------------------- | ------------------------------------------------------------------------------- |
-| `MAX_BLOB_COMMITMENTS_PER_BLOCK` | `Uint64(2**12)` (= 4,096) | `Uint64(2**12)` (= 4,096) | Upgrade independent fixed theoretical limit same as `TARGET_BLOB_GAS_PER_BLOCK` |
+| Name                             | Mainnet                   | Minimal | Description                                                                     |
+| -------------------------------- | ------------------------- | ------- | ------------------------------------------------------------------------------- |
+| `MAX_BLOB_COMMITMENTS_PER_BLOCK` | `Uint64(2**12)` (= 4,096) | *same*  | Upgrade independent fixed theoretical limit same as `TARGET_BLOB_GAS_PER_BLOCK` |
 
 ## Configuration
 
 ### Execution
 
-| Name                  | Mainnet     | Minimal     | Description                                                                           |
-| --------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------- |
-| `MAX_BLOBS_PER_BLOCK` | `Uint64(6)` | `Uint64(6)` | Maximum number of blobs in a single block limited by `MAX_BLOB_COMMITMENTS_PER_BLOCK` |
+| Name                  | Mainnet     | Minimal | Description                                                                           |
+| --------------------- | ----------- | ------- | ------------------------------------------------------------------------------------- |
+| `MAX_BLOBS_PER_BLOCK` | `Uint64(6)` | *same*  | Maximum number of blobs in a single block limited by `MAX_BLOB_COMMITMENTS_PER_BLOCK` |
 
 *Note*: The blob transactions are packed into the execution payload by the
 EL/builder with their corresponding blobs being independently transmitted and
