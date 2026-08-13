@@ -11,7 +11,6 @@
 - [Protocols](#protocols)
   - [`ExecutionEngine`](#executionengine)
     - [New `get_inclusion_list`](#new-get_inclusion_list)
-    - [`NoopExecutionEngine`](#noopexecutionengine)
 - [Beacon chain responsibilities](#beacon-chain-responsibilities)
   - [Validator assignments](#validator-assignments)
     - [Inclusion list committee](#inclusion-list-committee)
@@ -63,63 +62,6 @@ def get_inclusion_list(self: ExecutionEngine) -> GetInclusionListResponse:
     """
     Return inclusion list transactions (as Sequence[Transaction]) object.
     """
-```
-
-#### `NoopExecutionEngine`
-
-*Note*: The following is a reference-implementation stub.
-
-```python
-class NoopExecutionEngine(ExecutionEngine):
-    def notify_new_payload(
-        self,
-        execution_payload: ExecutionPayload,  # noqa: ARG002
-        parent_beacon_block_root: Root,  # noqa: ARG002
-        execution_requests_list: Sequence[bytes],  # noqa: ARG002
-    ) -> bool:
-        return True
-
-    def notify_forkchoice_updated(
-        self,
-        head_block_hash: Hash32,
-        safe_block_hash: Hash32,
-        finalized_block_hash: Hash32,
-        payload_attributes: Optional[PayloadAttributes],
-    ) -> Optional[PayloadId]:
-        pass
-
-    def get_payload(self, payload_id: PayloadId) -> GetPayloadResponse:
-        raise NotImplementedError("no default block production")
-
-    def is_valid_block_hash(
-        self,
-        execution_payload: ExecutionPayload,  # noqa: ARG002
-        parent_beacon_block_root: Root,  # noqa: ARG002
-        execution_requests_list: Sequence[bytes],  # noqa: ARG002
-    ) -> bool:
-        return True
-
-    def is_valid_versioned_hashes(self, new_payload_request: NewPayloadRequest) -> bool:  # noqa: ARG002
-        return True
-
-    def verify_and_notify_new_payload(
-        self,
-        new_payload_request: NewPayloadRequest,  # noqa: ARG002
-    ) -> bool:
-        return True
-
-    def get_inclusion_list(self) -> GetInclusionListResponse:
-        raise NotImplementedError("no default inclusion list production")
-
-    def is_inclusion_list_satisfied(
-        self,
-        execution_payload: ExecutionPayload,  # noqa: ARG002
-        inclusion_list_transactions: Sequence[Transaction],  # noqa: ARG002
-    ) -> bool:
-        return True
-
-
-EXECUTION_ENGINE = NoopExecutionEngine()
 ```
 
 ## Beacon chain responsibilities

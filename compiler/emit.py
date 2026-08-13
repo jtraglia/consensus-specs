@@ -6,7 +6,6 @@ import ast
 import importlib
 import re
 import sys
-import textwrap
 from typing import TYPE_CHECKING
 
 from ruamel.yaml import YAML
@@ -35,25 +34,17 @@ class Emitter:
         self.fork = fork
         self.forks = forks
         self.preset = preset
-        self.methods: dict[str, dict[str, str]] = {}
-        self.functions: dict[str, str] = {}
-        for name, source in self.spec.functions.items():
-            owner = self_type(source)
-            if owner is None:
-                self.functions[name] = source
-            else:
-                method = name.rsplit(".", 1)[-1]
-                self.methods.setdefault(owner, {})[method] = source.replace(
-                    f"self: {owner}", "self"
-                )
+        self.functions = dict(self.spec.functions)
 
     def render(self) -> str:
-        classes = order_types({**self.spec.types, **self.spec.containers, **self.spec.helpers})
-        protocols = set(self.methods)
-        implementers = {
-            name: source for name, source in classes.items() if base_name(source) in protocols
-        }
-        classes = {name: source for name, source in classes.items() if name not in implementers}
+        classes = order_types(
+            {
+                **self.spec.types,
+                **self.spec.containers,
+                **self.spec.dataclasses,
+                **self.spec.exceptions,
+            }
+        )
         constants, after_presets, deferred = self._constants()
         preset_src, more_deferred = self._presets()
         deferred.update(more_deferred)
@@ -83,7 +74,6 @@ class Emitter:
             "\n\n\n".join(self._qualify_configs(src) for src in late.values()),
             self._protocols(),
             self._qualify_configs("\n\n\n".join(remaining.values())),
-            "\n\n\n".join(self._qualify_configs(src) for src in implementers.values()),
         ]
         return "\n\n\n".join(part.strip("\n") for part in parts if part) + "\n"
 
@@ -96,7 +86,12 @@ class Emitter:
         return used
 
     def _constants(self) -> tuple[list[str], list[str], dict[str, str]]:
-        type_names = set(self.spec.types) | set(self.spec.containers) | set(self.spec.helpers)
+        type_names = (
+            set(self.spec.types)
+            | set(self.spec.containers)
+            | set(self.spec.dataclasses)
+            | set(self.spec.exceptions)
+        )
         presets = list(self.spec.presets)
         plain: list[str] = []
         after: list[str] = []
@@ -111,7 +106,12 @@ class Emitter:
         return plain, after, deferred
 
     def _presets(self) -> tuple[str, dict[str, str]]:
-        type_names = set(self.spec.types) | set(self.spec.containers) | set(self.spec.helpers)
+        type_names = (
+            set(self.spec.types)
+            | set(self.spec.containers)
+            | set(self.spec.dataclasses)
+            | set(self.spec.exceptions)
+        )
         lines: list[str] = []
         deferred: dict[str, str] = {}
         env: dict[str, int] = {}
@@ -162,13 +162,12 @@ class Emitter:
         )
 
     def _protocols(self) -> str:
-        chunks = []
-        for name, fns in self.methods.items():
-            block = f"class {name}(Protocol):"
-            for source in fns.values():
-                block += "\n\n" + textwrap.indent(source, "    ")
-            chunks.append(block)
-        return "\n\n\n".join(chunks)
+        names: list[str] = []
+        for source in self.spec.functions.values():
+            owner = self_type(source)
+            if owner is not None and owner not in names:
+                names.append(owner)
+        return "\n\n\n".join(f"class {name}(Protocol):\n    pass" for name in names)
 
     def _imports(self) -> str:
         lines = ["from eth_consensus_specs.runtime import *"]
@@ -381,17 +380,3 @@ def self_type(source: str) -> str | None:
     if first.arg != "self" or not isinstance(getattr(first, "annotation", None), ast.Name):
         return None
     return first.annotation.id
-
-
-def base_name(source: str) -> str | None:
-    cls = next((node for node in ast.parse(source).body if isinstance(node, ast.ClassDef)), None)
-    if cls is None or not cls.bases:
-        return None
-    base = cls.bases[0]
-    if isinstance(base, ast.Name):
-        return base.id
-    if isinstance(base, ast.Subscript):
-        return base.value.id
-    if isinstance(base, ast.Call):
-        return base.func.id
-    return None

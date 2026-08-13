@@ -18,6 +18,8 @@ REMOVED_SECTIONS = {
     "Presets": "presets",
     "Aliases": "aliases",
     "Types": "types",
+    "Dataclasses": "dataclasses",
+    "Exceptions": "exceptions",
 }
 
 
@@ -38,6 +40,8 @@ class Removals:
     aliases: set[str] = field(default_factory=set)
     types: set[str] = field(default_factory=set)
     containers: set[str] = field(default_factory=set)
+    dataclasses: set[str] = field(default_factory=set)
+    exceptions: set[str] = field(default_factory=set)
 
     @classmethod
     def from_path(cls, path: Path) -> Removals:
@@ -65,6 +69,8 @@ class Removals:
         self.aliases |= other.aliases
         self.types |= other.types
         self.containers |= other.containers
+        self.dataclasses |= other.dataclasses
+        self.exceptions |= other.exceptions
 
 
 @dataclass
@@ -73,7 +79,8 @@ class Spec:
     aliases: dict[str, str] = field(default_factory=dict)
     types: dict[str, str] = field(default_factory=dict)
     containers: dict[str, str] = field(default_factory=dict)
-    helpers: dict[str, str] = field(default_factory=dict)
+    dataclasses: dict[str, str] = field(default_factory=dict)
+    exceptions: dict[str, str] = field(default_factory=dict)
     constants: dict[str, str] = field(default_factory=dict)
     presets: dict[str, Value] = field(default_factory=dict)
     configs: dict[str, Value] = field(default_factory=dict)
@@ -84,24 +91,21 @@ class Spec:
             aliases={**self.aliases, **other.aliases},
             types={**self.types, **other.types},
             containers={**self.containers, **other.containers},
-            helpers={**self.helpers, **other.helpers},
+            dataclasses={**self.dataclasses, **other.dataclasses},
+            exceptions={**self.exceptions, **other.exceptions},
             constants={**self.constants, **other.constants},
             presets={**self.presets, **other.presets},
             configs={**self.configs, **other.configs},
         )
 
     def without(self, gone: Removals) -> Spec:
-        drop_fn = gone.functions
         return Spec(
-            functions={
-                key: source
-                for key, source in self.functions.items()
-                if key not in drop_fn and key.rsplit(".", 1)[-1] not in drop_fn
-            },
+            functions={k: v for k, v in self.functions.items() if k not in gone.functions},
             aliases={k: v for k, v in self.aliases.items() if k not in gone.aliases},
             types={k: v for k, v in self.types.items() if k not in gone.types},
             containers={k: v for k, v in self.containers.items() if k not in gone.containers},
-            helpers=self.helpers,
+            dataclasses={k: v for k, v in self.dataclasses.items() if k not in gone.dataclasses},
+            exceptions={k: v for k, v in self.exceptions.items() if k not in gone.exceptions},
             constants={k: v for k, v in self.constants.items() if k not in gone.constants},
             presets={k: v for k, v in self.presets.items() if k not in gone.presets},
             configs=self.configs,

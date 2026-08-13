@@ -3,6 +3,7 @@ from .constants import (
     MAINNET,
     MINIMAL,
 )
+from .engines import install_noop_engines
 from .typing import (
     PresetBaseName,
     Spec,
@@ -16,6 +17,8 @@ for fork in ALL_EXECUTABLE_SPEC_NAMES:
     exec(
         f"from eth_consensus_specs.{fork} import mainnet as spec_{fork}_mainnet, minimal as spec_{fork}_minimal"
     )
+    install_noop_engines(eval(f"spec_{fork}_mainnet"))
+    install_noop_engines(eval(f"spec_{fork}_minimal"))
 
 # this is the only output of this file
 spec_targets: dict[PresetBaseName, dict[SpecForkName, Spec]] = {

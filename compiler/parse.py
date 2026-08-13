@@ -24,7 +24,19 @@ LIST_OF_RECORDS_RE = re.compile(
     r"<!--\s*list-of-records:([a-zA-Z0-9_-]+)(?::(mainnet|minimal))?\s*-->"
 )
 SAME_TOKEN = "same"
-SECTIONS = frozenset({"aliases", "types", "containers", "presets", "configs", "constants"})
+SECTIONS = frozenset(
+    {
+        "aliases",
+        "types",
+        "containers",
+        "dataclasses",
+        "exceptions",
+        "presets",
+        "configs",
+        "constants",
+    }
+)
+CLASS_SECTIONS = frozenset({"aliases", "types", "containers", "dataclasses", "exceptions"})
 VARIANT_SECTIONS = frozenset({"presets", "configs"})
 
 
@@ -89,7 +101,7 @@ class Parser:
             )
             chunk = "\n".join(line.rstrip() for line in lines[start : element.end_lineno])
             if isinstance(element, ast.FunctionDef):
-                self.spec.functions[_function_key(element)] = chunk
+                self.spec.functions[element.name] = chunk
             elif isinstance(element, ast.ClassDef):
                 last_class = self._class(chunk, element)
             elif isinstance(element, ast.Assign) and len(element.targets) == 1:
@@ -107,7 +119,7 @@ class Parser:
         if self.current_name is not None and cls.name != self.current_name:
             raise ValueError(f"class {cls.name} does not match heading {self.current_name}")
         section = self._section()
-        bucket_name = section if section in {"aliases", "types", "containers"} else "helpers"
+        bucket_name = section if section in CLASS_SECTIONS else _class_kind(cls)
         bucket: dict[str, str] = getattr(self.spec, bucket_name)
         bucket[cls.name] = source
         return bucket, cls.name
@@ -181,12 +193,28 @@ def _text(node: object) -> str:
     return "".join(parts).strip()
 
 
-def _function_key(fn: ast.FunctionDef) -> str:
-    if fn.args.args:
-        first = fn.args.args[0]
-        if first.arg == "self" and isinstance(first.annotation, ast.Name):
-            return f"{first.annotation.id}.{fn.name}"
-    return fn.name
+def _class_kind(cls: ast.ClassDef) -> str:
+    if any(
+        (isinstance(deco, ast.Name) and deco.id == "dataclass")
+        or (
+            isinstance(deco, ast.Call)
+            and isinstance(deco.func, ast.Name)
+            and deco.func.id == "dataclass"
+        )
+        for deco in cls.decorator_list
+    ):
+        return "dataclasses"
+    if (
+        cls.bases
+        and isinstance(cls.bases[0], ast.Name)
+        and cls.bases[0].id
+        in {
+            "Exception",
+            "BaseException",
+        }
+    ):
+        return "exceptions"
+    raise ValueError(f"class {cls.name} is not under a known heading")
 
 
 def _is_constant_name(name: str) -> bool:

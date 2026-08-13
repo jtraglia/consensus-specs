@@ -87,6 +87,8 @@ wrong section and expect the compiler to guess from its base class.
 - **`## Types`** — collections and other SSZ types whose bound or element type
   needs an alias, constant, or preset.
 - **`## Containers`** — SSZ containers (and progressive containers).
+- **`## Dataclasses`** / **`## Exceptions`** — optional; leftover helper classes
+  are classified as dataclasses or exceptions from their definition.
 
 ```python
 class Slot(Uint64):
@@ -102,9 +104,9 @@ class BeaconBlock(Container):
     body: BeaconBlockBody
 ```
 
-`EXECUTION_ENGINE = NoopExecutionEngine()` stays in the same code block as the
-class it constructs. Protocol methods are free functions annotated
-`self: ExecutionEngine`; the compiler assembles them into a `Protocol` class.
+Protocol methods are free functions annotated `self: ExecutionEngine`. The
+compiler emits an empty `Protocol` class for the type. Test-only stubs such as
+`NoopExecutionEngine` live in the test helpers, not in the spec markdown.
 
 ## Documenting changes
 
@@ -150,5 +152,6 @@ subtle change the reader might otherwise miss.
 
 If an existing spec item is no longer needed in a newer spec, add its name to
 that fork's `removed.md` under the matching heading (`Functions`, `Containers`,
-`Constants`, `Presets`, `Aliases`, or `Types`). Define a removal only in the
-spec where the item is first dropped. Later specs inherit it automatically.
+`Constants`, `Presets`, `Aliases`, `Types`, `Dataclasses`, or `Exceptions`).
+Define a removal only in the spec where the item is first dropped. Later specs
+inherit it automatically.

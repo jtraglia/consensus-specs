@@ -11,10 +11,11 @@
       - [`safe_block_hash`](#safe_block_hash)
 - [Helpers](#helpers)
   - [`PayloadAttributes`](#payloadattributes)
-  - [`PowBlock`](#powblock)
   - [`get_pow_block`](#get_pow_block)
   - [`is_valid_terminal_pow_block`](#is_valid_terminal_pow_block)
   - [`validate_merge_block`](#validate_merge_block)
+- [Containers](#containers)
+  - [`PowBlock`](#powblock)
 - [Handlers](#handlers)
   - [`on_block`](#on_block)
 
@@ -115,15 +116,6 @@ class PayloadAttributes:
     suggested_fee_recipient: ExecutionAddress
 ```
 
-### `PowBlock`
-
-```python
-class PowBlock(Container):
-    block_hash: Hash32
-    parent_hash: Hash32
-    total_difficulty: Uint256
-```
-
 ### `get_pow_block`
 
 Let `get_pow_block(block_hash: Hash32) -> Optional[PowBlock]` be the function
@@ -176,6 +168,17 @@ def validate_merge_block(block: BeaconBlock) -> None:
     assert pow_parent is not None
     # Check if `pow_block` is a valid terminal PoW block
     assert is_valid_terminal_pow_block(pow_block, pow_parent)
+```
+
+## Containers
+
+### `PowBlock`
+
+```python
+class PowBlock(Container):
+    block_hash: Hash32
+    parent_hash: Hash32
+    total_difficulty: Uint256
 ```
 
 ## Handlers

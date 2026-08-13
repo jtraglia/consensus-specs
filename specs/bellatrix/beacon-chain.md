@@ -38,7 +38,6 @@
     - [`notify_new_payload`](#notify_new_payload)
     - [`is_valid_block_hash`](#is_valid_block_hash)
     - [`verify_and_notify_new_payload`](#verify_and_notify_new_payload)
-    - [`NoopExecutionEngine`](#noopexecutionengine)
   - [Block processing](#block-processing)
     - [Execution payload](#execution-payload)
       - [`process_execution_payload`](#process_execution_payload)
@@ -409,40 +408,6 @@ def verify_and_notify_new_payload(
         return False
 
     return True
-```
-
-#### `NoopExecutionEngine`
-
-*Note*: The following is a reference-implementation stub.
-
-```python
-class NoopExecutionEngine(ExecutionEngine):
-    def notify_new_payload(self, execution_payload: ExecutionPayload) -> bool:  # noqa: ARG002
-        return True
-
-    def notify_forkchoice_updated(
-        self,
-        head_block_hash: Hash32,
-        safe_block_hash: Hash32,
-        finalized_block_hash: Hash32,
-        payload_attributes: Optional[PayloadAttributes],
-    ) -> Optional[PayloadId]:
-        pass
-
-    def get_payload(self, payload_id: PayloadId) -> GetPayloadResponse:
-        raise NotImplementedError("no default block production")
-
-    def is_valid_block_hash(self, execution_payload: ExecutionPayload) -> bool:  # noqa: ARG002
-        return True
-
-    def verify_and_notify_new_payload(
-        self,
-        new_payload_request: NewPayloadRequest,  # noqa: ARG002
-    ) -> bool:
-        return True
-
-
-EXECUTION_ENGINE = NoopExecutionEngine()
 ```
 
 ### Block processing

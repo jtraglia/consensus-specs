@@ -14,7 +14,6 @@
   - [New `notify_forkchoice_updated`](#new-notify_forkchoice_updated)
   - [New `ProofAttributes`](#new-proofattributes)
   - [New `request_proofs`](#new-request_proofs)
-  - [`NoopProofEngine`](#noopproofengine)
 
 <!-- mdformat-toc end -->
 
@@ -104,35 +103,4 @@ def request_proofs(
     attributes. Returns ``new_payload_request.hash_tree_root()`` to track the
     generation request.
     """
-```
-
-### `NoopProofEngine`
-
-*Note*: The following is a reference-implementation stub.
-
-```python
-class NoopProofEngine(ProofEngine):
-    def verify_execution_proof(self, execution_proof: ExecutionProof) -> bool:  # noqa: ARG002
-        return True
-
-    def notify_new_payload(self, new_payload_request: NewPayloadRequest) -> None:  # noqa: ARG002
-        return None
-
-    def notify_forkchoice_updated(
-        self,
-        head_block_hash: Hash32,  # noqa: ARG002
-        safe_block_hash: Hash32,  # noqa: ARG002
-        finalized_block_hash: Hash32,  # noqa: ARG002
-    ) -> None:
-        return None
-
-    def request_proofs(
-        self,
-        new_payload_request: NewPayloadRequest,
-        proof_attributes: ProofAttributes,
-    ) -> Root:
-        raise NotImplementedError("no default proof generation")
-
-
-PROOF_ENGINE = NoopProofEngine()
 ```
