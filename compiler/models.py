@@ -33,11 +33,11 @@ class Value:
 @dataclass
 class Removals:
     functions: set[str] = field(default_factory=set)
-    containers: set[str] = field(default_factory=set)
     constants: set[str] = field(default_factory=set)
     presets: set[str] = field(default_factory=set)
     aliases: set[str] = field(default_factory=set)
     types: set[str] = field(default_factory=set)
+    containers: set[str] = field(default_factory=set)
 
     @classmethod
     def from_path(cls, path: Path) -> Removals:
@@ -60,15 +60,11 @@ class Removals:
 
     def update(self, other: Removals) -> None:
         self.functions |= other.functions
-        self.containers |= other.containers
         self.constants |= other.constants
         self.presets |= other.presets
         self.aliases |= other.aliases
         self.types |= other.types
-
-    @property
-    def classes(self) -> set[str]:
-        return self.containers | self.aliases | self.types
+        self.containers |= other.containers
 
 
 @dataclass
@@ -76,7 +72,8 @@ class Spec:
     functions: dict[str, str] = field(default_factory=dict)
     aliases: dict[str, str] = field(default_factory=dict)
     types: dict[str, str] = field(default_factory=dict)
-    instances: dict[str, str] = field(default_factory=dict)
+    containers: dict[str, str] = field(default_factory=dict)
+    helpers: dict[str, str] = field(default_factory=dict)
     constants: dict[str, str] = field(default_factory=dict)
     presets: dict[str, Value] = field(default_factory=dict)
     configs: dict[str, Value] = field(default_factory=dict)
@@ -86,7 +83,8 @@ class Spec:
             functions={**self.functions, **other.functions},
             aliases={**self.aliases, **other.aliases},
             types={**self.types, **other.types},
-            instances={**self.instances, **other.instances},
+            containers={**self.containers, **other.containers},
+            helpers={**self.helpers, **other.helpers},
             constants={**self.constants, **other.constants},
             presets={**self.presets, **other.presets},
             configs={**self.configs, **other.configs},
@@ -94,16 +92,16 @@ class Spec:
 
     def without(self, gone: Removals) -> Spec:
         drop_fn = gone.functions
-        drop_cls = gone.classes
         return Spec(
             functions={
                 key: source
                 for key, source in self.functions.items()
                 if key not in drop_fn and key.rsplit(".", 1)[-1] not in drop_fn
             },
-            aliases={k: v for k, v in self.aliases.items() if k not in drop_cls},
-            types={k: v for k, v in self.types.items() if k not in drop_cls},
-            instances=self.instances,
+            aliases={k: v for k, v in self.aliases.items() if k not in gone.aliases},
+            types={k: v for k, v in self.types.items() if k not in gone.types},
+            containers={k: v for k, v in self.containers.items() if k not in gone.containers},
+            helpers=self.helpers,
             constants={k: v for k, v in self.constants.items() if k not in gone.constants},
             presets={k: v for k, v in self.presets.items() if k not in gone.presets},
             configs=self.configs,

@@ -102,10 +102,9 @@ class BeaconBlock(Container):
     body: BeaconBlockBody
 ```
 
-Module-level instances such as `EXECUTION_ENGINE = NoopExecutionEngine()` stay
-in the helper section that defines the class they construct. Protocol methods
-are free functions annotated `self: ExecutionEngine`; the compiler assembles
-them into a `Protocol` class.
+`EXECUTION_ENGINE = NoopExecutionEngine()` stays in the same code block as the
+class it constructs. Protocol methods are free functions annotated
+`self: ExecutionEngine`; the compiler assembles them into a `Protocol` class.
 
 ## Documenting changes
 

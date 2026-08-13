@@ -80,6 +80,7 @@ class Parser:
         source = block.children[0].children.strip()
         module = ast.parse(source)
         lines = source.split("\n")
+        last_class: tuple[dict[str, str], str] | None = None
         for element in module.body:
             start = (
                 element.decorator_list[0].lineno - 1
@@ -90,22 +91,26 @@ class Parser:
             if isinstance(element, ast.FunctionDef):
                 self.spec.functions[_function_key(element)] = chunk
             elif isinstance(element, ast.ClassDef):
-                self._class(chunk, element)
+                last_class = self._class(chunk, element)
             elif isinstance(element, ast.Assign) and len(element.targets) == 1:
                 target = element.targets[0]
                 if not isinstance(target, ast.Name):
                     raise ValueError(f"unsupported assignment: {source}")
-                self.spec.instances[target.id] = chunk
+                if last_class is None:
+                    raise ValueError(f"{self.path}: assignment {target.id!r} is not after a class")
+                bucket, name = last_class
+                bucket[name] += "\n\n" + chunk
             else:
                 raise ValueError(f"unrecognized python: {source}")
 
-    def _class(self, source: str, cls: ast.ClassDef) -> None:
+    def _class(self, source: str, cls: ast.ClassDef) -> tuple[dict[str, str], str]:
         if self.current_name is not None and cls.name != self.current_name:
             raise ValueError(f"class {cls.name} does not match heading {self.current_name}")
-        if self._section() == "aliases":
-            self.spec.aliases[cls.name] = source
-        else:
-            self.spec.types[cls.name] = source
+        section = self._section()
+        bucket_name = section if section in {"aliases", "types", "containers"} else "helpers"
+        bucket: dict[str, str] = getattr(self.spec, bucket_name)
+        bucket[cls.name] = source
+        return bucket, cls.name
 
     def _table(self, table: Table) -> None:
         section = self._section()

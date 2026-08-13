@@ -12,9 +12,12 @@
 ## Containers
 
 - `ExecutionPayloadHeader`
+- `PartialDataColumnHeader`
+
+## Types
+
 - `KZGCommitmentsInclusionProof`
 - `OptionalPartialDataColumnHeader`
-- `PartialDataColumnHeader`
 
 ## Functions
 

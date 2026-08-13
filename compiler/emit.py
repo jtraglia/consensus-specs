@@ -48,12 +48,12 @@ class Emitter:
                 )
 
     def render(self) -> str:
-        types = order_types(self.spec.types)
+        classes = order_types({**self.spec.types, **self.spec.containers, **self.spec.helpers})
         protocols = set(self.methods)
         implementers = {
-            name: source for name, source in types.items() if base_name(source) in protocols
+            name: source for name, source in classes.items() if base_name(source) in protocols
         }
-        types = {name: source for name, source in types.items() if name not in implementers}
+        classes = {name: source for name, source in classes.items() if name not in implementers}
         constants, after_presets, deferred = self._constants()
         preset_src, more_deferred = self._presets()
         deferred.update(more_deferred)
@@ -63,12 +63,12 @@ class Emitter:
                 *constants,
                 preset_src,
                 *after_presets,
-                *types.values(),
+                *classes.values(),
                 *deferred.values(),
             ]
         )
         remaining = {name: src for name, src in self.functions.items() if name not in hoist}
-        early, late = split_by_deps(types, deferred)
+        early, late = split_by_deps(classes, deferred)
         parts = [
             self._imports(),
             f"fork = '{self.fork.name}'\n",
@@ -84,7 +84,6 @@ class Emitter:
             self._protocols(),
             self._qualify_configs("\n\n\n".join(remaining.values())),
             "\n\n\n".join(self._qualify_configs(src) for src in implementers.values()),
-            "\n\n\n".join(self.spec.instances.values()),
         ]
         return "\n\n\n".join(part.strip("\n") for part in parts if part) + "\n"
 
@@ -97,7 +96,7 @@ class Emitter:
         return used
 
     def _constants(self) -> tuple[list[str], list[str], dict[str, str]]:
-        type_names = set(self.spec.types)
+        type_names = set(self.spec.types) | set(self.spec.containers) | set(self.spec.helpers)
         presets = list(self.spec.presets)
         plain: list[str] = []
         after: list[str] = []
@@ -112,7 +111,7 @@ class Emitter:
         return plain, after, deferred
 
     def _presets(self) -> tuple[str, dict[str, str]]:
-        type_names = set(self.spec.types)
+        type_names = set(self.spec.types) | set(self.spec.containers) | set(self.spec.helpers)
         lines: list[str] = []
         deferred: dict[str, str] = {}
         env: dict[str, int] = {}

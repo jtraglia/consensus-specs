@@ -4,12 +4,12 @@
 
 - `BlobIdentifier`
 - `BlobSidecar`
-- `KZGCommitmentInclusionProof`
 
 ## Types
 
 - `BlobIdentifiers`
 - `BlobSidecars`
+- `KZGCommitmentInclusionProof`
 
 ## Functions
 

@@ -3,6 +3,9 @@
 ## Containers
 
 - `PendingAttestation`
+
+## Types
+
 - `PendingAttestations`
 
 ## Functions
