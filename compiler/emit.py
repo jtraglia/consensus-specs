@@ -145,12 +145,12 @@ class Emitter:
         fields = ["    PRESET_BASE: str"]
         values = [f'    PRESET_BASE="{self.preset}",']
         for name, value in self.spec.configs.items():
-            records = value.records(self.preset)
-            if records is not None:
+            chosen = value.select(self.preset)
+            if isinstance(chosen, list):
                 fields.append(f"    {name}: tuple[frozendict[str, Any], ...]")
-                values.append(f"    {name}={value.select(self.preset)},")
+                values.append(f"    {name}={format_records(chosen)},")
                 continue
-            expr = value.select(self.preset)
+            expr = chosen
             kind, inner = split_type(expr)
             fields.append(f"    {name}: {kind or 'int'}")
             values.append(f"    {name}={expr if kind is None else f'{kind}({inner})'},")
@@ -244,12 +244,12 @@ def write_preset_yaml(
 def write_config_yaml(path: Path, configs: dict[str, Value], preset_name: str) -> None:
     data: dict = {"PRESET_BASE": preset_name, "CONFIG_NAME": preset_name}
     for name, value in configs.items():
-        records = value.records(preset_name)
-        if records is None:
-            data[name] = yaml_value(value.select(preset_name))
+        chosen = value.select(preset_name)
+        if isinstance(chosen, str):
+            data[name] = yaml_value(chosen)
             continue
         rows = []
-        for record in records:
+        for record in chosen:
             row: dict[str, object] = {}
             for key, raw in record.items():
                 if key == "DATE":
@@ -261,6 +261,17 @@ def write_config_yaml(path: Path, configs: dict[str, Value], preset_name: str) -
             rows.append(row)
         data[name] = rows
     dump_yaml(path, data)
+
+
+def format_records(records: list[dict[str, str]]) -> str:
+    lines = ["("]
+    for record in records:
+        lines.append("    frozendict({")
+        for key, value in record.items():
+            lines.append(f'        "{key}": {value},')
+        lines.append("    }),")
+    lines.append(")")
+    return "\n".join(lines)
 
 
 def assign(name: str, expression: str) -> str:

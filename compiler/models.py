@@ -25,22 +25,19 @@ REMOVED_SECTIONS = {
 
 @dataclass(frozen=True)
 class Value:
-    mainnet: str
-    minimal: str
-    records_mainnet: list[dict[str, str]] | None = None
-    records_minimal: list[dict[str, str]] | None = None
+    mainnet: str | list[dict[str, str]]
+    minimal: str | list[dict[str, str]]
 
-    def select(self, preset: str) -> str:
+    def select(self, preset: str) -> str | list[dict[str, str]]:
         return self.mainnet if preset == "mainnet" else self.minimal
 
-    def records(self, preset: str) -> list[dict[str, str]] | None:
-        return self.records_mainnet if preset == "mainnet" else self.records_minimal
-
     def map_expr(self, fn: Callable[[str], str]) -> Value:
+        if not isinstance(self.mainnet, str) or not isinstance(self.minimal, str):
+            return self
         mainnet, minimal = fn(self.mainnet), fn(self.minimal)
         if (mainnet, minimal) == (self.mainnet, self.minimal):
             return self
-        return Value(mainnet, minimal, self.records_mainnet, self.records_minimal)
+        return Value(mainnet, minimal)
 
 
 @dataclass

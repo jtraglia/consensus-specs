@@ -149,18 +149,13 @@ class Parser:
             for row in table.children[1:]
         ]
         existing = self.spec.configs.get(name)
-        mainnet = existing.records_mainnet if existing and existing.records_mainnet else []
-        minimal = existing.records_minimal if existing and existing.records_minimal else []
+        mainnet = existing.mainnet if existing and isinstance(existing.mainnet, list) else []
+        minimal = existing.minimal if existing and isinstance(existing.minimal, list) else []
         if variant == "minimal":
             minimal = rows
         else:
             mainnet = rows
-        self.spec.configs[name] = Value(
-            mainnet=_format_records(mainnet),
-            minimal=_format_records(minimal),
-            records_mainnet=mainnet,
-            records_minimal=minimal,
-        )
+        self.spec.configs[name] = Value(mainnet, minimal)
 
 
 def _text(node: object) -> str:
@@ -231,14 +226,3 @@ def _cell_code(cell: TableCell) -> str:
                 if hasattr(child, "children") and isinstance(child.children, str):
                     return child.children
     return _text(cell)
-
-
-def _format_records(records: list[dict[str, str]]) -> str:
-    lines = ["("]
-    for record in records:
-        lines.append("    frozendict({")
-        for key, value in record.items():
-            lines.append(f'        "{key}": {value},')
-        lines.append("    }),")
-    lines.append(")")
-    return "\n".join(lines)
