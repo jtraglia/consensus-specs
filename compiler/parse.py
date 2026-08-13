@@ -25,7 +25,7 @@ LIST_OF_RECORDS_RE = re.compile(
 )
 SAME_TOKEN = "same"
 SECTIONS = frozenset({"aliases", "types", "containers", "presets", "configs", "constants"})
-TABLE_SECTIONS = frozenset({"presets", "configs", "constants"})
+VARIANT_SECTIONS = frozenset({"presets", "configs"})
 
 
 def parse_file(path: Path) -> Spec:
@@ -109,17 +109,22 @@ class Parser:
 
     def _table(self, table: Table) -> None:
         section = self._section()
-        if section not in TABLE_SECTIONS:
+        if section == "constants":
+            dest: dict = self.spec.constants
+            parse_row = _constant_row
+        elif section in VARIANT_SECTIONS:
+            dest = getattr(self.spec, section)
+            parse_row = _variant_row
+        else:
             return
-        header = [_text(cell).strip().lower() for cell in table.children[0].children]
-        two_col = len(header) >= 3 and header[1] == "mainnet" and header[2] == "minimal"
+        columns = 3 if section in VARIANT_SECTIONS else 2
         for row in table.children[1:]:
-            if len(row.children) < 2:
+            if len(row.children) < columns:
                 continue
-            name, mainnet, minimal = _row_fields(row, two_col)
+            name, value = parse_row(row)
             if not _is_constant_name(name):
                 raise ValueError(f"{self.path}: expected constant name, got {name!r}")
-            getattr(self.spec, section)[name] = Value(mainnet=mainnet, minimal=minimal)
+            dest[name] = value
 
     def _html(self, html: HTMLBlock) -> None:
         body = html.body.strip()
@@ -190,17 +195,20 @@ def _is_constant_name(name: str) -> bool:
     return all(c in string.ascii_uppercase + "_" + string.digits for c in name[1:])
 
 
-def _row_fields(row: TableRow, two_col: bool) -> tuple[str, str, str]:
+def _constant_row(row: TableRow) -> tuple[str, str]:
+    cells = list(row.children)
+    return _cell_code(cells[0]), _cell_code(cells[1])
+
+
+def _variant_row(row: TableRow) -> tuple[str, Value]:
     cells = list(row.children)
     name = _cell_code(cells[0])
+    if _is_same(_text(cells[1])):
+        raise ValueError(f"{name}: Mainnet column cannot use *{SAME_TOKEN}*")
     mainnet = _cell_code(cells[1])
-    if two_col:
-        if _is_same(_text(cells[1])):
-            raise ValueError(f"{name}: Mainnet column cannot use *{SAME_TOKEN}*")
-        if _is_same(_text(cells[2])):
-            return name, mainnet, mainnet
-        return name, mainnet, _cell_code(cells[2])
-    return name, mainnet, mainnet
+    if _is_same(_text(cells[2])):
+        return name, Value(mainnet, mainnet)
+    return name, Value(mainnet, _cell_code(cells[2]))
 
 
 def _is_same(text: str) -> bool:

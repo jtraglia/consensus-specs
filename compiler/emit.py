@@ -102,8 +102,7 @@ class Emitter:
         plain: list[str] = []
         after: list[str] = []
         deferred: dict[str, str] = {}
-        for name, value in self.spec.constants.items():
-            expr = value.mainnet
+        for name, expr in self.spec.constants.items():
             if references(expr, type_names):
                 deferred[name] = assign(name, expr)
             elif any(preset in expr for preset in presets):

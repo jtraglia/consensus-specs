@@ -90,7 +90,7 @@ class Spec:
     aliases: dict[str, str] = field(default_factory=dict)
     types: dict[str, str] = field(default_factory=dict)
     instances: dict[str, str] = field(default_factory=dict)
-    constants: dict[str, Value] = field(default_factory=dict)
+    constants: dict[str, str] = field(default_factory=dict)
     presets: dict[str, Value] = field(default_factory=dict)
     configs: dict[str, Value] = field(default_factory=dict)
 
@@ -140,7 +140,7 @@ class Spec:
             aliases=self.aliases,
             types=self.types,
             instances=self.instances,
-            constants={n: v.map_expr(qualify) for n, v in self.constants.items()},
+            constants={n: qualify(v) for n, v in self.constants.items()},
             presets={n: v.map_expr(qualify) for n, v in self.presets.items()},
             configs=self.configs,
         )
