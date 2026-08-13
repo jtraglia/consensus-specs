@@ -370,21 +370,8 @@ def order_types(types: dict[str, str]) -> dict[str, str]:
 
 
 def type_dependencies(name: str, source: str, types: dict[str, str]) -> list[str]:
-    lines = source.split("\n")
-    signature_end = next((i for i, line in enumerate(lines) if line.rstrip().endswith("):")), 0)
-    signature = " ".join(
-        line[: line.index("#")] if "#" in line else line for line in lines[: signature_end + 1]
-    )
-    names: list[str] = []
-    for i, line in enumerate([signature, *lines[signature_end + 1 :]]):
-        match = re.match(r".+?\((.+)\):", line) if i == 0 else re.match(r"\s+\w+: (.+)", line)
-        if not match:
-            continue
-        expr = match.group(1)
-        if "#" in expr:
-            expr = expr[: expr.index("#")]
-        names.extend(re.findall(r"(\w+)", expr))
-    return [dep for dep in names if dep in types and dep != name]
+    code = "\n".join(line.split("#", 1)[0] for line in source.split("\n"))
+    return [dep for dep in re.findall(r"\b(\w+)\b", code) if dep in types and dep != name]
 
 
 def self_type(source: str) -> str | None:

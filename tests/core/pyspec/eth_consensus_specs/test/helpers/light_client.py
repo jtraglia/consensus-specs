@@ -34,27 +34,15 @@ def sample_blob_schedule(initial_epoch=5, interval=5):
 
 
 def latest_finalized_root_gindex(spec):
-    if hasattr(spec, "FINALIZED_ROOT_GINDEX_GLOAS"):
-        return spec.FINALIZED_ROOT_GINDEX_GLOAS
-    if hasattr(spec, "FINALIZED_ROOT_GINDEX_ELECTRA"):
-        return spec.FINALIZED_ROOT_GINDEX_ELECTRA
-    return spec.FINALIZED_ROOT_GINDEX
+    return spec.get_generalized_index(spec.BeaconState, "finalized_checkpoint", "root")
 
 
 def latest_current_sync_committee_gindex(spec):
-    if hasattr(spec, "CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS"):
-        return spec.CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS
-    if hasattr(spec, "CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA"):
-        return spec.CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA
-    return spec.CURRENT_SYNC_COMMITTEE_GINDEX
+    return spec.get_generalized_index(spec.BeaconState, "current_sync_committee")
 
 
 def latest_next_sync_committee_gindex(spec):
-    if hasattr(spec, "NEXT_SYNC_COMMITTEE_GINDEX_GLOAS"):
-        return spec.NEXT_SYNC_COMMITTEE_GINDEX_GLOAS
-    if hasattr(spec, "NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA"):
-        return spec.NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA
-    return spec.NEXT_SYNC_COMMITTEE_GINDEX
+    return spec.get_generalized_index(spec.BeaconState, "next_sync_committee")
 
 
 def latest_normalize_merkle_branch(spec, branch, gindex):

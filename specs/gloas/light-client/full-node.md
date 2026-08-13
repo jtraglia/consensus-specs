@@ -27,22 +27,48 @@ def block_to_light_client_header(block: SignedBeaconBlock) -> LightClientHeader:
             block.message.body.signed_execution_payload_bid.message.parent_block_hash
         )
         execution_branch = ExecutionBranch(
-            data=compute_merkle_proof(block.message.body, EXECUTION_BLOCK_HASH_GINDEX_GLOAS)
+            data=compute_merkle_proof(
+                block.message.body,
+                get_generalized_index(
+                    BeaconBlockBody,
+                    "signed_execution_payload_bid",
+                    "message",
+                    "parent_block_hash",
+                ),
+            )
         )
     elif epoch >= DENEB_FORK_EPOCH:
         execution_block_hash = block.message.body.execution_payload.block_hash
         execution_branch = ExecutionBranch(
             data=normalize_merkle_branch(
-                compute_merkle_proof(block.message.body, EXECUTION_BLOCK_HASH_GINDEX_DENEB),
-                EXECUTION_BLOCK_HASH_GINDEX_GLOAS,
+                compute_merkle_proof(
+                    block.message.body,
+                    get_generalized_index(deneb.BeaconBlockBody, "execution_payload", "block_hash"),
+                ),
+                get_generalized_index(
+                    BeaconBlockBody,
+                    "signed_execution_payload_bid",
+                    "message",
+                    "parent_block_hash",
+                ),
             )
         )
     elif epoch >= CAPELLA_FORK_EPOCH:
         execution_block_hash = block.message.body.execution_payload.block_hash
         execution_branch = ExecutionBranch(
             data=normalize_merkle_branch(
-                compute_merkle_proof(block.message.body, EXECUTION_BLOCK_HASH_GINDEX),
-                EXECUTION_BLOCK_HASH_GINDEX_GLOAS,
+                compute_merkle_proof(
+                    block.message.body,
+                    get_generalized_index(
+                        capella.BeaconBlockBody, "execution_payload", "block_hash"
+                    ),
+                ),
+                get_generalized_index(
+                    BeaconBlockBody,
+                    "signed_execution_payload_bid",
+                    "message",
+                    "parent_block_hash",
+                ),
             )
         )
     else:

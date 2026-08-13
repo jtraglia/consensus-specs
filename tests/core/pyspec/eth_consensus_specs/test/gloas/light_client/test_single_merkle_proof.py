@@ -17,7 +17,12 @@ def test_execution_block_hash_merkle_proof(spec, state):
     )
 
     yield "object", block.message.body
-    gindex = spec.EXECUTION_BLOCK_HASH_GINDEX_GLOAS
+    gindex = spec.get_generalized_index(
+        spec.BeaconBlockBody,
+        "signed_execution_payload_bid",
+        "message",
+        "parent_block_hash",
+    )
     branch = spec.compute_merkle_proof(block.message.body, gindex)
     yield (
         "proof",

@@ -5,7 +5,6 @@
 - [Introduction](#introduction)
 - [Types](#types)
   - [New `ExecutionBranch`](#new-executionbranch)
-- [Constants](#constants)
 - [Containers](#containers)
   - [Modified `LightClientHeader`](#modified-lightclientheader)
   - [Modified `LightClientBootstrap`](#modified-lightclientbootstrap)
@@ -42,15 +41,8 @@ class ExecutionBranch(Vector[Bytes32]):
     A Merkle branch proving ``execution_payload`` within ``BeaconBlockBody``.
     """
 
-    LENGTH = floorlog2(EXECUTION_PAYLOAD_GINDEX)
+    LENGTH = floorlog2(get_generalized_index(BeaconBlockBody, "execution_payload"))
 ```
-
-## Constants
-
-| Name                          | Value                                                                               |
-| ----------------------------- | ----------------------------------------------------------------------------------- |
-| `EXECUTION_PAYLOAD_GINDEX`    | `get_generalized_index(BeaconBlockBody, 'execution_payload')` (= 25)                |
-| `EXECUTION_BLOCK_HASH_GINDEX` | `get_generalized_index(BeaconBlockBody, 'execution_payload', 'block_hash')` (= 412) |
 
 ## Containers
 
@@ -159,8 +151,8 @@ def is_valid_light_client_header(header: LightClientHeader) -> bool:
     return is_valid_merkle_branch(
         leaf=get_lc_execution_root(header),
         branch=header.execution_branch,
-        depth=floorlog2(EXECUTION_PAYLOAD_GINDEX),
-        index=get_subtree_index(EXECUTION_PAYLOAD_GINDEX),
+        depth=floorlog2(get_generalized_index(BeaconBlockBody, "execution_payload")),
+        index=get_subtree_index(get_generalized_index(BeaconBlockBody, "execution_payload")),
         root=header.beacon.body_root,
     )
 ```

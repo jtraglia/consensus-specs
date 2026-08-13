@@ -21,7 +21,7 @@ def test_execution_merkle_proof(spec, state):
     )
 
     yield "object", block.message.body
-    gindex = spec.EXECUTION_PAYLOAD_GINDEX
+    gindex = spec.get_generalized_index(spec.BeaconBlockBody, "execution_payload")
     branch = spec.compute_merkle_proof(block.message.body, gindex)
     yield (
         "proof",

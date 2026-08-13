@@ -7,10 +7,8 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from pathlib import Path
 
-GINDEX_UNQUALIFIED_RE = re.compile(r"(get_generalized_index\(\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*,)")
 REMOVED_HEADING_RE = re.compile(r"^##\s+(.+?)\s*$")
 REMOVED_ITEM_RE = re.compile(r"^-\s+`([^`]+)`")
 REMOVED_SECTIONS = {
@@ -30,14 +28,6 @@ class Value:
 
     def select(self, preset: str) -> str | list[dict[str, str]]:
         return self.mainnet if preset == "mainnet" else self.minimal
-
-    def map_expr(self, fn: Callable[[str], str]) -> Value:
-        if not isinstance(self.mainnet, str) or not isinstance(self.minimal, str):
-            return self
-        mainnet, minimal = fn(self.mainnet), fn(self.minimal)
-        if (mainnet, minimal) == (self.mainnet, self.minimal):
-            return self
-        return Value(mainnet, minimal)
 
 
 @dataclass
@@ -116,28 +106,5 @@ class Spec:
             instances=self.instances,
             constants={k: v for k, v in self.constants.items() if k not in gone.constants},
             presets={k: v for k, v in self.presets.items() if k not in gone.presets},
-            configs=self.configs,
-        )
-
-    def qualify_gindices(self, fork_name: str) -> Spec:
-        names = set(self.types)
-
-        def qualify(expr: str) -> str:
-            return GINDEX_UNQUALIFIED_RE.sub(
-                lambda match: (
-                    f"{match.group(1)}{fork_name}.{match.group(2)}{match.group(3)}"
-                    if match.group(2) in names
-                    else match.group(0)
-                ),
-                expr,
-            )
-
-        return Spec(
-            functions=self.functions,
-            aliases=self.aliases,
-            types=self.types,
-            instances=self.instances,
-            constants={n: qualify(v) for n, v in self.constants.items()},
-            presets={n: v.map_expr(qualify) for n, v in self.presets.items()},
             configs=self.configs,
         )

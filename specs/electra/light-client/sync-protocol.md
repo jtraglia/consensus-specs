@@ -7,7 +7,6 @@
   - [Modified `CurrentSyncCommitteeBranch`](#modified-currentsynccommitteebranch)
   - [Modified `FinalityBranch`](#modified-finalitybranch)
   - [Modified `NextSyncCommitteeBranch`](#modified-nextsynccommitteebranch)
-- [Constants](#constants)
 - [Helpers](#helpers)
   - [Modified `finalized_root_gindex_at_slot`](#modified-finalized_root_gindex_at_slot)
   - [Modified `current_sync_committee_gindex_at_slot`](#modified-current_sync_committee_gindex_at_slot)
@@ -38,7 +37,7 @@ class CurrentSyncCommitteeBranch(Vector[Bytes32]):
     A Merkle branch proving ``current_sync_committee`` within ``BeaconState``.
     """
 
-    LENGTH = floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA)
+    LENGTH = floorlog2(get_generalized_index(BeaconState, "current_sync_committee"))
 ```
 
 ### Modified `FinalityBranch`
@@ -51,7 +50,7 @@ class FinalityBranch(Vector[Bytes32]):
     ``BeaconState``.
     """
 
-    LENGTH = floorlog2(FINALIZED_ROOT_GINDEX_ELECTRA)
+    LENGTH = floorlog2(get_generalized_index(BeaconState, "finalized_checkpoint", "root"))
 ```
 
 ### Modified `NextSyncCommitteeBranch`
@@ -63,16 +62,8 @@ class NextSyncCommitteeBranch(Vector[Bytes32]):
     A Merkle branch proving ``next_sync_committee`` within ``BeaconState``.
     """
 
-    LENGTH = floorlog2(NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA)
+    LENGTH = floorlog2(get_generalized_index(BeaconState, "next_sync_committee"))
 ```
-
-## Constants
-
-| Name                                    | Value                                                                        |
-| --------------------------------------- | ---------------------------------------------------------------------------- |
-| `FINALIZED_ROOT_GINDEX_ELECTRA`         | `get_generalized_index(BeaconState, 'finalized_checkpoint', 'root')` (= 169) |
-| `CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA` | `get_generalized_index(BeaconState, 'current_sync_committee')` (= 86)        |
-| `NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA`    | `get_generalized_index(BeaconState, 'next_sync_committee')` (= 87)           |
 
 ## Helpers
 
@@ -84,8 +75,8 @@ def finalized_root_gindex_at_slot(slot: Slot) -> GeneralizedIndex:
 
     # [Modified in Electra]
     if epoch >= ELECTRA_FORK_EPOCH:
-        return FINALIZED_ROOT_GINDEX_ELECTRA
-    return FINALIZED_ROOT_GINDEX
+        return get_generalized_index(BeaconState, "finalized_checkpoint", "root")
+    return get_generalized_index(altair.BeaconState, "finalized_checkpoint", "root")
 ```
 
 ### Modified `current_sync_committee_gindex_at_slot`
@@ -96,8 +87,8 @@ def current_sync_committee_gindex_at_slot(slot: Slot) -> GeneralizedIndex:
 
     # [Modified in Electra]
     if epoch >= ELECTRA_FORK_EPOCH:
-        return CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA
-    return CURRENT_SYNC_COMMITTEE_GINDEX
+        return get_generalized_index(BeaconState, "current_sync_committee")
+    return get_generalized_index(altair.BeaconState, "current_sync_committee")
 ```
 
 ### Modified `next_sync_committee_gindex_at_slot`
@@ -108,6 +99,6 @@ def next_sync_committee_gindex_at_slot(slot: Slot) -> GeneralizedIndex:
 
     # [Modified in Electra]
     if epoch >= ELECTRA_FORK_EPOCH:
-        return NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA
-    return NEXT_SYNC_COMMITTEE_GINDEX
+        return get_generalized_index(BeaconState, "next_sync_committee")
+    return get_generalized_index(altair.BeaconState, "next_sync_committee")
 ```

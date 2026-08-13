@@ -46,7 +46,10 @@ def block_to_light_client_header(block: SignedBeaconBlock) -> LightClientHeader:
             execution_header.excess_blob_gas = payload.excess_blob_gas
 
         execution_branch = ExecutionBranch(
-            data=compute_merkle_proof(block.message.body, EXECUTION_PAYLOAD_GINDEX)
+            data=compute_merkle_proof(
+                block.message.body,
+                get_generalized_index(BeaconBlockBody, "execution_payload"),
+            )
         )
     else:
         # Note that during fork transitions, `finalized_header` may still point to earlier forks.

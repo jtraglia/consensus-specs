@@ -7,7 +7,6 @@
   - [`CurrentSyncCommitteeBranch`](#currentsynccommitteebranch)
   - [`FinalityBranch`](#finalitybranch)
   - [`NextSyncCommitteeBranch`](#nextsynccommitteebranch)
-- [Constants](#constants)
 - [Presets](#presets)
   - [Misc](#misc)
 - [Containers](#containers)
@@ -70,7 +69,7 @@ class CurrentSyncCommitteeBranch(Vector[Bytes32]):
     A Merkle branch proving ``current_sync_committee`` within ``BeaconState``.
     """
 
-    LENGTH = floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX)
+    LENGTH = floorlog2(get_generalized_index(BeaconState, "current_sync_committee"))
 ```
 
 ### `FinalityBranch`
@@ -82,7 +81,7 @@ class FinalityBranch(Vector[Bytes32]):
     ``BeaconState``.
     """
 
-    LENGTH = floorlog2(FINALIZED_ROOT_GINDEX)
+    LENGTH = floorlog2(get_generalized_index(BeaconState, "finalized_checkpoint", "root"))
 ```
 
 ### `NextSyncCommitteeBranch`
@@ -93,16 +92,8 @@ class NextSyncCommitteeBranch(Vector[Bytes32]):
     A Merkle branch proving ``next_sync_committee`` within ``BeaconState``.
     """
 
-    LENGTH = floorlog2(NEXT_SYNC_COMMITTEE_GINDEX)
+    LENGTH = floorlog2(get_generalized_index(BeaconState, "next_sync_committee"))
 ```
-
-## Constants
-
-| Name                            | Value                                                                        |
-| ------------------------------- | ---------------------------------------------------------------------------- |
-| `FINALIZED_ROOT_GINDEX`         | `get_generalized_index(BeaconState, 'finalized_checkpoint', 'root')` (= 105) |
-| `CURRENT_SYNC_COMMITTEE_GINDEX` | `get_generalized_index(BeaconState, 'current_sync_committee')` (= 54)        |
-| `NEXT_SYNC_COMMITTEE_GINDEX`    | `get_generalized_index(BeaconState, 'next_sync_committee')` (= 55)           |
 
 ## Presets
 
@@ -207,21 +198,21 @@ class LightClientStore:
 
 ```python
 def finalized_root_gindex_at_slot(_slot: Slot) -> GeneralizedIndex:
-    return FINALIZED_ROOT_GINDEX
+    return get_generalized_index(BeaconState, "finalized_checkpoint", "root")
 ```
 
 ### `current_sync_committee_gindex_at_slot`
 
 ```python
 def current_sync_committee_gindex_at_slot(_slot: Slot) -> GeneralizedIndex:
-    return CURRENT_SYNC_COMMITTEE_GINDEX
+    return get_generalized_index(BeaconState, "current_sync_committee")
 ```
 
 ### `next_sync_committee_gindex_at_slot`
 
 ```python
 def next_sync_committee_gindex_at_slot(_slot: Slot) -> GeneralizedIndex:
-    return NEXT_SYNC_COMMITTEE_GINDEX
+    return get_generalized_index(BeaconState, "next_sync_committee")
 ```
 
 ### `is_valid_light_client_header`

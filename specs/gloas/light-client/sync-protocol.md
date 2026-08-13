@@ -8,7 +8,6 @@
   - [Modified `ExecutionBranch`](#modified-executionbranch)
   - [Modified `FinalityBranch`](#modified-finalitybranch)
   - [Modified `NextSyncCommitteeBranch`](#modified-nextsynccommitteebranch)
-- [Constants](#constants)
 - [Containers](#containers)
   - [Modified `LightClientHeader`](#modified-lightclientheader)
 - [Helpers](#helpers)
@@ -45,7 +44,7 @@ class CurrentSyncCommitteeBranch(Vector[Bytes32]):
     A Merkle branch proving ``current_sync_committee`` within ``BeaconState``.
     """
 
-    LENGTH = floorlog2(CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS)
+    LENGTH = floorlog2(get_generalized_index(BeaconState, "current_sync_committee"))
 ```
 
 ### Modified `ExecutionBranch`
@@ -58,7 +57,14 @@ class ExecutionBranch(Vector[Bytes32]):
     ``BeaconBlockBody``.
     """
 
-    LENGTH = floorlog2(EXECUTION_BLOCK_HASH_GINDEX_GLOAS)
+    LENGTH = floorlog2(
+        get_generalized_index(
+            BeaconBlockBody,
+            "signed_execution_payload_bid",
+            "message",
+            "parent_block_hash",
+        )
+    )
 ```
 
 ### Modified `FinalityBranch`
@@ -71,7 +77,7 @@ class FinalityBranch(Vector[Bytes32]):
     ``BeaconState``.
     """
 
-    LENGTH = floorlog2(FINALIZED_ROOT_GINDEX_GLOAS)
+    LENGTH = floorlog2(get_generalized_index(BeaconState, "finalized_checkpoint", "root"))
 ```
 
 ### Modified `NextSyncCommitteeBranch`
@@ -83,17 +89,8 @@ class NextSyncCommitteeBranch(Vector[Bytes32]):
     A Merkle branch proving ``next_sync_committee`` within ``BeaconState``.
     """
 
-    LENGTH = floorlog2(NEXT_SYNC_COMMITTEE_GINDEX_GLOAS)
+    LENGTH = floorlog2(get_generalized_index(BeaconState, "next_sync_committee"))
 ```
-
-## Constants
-
-| Name                                  | Value                                                                                                              |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `FINALIZED_ROOT_GINDEX_GLOAS`         | `get_generalized_index(BeaconState, 'finalized_checkpoint', 'root')` (= 735)                                       |
-| `CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS` | `get_generalized_index(BeaconState, 'current_sync_committee')` (= 2,945)                                           |
-| `NEXT_SYNC_COMMITTEE_GINDEX_GLOAS`    | `get_generalized_index(BeaconState, 'next_sync_committee')` (= 2,946)                                              |
-| `EXECUTION_BLOCK_HASH_GINDEX_GLOAS`   | `get_generalized_index(BeaconBlockBody, 'signed_execution_payload_bid', 'message', 'parent_block_hash')` (= 2,856) |
 
 ## Containers
 
@@ -120,10 +117,10 @@ def finalized_root_gindex_at_slot(slot: Slot) -> GeneralizedIndex:
 
     # [Modified in Gloas:EIP7688]
     if epoch >= GLOAS_FORK_EPOCH:
-        return FINALIZED_ROOT_GINDEX_GLOAS
+        return get_generalized_index(BeaconState, "finalized_checkpoint", "root")
     if epoch >= ELECTRA_FORK_EPOCH:
-        return FINALIZED_ROOT_GINDEX_ELECTRA
-    return FINALIZED_ROOT_GINDEX
+        return get_generalized_index(electra.BeaconState, "finalized_checkpoint", "root")
+    return get_generalized_index(altair.BeaconState, "finalized_checkpoint", "root")
 ```
 
 ### Modified `current_sync_committee_gindex_at_slot`
@@ -134,10 +131,10 @@ def current_sync_committee_gindex_at_slot(slot: Slot) -> GeneralizedIndex:
 
     # [Modified in Gloas:EIP7688]
     if epoch >= GLOAS_FORK_EPOCH:
-        return CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS
+        return get_generalized_index(BeaconState, "current_sync_committee")
     if epoch >= ELECTRA_FORK_EPOCH:
-        return CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA
-    return CURRENT_SYNC_COMMITTEE_GINDEX
+        return get_generalized_index(electra.BeaconState, "current_sync_committee")
+    return get_generalized_index(altair.BeaconState, "current_sync_committee")
 ```
 
 ### Modified `next_sync_committee_gindex_at_slot`
@@ -148,10 +145,10 @@ def next_sync_committee_gindex_at_slot(slot: Slot) -> GeneralizedIndex:
 
     # [Modified in Gloas:EIP7688]
     if epoch >= GLOAS_FORK_EPOCH:
-        return NEXT_SYNC_COMMITTEE_GINDEX_GLOAS
+        return get_generalized_index(BeaconState, "next_sync_committee")
     if epoch >= ELECTRA_FORK_EPOCH:
-        return NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA
-    return NEXT_SYNC_COMMITTEE_GINDEX
+        return get_generalized_index(electra.BeaconState, "next_sync_committee")
+    return get_generalized_index(altair.BeaconState, "next_sync_committee")
 ```
 
 ### Modified `get_lc_execution_root`
@@ -178,7 +175,8 @@ def get_lc_execution_root(header: LightClientHeader) -> Root:
 
     # [Modified in Gloas:EIP7732]
     inner = header.execution_branch[
-        : len(header.execution_branch) - floorlog2(EXECUTION_PAYLOAD_GINDEX)
+        : len(header.execution_branch)
+        - floorlog2(get_generalized_index(capella.BeaconBlockBody, "execution_payload"))
     ]
     return compute_merkle_branch_root(
         leaf=Bytes32(header.execution_block_hash),
@@ -199,7 +197,12 @@ def is_valid_light_client_header(header: LightClientHeader) -> bool:
         return is_valid_normalized_merkle_branch(
             leaf=Bytes32(header.execution_block_hash),
             branch=header.execution_branch,
-            gindex=EXECUTION_BLOCK_HASH_GINDEX_GLOAS,
+            gindex=get_generalized_index(
+                BeaconBlockBody,
+                "signed_execution_payload_bid",
+                "message",
+                "parent_block_hash",
+            ),
             root=header.beacon.body_root,
         )
 
@@ -208,7 +211,7 @@ def is_valid_light_client_header(header: LightClientHeader) -> bool:
         return is_valid_normalized_merkle_branch(
             leaf=Bytes32(header.execution_block_hash),
             branch=header.execution_branch,
-            gindex=EXECUTION_BLOCK_HASH_GINDEX_DENEB,
+            gindex=get_generalized_index(deneb.BeaconBlockBody, "execution_payload", "block_hash"),
             root=header.beacon.body_root,
         )
 
@@ -217,7 +220,9 @@ def is_valid_light_client_header(header: LightClientHeader) -> bool:
         return is_valid_normalized_merkle_branch(
             leaf=Bytes32(header.execution_block_hash),
             branch=header.execution_branch,
-            gindex=EXECUTION_BLOCK_HASH_GINDEX,
+            gindex=get_generalized_index(
+                capella.BeaconBlockBody, "execution_payload", "block_hash"
+            ),
             root=header.beacon.body_root,
         )
 

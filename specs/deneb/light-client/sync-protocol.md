@@ -3,7 +3,6 @@
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
-- [Constants](#constants)
 - [Helpers](#helpers)
   - [Modified `get_lc_execution_root`](#modified-get_lc_execution_root)
   - [Modified `is_valid_light_client_header`](#modified-is_valid_light_client_header)
@@ -22,12 +21,6 @@ Additional documents describe the impact of the upgrade on certain roles:
 
 - [Full node](./full-node.md)
 - [Networking](./p2p-interface.md)
-
-## Constants
-
-| Name                                | Value                                                                               |
-| ----------------------------------- | ----------------------------------------------------------------------------------- |
-| `EXECUTION_BLOCK_HASH_GINDEX_DENEB` | `get_generalized_index(BeaconBlockBody, 'execution_payload', 'block_hash')` (= 812) |
 
 ## Helpers
 
@@ -87,8 +80,8 @@ def is_valid_light_client_header(header: LightClientHeader) -> bool:
     return is_valid_merkle_branch(
         leaf=get_lc_execution_root(header),
         branch=header.execution_branch,
-        depth=floorlog2(EXECUTION_PAYLOAD_GINDEX),
-        index=get_subtree_index(EXECUTION_PAYLOAD_GINDEX),
+        depth=floorlog2(get_generalized_index(BeaconBlockBody, "execution_payload")),
+        index=get_subtree_index(get_generalized_index(BeaconBlockBody, "execution_payload")),
         root=header.beacon.body_root,
     )
 ```

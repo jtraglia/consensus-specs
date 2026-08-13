@@ -81,12 +81,8 @@ class Builder:
 
     def parse_fork(self, fork: Fork) -> Spec:
         spec = Spec()
-        previous: str | None = None
         for ancestor in fork.lineage(self.forks):
-            if previous is not None:
-                spec = spec.qualify_gindices(previous)
             spec = spec.merge(self.parse_files(ancestor.markdown_files()))
-            previous = ancestor.name
         return spec
 
     def parse_files(self, paths: list[Path]) -> Spec:
