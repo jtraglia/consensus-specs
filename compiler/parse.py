@@ -20,23 +20,12 @@ if TYPE_CHECKING:
 
     from marko.element import Element
 
-ANNOTATION_RE = re.compile(r"\(\s*=\s*([\d,]+)")
 LIST_OF_RECORDS_RE = re.compile(
     r"<!--\s*list-of-records:([a-zA-Z0-9_-]+)(?::(mainnet|minimal))?\s*-->"
 )
 SAME_TOKEN = "same"
-SECTION_KINDS = {
-    "alias": "alias",
-    "aliases": "alias",
-    "type": "type",
-    "types": "type",
-    "container": "container",
-    "containers": "container",
-    "preset": "preset",
-    "configuration": "config",
-    "constant": "constant",
-    "constants": "constant",
-}
+SECTIONS = frozenset({"aliases", "types", "containers", "presets", "configs", "constants"})
+TABLE_SECTIONS = frozenset({"presets", "configs", "constants"})
 
 
 def parse_file(path: Path) -> Spec:
@@ -45,6 +34,7 @@ def parse_file(path: Path) -> Spec:
 
 class Parser:
     def __init__(self, path: Path) -> None:
+        self.path = path
         self.spec = Spec()
         self.headings: list[tuple[int, str]] = []
         self.current_name: str | None = None
@@ -77,11 +67,11 @@ class Parser:
         last = heading.children[-1]
         self.current_name = last.children if isinstance(last, CodeSpan) else None
 
-    def _section_kind(self) -> str | None:
+    def _section(self) -> str | None:
         for _, title in reversed(self.headings):
             word = title.strip("`").split()[0].lower() if title.strip() else ""
-            if word in SECTION_KINDS:
-                return SECTION_KINDS[word]
+            if word in SECTIONS:
+                return word
         return None
 
     def _code(self, block: FencedCode) -> None:
@@ -112,35 +102,24 @@ class Parser:
     def _class(self, source: str, cls: ast.ClassDef) -> None:
         if self.current_name is not None and cls.name != self.current_name:
             raise ValueError(f"class {cls.name} does not match heading {self.current_name}")
-        if self._section_kind() == "alias":
+        if self._section() == "aliases":
             self.spec.aliases[cls.name] = source
         else:
             self.spec.types[cls.name] = source
 
     def _table(self, table: Table) -> None:
-        kind = self._section_kind()
-        if kind not in ("preset", "config", "constant", None):
+        section = self._section()
+        if section not in TABLE_SECTIONS:
             return
         header = [_text(cell).strip().lower() for cell in table.children[0].children]
         two_col = len(header) >= 3 and header[1] == "mainnet" and header[2] == "minimal"
         for row in table.children[1:]:
             if len(row.children) < 2:
                 continue
-            name, mainnet, minimal, ann_main, ann_min = _row_fields(row, two_col)
+            name, mainnet, minimal = _row_fields(row, two_col)
             if not _is_constant_name(name):
-                continue
-            value = Value(
-                mainnet=mainnet,
-                minimal=minimal,
-                annotation_mainnet=ann_main,
-                annotation_minimal=ann_min,
-            )
-            if kind == "preset":
-                self.spec.presets[name] = value
-            elif kind == "config":
-                self.spec.configs[name] = value
-            else:
-                self.spec.constants[name] = value
+                raise ValueError(f"{self.path}: expected constant name, got {name!r}")
+            getattr(self.spec, section)[name] = Value(mainnet=mainnet, minimal=minimal)
 
     def _html(self, html: HTMLBlock) -> None:
         body = html.body.strip()
@@ -211,29 +190,21 @@ def _is_constant_name(name: str) -> bool:
     return all(c in string.ascii_uppercase + "_" + string.digits for c in name[1:])
 
 
-def _row_fields(row: TableRow, two_col: bool) -> tuple[str, str, str, int | None, int | None]:
+def _row_fields(row: TableRow, two_col: bool) -> tuple[str, str, str]:
     cells = list(row.children)
     name = _cell_code(cells[0])
     mainnet = _cell_code(cells[1])
-    ann_main = _annotation(cells[1])
     if two_col:
         if _is_same(_text(cells[1])):
             raise ValueError(f"{name}: Mainnet column cannot use *{SAME_TOKEN}*")
         if _is_same(_text(cells[2])):
-            return name, mainnet, mainnet, ann_main, ann_main
-        return name, mainnet, _cell_code(cells[2]), ann_main, _annotation(cells[2])
-    return name, mainnet, mainnet, ann_main, ann_main
+            return name, mainnet, mainnet
+        return name, mainnet, _cell_code(cells[2])
+    return name, mainnet, mainnet
 
 
 def _is_same(text: str) -> bool:
     return text.strip().lower() == SAME_TOKEN
-
-
-def _annotation(cell: TableCell) -> int | None:
-    match = ANNOTATION_RE.search(_text(cell))
-    if match:
-        return int(match.group(1).replace(",", ""))
-    return None
 
 
 def _cell_code(cell: TableCell) -> str:

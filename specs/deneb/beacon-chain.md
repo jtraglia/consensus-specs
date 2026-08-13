@@ -13,10 +13,10 @@
   - [New `BlobKZGCommitments`](#new-blobkzgcommitments)
 - [Constants](#constants)
   - [Blob](#blob)
-- [Preset](#preset)
+- [Presets](#presets)
   - [Blob](#blob-1)
   - [Execution](#execution)
-- [Configuration](#configuration)
+- [Configs](#configs)
   - [Execution](#execution-1)
   - [Validator cycle](#validator-cycle)
 - [Containers](#containers)
@@ -139,7 +139,7 @@ class BlobKZGCommitments(List[KZGCommitment]):
 | `VERSIONED_HASH_VERSION_KZG` | `Bytes1('0x01')` | Version byte of a blob's versioned hash         |
 | `BYTES_PER_FIELD_ELEMENT`    | `Uint64(32)`     | Bytes used to encode a BLS scalar field element |
 
-## Preset
+## Presets
 
 ### Blob
 
@@ -153,7 +153,7 @@ class BlobKZGCommitments(List[KZGCommitment]):
 | -------------------------------- | ------------------------- | ------- |
 | `MAX_BLOB_COMMITMENTS_PER_BLOCK` | `Uint64(2**12)` (= 4,096) | *same*  |
 
-## Configuration
+## Configs
 
 ### Execution
 

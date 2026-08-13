@@ -27,16 +27,11 @@ REMOVED_SECTIONS = {
 class Value:
     mainnet: str
     minimal: str
-    annotation_mainnet: int | None = None
-    annotation_minimal: int | None = None
     records_mainnet: list[dict[str, str]] | None = None
     records_minimal: list[dict[str, str]] | None = None
 
     def select(self, preset: str) -> str:
         return self.mainnet if preset == "mainnet" else self.minimal
-
-    def annotation(self, preset: str) -> int | None:
-        return self.annotation_mainnet if preset == "mainnet" else self.annotation_minimal
 
     def records(self, preset: str) -> list[dict[str, str]] | None:
         return self.records_mainnet if preset == "mainnet" else self.records_minimal
@@ -45,14 +40,7 @@ class Value:
         mainnet, minimal = fn(self.mainnet), fn(self.minimal)
         if (mainnet, minimal) == (self.mainnet, self.minimal):
             return self
-        return Value(
-            mainnet,
-            minimal,
-            self.annotation_mainnet,
-            self.annotation_minimal,
-            self.records_mainnet,
-            self.records_minimal,
-        )
+        return Value(mainnet, minimal, self.records_mainnet, self.records_minimal)
 
 
 @dataclass

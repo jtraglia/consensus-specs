@@ -5,7 +5,7 @@
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
-- [Configuration](#configuration)
+- [Configs](#configs)
 - [Fork to Deneb](#fork-to-deneb)
   - [Fork trigger](#fork-trigger)
   - [Upgrading the state](#upgrading-the-state)
@@ -16,7 +16,7 @@
 
 This document describes the process of Deneb upgrade.
 
-## Configuration
+## Configs
 
 Warning: this configuration is not definitive.
 

@@ -56,11 +56,11 @@ Asserts signal an impossible situation or something that is not allowed.
 Implementations are expected to handle these cases with proper error handling.
 Do not use assert messages.
 
-## Preset and configuration tables
+## Presets and configs tables
 
-Preset and configuration values use a `Name | Mainnet | Minimal` table. The
-Minimal column uses the reserved token *same* when it matches Mainnet. Write an
-explicit expression only when Minimal differs.
+Values under `## Presets` and `## Configs` use a `Name | Mainnet | Minimal`
+table. The Minimal column uses the reserved token *same* when it matches
+Mainnet. Write an explicit expression only when Minimal differs.
 
 Annotate self-contained arithmetic with `(= N)` so the decimal is obvious, as in
 `Uint64(2**6)` (= 64). Do not annotate expressions that name other values: the

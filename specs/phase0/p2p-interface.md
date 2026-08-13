@@ -18,7 +18,7 @@
     - [`ErrorMessage`](#errormessage)
     - [`SignedBeaconBlocks`](#signedbeaconblocks)
   - [Constants](#constants)
-  - [Configuration](#configuration)
+  - [Configs](#configs)
   - [Helpers](#helpers)
     - [`GossipIgnore`](#gossipignore)
     - [`GossipReject`](#gossipreject)
@@ -297,7 +297,7 @@ class SignedBeaconBlocks(List[SignedBeaconBlock]):
 | -------------- | ------------- |
 | `NODE_ID_BITS` | `Uint64(256)` |
 
-### Configuration
+### Configs
 
 This section outlines configurations that are used in this specification.
 

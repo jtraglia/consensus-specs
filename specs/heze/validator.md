@@ -5,7 +5,7 @@
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
-- [Configuration](#configuration)
+- [Configs](#configs)
 - [Helpers](#helpers)
   - [New `GetInclusionListResponse`](#new-getinclusionlistresponse)
 - [Protocols](#protocols)
@@ -30,7 +30,7 @@
 This document represents the changes to be made in the code of an "honest
 validator" to implement Heze.
 
-## Configuration
+## Configs
 
 ## Helpers
 

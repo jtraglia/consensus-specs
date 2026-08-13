@@ -50,10 +50,10 @@ class Emitter:
     def render(self) -> str:
         types = order_types(self.spec.types)
         protocols = set(self.methods)
-        implementors = {
+        implementers = {
             name: source for name, source in types.items() if base_name(source) in protocols
         }
-        types = {name: source for name, source in types.items() if name not in implementors}
+        types = {name: source for name, source in types.items() if name not in implementers}
         constants, after_presets, deferred = self._constants()
         preset_src, more_deferred = self._presets()
         deferred.update(more_deferred)
@@ -83,7 +83,7 @@ class Emitter:
             "\n\n\n".join(self._qualify_configs(src) for src in late.values()),
             self._protocols(),
             self._qualify_configs("\n\n\n".join(remaining.values())),
-            "\n\n\n".join(self._qualify_configs(src) for src in implementors.values()),
+            "\n\n\n".join(self._qualify_configs(src) for src in implementers.values()),
             "\n\n\n".join(self.spec.instances.values()),
         ]
         return "\n\n\n".join(part.strip("\n") for part in parts if part) + "\n"
