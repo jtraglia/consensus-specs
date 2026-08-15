@@ -76,7 +76,7 @@ def verify_execution_payload_envelope(
 
     # [New in EIP8025]
     # Notify ProofEngine of the new execution payload
-    proof_engine.notify_new_payload(new_payload_request)
+    proof_engine.proof_engine__notify_new_payload(new_payload_request)
 ```
 
 ### Modified `on_execution_payload_envelope`

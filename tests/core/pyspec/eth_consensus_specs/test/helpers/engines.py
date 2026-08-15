@@ -2,7 +2,7 @@
 
 
 class NoopExecutionEngine:
-    def notify_new_payload(self, *args, **kwargs):
+    def execution_engine__notify_new_payload(self, *args, **kwargs):
         return True
 
     def is_valid_block_hash(self, *args, **kwargs):
@@ -11,7 +11,7 @@ class NoopExecutionEngine:
     def is_valid_versioned_hashes(self, *args, **kwargs):
         return True
 
-    def notify_forkchoice_updated(self, *args, **kwargs):
+    def execution_engine__notify_forkchoice_updated(self, *args, **kwargs):
         return None
 
     def get_payload(self, *args, **kwargs):
@@ -31,10 +31,10 @@ class NoopProofEngine:
     def verify_execution_proof(self, *args, **kwargs):
         return True
 
-    def notify_new_payload(self, *args, **kwargs):
+    def proof_engine__notify_new_payload(self, *args, **kwargs):
         return None
 
-    def notify_forkchoice_updated(self, *args, **kwargs):
+    def proof_engine__notify_forkchoice_updated(self, *args, **kwargs):
         return None
 
     def request_proofs(self, *args, **kwargs):

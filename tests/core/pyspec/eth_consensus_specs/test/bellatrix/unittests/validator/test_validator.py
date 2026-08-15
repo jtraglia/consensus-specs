@@ -148,7 +148,7 @@ def test_prepare_execution_payload(spec, state):
 
         # Mock execution_engine
         class TestEngine(spec.NoopExecutionEngine):
-            def notify_forkchoice_updated(
+            def execution_engine__notify_forkchoice_updated(
                 self, head_block_hash, safe_block_hash, finalized_block_hash, payload_attributes
             ) -> spec.PayloadId | None:
                 return SAMPLE_PAYLOAD_ID

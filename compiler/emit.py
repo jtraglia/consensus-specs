@@ -34,7 +34,11 @@ class Emitter:
         self.fork = fork
         self.forks = forks
         self.preset = preset
-        self.functions = dict(self.spec.functions)
+        self.functions = {
+            name: source
+            for name, source in self.spec.functions.items()
+            if self_type(source) is None
+        }
 
     def render(self) -> str:
         classes = order_types(
@@ -162,12 +166,23 @@ class Emitter:
         )
 
     def _protocols(self) -> str:
-        names: list[str] = []
-        for source in self.spec.functions.values():
+        groups: dict[str, dict[str, str]] = {}
+        order: list[str] = []
+        for name, source in self.spec.functions.items():
             owner = self_type(source)
-            if owner is not None and owner not in names:
-                names.append(owner)
-        return "\n\n\n".join(f"class {name}(Protocol):\n    pass" for name in names)
+            if owner is None:
+                continue
+            if owner not in groups:
+                groups[owner] = {}
+                order.append(owner)
+            groups[owner][name] = source
+        parts = []
+        for owner in order:
+            methods = "\n\n".join(
+                indent(self._qualify_configs(source)) for source in groups[owner].values()
+            )
+            parts.append(f"class {owner}(Protocol):\n{methods}")
+        return "\n\n\n".join(parts)
 
     def _imports(self) -> str:
         lines = ["from eth_consensus_specs.runtime import *"]
@@ -380,3 +395,7 @@ def self_type(source: str) -> str | None:
     if first.arg != "self" or not isinstance(getattr(first, "annotation", None), ast.Name):
         return None
     return first.annotation.id
+
+
+def indent(source: str) -> str:
+    return "\n".join(f"    {line}" if line else line for line in source.split("\n"))

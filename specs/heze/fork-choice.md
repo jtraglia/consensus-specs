@@ -10,7 +10,7 @@
 - [Protocols](#protocols)
   - [`ExecutionEngine`](#executionengine)
     - [New `is_inclusion_list_satisfied`](#new-is_inclusion_list_satisfied)
-    - [Modified `notify_forkchoice_updated`](#modified-notify_forkchoice_updated)
+    - [Modified `execution_engine__notify_forkchoice_updated`](#modified-execution_engine__notify_forkchoice_updated)
 - [Helpers](#helpers)
   - [Modified `PayloadAttributes`](#modified-payloadattributes)
   - [Modified `Store`](#modified-store)
@@ -62,11 +62,11 @@ def is_inclusion_list_satisfied(
     """
 ```
 
-#### Modified `notify_forkchoice_updated`
+#### Modified `execution_engine__notify_forkchoice_updated`
 
 *Note*: The only change made is to the `PayloadAttributes` container through the
 addition of `inclusion_list_transactions`. Otherwise,
-`notify_forkchoice_updated` inherits all prior functionality.
+`execution_engine__notify_forkchoice_updated` inherits all prior functionality.
 
 *Note*: If the `inclusion_list_transactions` field of `payload_attributes` is
 not empty, the payload build process MUST produce an execution payload that
@@ -74,7 +74,7 @@ satisfies the inclusion list constraints with respect to
 `inclusion_list_transactions`.
 
 ```python
-def notify_forkchoice_updated(
+def execution_engine__notify_forkchoice_updated(
     self: ExecutionEngine,
     head_block_hash: Hash32,
     safe_block_hash: Hash32,

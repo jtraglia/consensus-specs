@@ -104,9 +104,12 @@ class BeaconBlock(Container):
     body: BeaconBlockBody
 ```
 
-Protocol methods are free functions annotated `self: ExecutionEngine`. The
-compiler emits an empty `Protocol` class for the type. Test-only stubs such as
-`NoopExecutionEngine` live in the test helpers, not in the spec markdown.
+Protocol methods are free functions annotated `self: ExecutionEngine`. Function
+names must be unique across a spec; if two protocols would share a name, prefix
+it (`execution_engine__notify_new_payload`, `proof_engine__notify_new_payload`).
+The compiler emits a `Protocol` class whose methods are those functions.
+Test-only stubs such as `NoopExecutionEngine` live in the test helpers, not in
+the spec markdown.
 
 ## Documenting changes
 

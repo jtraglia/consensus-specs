@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from compiler.discover import build_order, discover_forks, repo_root
 from compiler.emit import emit_python, write_config_yaml, write_preset_yaml
-from compiler.models import Spec
+from compiler.models import NAMED_FIELDS, Spec
 from compiler.parse import parse_file
 
 if TYPE_CHECKING:
@@ -88,7 +88,12 @@ class Builder:
     def parse_files(self, paths: list[Path]) -> Spec:
         spec = Spec()
         for path in paths:
-            spec = spec.merge(parse_file(path))
+            incoming = parse_file(path)
+            for field in NAMED_FIELDS:
+                clash = set(getattr(spec, field)) & set(getattr(incoming, field))
+                if clash:
+                    raise ValueError(f"{path}: redefines {field} {', '.join(sorted(clash))}")
+            spec = spec.merge(incoming)
         return spec
 
 

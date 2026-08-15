@@ -61,3 +61,5 @@ SSZObject = TypeVar("SSZObject", bound=SSZType)
 SSZVariableName = str
 GeneralizedIndex = int
 ExecutionState = Any
+EXECUTION_ENGINE: Any = None
+PROOF_ENGINE: Any = None

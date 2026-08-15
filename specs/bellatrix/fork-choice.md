@@ -7,7 +7,7 @@
   - [New `PayloadId`](#new-payloadid)
 - [Protocols](#protocols)
   - [`ExecutionEngine`](#executionengine)
-    - [`notify_forkchoice_updated`](#notify_forkchoice_updated)
+    - [`execution_engine__notify_forkchoice_updated`](#execution_engine__notify_forkchoice_updated)
       - [`safe_block_hash`](#safe_block_hash)
 - [Helpers](#helpers)
   - [`PayloadAttributes`](#payloadattributes)
@@ -47,13 +47,13 @@ class PayloadId(Bytes8):
 
 ### `ExecutionEngine`
 
-*Note*: The `notify_forkchoice_updated` function is added to the
-`ExecutionEngine` protocol to signal the fork choice updates.
+*Note*: The `execution_engine__notify_forkchoice_updated` function is added to
+the `ExecutionEngine` protocol to signal the fork choice updates.
 
 The body of this function is implementation dependent. The Engine API may be
 used to implement it with an external execution engine.
 
-#### `notify_forkchoice_updated`
+#### `execution_engine__notify_forkchoice_updated`
 
 This function performs three actions *atomically*:
 
@@ -70,7 +70,7 @@ a payload build process on top of `head_block_hash` and returns an identifier of
 initiated process.
 
 ```python
-def notify_forkchoice_updated(
+def execution_engine__notify_forkchoice_updated(
     self: ExecutionEngine,
     head_block_hash: Hash32,
     safe_block_hash: Hash32,
@@ -80,11 +80,11 @@ def notify_forkchoice_updated(
 ```
 
 *Note*: The `(head_block_hash, finalized_block_hash)` values of the
-`notify_forkchoice_updated` function call maps on the `POS_FORKCHOICE_UPDATED`
-event defined in the
+`execution_engine__notify_forkchoice_updated` function call maps on the
+`POS_FORKCHOICE_UPDATED` event defined in the
 [EIP-3675](https://eips.ethereum.org/EIPS/eip-3675#definitions). As per
 EIP-3675, before a post-transition block is finalized,
-`notify_forkchoice_updated` MUST be called with
+`execution_engine__notify_forkchoice_updated` MUST be called with
 `finalized_block_hash = Hash32()`.
 
 *Note*: Client software MUST NOT call this function until the transition
@@ -106,7 +106,7 @@ function.
 ### `PayloadAttributes`
 
 Used to signal to initiate the payload build process via
-`notify_forkchoice_updated`.
+`execution_engine__notify_forkchoice_updated`.
 
 ```python
 @dataclass

@@ -10,8 +10,8 @@
 - [Introduction](#introduction)
 - [Proof engine](#proof-engine)
   - [New `verify_execution_proof`](#new-verify_execution_proof)
-  - [New `notify_new_payload`](#new-notify_new_payload)
-  - [New `notify_forkchoice_updated`](#new-notify_forkchoice_updated)
+  - [New `proof_engine__notify_new_payload`](#new-proof_engine__notify_new_payload)
+  - [New `proof_engine__notify_forkchoice_updated`](#new-proof_engine__notify_forkchoice_updated)
   - [New `ProofAttributes`](#new-proofattributes)
   - [New `request_proofs`](#new-request_proofs)
 
@@ -31,10 +31,10 @@ sub-system logic via:
   proofs
 - a verification function `self.verify_execution_proof` to verify individual
   proofs
-- a notification function `self.notify_new_payload` to notify the proof engine
-  of the new payload
-- a notification function `self.notify_forkchoice_updated` to notify the proof
-  engine of forkchoice state changes
+- a notification function `self.proof_engine__notify_new_payload` to notify the
+  proof engine of the new payload
+- a notification function `self.proof_engine__notify_forkchoice_updated` to
+  notify the proof engine of forkchoice state changes
 - a generation function `self.request_proofs` to initiate asynchronous proof
   generation
 
@@ -55,10 +55,10 @@ def verify_execution_proof(
     """
 ```
 
-### New `notify_new_payload`
+### New `proof_engine__notify_new_payload`
 
 ```python
-def notify_new_payload(
+def proof_engine__notify_new_payload(
     self: ProofEngine,
     new_payload_request: NewPayloadRequest,
 ) -> None:
@@ -67,10 +67,10 @@ def notify_new_payload(
     """
 ```
 
-### New `notify_forkchoice_updated`
+### New `proof_engine__notify_forkchoice_updated`
 
 ```python
-def notify_forkchoice_updated(
+def proof_engine__notify_forkchoice_updated(
     self: ProofEngine,
     head_block_hash: Hash32,
     safe_block_hash: Hash32,

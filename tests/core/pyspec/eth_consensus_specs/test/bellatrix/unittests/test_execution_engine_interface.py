@@ -16,13 +16,13 @@ from eth_consensus_specs.utils.ssz.bytes import Bytes32
 @spec_state_test
 def test_noop_execution_engine_notify_forkchoice_updated(spec, state):
     """
-    Test NoopExecutionEngine.notify_forkchoice_updated returns None and doesn't modify state
+    Test NoopExecutionEngine.execution_engine__notify_forkchoice_updated returns None and doesn't modify state
     """
     engine = spec.NoopExecutionEngine()
     pre_state = state.copy()
 
     # Test notify_forkchoice_updated
-    result = engine.notify_forkchoice_updated(
+    result = engine.execution_engine__notify_forkchoice_updated(
         head_block_hash=Bytes32(),
         safe_block_hash=Bytes32(),
         finalized_block_hash=Bytes32(),
@@ -73,13 +73,13 @@ def test_noop_execution_engine_verify_and_notify_new_payload(spec, state):
 @spec_state_test
 def test_noop_execution_engine_notify_new_payload_bellatrix_capella(spec, state):
     """
-    Test NoopExecutionEngine.notify_new_payload returns True and doesn't modify state
+    Test NoopExecutionEngine.execution_engine__notify_new_payload returns True and doesn't modify state
     """
     engine = spec.NoopExecutionEngine()
 
     next_slot(spec, state)
     payload = build_empty_execution_payload(spec, state)
-    result = engine.notify_new_payload(execution_payload=payload)
+    result = engine.execution_engine__notify_new_payload(execution_payload=payload)
 
     assert result is True
 

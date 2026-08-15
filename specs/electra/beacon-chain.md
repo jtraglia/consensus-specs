@@ -90,7 +90,7 @@
       - [Modified `NewPayloadRequest`](#modified-newpayloadrequest)
     - [Engine APIs](#engine-apis)
       - [Modified `is_valid_block_hash`](#modified-is_valid_block_hash)
-      - [Modified `notify_new_payload`](#modified-notify_new_payload)
+      - [Modified `execution_engine__notify_new_payload`](#modified-execution_engine__notify_new_payload)
       - [Modified `verify_and_notify_new_payload`](#modified-verify_and_notify_new_payload)
   - [Block processing](#block-processing)
     - [Withdrawals](#withdrawals)
@@ -1285,13 +1285,13 @@ def is_valid_block_hash(
     """
 ```
 
-##### Modified `notify_new_payload`
+##### Modified `execution_engine__notify_new_payload`
 
-*Note*: The function `notify_new_payload` is modified to include the additional
-`execution_requests_list`.
+*Note*: The function `execution_engine__notify_new_payload` is modified to
+include the additional `execution_requests_list`.
 
 ```python
-def notify_new_payload(
+def execution_engine__notify_new_payload(
     self: ExecutionEngine,
     execution_payload: ExecutionPayload,
     parent_beacon_block_root: Root,
@@ -1307,7 +1307,7 @@ def notify_new_payload(
 
 *Note*: The function `verify_and_notify_new_payload` is modified to pass the
 additional parameter `execution_requests_list` when calling
-`is_valid_block_hash` and `notify_new_payload` in Electra.
+`is_valid_block_hash` and `execution_engine__notify_new_payload` in Electra.
 
 ```python
 def verify_and_notify_new_payload(
@@ -1334,7 +1334,7 @@ def verify_and_notify_new_payload(
         return False
 
     # [Modified in Electra]
-    if not self.notify_new_payload(
+    if not self.execution_engine__notify_new_payload(
         execution_payload, parent_beacon_block_root, execution_requests_list
     ):
         return False

@@ -12,7 +12,7 @@ from marko.ext.gfm import gfm
 from marko.ext.gfm.elements import Table, TableCell, TableRow
 from marko.inline import CodeSpan
 
-from compiler.models import Spec, Value
+from compiler.models import NAMED_FIELDS, Spec, Value
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -62,6 +62,7 @@ class Parser:
                 self._table(child)
             elif isinstance(child, HTMLBlock):
                 self._html(child)
+        self.spec.assert_unique_names()
         return self.spec
 
     def _next(self) -> Element | None:
@@ -101,7 +102,7 @@ class Parser:
             )
             chunk = "\n".join(line.rstrip() for line in lines[start : element.end_lineno])
             if isinstance(element, ast.FunctionDef):
-                self.spec.functions[element.name] = chunk
+                self._store("functions", element.name, chunk)
             elif isinstance(element, ast.ClassDef):
                 last_class = self._class(chunk, element)
             elif isinstance(element, ast.Assign) and len(element.targets) == 1:
@@ -120,17 +121,15 @@ class Parser:
             raise ValueError(f"class {cls.name} does not match heading {self.current_name}")
         section = self._section()
         bucket_name = section if section in CLASS_SECTIONS else _class_kind(cls)
+        self._store(bucket_name, cls.name, source)
         bucket: dict[str, str] = getattr(self.spec, bucket_name)
-        bucket[cls.name] = source
         return bucket, cls.name
 
     def _table(self, table: Table) -> None:
         section = self._section()
         if section == "constants":
-            dest: dict = self.spec.constants
             parse_row = _constant_row
         elif section in VARIANT_SECTIONS:
-            dest = getattr(self.spec, section)
             parse_row = _variant_row
         else:
             return
@@ -141,7 +140,7 @@ class Parser:
             name, value = parse_row(row)
             if not _is_constant_name(name):
                 raise ValueError(f"{self.path}: expected constant name, got {name!r}")
-            dest[name] = value
+            self._store(section, name, value)
 
     def _html(self, html: HTMLBlock) -> None:
         body = html.body.strip()
@@ -173,6 +172,15 @@ class Parser:
         else:
             mainnet = rows
         self.spec.configs[name] = Value(mainnet, minimal)
+
+    def _store(self, field: str, name: str, value: object) -> None:
+        bucket = getattr(self.spec, field)
+        if name in bucket:
+            raise ValueError(f"{self.path}: duplicate {name}")
+        for other in NAMED_FIELDS:
+            if other != field and name in getattr(self.spec, other):
+                raise ValueError(f"{self.path}: {name} is already a {other}")
+        bucket[name] = value
 
 
 def _text(node: object) -> str:

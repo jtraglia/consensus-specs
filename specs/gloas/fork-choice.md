@@ -10,7 +10,7 @@
 - [Constants](#constants)
 - [Protocols](#protocols)
   - [`ExecutionEngine`](#executionengine)
-    - [`notify_forkchoice_updated`](#notify_forkchoice_updated)
+    - [`execution_engine__notify_forkchoice_updated`](#execution_engine__notify_forkchoice_updated)
 - [Helpers](#helpers)
   - [Modified `ForkChoiceNode`](#modified-forkchoicenode)
   - [Modified `PayloadAttributes`](#modified-payloadattributes)
@@ -96,11 +96,12 @@ class PayloadStatus(Uint8):
 
 ### `ExecutionEngine`
 
-#### `notify_forkchoice_updated`
+#### `execution_engine__notify_forkchoice_updated`
 
 In Gloas, `finalized_block_hash` and `safe_block_hash` values **MUST** be
-computed as the following. All other semantics of `notify_forkchoice_updated`
-and its invocation are inherited from prior forks.
+computed as the following. All other semantics of
+`execution_engine__notify_forkchoice_updated` and its invocation are inherited
+from prior forks.
 
 - `finalized_block_hash = finalized_block_bid.parent_block_hash`,
 - `safe_block_hash = get_safe_execution_block_hash(fcr_store)`.

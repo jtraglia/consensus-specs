@@ -35,7 +35,7 @@
     - [Request data](#request-data)
       - [`NewPayloadRequest`](#newpayloadrequest)
     - [Engine APIs](#engine-apis)
-    - [`notify_new_payload`](#notify_new_payload)
+    - [`execution_engine__notify_new_payload`](#execution_engine__notify_new_payload)
     - [`is_valid_block_hash`](#is_valid_block_hash)
     - [`verify_and_notify_new_payload`](#verify_and_notify_new_payload)
   - [Block processing](#block-processing)
@@ -359,20 +359,22 @@ The implementation-dependent `ExecutionEngine` protocol encapsulates the
 execution sub-system logic via:
 
 - a state object `self.execution_state` of type `ExecutionState`
-- a notification function `self.notify_new_payload` which may apply changes to
-  the `self.execution_state`
+- a notification function `self.execution_engine__notify_new_payload` which may
+  apply changes to the `self.execution_state`
 
 The body of these functions are implementation dependent. The Engine API may be
 used to implement this and similarly defined functions via an external execution
 engine.
 
-#### `notify_new_payload`
+#### `execution_engine__notify_new_payload`
 
-`notify_new_payload` is a function accessed through the `EXECUTION_ENGINE`
-module which instantiates the `ExecutionEngine` protocol.
+`execution_engine__notify_new_payload` is a function accessed through the
+`EXECUTION_ENGINE` module which instantiates the `ExecutionEngine` protocol.
 
 ```python
-def notify_new_payload(self: ExecutionEngine, execution_payload: ExecutionPayload) -> bool:
+def execution_engine__notify_new_payload(
+    self: ExecutionEngine, execution_payload: ExecutionPayload
+) -> bool:
     """
     Return ``True`` if and only if ``execution_payload`` is valid with respect to ``self.execution_state``.
     """
@@ -404,7 +406,7 @@ def verify_and_notify_new_payload(
     if not self.is_valid_block_hash(execution_payload):
         return False
 
-    if not self.notify_new_payload(execution_payload):
+    if not self.execution_engine__notify_new_payload(execution_payload):
         return False
 
     return True

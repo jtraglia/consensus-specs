@@ -366,7 +366,7 @@ def prepare_execution_payload(
         # [New in Gloas]
         target_gas_limit=target_gas_limit,
     )
-    return execution_engine.notify_forkchoice_updated(
+    return execution_engine.execution_engine__notify_forkchoice_updated(
         # [Modified in Gloas:EIP7732]
         head_block_hash=head_block_hash,
         safe_block_hash=safe_block_hash,

@@ -159,7 +159,7 @@ def prepare_execution_payload(
         # [New in Deneb:EIP4788]
         parent_beacon_block_root=hash_tree_root(state.latest_block_header),
     )
-    return execution_engine.notify_forkchoice_updated(
+    return execution_engine.execution_engine__notify_forkchoice_updated(
         head_block_hash=parent_hash,
         safe_block_hash=safe_block_hash,
         finalized_block_hash=finalized_block_hash,

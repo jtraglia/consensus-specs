@@ -97,8 +97,8 @@ used to implement it with an external execution engine.
 
 *Note*: Given the `payload_id`, the `get_payload` function returns
 `GetPayloadResponse` with the most recent version of the execution payload that
-has been built since the corresponding call to `notify_forkchoice_updated`
-method.
+has been built since the corresponding call to
+`execution_engine__notify_forkchoice_updated` method.
 
 ```python
 def get_payload(self: ExecutionEngine, payload_id: PayloadId) -> GetPayloadResponse:
@@ -176,7 +176,7 @@ def prepare_execution_payload(
         prev_randao=get_randao_mix(state, get_current_epoch(state)),
         suggested_fee_recipient=suggested_fee_recipient,
     )
-    return execution_engine.notify_forkchoice_updated(
+    return execution_engine.execution_engine__notify_forkchoice_updated(
         head_block_hash=parent_hash,
         safe_block_hash=safe_block_hash,
         finalized_block_hash=finalized_block_hash,

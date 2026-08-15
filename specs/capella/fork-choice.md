@@ -5,7 +5,7 @@
 - [Introduction](#introduction)
 - [Protocols](#protocols)
   - [`ExecutionEngine`](#executionengine)
-    - [`notify_forkchoice_updated`](#notify_forkchoice_updated)
+    - [`execution_engine__notify_forkchoice_updated`](#execution_engine__notify_forkchoice_updated)
 - [Helpers](#helpers)
   - [Modified `PayloadAttributes`](#modified-payloadattributes)
 - [Handlers](#handlers)
@@ -24,17 +24,17 @@ Unless stated explicitly, all prior functionality from
 
 ### `ExecutionEngine`
 
-*Note*: The `notify_forkchoice_updated` function is modified in the
-`ExecutionEngine` protocol at the Capella upgrade.
+*Note*: The `execution_engine__notify_forkchoice_updated` function is modified
+in the `ExecutionEngine` protocol at the Capella upgrade.
 
-#### `notify_forkchoice_updated`
+#### `execution_engine__notify_forkchoice_updated`
 
 The only change made is to the `PayloadAttributes` container through the
-addition of `withdrawals`. Otherwise, `notify_forkchoice_updated` inherits all
-prior functionality.
+addition of `withdrawals`. Otherwise,
+`execution_engine__notify_forkchoice_updated` inherits all prior functionality.
 
 ```python
-def notify_forkchoice_updated(
+def execution_engine__notify_forkchoice_updated(
     self: ExecutionEngine,
     head_block_hash: Hash32,
     safe_block_hash: Hash32,

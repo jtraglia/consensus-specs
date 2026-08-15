@@ -171,7 +171,7 @@ def prepare_execution_payload(
             get_inclusion_list_store(), state, Slot(state.slot - 1), only_timely=False
         ),
     )
-    return execution_engine.notify_forkchoice_updated(
+    return execution_engine.execution_engine__notify_forkchoice_updated(
         head_block_hash=head_block_hash,
         safe_block_hash=safe_block_hash,
         finalized_block_hash=finalized_block_hash,

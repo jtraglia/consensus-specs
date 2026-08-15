@@ -38,7 +38,7 @@
     - [Engine APIs](#engine-apis)
       - [`is_valid_block_hash`](#is_valid_block_hash)
       - [`is_valid_versioned_hashes`](#is_valid_versioned_hashes)
-      - [Modified `notify_new_payload`](#modified-notify_new_payload)
+      - [Modified `execution_engine__notify_new_payload`](#modified-execution_engine__notify_new_payload)
       - [Modified `verify_and_notify_new_payload`](#modified-verify_and_notify_new_payload)
   - [Block processing](#block-processing)
     - [Modified `process_attestation`](#modified-process_attestation)
@@ -395,13 +395,13 @@ def is_valid_versioned_hashes(
     """
 ```
 
-##### Modified `notify_new_payload`
+##### Modified `execution_engine__notify_new_payload`
 
-*Note*: The function `notify_new_payload` is modified to include the additional
-`parent_beacon_block_root` parameter for EIP-4788.
+*Note*: The function `execution_engine__notify_new_payload` is modified to
+include the additional `parent_beacon_block_root` parameter for EIP-4788.
 
 ```python
-def notify_new_payload(
+def execution_engine__notify_new_payload(
     self: ExecutionEngine, execution_payload: ExecutionPayload, parent_beacon_block_root: Root
 ) -> bool:
     """
@@ -434,7 +434,7 @@ def verify_and_notify_new_payload(
         return False
 
     # [Modified in Deneb:EIP4788]
-    if not self.notify_new_payload(execution_payload, parent_beacon_block_root):
+    if not self.execution_engine__notify_new_payload(execution_payload, parent_beacon_block_root):
         return False
 
     return True

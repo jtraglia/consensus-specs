@@ -21,6 +21,17 @@ REMOVED_SECTIONS = {
     "Dataclasses": "dataclasses",
     "Exceptions": "exceptions",
 }
+NAMED_FIELDS = (
+    "functions",
+    "aliases",
+    "types",
+    "containers",
+    "dataclasses",
+    "exceptions",
+    "constants",
+    "presets",
+    "configs",
+)
 
 
 @dataclass(frozen=True)
@@ -86,7 +97,7 @@ class Spec:
     configs: dict[str, Value] = field(default_factory=dict)
 
     def merge(self, other: Spec) -> Spec:
-        return Spec(
+        result = Spec(
             functions={**self.functions, **other.functions},
             aliases={**self.aliases, **other.aliases},
             types={**self.types, **other.types},
@@ -97,6 +108,17 @@ class Spec:
             presets={**self.presets, **other.presets},
             configs={**self.configs, **other.configs},
         )
+        result.assert_unique_names()
+        return result
+
+    def assert_unique_names(self) -> None:
+        seen: dict[str, str] = {}
+        for kind in NAMED_FIELDS:
+            for name in getattr(self, kind):
+                other = seen.get(name)
+                if other is not None:
+                    raise ValueError(f"{name} is defined as both {other} and {kind}")
+                seen[name] = kind
 
     def without(self, gone: Removals) -> Spec:
         return Spec(

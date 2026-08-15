@@ -29,7 +29,7 @@ class CaptureEngine:
         self.head_block_hash = None
         self.payload_attributes = None
 
-    def notify_forkchoice_updated(
+    def execution_engine__notify_forkchoice_updated(
         self, head_block_hash, safe_block_hash, finalized_block_hash, payload_attributes
     ):
         self.head_block_hash = head_block_hash
