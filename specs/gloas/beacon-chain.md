@@ -57,6 +57,7 @@
 - [Configs](#configs)
   - [Validator cycle](#validator-cycle)
   - [Time parameters](#time-parameters)
+  - [Gas limit schedule](#gas-limit-schedule)
 - [Containers](#containers)
   - [New containers](#new-containers)
     - [`Builder`](#builder)
@@ -94,6 +95,7 @@
   - [Misc](#misc-2)
     - [New `convert_builder_index_to_validator_index`](#new-convert_builder_index_to_validator_index)
     - [New `convert_validator_index_to_builder_index`](#new-convert_validator_index_to_builder_index)
+    - [New `get_scheduled_gas_limit`](#new-get_scheduled_gas_limit)
     - [New `get_pending_balance_to_withdraw_for_builder`](#new-get_pending_balance_to_withdraw_for_builder)
     - [New `can_builder_cover_bid`](#new-can_builder_cover_bid)
     - [New `compute_balance_weighted_selection`](#new-compute_balance_weighted_selection)
@@ -172,6 +174,8 @@ Gloas is a consensus-layer upgrade containing a number of features. Including:
   Exclude slashed validators from proposing
 - [EIP-8061](https://github.com/ethereum/EIPs/blob/01f15c37c64114c478cb1136e0a6966084e4db14/EIPS/eip-8061.md):
   Increase exit and consolidation churn
+- [EIP-8261](https://github.com/ethereum/EIPs/blob/f6b4668ef37612feba85aef151303f4100b79360/EIPS/eip-8261.md):
+  Gas Limit Schedule
 - [EIP-8282](https://github.com/ethereum/EIPs/blob/de4c6f02c7bec4686762c55f8ab6abcf97a77d7d/EIPS/eip-8282.md):
   Builder Execution Requests
 
@@ -630,6 +634,22 @@ same `Withdrawal` container can be used for validators and builders.
 | Name                                | Mainnet              | Minimal             |
 | ----------------------------------- | -------------------- | ------------------- |
 | `MIN_BUILDER_WITHDRAWABILITY_DELAY` | `Epoch(2**6)` (= 64) | `Epoch(2**1)` (= 2) |
+
+### Gas limit schedule
+
+*[New in Gloas:EIP8261]* This schedule defines the default and recommended
+maximum gas limit for a given epoch. The field is optional: clients that do not
+support it ignore it, and it introduces no new validity rules.
+
+There MUST NOT exist multiple gas limit schedule entries with the same epoch
+value. The epoch value in each entry MUST be greater than or equal to
+`GLOAS_FORK_EPOCH`. The gas limit schedule entries SHOULD be sorted by epoch in
+ascending order. The gas limit schedule MAY be empty.
+
+<!-- list-of-records:gas_limit_schedule -->
+
+| Epoch | Gas Limit | Date |
+| ----: | --------: | ---: |
 
 ## Containers
 
@@ -1115,6 +1135,19 @@ def convert_builder_index_to_validator_index(builder_index: BuilderIndex) -> Val
 ```python
 def convert_validator_index_to_builder_index(validator_index: ValidatorIndex) -> BuilderIndex:
     return BuilderIndex(validator_index & ~BUILDER_INDEX_FLAG)
+```
+
+#### New `get_scheduled_gas_limit`
+
+```python
+def get_scheduled_gas_limit(epoch: Epoch) -> Optional[Uint64]:
+    """
+    Return the scheduled gas limit at a given epoch, if any.
+    """
+    for entry in sorted(GAS_LIMIT_SCHEDULE, key=lambda e: e["EPOCH"], reverse=True):
+        if epoch >= entry["EPOCH"]:
+            return entry["GAS_LIMIT"]
+    return None
 ```
 
 #### New `get_pending_balance_to_withdraw_for_builder`
@@ -2340,8 +2373,7 @@ def process_attestation(
     proposer_reward_numerator = 0
     for index in get_attesting_indices(state, attestation):
         # [New in Gloas:EIP7732]
-        # For same-slot attestations, check if we are setting any new flags.
-        # If we are, this validator has not contributed to this slot's quorum yet.
+        had_no_participation = epoch_participation[index] == ParticipationFlags(0b0000_0000)
         will_set_new_flag = False
 
         for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
@@ -2354,10 +2386,9 @@ def process_attestation(
                 will_set_new_flag = True
 
         # [New in Gloas:EIP7732]
-        # Add weight for same-slot attestations when any new flag is set.
-        # This ensures each validator contributes exactly once per slot.
         if (
             will_set_new_flag
+            and had_no_participation
             and is_attestation_same_slot(state, data)
             and payment.withdrawal.amount > 0
         ):

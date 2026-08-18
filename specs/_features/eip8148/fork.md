@@ -35,13 +35,6 @@ The upgrade occurs after the completion of the inner loop of `process_slots`
 that sets `state.slot` equal to `EIP8148_FORK_EPOCH * SLOTS_PER_EPOCH`.
 
 ```python
-def blah(epoch: Epoch) -> Slot:
-    if epoch <= MIN_SEED_LOOKAHEAD:
-        return GENESIS_SLOT
-    return compute_start_slot_at_epoch(epoch - MIN_SEED_LOOKAHEAD) - 1
-```
-
-```python
 def upgrade_to_eip8148(pre: heze.BeaconState) -> BeaconState:
     epoch = get_current_epoch(pre)
     post = BeaconState(
