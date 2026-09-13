@@ -1162,18 +1162,19 @@ def get_scheduled_gas_limit(epoch: Epoch) -> Optional[Uint64]:
 
 #### New `get_pending_balance_to_withdraw_for_builder`
 
-```python
-def get_pending_balance_to_withdraw_for_builder(
-    state: BeaconState, builder_index: BuilderIndex
-) -> Gwei:
-    balance = Gwei(0)
-    for withdrawal in state.builder_pending_withdrawals:
-        if withdrawal.builder_index == builder_index:
-            balance += withdrawal.amount
-    for payment in state.builder_pending_payments:
-        if payment.withdrawal.builder_index == builder_index:
-            balance += payment.withdrawal.amount
-    return balance
+```lean
+def get_pending_balance_to_withdraw_for_builder
+    (state : BeaconState)
+    (builder_index : BuilderIndex)
+    : Gwei := Id.run do
+  let mut balance : Gwei := 0
+  for withdrawal in state.builder_pending_withdrawals.elements do
+    if withdrawal.builder_index == builder_index then
+      balance := balance + withdrawal.amount
+  for payment in state.builder_pending_payments.elements do
+    if payment.withdrawal.builder_index == builder_index then
+      balance := balance + payment.withdrawal.amount
+  return balance
 ```
 
 #### New `can_builder_cover_bid`
