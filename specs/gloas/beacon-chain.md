@@ -1048,6 +1048,11 @@ def is_builder_index(validator_index: ValidatorIndex) -> bool:
     return (validator_index & BUILDER_INDEX_FLAG) != 0
 ```
 
+```lean
+def is_builder_index (validator_index : ValidatorIndex) : Bool :=
+  (validator_index &&& BUILDER_INDEX_FLAG) != 0
+```
+
 #### New `is_active_builder`
 
 ```python
@@ -1549,6 +1554,23 @@ def settle_builder_payment(state: BeaconState, payment_index: Uint64) -> None:
     state.builder_pending_payments[payment_index] = BuilderPendingPayment.empty()
 ```
 
+```lean
+def settle_builder_payment (state : BeaconState) (payment_index : Uint64) : SpecM BeaconState := do
+  Pyspec.check (payment_index.toNat < state.builder_pending_payments.size)
+    "settle_builder_payment: payment_index is past the end of the pending payments"
+  let payment := state.builder_pending_payments[payment_index.toNat]!
+  let state :=
+    if payment.withdrawal.amount > 0 then
+      state.set_builder_pending_withdrawals
+        (state.builder_pending_withdrawals.push payment.withdrawal)
+    else
+      state
+  let emptied :=
+    state.builder_pending_payments.set!
+      payment_index.toNat ⟨Pyspec.defaultOf Descs.BuilderPendingPayment⟩
+  return state.set_builder_pending_payments emptied
+```
+
 ## Beacon chain state transition function
 
 State transition is fundamentally modified in Gloas. The full state transition
@@ -1985,6 +2007,18 @@ def update_next_withdrawal_builder_index(
         next_index = state.next_withdrawal_builder_index + processed_builders_sweep_count
         next_builder_index = next_index % len(state.builders)
         state.next_withdrawal_builder_index = next_builder_index
+```
+
+```lean
+def update_next_withdrawal_builder_index
+    (state : BeaconState) (processed_builders_sweep_count : Uint64) : BeaconState :=
+  if state.builders.size > 0 then
+    -- Update the next builder index to start the next withdrawal sweep
+    let next_index := state.next_withdrawal_builder_index + processed_builders_sweep_count
+    let next_builder_index := next_index % UInt64.ofNat state.builders.size
+    state.set_next_withdrawal_builder_index next_builder_index
+  else
+    state
 ```
 
 ##### Modified `process_withdrawals`

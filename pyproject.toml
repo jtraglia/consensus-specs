@@ -77,7 +77,7 @@ pythonpath = ["."]
 testpaths = ["tests"]
 
 [tool.codespell]
-skip = "docs,site"
+skip = "docs,site,lean/.lake"
 
 [tool.ruff]
 line-length = 100

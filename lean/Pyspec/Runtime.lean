@@ -66,6 +66,12 @@ def ofBytes (data : ByteArray) : Value := .bytes data.data
 def ofBits (data : Array Bool) : Value := .bits data
 def ofSeq (elements : Array Value) : Value := .seq elements.toList
 
+/-- The default value of a type, as `empty()` gives in Python. -/
+def defaultOf (shape : Desc) : Value :=
+  match Desc.default shape with
+  | .ok value => value
+  | .error _ => .seq []
+
 /-!
 The wire format.
 

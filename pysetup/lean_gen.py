@@ -52,6 +52,16 @@ UINT_READERS = {
 }
 UINT_LEAN = {8: "UInt8", 16: "UInt16", 32: "UInt32", 64: "UInt64"}
 
+# The SSZ base types, so that a Lean signature can be spelled the way the Python
+# one is. Lean has no integer wider than 64 bits, so those become naturals.
+BASE_ALIASES = [
+    "abbrev Boolean := Bool",
+    "abbrev Byte := UInt8",
+    *(f"abbrev Uint{bits} := UInt{bits}" for bits in (8, 16, 32, 64)),
+    *(f"abbrev Uint{bits} := Nat" for bits in (128, 256)),
+    *(f"abbrev Bytes{size} := ByteArray" for size in (1, 4, 8, 20, 31, 32, 48, 96)),
+]
+
 
 class LeanType(NamedTuple):
     """How one spec type is spelled in Lean, read from a value, and written back."""
@@ -443,6 +453,8 @@ def generate(
         *emit_constants(spec_object, module),
         "",
         "/-! Types, their SSZ descriptors, and an accessor for every field. -/",
+        "",
+        "\n".join(BASE_ALIASES),
         "",
         "\n\n".join(types.declarations),
         "",
