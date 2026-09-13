@@ -186,14 +186,19 @@ class MarkdownToSpec:
         """
         Stores a Lean definition of the function the current heading names.
 
-        The block sits beside the Python one and replaces it in the generated
-        specification. The Python stays the readable definition of record.
+        A block may hold more than one definition, so the heading says which of
+        them the specification is defining. Where the heading names no function,
+        because the definition sits in a section of prose, the block's first
+        definition is the one.
         """
+        source = _get_source_from_code_block(code_block)
         name = self.current_heading_name
         if name is None:
-            raise Exception("lean code block outside of a named section")
-        source = _get_source_from_code_block(code_block)
-        if not re.search(rf"^def {re.escape(name)}\b", source, re.MULTILINE):
+            match = re.search(r"^def (\w+)", source, re.MULTILINE)
+            if match is None:
+                raise Exception("lean code block defines nothing")
+            name = match.group(1)
+        elif not re.search(rf"^def {re.escape(name)}\b", source, re.MULTILINE):
             raise Exception(f"lean block under {name} does not define {name}")
         self.spec["lean_functions"][name] = source
 

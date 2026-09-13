@@ -1213,7 +1213,7 @@ def compute_balance_weighted_selection
   while selected.size < size do
     let offset := i % 16 * 2
     if offset == 0 then
-      random_bytes := sha256 (seed ++ uint_to_bytes (i / 16) 8)
+      random_bytes := sha256 (seed ++ uint64_to_bytes (i / 16))
     let mut next_index := i % total
     if shuffle_indices then
       next_index <- compute_shuffled_index next_index total seed
@@ -1239,7 +1239,7 @@ def compute_proposer_indices(
     Return the proposer indices for the given ``epoch``.
     """
     start_slot = compute_start_slot_at_epoch(epoch)
-    seeds = [sha256(seed + uint_to_bytes(start_slot + i)) for i in range(SLOTS_PER_EPOCH)]
+    seeds = [sha256(seed + uint64_to_bytes(start_slot + i)) for i in range(SLOTS_PER_EPOCH)]
     # [Modified in Gloas:EIP7732]
     return ProposerIndices(
         data=[
@@ -1263,7 +1263,7 @@ def compute_ptc(state: BeaconState, slot: Slot) -> PayloadTimelinessCommittee:
     Get the payload timeliness committee, with possible duplicates, for the given ``slot``.
     """
     epoch = compute_epoch_at_slot(slot)
-    seed = sha256(get_seed(state, epoch, DOMAIN_PTC_ATTESTER) + uint_to_bytes(slot))
+    seed = sha256(get_seed(state, epoch, DOMAIN_PTC_ATTESTER) + uint64_to_bytes(slot))
     indices: list[ValidatorIndex] = []
     # Concatenate all committees for this slot in order
     committees_per_slot = get_committee_count_per_slot(state, epoch)

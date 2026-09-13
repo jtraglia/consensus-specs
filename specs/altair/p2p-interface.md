@@ -175,12 +175,12 @@ of the `Message` Protobuf, and interpreted as empty byte strings if missing. The
   data: `MESSAGE_DOMAIN_VALID_SNAPPY`, the length of the topic byte string
   (encoded as little-endian `Uint64`), the topic byte string, and the snappy
   decompressed message data: i.e.
-  `SHA256(MESSAGE_DOMAIN_VALID_SNAPPY + uint_to_bytes(Uint64(len(message.topic))) + message.topic + snappy_decompress(message.data))[:20]`.
+  `SHA256(MESSAGE_DOMAIN_VALID_SNAPPY + uint64_to_bytes(Uint64(len(message.topic))) + message.topic + snappy_decompress(message.data))[:20]`.
 - Otherwise, set `message-id` to the first 20 bytes of the `SHA256` hash of the
   concatenation of the following data: `MESSAGE_DOMAIN_INVALID_SNAPPY`, the
   length of the topic byte string (encoded as little-endian `Uint64`), the topic
   byte string, and the raw message data: i.e.
-  `SHA256(MESSAGE_DOMAIN_INVALID_SNAPPY + uint_to_bytes(Uint64(len(message.topic))) + message.topic + message.data)[:20]`.
+  `SHA256(MESSAGE_DOMAIN_INVALID_SNAPPY + uint64_to_bytes(Uint64(len(message.topic))) + message.topic + message.data)[:20]`.
 
 Implementations may need to carefully handle the function that computes the
 `message-id`. In particular, messages on topics with the Phase 0 fork digest

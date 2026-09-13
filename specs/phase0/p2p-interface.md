@@ -436,12 +436,10 @@ def compute_attestation_subnet_prefix_bits() -> Uint64:
 
 #### `compute_min_epochs_for_block_requests`
 
-```python
-def compute_min_epochs_for_block_requests() -> Uint64:
-    """
-    Return the minimum epoch range over which a node must serve blocks.
-    """
-    return Uint64(MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2)
+```lean
+def compute_min_epochs_for_block_requests
+    : Uint64 :=
+  MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT / 2
 ```
 
 #### `is_non_strict_superset`
@@ -496,19 +494,25 @@ can carry according to the following functions:
 
 #### `max_compressed_len`
 
-```python
-def max_compressed_len(n: Uint64) -> Uint64:
-    # Worst-case compressed length for a given payload of size n when using snappy:
-    # https://github.com/google/snappy/blob/32ded457c0b1fe78ceb8397632c416568d6714a0/snappy.cc#L218C1-L218C47
-    return 32 + n + n // 6
+The worst-case compressed length of a payload of size `n` under snappy, from
+[the implementation][snappy-max].
+
+```lean
+def max_compressed_len
+    (n : Uint64)
+    : Uint64 :=
+  32 + n + n / 6
 ```
 
 #### `max_message_size`
 
-```python
-def max_message_size() -> Uint64:
-    # Allow 1024 bytes for framing and encoding overhead but at least 1MiB in case MAX_PAYLOAD_SIZE is small.
-    return max(max_compressed_len(MAX_PAYLOAD_SIZE) + 1024, Uint64(1024 * 1024))
+This allows 1024 bytes for framing and encoding overhead, but at least a
+mebibyte in case `MAX_PAYLOAD_SIZE` is small.
+
+```lean
+def max_message_size
+    : Uint64 :=
+  max (max_compressed_len MAX_PAYLOAD_SIZE + 1024) (1024 * 1024)
 ```
 
 ### The gossip domain: gossipsub
@@ -1827,7 +1831,7 @@ def compute_subscribed_subnet(node_id: NodeID, epoch: Epoch, index: int) -> Subn
     node_id_prefix = node_id >> int(NODE_ID_BITS - prefix_bits)
     node_offset = Uint64(node_id % Uint256(EPOCHS_PER_SUBNET_SUBSCRIPTION))
     permutation_seed = sha256(
-        uint_to_bytes(Uint64((epoch + node_offset) // EPOCHS_PER_SUBNET_SUBSCRIPTION))
+        uint64_to_bytes(Uint64((epoch + node_offset) // EPOCHS_PER_SUBNET_SUBSCRIPTION))
     )
     permutated_prefix = compute_shuffled_index(
         Uint64(node_id_prefix),
@@ -2683,3 +2687,5 @@ messages signed by a validator may be amplified by the network.
 This section will soon contain a matrix showing the maturity/state of the libp2p
 features required by this specification across the languages in which clients
 are being developed.
+
+[snappy-max]: https://github.com/google/snappy/blob/32ded457c0b1fe78ceb8397632c416568d6714a0/snappy.cc#L218C1-L218C47

@@ -87,7 +87,10 @@
     - [`get_set_bit_count`](#get_set_bit_count)
     - [`integer_squareroot`](#integer_squareroot)
     - [`xor`](#xor)
-    - [`uint_to_bytes`](#uint_to_bytes)
+    - [`uint8_to_bytes`](#uint8_to_bytes)
+    - [`uint32_to_bytes`](#uint32_to_bytes)
+    - [`uint64_to_bytes`](#uint64_to_bytes)
+    - [`uint256_to_bytes`](#uint256_to_bytes)
     - [`bytes_to_uint64`](#bytes_to_uint64)
   - [Crypto](#crypto)
     - [`sha256`](#sha256)
@@ -971,74 +974,83 @@ necessarily optimal implementations.
 
 #### `get_set_bit_count`
 
-```python
-def get_set_bit_count(bits: Sequence[Boolean]) -> Uint64:
-    """
-    Return the number of bits that are set in ``bits``.
-    """
-    return Uint64(sum(1 for bit in bits if bit))
+```lean
+def get_set_bit_count
+    (bits : Sequence Boolean)
+    : Uint64 :=
+  (bits.elements.filter fun bit => bit).size
 ```
 
 #### `integer_squareroot`
 
-```python
-def integer_squareroot(n: Uint64) -> Uint64:
-    """
-    Return the largest integer ``x`` such that ``x**2 <= n``.
-    """
-    if n == UINT64_MAX:
-        return UINT64_MAX_SQRT
-    x = n
-    y = (x + 1) // 2
-    while y < x:
-        x = y
-        y = (x + n // x) // 2
-    return x
+The Python computes this by Newton's method and special-cases `UINT64_MAX`,
+whose iteration would overflow. An integer here is unbounded, so neither is
+needed.
+
+```lean
+def integer_squareroot
+    (n : Uint64)
+    : Uint64 :=
+  Nat.sqrt n
 ```
 
 #### `xor`
 
-```python
-def xor(bytes_1: Bytes32, bytes_2: Bytes32) -> Bytes32:
-    """
-    Return the exclusive-or of two 32-byte strings.
-    """
-    return Bytes32(a ^ b for a, b in zip(bytes_1, bytes_2, strict=True))
+```lean
+def xor
+    (bytes_1 : Bytes32)
+    (bytes_2 : Bytes32)
+    : Bytes32 :=
+  ByteArray.mk (Array.zipWith (fun a b => a ^^^ b) bytes_1.data bytes_2.data)
 ```
 
-#### `uint_to_bytes`
+#### `uint8_to_bytes`
 
-```python
-def uint_to_bytes(n: Uint) -> bytes:
-    """
-    Return the SSZ serialization of ``n``, a ``Uint``.
-    """
-    return ssz_serialize(n)
-```
-
-Every unsigned integer is a `Nat` in Lean, which carries no width, so the Lean
-definition takes the width the Python takes from the type of `n`.
+Every unsigned integer is a natural in Lean, which carries no width, so where
+the Python took the width from the type of its argument there is one definition
+per width. Each is the little-endian SSZ serialization of `n`.
 
 ```lean
-def uint_to_bytes
-    (n : Nat)
-    (width : Nat)
+def uint8_to_bytes
+    (n : Uint8)
     : ByteArray :=
-  ByteArray.mk (Array.ofFn fun index : Fin width =>
+  ByteArray.mk (Array.ofFn fun index : Fin 1 =>
+    UInt8.ofNat (n / 256 ^ index.val % 256))
+```
+
+#### `uint32_to_bytes`
+
+```lean
+def uint32_to_bytes
+    (n : Uint32)
+    : ByteArray :=
+  ByteArray.mk (Array.ofFn fun index : Fin 4 =>
+    UInt8.ofNat (n / 256 ^ index.val % 256))
+```
+
+#### `uint64_to_bytes`
+
+```lean
+def uint64_to_bytes
+    (n : Uint64)
+    : ByteArray :=
+  ByteArray.mk (Array.ofFn fun index : Fin 8 =>
+    UInt8.ofNat (n / 256 ^ index.val % 256))
+```
+
+#### `uint256_to_bytes`
+
+```lean
+def uint256_to_bytes
+    (n : Uint256)
+    : ByteArray :=
+  ByteArray.mk (Array.ofFn fun index : Fin 32 =>
     UInt8.ofNat (n / 256 ^ index.val % 256))
 ```
 
 #### `bytes_to_uint64`
 
 *Note*: `data` may be shorter than eight bytes.
-
-```python
-def bytes_to_uint64(data: bytes) -> Uint64:
-    """
-    Return the integer deserialization of ``data`` as a ``Uint64``.
-    """
-    return Uint64(int.from_bytes(data, ENDIANNESS))
-```
 
 ```lean
 def bytes_to_uint64
@@ -1051,14 +1063,6 @@ def bytes_to_uint64
 ### Crypto
 
 #### `sha256`
-
-```python
-def sha256(data: bytes) -> Bytes32:
-    """
-    Return the SHA256 hash of ``data``.
-    """
-    return Bytes32(sha256_hash(data).digest())
-```
 
 ```lean
 def sha256
@@ -1100,25 +1104,22 @@ The above functions are accessed through the `bls` module, e.g. `bls.Verify`.
 
 #### `is_active_validator`
 
-```python
-def is_active_validator(validator: Validator, epoch: Epoch) -> bool:
-    """
-    Check if ``validator`` is active.
-    """
-    return validator.activation_epoch <= epoch < validator.exit_epoch
+```lean
+def is_active_validator
+    (validator : Validator)
+    (epoch : Epoch)
+    : Bool :=
+  validator.activation_epoch <= epoch && epoch < validator.exit_epoch
 ```
 
 #### `is_eligible_for_activation_queue`
 
-```python
-def is_eligible_for_activation_queue(validator: Validator) -> bool:
-    """
-    Check if ``validator`` is eligible to be placed into the activation queue.
-    """
-    return (
-        validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
-        and validator.effective_balance == MAX_EFFECTIVE_BALANCE
-    )
+```lean
+def is_eligible_for_activation_queue
+    (validator : Validator)
+    : Bool :=
+  validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
+    && validator.effective_balance == MAX_EFFECTIVE_BALANCE
 ```
 
 #### `is_eligible_for_activation`
@@ -1138,30 +1139,29 @@ def is_eligible_for_activation(state: BeaconState, validator: Validator) -> bool
 
 #### `is_slashable_validator`
 
-```python
-def is_slashable_validator(validator: Validator, epoch: Epoch) -> bool:
-    """
-    Check if ``validator`` is slashable.
-    """
-    return (not validator.slashed) and (
-        validator.activation_epoch <= epoch < validator.withdrawable_epoch
-    )
+```lean
+def is_slashable_validator
+    (validator : Validator)
+    (epoch : Epoch)
+    : Bool :=
+  !validator.slashed
+    && validator.activation_epoch <= epoch
+    && epoch < validator.withdrawable_epoch
 ```
 
 #### `is_slashable_attestation_data`
 
-```python
-def is_slashable_attestation_data(data_1: AttestationData, data_2: AttestationData) -> bool:
-    """
-    Check if ``data_1`` and ``data_2`` are slashable according to Casper FFG rules.
-    """
-    return (
-        # Double vote
-        (data_1 != data_2 and data_1.target.epoch == data_2.target.epoch)
-        or
-        # Surround vote
-        (data_1.source.epoch < data_2.source.epoch and data_2.target.epoch < data_1.target.epoch)
-    )
+A double vote is two different attestations for the same target epoch. A
+surround vote is one whose source and target strictly enclose the other's.
+
+```lean
+def is_slashable_attestation_data
+    (data_1 : AttestationData)
+    (data_2 : AttestationData)
+    : Bool :=
+  (data_1 != data_2 && data_1.target.epoch == data_2.target.epoch)
+    || (data_1.source.epoch < data_2.source.epoch
+      && data_2.target.epoch < data_1.target.epoch)
 ```
 
 #### `is_valid_indexed_attestation`
@@ -1234,32 +1234,20 @@ def compute_shuffled_permutation
   let mut indices := Array.range index_count
 
   for current_round in [0:SHUFFLE_ROUND_COUNT] do
-    let round_bytes := uint_to_bytes current_round 1
+    let round_bytes := uint8_to_bytes current_round
     let pivot_source := sha256 (seed ++ round_bytes)
     let pivot := bytes_to_uint64 (pivot_source.extract 0 8) % index_count
 
     indices := indices.map fun current =>
       let flip := (pivot + index_count - current) % index_count
       let position := max current flip
-      let source := sha256 (seed ++ round_bytes ++ uint_to_bytes (position / 256) 4)
+      let source := sha256 (seed ++ round_bytes ++ uint32_to_bytes (position / 256))
       if bytes_to_uint64 source >>> (position % 256) % 2 == 1 then flip else current
 
   return Sequence.mk indices
 ```
 
 #### `compute_shuffled_index`
-
-```python
-def compute_shuffled_index(index: Uint64, index_count: Uint64, seed: Bytes32) -> Uint64:
-    """
-    Return the shuffled index corresponding to ``seed`` (and ``index_count``).
-    """
-    assert index < index_count
-    return compute_shuffled_permutation(index_count, seed)[index]
-```
-
-*Note*: the Python definition stays, because the permutation it reads is cached
-across calls and a Lean definition would recompute it every time.
 
 ```lean
 def compute_shuffled_index
@@ -1286,7 +1274,7 @@ def compute_proposer_index(
     total = Uint64(len(indices))
     while True:
         candidate_index = indices[compute_shuffled_index(i % total, total, seed)]
-        random_byte = sha256(seed + uint_to_bytes(Uint64(i // 32)))[i % 32]
+        random_byte = sha256(seed + uint64_to_bytes(Uint64(i // 32)))[i % 32]
         effective_balance = state.validators[candidate_index].effective_balance
         if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
             return candidate_index
@@ -1295,19 +1283,21 @@ def compute_proposer_index(
 
 #### `compute_committee`
 
-```python
-def compute_committee(
-    indices: Sequence[ValidatorIndex], seed: Bytes32, index: Uint64, count: Uint64
-) -> Sequence[ValidatorIndex]:
-    """
-    Return the committee corresponding to ``indices``, ``seed``, ``index``, and committee ``count``.
-    """
-    start = (len(indices) * index) // count
-    end = (len(indices) * Uint64(index + 1)) // count
-    return [
-        indices[compute_shuffled_index(Uint64(i), Uint64(len(indices)), seed)]
-        for i in range(start, end)
-    ]
+```lean
+def compute_committee
+    (indices : Sequence ValidatorIndex)
+    (seed : Bytes32)
+    (index : Uint64)
+    (count : Uint64)
+    : Result (Sequence ValidatorIndex) := do
+  let start := indices.size * index / count
+  let stop := indices.size * (index + 1) / count
+
+  let mut committee : Array ValidatorIndex := #[]
+  for position in [start:stop] do
+    let shuffled <- compute_shuffled_index position indices.size seed
+    committee := committee.push (indices.elements.getD shuffled 0)
+  return Sequence.mk committee
 ```
 
 #### `compute_time_at_slot`
@@ -1322,32 +1312,29 @@ def compute_time_at_slot(state: BeaconState, slot: Slot) -> Uint64:
 
 #### `compute_epoch_at_slot`
 
-```python
-def compute_epoch_at_slot(slot: Slot) -> Epoch:
-    """
-    Return the epoch number at ``slot``.
-    """
-    return Epoch(slot // SLOTS_PER_EPOCH)
+```lean
+def compute_epoch_at_slot
+    (slot : Slot)
+    : Epoch :=
+  slot / SLOTS_PER_EPOCH
 ```
 
 #### `compute_start_slot_at_epoch`
 
-```python
-def compute_start_slot_at_epoch(epoch: Epoch) -> Slot:
-    """
-    Return the start slot of ``epoch``.
-    """
-    return Slot(epoch) * SLOTS_PER_EPOCH
+```lean
+def compute_start_slot_at_epoch
+    (epoch : Epoch)
+    : Slot :=
+  epoch * SLOTS_PER_EPOCH
 ```
 
 #### `compute_activation_exit_epoch`
 
-```python
-def compute_activation_exit_epoch(epoch: Epoch) -> Epoch:
-    """
-    Return the epoch during which validator activations and exits initiated in ``epoch`` take effect.
-    """
-    return epoch + 1 + MAX_SEED_LOOKAHEAD
+```lean
+def compute_activation_exit_epoch
+    (epoch : Epoch)
+    : Epoch :=
+  epoch + 1 + MAX_SEED_LOOKAHEAD
 ```
 
 #### `compute_fork_data_root`
@@ -1404,66 +1391,72 @@ def compute_signing_root(ssz_object: SSZObject, domain: Domain) -> Root:
 
 #### `get_current_epoch`
 
-```python
-def get_current_epoch(state: BeaconState) -> Epoch:
-    """
-    Return the current epoch.
-    """
-    return compute_epoch_at_slot(state.slot)
+```lean
+def get_current_epoch
+    (state : BeaconState)
+    : Epoch :=
+  compute_epoch_at_slot state.slot
 ```
 
 #### `get_previous_epoch`
 
-```python
-def get_previous_epoch(state: BeaconState) -> Epoch:
-    """`
-    Return the previous epoch (unless the current epoch is ``GENESIS_EPOCH``).
-    """
-    current_epoch = get_current_epoch(state)
-    return GENESIS_EPOCH if current_epoch == GENESIS_EPOCH else current_epoch - 1
+Unless the current epoch is `GENESIS_EPOCH`, in which case there is no previous
+one.
+
+```lean
+def get_previous_epoch
+    (state : BeaconState)
+    : Epoch :=
+  let current_epoch := get_current_epoch state
+  if current_epoch == GENESIS_EPOCH then
+    GENESIS_EPOCH
+  else
+    current_epoch - 1
 ```
 
 #### `get_block_root`
 
-```python
-def get_block_root(state: BeaconState, epoch: Epoch) -> Root:
-    """
-    Return the block root at the start of a recent ``epoch``.
-    """
-    return get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch))
+```lean
+def get_block_root
+    (state : BeaconState)
+    (epoch : Epoch)
+    : Result Root :=
+  get_block_root_at_slot state (compute_start_slot_at_epoch epoch)
 ```
 
 #### `get_block_root_at_slot`
 
-```python
-def get_block_root_at_slot(state: BeaconState, slot: Slot) -> Root:
-    """
-    Return the block root at a recent ``slot``.
-    """
-    assert slot < state.slot <= slot + SLOTS_PER_HISTORICAL_ROOT
-    return state.block_roots[slot % SLOTS_PER_HISTORICAL_ROOT]
+```lean
+def get_block_root_at_slot
+    (state : BeaconState)
+    (slot : Slot)
+    : Result Root := do
+  assert (slot < state.slot && state.slot <= slot + SLOTS_PER_HISTORICAL_ROOT)
+  state.block_roots[slot % SLOTS_PER_HISTORICAL_ROOT]
 ```
 
 #### `get_randao_mix`
 
-```python
-def get_randao_mix(state: BeaconState, epoch: Epoch) -> Bytes32:
-    """
-    Return the randao mix at a recent ``epoch``.
-    """
-    return state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR]
+```lean
+def get_randao_mix
+    (state : BeaconState)
+    (epoch : Epoch)
+    : Result Bytes32 :=
+  state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR]
 ```
 
 #### `get_active_validator_indices`
 
-```python
-def get_active_validator_indices(state: BeaconState, epoch: Epoch) -> Sequence[ValidatorIndex]:
-    """
-    Return the sequence of active validator indices at ``epoch``.
-    """
-    return [
-        ValidatorIndex(i) for i, v in enumerate(state.validators) if is_active_validator(v, epoch)
-    ]
+```lean
+def get_active_validator_indices
+    (state : BeaconState)
+    (epoch : Epoch)
+    : Sequence ValidatorIndex := Id.run do
+  let mut active : Array ValidatorIndex := #[]
+  for index in [0:state.validators.size] do
+    if is_active_validator (state.validators.elements.getD index Validator.empty) epoch then
+      active := active.push index
+  return Sequence.mk active
 ```
 
 #### `get_validator_churn_limit`
@@ -1481,15 +1474,17 @@ def get_validator_churn_limit(state: BeaconState) -> Uint64:
 
 #### `get_seed`
 
-```python
-def get_seed(state: BeaconState, epoch: Epoch, domain_type: DomainType) -> Bytes32:
-    """
-    Return the seed at ``epoch``.
-    """
-    mix = get_randao_mix(
-        state, epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD - 1
-    )  # Avoid underflow
-    return sha256(domain_type + uint_to_bytes(epoch) + mix)
+The lookahead is written as an addition of a whole vector's length so that it
+cannot underflow.
+
+```lean
+def get_seed
+    (state : BeaconState)
+    (epoch : Epoch)
+    (domain_type : DomainType)
+    : Result Bytes32 := do
+  let mix <- get_randao_mix state (epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD - 1)
+  return sha256 (domain_type ++ uint64_to_bytes epoch ++ mix)
 ```
 
 #### `get_committee_count_per_slot`
@@ -1537,7 +1532,7 @@ def get_beacon_proposer_index(state: BeaconState) -> ValidatorIndex:
     Return the beacon proposer index at the current slot.
     """
     epoch = get_current_epoch(state)
-    seed = sha256(get_seed(state, epoch, DOMAIN_BEACON_PROPOSER) + uint_to_bytes(state.slot))
+    seed = sha256(get_seed(state, epoch, DOMAIN_BEACON_PROPOSER) + uint64_to_bytes(state.slot))
     indices = get_active_validator_indices(state, epoch)
     return compute_proposer_index(state, indices, seed)
 ```

@@ -698,18 +698,18 @@ The `subnet_id` for the `attestation` is calculated with:
 - Let
   `subnet_id = compute_subnet_for_attestation(committees_per_slot, attestation.data.slot, attestation.data.index)`.
 
-```python
-def compute_subnet_for_attestation(
-    committees_per_slot: Uint64, slot: Slot, committee_index: CommitteeIndex
-) -> SubnetID:
-    """
-    Compute the correct subnet for an attestation for Phase 0.
-    Note, this mimics expected future behavior where attestations will be mapped to their shard subnet.
-    """
-    slots_since_epoch_start = Uint64(slot % SLOTS_PER_EPOCH)
-    committees_since_epoch_start = committees_per_slot * slots_since_epoch_start
+This mimics expected future behaviour, where attestations will be mapped to
+their shard subnet.
 
-    return SubnetID((committees_since_epoch_start + committee_index) % ATTESTATION_SUBNET_COUNT)
+```lean
+def compute_subnet_for_attestation
+    (committees_per_slot : Uint64)
+    (slot : Slot)
+    (committee_index : CommitteeIndex)
+    : SubnetID :=
+  let slots_since_epoch_start := slot % SLOTS_PER_EPOCH
+  let committees_since_epoch_start := committees_per_slot * slots_since_epoch_start
+  (committees_since_epoch_start + committee_index) % ATTESTATION_SUBNET_COUNT
 ```
 
 ### Attestation aggregation

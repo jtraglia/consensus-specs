@@ -188,12 +188,11 @@ def get_current_target(store: Store) -> Checkpoint:
 
 ##### `is_start_slot_at_epoch`
 
-```python
-def is_start_slot_at_epoch(slot: Slot) -> bool:
-    """
-    Return ``True`` if ``slot`` is the start slot of an epoch.
-    """
-    return compute_slots_since_epoch_start(slot) == 0
+```lean
+def is_start_slot_at_epoch
+    (slot : Slot)
+    : Bool :=
+  compute_slots_since_epoch_start slot == 0
 ```
 
 ##### `get_ancestor_roots`

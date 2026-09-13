@@ -261,9 +261,11 @@ def get_current_store_epoch(store: Store) -> Epoch:
 
 #### `compute_slots_since_epoch_start`
 
-```python
-def compute_slots_since_epoch_start(slot: Slot) -> int:
-    return slot - compute_start_slot_at_epoch(compute_epoch_at_slot(slot))
+```lean
+def compute_slots_since_epoch_start
+    (slot : Slot)
+    : Uint64 :=
+  slot - compute_start_slot_at_epoch (compute_epoch_at_slot slot)
 ```
 
 #### `get_ancestor`
@@ -550,12 +552,11 @@ def seconds_to_milliseconds(seconds: Uint64) -> Uint64:
 
 #### `get_slot_component_duration_ms`
 
-```python
-def get_slot_component_duration_ms(basis_points: Uint64) -> Uint64:
-    """
-    Calculate the duration of a slot component in milliseconds.
-    """
-    return basis_points * SLOT_DURATION_MS // BASIS_POINTS
+```lean
+def get_slot_component_duration_ms
+    (basis_points : Uint64)
+    : Uint64 :=
+  basis_points * SLOT_DURATION_MS / BASIS_POINTS
 ```
 
 #### `get_attestation_due_ms`
@@ -592,9 +593,11 @@ def is_head_late(store: Store, head_root: Root) -> bool:
 
 ##### `is_shuffling_stable`
 
-```python
-def is_shuffling_stable(slot: Slot) -> bool:
-    return slot % SLOTS_PER_EPOCH != 0
+```lean
+def is_shuffling_stable
+    (slot : Slot)
+    : Bool :=
+  slot % SLOTS_PER_EPOCH != 0
 ```
 
 ##### `is_ffg_competitive`
@@ -884,11 +887,14 @@ def record_block_timeliness(store: Store, root: Root) -> None:
 
 ##### `compute_shuffling_dependent_slot`
 
-```python
-def compute_shuffling_dependent_slot(epoch: Epoch) -> Slot:
-    if epoch <= MIN_SEED_LOOKAHEAD:
-        return GENESIS_SLOT
-    return compute_start_slot_at_epoch(epoch - MIN_SEED_LOOKAHEAD) - 1
+```lean
+def compute_shuffling_dependent_slot
+    (epoch : Epoch)
+    : Slot :=
+  if epoch <= MIN_SEED_LOOKAHEAD then
+    GENESIS_SLOT
+  else
+    compute_start_slot_at_epoch (epoch - MIN_SEED_LOOKAHEAD) - 1
 ```
 
 ##### `get_shuffling_dependent_root`

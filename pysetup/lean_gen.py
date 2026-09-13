@@ -114,6 +114,15 @@ BYTES_READ = LeanType(
     desc="", lean="ByteArray", read="(Spec.asBytes {})", write="(Spec.ofBytes {})"
 )
 BITS_READ = LeanType(desc="", lean="Array Bool", read="(Spec.asBits {})", write="(Spec.ofBits {})")
+# A Python `bytes` carries no length, so it crosses as a progressive list of
+# bytes, whose elements are uints rather than one run of bytes.
+PLAIN_BYTES = LeanType(
+    desc="(Ssz.Desc.progressiveList Ssz.Desc.uint8)",
+    lean="ByteArray",
+    read="(ByteArray.mk ((Spec.asElements {}).map (fun element => "
+    "UInt8.ofNat (Spec.asNat element))))",
+    write="(Spec.ofElements ((({}).data).map (fun element => Ssz.Value.uint element.toNat)))",
+)
 
 
 class LeanTypes:
@@ -142,6 +151,8 @@ class LeanTypes:
         text = ast.unparse(node)
         if text in self.table:
             return self.table[text]
+        if text == "bytes":
+            return PLAIN_BYTES
         if text in SCALAR_DESCS:
             if text in ("Boolean", "bool"):
                 return BOOL_TYPE
@@ -330,7 +341,7 @@ def _class_body_value(cls: ast.ClassDef, name: str) -> str | None:
 
 
 # How a Lean type is spelled when the generated Python declares it.
-LEAN_TO_PYTHON = {"Bool": "bool", "Nat": "int"}
+LEAN_TO_PYTHON = {"Bool": "bool", "Nat": "int", "ByteArray": "bytes"}
 
 OPENERS, CLOSERS = "([{\u27e8", ")]}\u27e9"
 
@@ -411,19 +422,41 @@ def _spec_name(lean_type: str) -> str:
     return LEAN_TO_PYTHON.get(lean_type, lean_type)
 
 
-def facade_of(fork: str, preset: str, name: str, spec_object) -> Facade:
+def container_names(spec_object) -> set[str]:
+    """
+    The types a definition can be said to edit, which are the containers.
+
+    Python edits an argument by mutating the object it was handed, so only a
+    container can be edited. A definition that gives back the type of its first
+    argument is editing it when that type is a container, and is an ordinary
+    function of it otherwise.
+    """
+    names = set()
+    for name, source in spec_object.ssz_objects.items():
+        declaration = ast.parse(source).body[0]
+        if not isinstance(declaration, ast.ClassDef) or not declaration.bases:
+            continue
+        base = declaration.bases[0]
+        head = ast.unparse(base.value if isinstance(base, ast.Subscript) else base)
+        if head in ("Container", "ProgressiveContainer"):
+            names.add(name)
+    return names
+
+
+def facade_of(fork: str, preset: str, name: str, spec_object, containers: set[str]) -> Facade:
     """
     Work out what the generated Python declares for a Lean definition.
 
-    The signature is read off the Lean: a definition whose result is the type of
-    its first argument is one that edits it, which is what `-> None` means on the
-    Python side.
+    The signature is read off the Lean: a definition whose result is the
+    container type of its first argument is one that edits it, which is what
+    `-> None` means on the Python side.
     """
     key = f"{fork}/{preset}/{name}"
     signature = parse_lean_signature(spec_object.lean_functions[name], name)
     params = [(argument, _spec_name(annotation)) for argument, annotation in signature.params]
     result = _spec_name(signature.returns.removeprefix("Result").strip())
-    returns = "None" if params and result == params[0][1] else result
+    edits = params and result == params[0][1] and result in containers
+    returns = "None" if edits else result
     return Facade(name, key, params, returns, signature.doc)
 
 
@@ -443,9 +476,10 @@ def bound_names(spec_object) -> list[str]:
 def collect_bindings(fork: str, preset: str, spec_object, types: LeanTypes) -> list[Binding]:
     """Match each Lean definition to the Python face the generated module keeps."""
     bindings = []
+    containers = container_names(spec_object)
     for name in bound_names(spec_object):
         lean_source = spec_object.lean_functions[name]
-        facade = facade_of(fork, preset, name, spec_object)
+        facade = facade_of(fork, preset, name, spec_object, containers)
 
         def resolve(annotation: str, what: str, fn: str = name) -> LeanType:
             try:
@@ -499,6 +533,34 @@ def _emit_records(name: str, fields: list[str], entries) -> list[str]:
         "\n".join(declaration),
         f"def {name} : Array {kind} :=\n  #[" + ", ".join(rows) + "]",
     ]
+
+
+def order_definitions(lean_functions: dict[str, str]) -> list[str]:
+    """
+    The Lean definitions, ordered so that each follows the ones it calls.
+
+    The specification names them in the order its sections run, which is not an
+    order Lean can elaborate: a definition in one file may call one that a later
+    file defines.
+    """
+    ordered: list[str] = []
+    placed: set[str] = set()
+
+    def place(name: str, calling: frozenset[str]) -> None:
+        if name in placed:
+            return
+        if name in calling:
+            raise ValueError(f"lean definitions call one another: {name}")
+        body = lean_functions[name]
+        for other in lean_functions:
+            if other != name and re.search(rf"\b{re.escape(other)}\b", body):
+                place(other, calling | {name})
+        placed.add(name)
+        ordered.append(name)
+
+    for name in lean_functions:
+        place(name, frozenset())
+    return ordered
 
 
 def emit_constants(spec_object, module: ModuleType) -> list[str]:
@@ -589,7 +651,10 @@ def generate(
         "",
         "/-! Definitions the specification writes in Lean. -/",
         "",
-        "\n\n".join(spec_object.lean_functions.values()),
+        "\n\n".join(
+            spec_object.lean_functions[name]
+            for name in order_definitions(spec_object.lean_functions)
+        ),
         "",
         "/-! The boundary: decoding arguments, and encoding what comes back. -/",
         "",
@@ -640,7 +705,7 @@ def write_root(generated: dict[tuple[str, str], list[Binding]], lean_dir: Path) 
 
 
 # Python annotations that are not SSZ classes, and the SSZ class to send them as.
-PYTHON_COERCIONS = {"bool": "Boolean", "int": "Uint64"}
+PYTHON_COERCIONS = {"bool": "Boolean", "int": "Uint64", "bytes": "_lean_bytes()"}
 OPTIONAL_TYPE = re.compile(r"^Optional\[(.+)\]$")
 SEQUENCE_TYPE = re.compile(r"^Sequence\[(.+)\]$")
 # A result declared as a plain Python type comes back as the SSZ class that
@@ -726,11 +791,22 @@ def _lean_optional(element):
 
 
 def _lean_argument(declared, value):
-    """Put an argument into the SSZ class it crosses as."""
+    """
+    Put an argument into the SSZ class it crosses as.
+
+    A specification hands one fork's container to another fork's function
+    wherever the two agree on the fields it reads, which Python allows because
+    it never looks at the type. The boundary has to name a type, so the one it
+    declares is rebuilt from the fields the value carries.
+    """
     if isinstance(value, declared):
         return value
-    if "data" in getattr(declared, "model_fields", ()):
+    fields = getattr(declared, "model_fields", ())
+    if "data" in fields:
         return declared(data=list(value))
+    if fields and hasattr(value, "model_fields"):
+        shared = {name: getattr(value, name) for name in fields if hasattr(value, name)}
+        return declared(**shared)
     return declared(value)
 
 
@@ -740,9 +816,20 @@ def _lean_sequence(element):
     return type(f"Sequence{element.__name__}", (ProgressiveList[element],), {})
 
 
+@cache
+def _lean_bytes():
+    """The SSZ type a `bytes` crosses as, which has no length to declare."""
+    return type("LeanBytes", (ProgressiveList[Byte],), {})
+
+
 def _lean_copy(target, source) -> None:
     """Copy a returned value back over the argument the caller passed in."""
     for name in type(target).model_fields:
+        if not hasattr(source, name):
+            raise TypeError(
+                f"{type(target).__name__} was edited as a {type(source).__name__}, "
+                f"which has no {name} to copy back"
+            )
         setattr(target, name, getattr(source, name))
 '''
 
@@ -760,7 +847,7 @@ def _call(key: str, arguments: str, result: str, indent: str) -> list[str]:
     return [
         f"{indent}_lean_call(",
         f'{indent}    "{key}",',
-        f"{indent}    ({arguments},),",
+        f"{indent}    ({arguments},)," if arguments else f"{indent}    (),",
         f"{indent}    {result},",
         f"{indent})",
     ]
@@ -792,8 +879,9 @@ def emit_python(fork: str, preset: str, spec_object) -> tuple[dict[str, str], st
         return {}, ""
 
     replacements = {}
+    containers = container_names(spec_object)
     for name in bound_names(spec_object):
-        facade = facade_of(fork, preset, name, spec_object)
+        facade = facade_of(fork, preset, name, spec_object, containers)
         arguments = ", ".join(
             f"({_ssz_class(annotation)}, {argument})" for argument, annotation in facade.params
         )
@@ -809,6 +897,10 @@ def emit_python(fork: str, preset: str, spec_object) -> tuple[dict[str, str], st
                 "    )",
             ]
             body[-2] += ","
+        elif facade.returns == "bytes":
+            lines = _call(facade.key, arguments, _ssz_class(facade.returns), "    ")
+            body = [f"    return bytes({lines[0].lstrip()}", *lines[1:]]
+            body[-1] += ")"
         elif SEQUENCE_TYPE.match(facade.returns):
             # The result travels as a progressive list, and is handed on as the
             # plain Python sequence the specification declares.
