@@ -1,15 +1,17 @@
-import Spec.Notation
 import Ssz
 
 /-!
-What the generated specification is written against.
+What the specification is written against.
 
-Each SSZ type becomes an ordinary Lean structure, so a field is read as
-`state.slot`, a copy with one field changed is `{ state with slot := x }`, and a
-`do` block that declares `let mut state` can assign to `state.slot` directly.
+Every type the specification declares becomes an ordinary Lean structure, so a
+field is read as `state.slot` and a copy with fields changed is written
+`{ state with slot := s }`. Sequences become `Sequence`, whose operations are
+named after the Python ones they stand for.
 
-The helpers here are what the generated conversions to and from `Ssz.Value` are
-built out of. Writing a specification needs `assert` and little else.
+A definition that can reject returns `Result`. Indexing and assigning past the
+end of a sequence reject, which is what an `IndexError` does in Python, and
+`assert` rejects the way Python's `assert` does. Nothing here panics, so no
+definition can take the process down with it.
 -/
 
 namespace Spec
@@ -24,11 +26,53 @@ instance : Repr ByteArray where
 abbrev Result := Except String
 
 /-- Reject, naming the reason. -/
-def reject {α : Type} (reason : String) : Result α := .error reason
+def reject {a : Type} (reason : String) : Result a := .error reason
 
-/-- Reject unless a condition holds. -/
-def check (condition : Bool) (reason : String) : Result Unit :=
+/-- Reject unless a condition holds, the way Python's `assert` does. -/
+def assert (condition : Bool) (reason : String := "assertion failed") : Result Unit :=
   if condition then .ok () else .error reason
+
+/-!
+Sequences.
+
+`List[T, N]`, `Vector[T, N]` and `ProgressiveList[T]` all become a `Sequence`,
+which differs from a Lean `Array` in one way: reading or writing past the end
+rejects rather than needing a proof or panicking.
+-/
+
+/-- What the specification declares as a `List`, a `Vector` or a `ProgressiveList`. -/
+structure Sequence (a : Type) where
+  elements : Array a
+deriving Repr, BEq, Inhabited
+
+namespace Sequence
+
+variable {a : Type}
+
+/-- `len(xs)`. -/
+def size (xs : Sequence a) : Nat := xs.elements.size
+
+/-- `xs[index]`, which rejects when the index is past the end. -/
+instance : GetElem (Sequence a) Nat (Result a) (fun _ _ => True) where
+  getElem xs index _ :=
+    if valid : index < xs.elements.size then .ok xs.elements[index]
+    else .error s!"index {index} out of range"
+
+/-- `xs[index] = value`, which rejects when the index is past the end. -/
+def set (xs : Sequence a) (index : Nat) (value : a) : Result (Sequence a) :=
+  if index < xs.size then .ok (Sequence.mk (xs.elements.setIfInBounds index value))
+  else .error s!"index {index} out of range"
+
+/-- `xs.append(value)`. -/
+def append (xs : Sequence a) (value : a) : Sequence a :=
+  Sequence.mk (xs.elements.push value)
+
+end Sequence
+
+/-!
+The pieces the generated conversions to and from `Ssz.Value` are built out of.
+A specification does not name these.
+-/
 
 /-- The nth field of a struct, or the nth element of a sequence. -/
 def field (value : Value) (index : Nat) : Value :=
@@ -45,28 +89,23 @@ def defaultOf (shape : Desc) : Value :=
 /-! Readers for each shape a value can take. A value that has been checked
 against its type cannot take the wrong shape, so these do not fail. -/
 
-def asNat : Value → Nat
+def asNat : Value -> Nat
   | .uint n => n
   | _ => 0
 
-def asUInt8 (value : Value) : UInt8 := UInt8.ofNat (asNat value)
-def asUInt16 (value : Value) : UInt16 := UInt16.ofNat (asNat value)
-def asUInt32 (value : Value) : UInt32 := UInt32.ofNat (asNat value)
-def asUInt64 (value : Value) : UInt64 := UInt64.ofNat (asNat value)
-
-def asBool : Value → Bool
+def asBool : Value -> Bool
   | .bool b => b
   | _ => false
 
-def asBytes : Value → ByteArray
-  | .bytes data => ⟨data⟩
-  | _ => ⟨#[]⟩
+def asBytes : Value -> ByteArray
+  | .bytes data => ByteArray.mk data
+  | _ => ByteArray.mk #[]
 
-def asBits : Value → Array Bool
+def asBits : Value -> Array Bool
   | .bits data => data
   | _ => #[]
 
-def asSeq : Value → Array Value
+def asElements : Value -> Array Value
   | .seq elements => elements.toArray
   | _ => #[]
 
@@ -76,15 +115,15 @@ def ofNat (n : Nat) : Value := .uint n
 def ofBool (b : Bool) : Value := .bool b
 def ofBytes (data : ByteArray) : Value := .bytes data.data
 def ofBits (data : Array Bool) : Value := .bits data
-def ofSeq (elements : Array Value) : Value := .seq elements.toList
+def ofElements (elements : Array Value) : Value := .seq elements.toList
 
 /-!
 The wire format.
 
 Arguments arrive as a run of frames, each a four-byte little-endian length
 followed by that many bytes of SSZ. The reply is a status byte -- zero for a
-result, one for a failed assertion -- followed by the encoded result or the
-reason as UTF-8.
+result, one for a rejection -- followed by the encoded result or the reason as
+UTF-8.
 -/
 
 /-- Read a four-byte little-endian length. -/
@@ -114,14 +153,14 @@ def decodeArg (shape : Desc) (data : ByteArray) : Result Value :=
 /-- Encode a result against the type it is declared to have. -/
 def encodeResult (shape : Desc) (value : Value) : Result ByteArray :=
   match Ssz.serialize shape value with
-  | .ok bytes => .ok ⟨bytes⟩
+  | .ok bytes => .ok (ByteArray.mk bytes)
   | .error e => .error s!"result did not encode: {repr e}"
 
 /-- Prefix a successful reply with its status byte. -/
 def ok (payload : ByteArray) : ByteArray :=
   (ByteArray.mk #[0]) ++ payload
 
-/-- Report a failed assertion, or any refusal, as a reply. -/
+/-- Report a rejection as a reply. -/
 def failure (reason : String) : ByteArray :=
   (ByteArray.mk #[1]) ++ reason.toUTF8
 

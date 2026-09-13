@@ -6,9 +6,8 @@ executed: the generated Python keeps the signature and docstring the spec gives
 it, serializes its arguments, and calls the Lean library across the FFI.
 
 Everything the Lean author writes against is generated from the same markdown:
-the SSZ descriptor of every type, a wrapper type naming it, an accessor and a
-setter for every field, and every constant of the preset. Only the function
-bodies are written by hand.
+a structure for every type, its SSZ descriptor, and every constant of the
+preset. Only the definitions themselves are written by hand.
 """
 
 import ast
@@ -44,21 +43,13 @@ COLLECTIONS = {
 }
 BYTES_TYPE = re.compile(r"^Bytes(\d+)$")
 
-UINT_READERS = {
-    8: "Spec.asUInt8",
-    16: "Spec.asUInt16",
-    32: "Spec.asUInt32",
-    64: "Spec.asUInt64",
-}
-UINT_LEAN = {8: "UInt8", 16: "UInt16", 32: "UInt32", 64: "UInt64"}
-
 # The SSZ base types, so that a Lean signature can be spelled the way the Python
-# one is. Lean has no integer wider than 64 bits, so those become naturals.
+# one is. Every unsigned integer is a natural: a definition works with them
+# unbounded, and their width is checked where they are written back.
 BASE_ALIASES = [
     "abbrev Boolean := Bool",
-    "abbrev Byte := UInt8",
-    *(f"abbrev Uint{bits} := UInt{bits}" for bits in (8, 16, 32, 64)),
-    *(f"abbrev Uint{bits} := Nat" for bits in (128, 256)),
+    "abbrev Byte := Nat",
+    *(f"abbrev Uint{bits} := Nat" for bits in (8, 16, 32, 64, 128, 256)),
     *(f"abbrev Bytes{size} := ByteArray" for size in (1, 4, 8, 20, 31, 32, 48, 96)),
 ]
 
@@ -108,14 +99,6 @@ def namespace_of(fork: str, preset: str) -> str:
 
 
 def _uint(width_bits: int) -> LeanType:
-    if width_bits in UINT_LEAN:
-        return LeanType(
-            desc=SCALAR_DESCS[f"Uint{width_bits}"],
-            lean=UINT_LEAN[width_bits],
-            read=f"({UINT_READERS[width_bits]} {{}})",
-            write="(Ssz.Value.uint ({}).toNat)",
-        )
-    # Lean has no UInt128 or UInt256, so the wide integers are plain naturals.
     return LeanType(
         desc=SCALAR_DESCS[f"Uint{width_bits}"],
         lean="Nat",
@@ -197,9 +180,13 @@ class LeanTypes:
     def _sequence(desc: str, element: LeanType) -> LeanType:
         return LeanType(
             desc=desc,
-            lean=f"(Array {element.lean})",
-            read="((Spec.asSeq {}).map (fun element => " + element.reader("element") + "))",
-            write="(Spec.ofSeq (({}).map (fun element => " + element.writer("element") + ")))",
+            lean=f"(Sequence {element.lean})",
+            read="(Sequence.mk ((Spec.asElements {}).map (fun element => "
+            + element.reader("element")
+            + ")))",
+            write="(Spec.ofElements ((({}).elements).map (fun element => "
+            + element.writer("element")
+            + ")))",
         )
 
     # -- building the table --------------------------------------------------
@@ -300,7 +287,7 @@ class LeanTypes:
                 f"/-- The default `{name}`, which is what `empty()` gives in Python. -/\n"
                 f"def {name}.empty : {name} := {name}.ofValue (Spec.defaultOf Descs.{name})"
             ),
-            f"instance : Inhabited {name} := ⟨{name}.empty⟩",
+            f"instance : Inhabited {name} := {{ default := {name}.empty }}",
         ]
         self.table[name] = LeanType(
             desc=f"Descs.{name}",
@@ -318,11 +305,7 @@ def _class_body_value(cls: ast.ClassDef, name: str) -> str | None:
 
 
 # How a Lean type is spelled when the generated Python declares it.
-LEAN_TO_PYTHON = {
-    "Bool": "bool",
-    "Nat": "int",
-    **{f"UInt{bits}": f"Uint{bits}" for bits in (8, 16, 32, 64)},
-}
+LEAN_TO_PYTHON = {"Bool": "bool", "Nat": "int"}
 
 OPENERS, CLOSERS = "([{\u27e8", ")]}\u27e9"
 
@@ -472,14 +455,11 @@ def emit_constants(spec_object, module: ModuleType) -> list[str]:
         value = configuration.get(name, getattr(module, name, None))
         if isinstance(value, bool):
             lines.append(f"def {name} : Bool := {'true' if value else 'false'}")
-        elif isinstance(value, int):
-            if 0 <= value < 2**64:
-                lines.append(f"def {name} : UInt64 := {value}")
-            elif value >= 0:
-                lines.append(f"def {name} : Nat := {value}")
+        elif isinstance(value, int) and value >= 0:
+            lines.append(f"def {name} : Nat := {value}")
         elif isinstance(value, bytes):
             body = ", ".join(str(byte) for byte in value)
-            lines.append(f"def {name} : ByteArray := ⟨#[{body}]⟩")
+            lines.append(f"def {name} : ByteArray := ByteArray.mk #[{body}]")
     return lines
 
 
@@ -487,13 +467,13 @@ def emit_dispatch(bindings: list[Binding]) -> list[str]:
     """A runner per bound function, and the match that selects one."""
     lines = []
     for binding in bindings:
-        steps = [f'  Spec.check (frames.size == {len(binding.params)}) "wrong argument count"']
+        steps = [f'  Spec.assert (frames.size == {len(binding.params)}) "wrong argument count"']
         arguments = []
         for index, (_, kind) in enumerate(binding.params):
-            steps.append(f"  let value{index} \u2190 Spec.decodeArg {kind.desc} frames[{index}]!")
+            steps.append(f"  let value{index} <- Spec.decodeArg {kind.desc} frames[{index}]!")
             arguments.append(kind.reader(f"value{index}"))
         call = " ".join([binding.name, *arguments])
-        steps.append(f"  let result {'\u2190' if binding.monadic else ':='} {call}")
+        steps.append(f"  let result {'<-' if binding.monadic else ':='} {call}")
         steps.append(f"  Spec.encodeResult {binding.result.desc} {binding.result.writer('result')}")
         lines.append(
             f"private def run_{binding.name} (frames : Array ByteArray) : ByteArray :=\n"
@@ -539,7 +519,7 @@ def generate(
         "",
         *emit_constants(spec_object, module),
         "",
-        "/-! Types, their SSZ descriptors, and an accessor for every field. -/",
+        "/-! Types as the specification declares them, and their SSZ descriptors. -/",
         "",
         "\n".join(BASE_ALIASES),
         "",

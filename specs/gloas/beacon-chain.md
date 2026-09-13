@@ -1044,19 +1044,21 @@ def is_valid_indexed_attestation(
 #### New `is_builder_index`
 
 ```lean
-def is_builder_index (validator_index : ValidatorIndex) : Bool :=
+def is_builder_index
+    (validator_index : ValidatorIndex)
+    : Bool :=
   (validator_index &&& BUILDER_INDEX_FLAG) != 0
 ```
 
 #### New `is_active_builder`
 
 ```lean
-/-- Check if the builder at `builder_index` is active for the given `state`. -/
-def is_active_builder (state : BeaconState) (builder_index : BuilderIndex) : Bool :=
-  let builder := state.builders[builder_index.toNat]!
-  -- Placement in builder list is finalized
-  builder.deposit_epoch < state.finalized_checkpoint.epoch
-    -- Has not initiated exit
+def is_active_builder
+    (state : BeaconState)
+    (builder_index : BuilderIndex)
+    : Result Bool := do
+  let builder <- state.builders[builder_index]
+  return builder.deposit_epoch < state.finalized_checkpoint.epoch
     && builder.withdrawable_epoch == FAR_FUTURE_EPOCH
 ```
 
@@ -1528,14 +1530,22 @@ def initiate_builder_exit(state: BeaconState, builder_index: BuilderIndex) -> No
 #### New `settle_builder_payment`
 
 ```lean
-def settle_builder_payment (state : BeaconState) (payment_index : Uint64) : Result BeaconState := do
-  assert payment_index.toNat < state.builder_pending_payments.size
-  let mut state := state
-  let payment := state.builder_pending_payments[payment_index.toNat]!
+def settle_builder_payment
+    (state : BeaconState)
+    (payment_index : Uint64)
+    : Result BeaconState := do
+  let mut payments := state.builder_pending_payments
+  let mut withdrawals := state.builder_pending_withdrawals
+
+  let payment <- payments[payment_index]
   if payment.withdrawal.amount > 0 then
-    state.builder_pending_withdrawals := state.builder_pending_withdrawals.push payment.withdrawal
-  state.builder_pending_payments[payment_index.toNat] := BuilderPendingPayment.empty
-  return state
+    withdrawals := withdrawals.append payment.withdrawal
+  payments <- payments.set payment_index BuilderPendingPayment.empty
+
+  return { state with
+    builder_pending_payments := payments
+    builder_pending_withdrawals := withdrawals
+  }
 ```
 
 ## Beacon chain state transition function
@@ -1967,13 +1977,15 @@ def update_builder_pending_withdrawals(
 
 ```lean
 def update_next_withdrawal_builder_index
-    (state : BeaconState) (processed_builders_sweep_count : Uint64) : BeaconState := Id.run do
-  let mut state := state
+    (state : BeaconState)
+    (processed_builders_sweep_count : Uint64)
+    : BeaconState :=
   if state.builders.size > 0 then
-    -- Update the next builder index to start the next withdrawal sweep
     let next_index := state.next_withdrawal_builder_index + processed_builders_sweep_count
-    state.next_withdrawal_builder_index := next_index % UInt64.ofNat state.builders.size
-  return state
+    let next_builder_index := next_index % state.builders.size
+    { state with next_withdrawal_builder_index := next_builder_index }
+  else
+    state
 ```
 
 ##### Modified `process_withdrawals`
