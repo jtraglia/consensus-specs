@@ -79,6 +79,7 @@ class MarkdownToSpec:
             "lean_functions": {},
             "preset_dep_constant_vars": {},
             "preset_vars": {},
+            "record_fields": {},
             "protocols": {},
             "ssz_dep_constants": {},
             "ssz_objects": {},
@@ -379,6 +380,9 @@ class MarkdownToSpec:
         """
         list_of_records_spec = self._extract_list_of_records_spec(table)
 
+        # Keep the field names, which a row is not needed to know
+        self.spec["record_fields"][list_of_records_name] = self._extract_record_fields(table)
+
         # Make a type map from the spec definition
         type_map = self._make_list_of_records_type_map(list_of_records_spec)
 
@@ -416,6 +420,19 @@ class MarkdownToSpec:
                 if m:
                     type_map[k] = m.group(1)
         return type_map
+
+    @staticmethod
+    def _extract_record_fields(table: Table) -> list[str]:
+        """
+        The field names a list-of-records table declares, read off its header.
+
+        The last column is the description, which is not a field.
+        """
+        header_row = cast("TableRow", table.children[0])
+        return [
+            re.sub(r"\s+", "_", value.children[0].children.upper())
+            for value in header_row.children[:-1]
+        ]
 
     @staticmethod
     def _extract_list_of_records_spec(table: Table) -> list[dict[str, str]]:
@@ -513,6 +530,7 @@ class MarkdownToSpec:
             functions=self.spec["functions"],
             preset_dep_constant_vars=self.spec["preset_dep_constant_vars"],
             preset_vars=self.spec["preset_vars"],
+            record_fields=self.spec["record_fields"],
             protocols=self.spec["protocols"],
             ssz_dep_constants=self.spec["ssz_dep_constants"],
             ssz_objects=self.spec["ssz_objects"],

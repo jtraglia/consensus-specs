@@ -24,6 +24,9 @@ class SpecObject(NamedTuple):
     preset_dep_constant_vars: dict[str, VariableDefinition]
     preset_vars: dict[str, VariableDefinition]
     config_vars: dict[str, VariableDefinition]
+    # Field names of each config variable that holds a list of records, in the
+    # order the specification's table declares them.
+    record_fields: dict[str, list[str]]
     ssz_dep_constants: dict[str, str]  # the constants that depend on ssz_objects
     func_dep_presets: dict[str, str]  # the constants that depend on functions
     ssz_objects: dict[str, str]

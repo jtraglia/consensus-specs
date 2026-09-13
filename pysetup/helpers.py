@@ -343,6 +343,7 @@ def combine_spec_objects(spec0: SpecObject, spec1: SpecObject) -> SpecObject:
     )
     preset_vars = combine_dicts(spec0.preset_vars, spec1.preset_vars)
     config_vars = combine_dicts(spec0.config_vars, spec1.config_vars)
+    record_fields = combine_dicts(spec0.record_fields, spec1.record_fields)
     ssz_dep_constants = combine_dicts(spec0.ssz_dep_constants, spec1.ssz_dep_constants)
     func_dep_presets = combine_dicts(spec0.func_dep_presets, spec1.func_dep_presets)
     ssz_objects = combine_ssz_objects(spec0.ssz_objects, spec1.ssz_objects)
@@ -356,6 +357,7 @@ def combine_spec_objects(spec0: SpecObject, spec1: SpecObject) -> SpecObject:
         preset_dep_constant_vars=preset_dep_constant_vars,
         preset_vars=preset_vars,
         config_vars=config_vars,
+        record_fields=record_fields,
         ssz_dep_constants=ssz_dep_constants,
         func_dep_presets=func_dep_presets,
         ssz_objects=ssz_objects,
@@ -392,6 +394,7 @@ def finalized_spec_object(spec_object: SpecObject) -> SpecObject:
         preset_dep_constant_vars=spec_object.preset_dep_constant_vars,
         preset_vars=spec_object.preset_vars,
         config_vars=spec_object.config_vars,
+        record_fields=spec_object.record_fields,
         ssz_dep_constants=spec_object.ssz_dep_constants,
         func_dep_presets=spec_object.func_dep_presets,
         ssz_objects=ssz_objects,

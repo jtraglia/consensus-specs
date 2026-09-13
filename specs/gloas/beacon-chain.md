@@ -1149,15 +1149,14 @@ def convert_validator_index_to_builder_index(validator_index: ValidatorIndex) ->
 
 #### New `get_scheduled_gas_limit`
 
-```python
-def get_scheduled_gas_limit(epoch: Epoch) -> Optional[Uint64]:
-    """
-    Return the scheduled gas limit at a given epoch, if any.
-    """
-    for entry in sorted(GAS_LIMIT_SCHEDULE, key=lambda e: e["EPOCH"], reverse=True):
-        if epoch >= entry["EPOCH"]:
-            return entry["GAS_LIMIT"]
-    return None
+```lean
+def get_scheduled_gas_limit
+    (epoch : Epoch)
+    : Option Uint64 := Id.run do
+  for entry in GAS_LIMIT_SCHEDULE.qsort fun a b => a.EPOCH > b.EPOCH do
+    if epoch >= entry.EPOCH then
+      return some entry.GAS_LIMIT
+  return none
 ```
 
 #### New `get_pending_balance_to_withdraw_for_builder`

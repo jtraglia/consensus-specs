@@ -155,6 +155,8 @@ class LeanTypes:
             parts = node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
             if head in COLLECTIONS:
                 return self._collection(head, parts)
+            if head == "Optional":
+                return self._optional(self.translate(parts[0]))
         raise UnsupportedType(text)
 
     def _collection(self, head: str, parts: list[ast.expr]) -> LeanType:
@@ -175,6 +177,25 @@ class LeanTypes:
         else:
             desc = f"(Ssz.Desc.{constructor} {element.desc} {self.value_of(ast.unparse(parts[1]))})"
         return self._sequence(desc, element)
+
+    @staticmethod
+    def _optional(element: LeanType) -> LeanType:
+        """
+        A value that may be absent, which SSZ has no shape for.
+
+        It crosses as a list that holds at most one element, so that `none` is
+        the empty list and `some` is the list holding the value.
+        """
+        return LeanType(
+            desc=f"(Ssz.Desc.list {element.desc} 1)",
+            lean=f"(Option {element.lean})",
+            read="(((Spec.asElements {}).map (fun element => "
+            + element.reader("element")
+            + "))[0]?)",
+            write="(Spec.ofElements (match {} with | some element => #["
+            + element.writer("element")
+            + "] | none => #[]))",
+        )
 
     @staticmethod
     def _sequence(desc: str, element: LeanType) -> LeanType:
@@ -378,6 +399,9 @@ class Facade(NamedTuple):
 
 def _spec_name(lean_type: str) -> str:
     """The name the specification knows a Lean type by."""
+    inner = lean_type.removeprefix("Option ")
+    if inner != lean_type:
+        return f"Optional[{_spec_name(inner.strip())}]"
     return LEAN_TO_PYTHON.get(lean_type, lean_type)
 
 
@@ -417,6 +441,9 @@ def collect_bindings(fork: str, preset: str, spec_object, types: LeanTypes) -> l
             except UnsupportedType as error:
                 raise ValueError(f"{fn}: {what} {error} cannot cross the boundary yet") from error
 
+        for argument, annotation in facade.params:
+            if OPTIONAL_TYPE.match(annotation):
+                raise ValueError(f"{name}: parameter {argument} may not be optional")
         params = [
             (argument, resolve(annotation, "parameter type"))
             for argument, annotation in facade.params
@@ -441,6 +468,27 @@ def collect_bindings(fork: str, preset: str, spec_object, types: LeanTypes) -> l
     return bindings
 
 
+def record_type(name: str) -> str:
+    """The Lean structure a list-of-records constant holds entries of."""
+    return "".join(part.capitalize() for part in name.split("_")) + "Entry"
+
+
+def _emit_records(name: str, fields: list[str], entries) -> list[str]:
+    """A constant that holds a list of records, as a structure and an array."""
+    kind = record_type(name)
+    declaration = [f"structure {kind} where"]
+    declaration += [f"  {field} : Nat" for field in fields]
+    declaration.append("  deriving Repr, BEq")
+    rows = [
+        "{ " + ", ".join(f"{field} := {int(entry[field])}" for field in fields) + " }"
+        for entry in entries
+    ]
+    return [
+        "\n".join(declaration),
+        f"def {name} : Array {kind} :=\n  #[" + ", ".join(rows) + "]",
+    ]
+
+
 def emit_constants(spec_object, module: ModuleType) -> list[str]:
     """Every constant of the preset, as a Lean definition."""
     names = [
@@ -453,7 +501,9 @@ def emit_constants(spec_object, module: ModuleType) -> list[str]:
     lines = []
     for name in dict.fromkeys(names):
         value = configuration.get(name, getattr(module, name, None))
-        if isinstance(value, bool):
+        if fields := spec_object.record_fields.get(name):
+            lines += _emit_records(name, fields, value or ())
+        elif isinstance(value, bool):
             lines.append(f"def {name} : Bool := {'true' if value else 'false'}")
         elif isinstance(value, int) and value >= 0:
             lines.append(f"def {name} : Nat := {value}")
@@ -579,6 +629,7 @@ def write_root(generated: dict[tuple[str, str], list[Binding]], lean_dir: Path) 
 
 # Python annotations that are not SSZ classes, and the SSZ class to send them as.
 PYTHON_COERCIONS = {"bool": "Boolean", "int": "Uint64"}
+OPTIONAL_TYPE = re.compile(r"^Optional\[(.+)\]$")
 # A result declared as a plain Python type comes back as the SSZ class that
 # carried it, and has to be handed on as the type the specification declares.
 RESULT_COERCIONS = {"bool": "bool", "int": "int"}
@@ -587,6 +638,7 @@ LEAN_RUNTIME_BLOCK = '''
 import ctypes
 import os
 import sys
+from functools import cache
 from pathlib import Path
 
 # The compiled Lean specification, and the calls that reach it.
@@ -654,6 +706,12 @@ def _lean_call(key, arguments, result_type):
     return ssz_deserialize(result_type, reply[1:])
 
 
+@cache
+def _lean_optional(element):
+    """The SSZ type an `Optional` crosses as: a list holding at most one element."""
+    return type(f"Optional{element.__name__}", (List[element],), {"LIMIT": 1})
+
+
 def _lean_copy(target, source) -> None:
     """Copy a returned value back over the argument the caller passed in."""
     for name in type(target).model_fields:
@@ -676,6 +734,8 @@ def _python_header(source: str) -> list[str]:
 
 
 def _ssz_class(annotation: str) -> str:
+    if match := OPTIONAL_TYPE.match(annotation):
+        return f"_lean_optional({_ssz_class(match.group(1))})"
     return PYTHON_COERCIONS.get(annotation, annotation)
 
 
@@ -736,6 +796,12 @@ def emit_python(fork: str, preset: str, spec_object) -> tuple[dict[str, str], st
                 "    )",
             ]
             body[-2] += ","
+        elif OPTIONAL_TYPE.match(facade.returns):
+            # The result travels as a list holding at most one element, which is
+            # what the specification declares as `Optional`.
+            lines = _call(facade.key, arguments, _ssz_class(facade.returns), "    ")
+            body = [f"    result = {lines[0].lstrip()}", *lines[1:]]
+            body.append("    return result[0] if len(result) > 0 else None")
         elif facade.returns in RESULT_COERCIONS:
             # The result travels as an SSZ value, but the specification declares
             # it as a plain Python type.
