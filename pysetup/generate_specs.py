@@ -32,7 +32,7 @@ PYSPEC_DIR = Path("tests/core/pyspec")
 # The Lean package, beside the markdown it is generated from.
 LEAN_DIR = Path("lean")
 # What each fork and preset binds, collected as the forks are generated.
-LEAN_BINDINGS: dict[str, list[lean_gen.Binding]] = {}
+LEAN_BINDINGS: dict[tuple[str, str], list[lean_gen.Binding]] = {}
 
 
 def import_generated_spec(fork: str, preset_name: str, out_dir: Path) -> ModuleType:
@@ -310,9 +310,9 @@ def generate_fork_specs(
     for preset_name, spec_object, class_objects in lean_targets:
         module = import_generated_spec(fork, preset_name, out_dir)
         bindings = lean_gen.generate(
-            fork, preset_name, spec_object, class_objects, module, LEAN_DIR / "Pyspec" / "Generated"
+            fork, preset_name, spec_object, class_objects, module, LEAN_DIR / "Spec" / "Generated"
         )
-        LEAN_BINDINGS[lean_gen.module_name(fork, preset_name)] = bindings
+        LEAN_BINDINGS[fork, preset_name] = bindings
         if verbose:
             print(f"  Lean: {len(bindings)} function(s) for {fork}/{preset_name}")
 

@@ -1,5 +1,5 @@
-name = "Pyspec"
-defaultTargets = ["Pyspec"]
+name = "Spec"
+defaultTargets = ["Spec"]
 
 # The SSZ codec, merkleization and proofs, with their proofs, from ssz-specs.
 # Pinned: this is an unmerged branch.
@@ -16,4 +16,4 @@ autoImplicit = false
 relaxedAutoImplicit = false
 
 [[lean_lib]]
-name = "Pyspec"
+name = "Spec"

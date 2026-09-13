@@ -1,19 +1,25 @@
 import Ssz
 
 /-!
-What the generated specification code is written against.
+What the generated specification is written against.
 
-A spec value is an `Ssz.Value` under a one-field wrapper that names its type, so
-that a `BeaconState` and an `Attestation` are different Lean types while both
-stay in the shape the SSZ library reads. A wrapper of one field is erased by the
-compiler, so naming a type this way costs nothing at runtime.
+Each SSZ type becomes an ordinary Lean structure, so a field is read as
+`state.slot`, a copy with one field changed is `{ state with slot := x }`, and a
+`do` block that declares `let mut state` can assign to `state.slot` directly.
+
+The helpers here are what the generated conversions to and from `Ssz.Value` are
+built out of. Writing a specification needs `check` and little else.
 -/
 
-namespace Pyspec
+namespace Spec
 
 open Ssz
 
-/-- A spec function either produces a value or fails the way `assert` does. -/
+/-- Lean has `BEq` and `DecidableEq` for bytes, but no way to print them. -/
+instance : Repr ByteArray where
+  reprPrec data precedence := reprPrec data.data precedence
+
+/-- A definition either produces a value or fails the way `assert` does. -/
 abbrev SpecM := Except String
 
 /-- Fail the way a spec `assert` does. -/
@@ -26,11 +32,11 @@ def field (value : Value) (index : Nat) : Value :=
   | .seq elements => elements.getD index (.bool false)
   | _ => .bool false
 
-/-- The same value with its nth field replaced. -/
-def setField (value : Value) (index : Nat) (replacement : Value) : Value :=
-  match value with
-  | .seq elements => .seq (elements.set index replacement)
-  | _ => value
+/-- The default value of a type, which is what `empty()` gives in Python. -/
+def defaultOf (shape : Desc) : Value :=
+  match Desc.default shape with
+  | .ok value => value
+  | .error _ => .seq []
 
 /-! Readers for each shape a value can take. A value that has been checked
 against its type cannot take the wrong shape, so these do not fail. -/
@@ -60,17 +66,13 @@ def asSeq : Value → Array Value
   | .seq elements => elements.toArray
   | _ => #[]
 
-/-! Writers, for the setters the generated accessors provide. -/
+/-! Writers, for the conversion back. -/
 
+def ofNat (n : Nat) : Value := .uint n
+def ofBool (b : Bool) : Value := .bool b
 def ofBytes (data : ByteArray) : Value := .bytes data.data
 def ofBits (data : Array Bool) : Value := .bits data
 def ofSeq (elements : Array Value) : Value := .seq elements.toList
-
-/-- The default value of a type, as `empty()` gives in Python. -/
-def defaultOf (shape : Desc) : Value :=
-  match Desc.default shape with
-  | .ok value => value
-  | .error _ => .seq []
 
 /-!
 The wire format.
@@ -119,10 +121,10 @@ def ok (payload : ByteArray) : ByteArray :=
 def failure (reason : String) : ByteArray :=
   (ByteArray.mk #[1]) ++ reason.toUTF8
 
-/-- Turn a spec result into the reply the caller reads. -/
+/-- Turn a result into the reply the caller reads. -/
 def reply (result : SpecM ByteArray) : ByteArray :=
   match result with
   | .ok payload => ok payload
   | .error reason => failure reason
 
-end Pyspec
+end Spec

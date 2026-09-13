@@ -1556,19 +1556,16 @@ def settle_builder_payment(state: BeaconState, payment_index: Uint64) -> None:
 
 ```lean
 def settle_builder_payment (state : BeaconState) (payment_index : Uint64) : SpecM BeaconState := do
-  Pyspec.check (payment_index.toNat < state.builder_pending_payments.size)
-    "settle_builder_payment: payment_index is past the end of the pending payments"
+  check (payment_index.toNat < state.builder_pending_payments.size)
+    "payment_index is past the end of the pending payments"
+  let mut state := state
   let payment := state.builder_pending_payments[payment_index.toNat]!
-  let state :=
-    if payment.withdrawal.amount > 0 then
-      state.set_builder_pending_withdrawals
-        (state.builder_pending_withdrawals.push payment.withdrawal)
-    else
-      state
-  let emptied :=
-    state.builder_pending_payments.set!
-      payment_index.toNat ⟨Pyspec.defaultOf Descs.BuilderPendingPayment⟩
-  return state.set_builder_pending_payments emptied
+  if payment.withdrawal.amount > 0 then
+    state := { state with
+      builder_pending_withdrawals := state.builder_pending_withdrawals.push payment.withdrawal }
+  return { state with
+    builder_pending_payments :=
+      state.builder_pending_payments.set! payment_index.toNat BuilderPendingPayment.empty }
 ```
 
 ## Beacon chain state transition function
@@ -2015,8 +2012,7 @@ def update_next_withdrawal_builder_index
   if state.builders.size > 0 then
     -- Update the next builder index to start the next withdrawal sweep
     let next_index := state.next_withdrawal_builder_index + processed_builders_sweep_count
-    let next_builder_index := next_index % UInt64.ofNat state.builders.size
-    state.set_next_withdrawal_builder_index next_builder_index
+    { state with next_withdrawal_builder_index := next_index % UInt64.ofNat state.builders.size }
   else
     state
 ```

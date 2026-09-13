@@ -1,7 +1,7 @@
 # The Lean specification
 
 A prototype. A function that a specification defines in a `lean` code block is
-compiled and called from the generated pyspec, instead of being executed as
+compiled and called from the generated Python, instead of being executed as
 Python. Callers and tests do not change.
 
 ## Writing one
@@ -36,8 +36,8 @@ Then:
 make lean
 ```
 
-That regenerates the specifications and builds the shared library the pyspec
-calls into. Running the tests afterwards needs nothing else.
+That regenerates the specifications and builds the shared library the generated
+Python calls into. Running the tests afterwards needs nothing else.
 
 The Python block stays. It remains the readable definition of record, and it is
 what a reader of the specification sees.
@@ -47,10 +47,10 @@ what a reader of the specification sees.
 Everything except the function body is generated from the same markdown the
 Python comes from, so the two sides cannot drift:
 
-- an `Ssz.Desc` for every type, under `Descs`
-- a wrapper type naming it, so a `BeaconState` and an `Attestation` are
-  different Lean types
-- `x.field_name` and `x.set_field_name value` for every field
+- an ordinary Lean `structure` for every type, so `state.slot` reads a field and
+  `{ state with slot := x }` is a copy with one changed
+- `X.empty`, which is what `X.empty()` gives in Python
+- an `Ssz.Desc` for every type, under `Descs`, and the conversions either way
 - every constant of the preset, spelled as the specification spells it
 - `Uint64`, `Bytes32`, `Boolean` and the rest, so a signature reads like the
   Python one
@@ -58,8 +58,8 @@ Python comes from, so the two sides cannot drift:
 A function that edits its argument is written as one that returns the new value.
 The Python signature stays `-> None`, and the caller copies the result back.
 
-A function that asserts returns `SpecM T`, and uses `Pyspec.check`. A refusal
-reaches the caller as the `AssertionError` the Python would have raised.
+A function that asserts returns `SpecM T`, and uses `check`. A refusal reaches
+the caller as the `AssertionError` the Python would have raised.
 
 ## Three shapes, as they appear in gloas
 
@@ -73,9 +73,9 @@ reaches the caller as the `AssertionError` the Python would have raised.
 
 ```
 specs/**.md  ──┬─► tests/core/pyspec/…/<preset>.py   the wrapper that calls in
-               └─► lean/Pyspec/Generated/…           types, constants, bodies
+               └─► lean/Spec/Generated/…           types, constants, bodies
                                   │
-                                  └─► libpyspec.<so|dylib>
+                                  └─► libspec.<so|dylib>
 ```
 
 Arguments cross as SSZ bytes: a run of frames, each a four-byte little-endian

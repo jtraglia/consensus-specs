@@ -45,10 +45,10 @@ COLLECTIONS = {
 BYTES_TYPE = re.compile(r"^Bytes(\d+)$")
 
 UINT_READERS = {
-    8: "Pyspec.asUInt8",
-    16: "Pyspec.asUInt16",
-    32: "Pyspec.asUInt32",
-    64: "Pyspec.asUInt64",
+    8: "Spec.asUInt8",
+    16: "Spec.asUInt16",
+    32: "Spec.asUInt32",
+    64: "Spec.asUInt64",
 }
 UINT_LEAN = {8: "UInt8", 16: "UInt16", 32: "UInt32", 64: "UInt64"}
 
@@ -98,7 +98,13 @@ class UnsupportedType(Exception):
 
 
 def module_name(fork: str, preset: str) -> str:
+    """The Lean module a fork and preset are generated into."""
     return f"{fork.capitalize()}{preset.capitalize()}"
+
+
+def namespace_of(fork: str, preset: str) -> str:
+    """The namespace its definitions live in."""
+    return f"Spec.{fork.capitalize()}.{preset.capitalize()}"
 
 
 def _uint(width_bits: int) -> LeanType:
@@ -113,20 +119,18 @@ def _uint(width_bits: int) -> LeanType:
     return LeanType(
         desc=SCALAR_DESCS[f"Uint{width_bits}"],
         lean="Nat",
-        read="(Pyspec.asNat {})",
+        read="(Spec.asNat {})",
         write="(Ssz.Value.uint {})",
     )
 
 
 BOOL_TYPE = LeanType(
-    desc="Ssz.Desc.bool", lean="Bool", read="(Pyspec.asBool {})", write="(Ssz.Value.bool {})"
+    desc="Ssz.Desc.bool", lean="Bool", read="(Spec.asBool {})", write="(Ssz.Value.bool {})"
 )
 BYTES_READ = LeanType(
-    desc="", lean="ByteArray", read="(Pyspec.asBytes {})", write="(Pyspec.ofBytes {})"
+    desc="", lean="ByteArray", read="(Spec.asBytes {})", write="(Spec.ofBytes {})"
 )
-BITS_READ = LeanType(
-    desc="", lean="Array Bool", read="(Pyspec.asBits {})", write="(Pyspec.ofBits {})"
-)
+BITS_READ = LeanType(desc="", lean="Array Bool", read="(Spec.asBits {})", write="(Spec.ofBits {})")
 
 
 class LeanTypes:
@@ -194,8 +198,8 @@ class LeanTypes:
         return LeanType(
             desc=desc,
             lean=f"(Array {element.lean})",
-            read="((Pyspec.asSeq {}).map (fun element => " + element.reader("element") + "))",
-            write="(Pyspec.ofSeq (({}).map (fun element => " + element.writer("element") + ")))",
+            read="((Spec.asSeq {}).map (fun element => " + element.reader("element") + "))",
+            write="(Spec.ofSeq (({}).map (fun element => " + element.writer("element") + ")))",
         )
 
     # -- building the table --------------------------------------------------
@@ -278,23 +282,32 @@ class LeanTypes:
         else:
             desc = f".container {names}\n    {descs}"
 
-        lines = [
+        declaration = [f"structure {name} where"]
+        declaration += [f"  {field} : {kind.lean}" for field, kind in fields]
+        declaration.append("  deriving Repr, BEq")
+
+        written = ", ".join(kind.writer(f"self.{field}") for field, kind in fields)
+        read = "\n".join(
+            f"    {field} := {kind.reader(f'(Spec.field value {index})')}"
+            for index, (field, kind) in enumerate(fields)
+        )
+        self.declarations += [
             f"def Descs.{name} : Ssz.Desc :=\n  {desc}",
-            f"/-- `{name}`, as the specification declares it. -/",
-            f"structure {name} where\n  raw : Ssz.Value\nderiving Inhabited",
+            f"/-- `{name}`, as the specification declares it. -/\n" + "\n".join(declaration),
+            f"def {name}.toValue (self : {name}) : Ssz.Value :=\n  .seq [{written}]",
+            f"def {name}.ofValue (value : Ssz.Value) : {name} :=\n  {{\n{read}\n  }}",
+            (
+                f"/-- The default `{name}`, which is what `empty()` gives in Python. -/\n"
+                f"def {name}.empty : {name} := {name}.ofValue (Spec.defaultOf Descs.{name})"
+            ),
+            f"instance : Inhabited {name} := ⟨{name}.empty⟩",
         ]
-        for index, (field, kind) in enumerate(fields):
-            source = f"(Pyspec.field self.raw {index})"
-            lines.append(
-                f"def {name}.{field} (self : {name}) : {kind.lean} := {kind.reader(source)}"
-            )
-            written = kind.writer("value")
-            lines.append(
-                f"def {name}.set_{field} (self : {name}) (value : {kind.lean}) : {name} :=\n"
-                f"  ⟨Pyspec.setField self.raw {index} {written}⟩"
-            )
-        self.declarations.extend(lines)
-        self.table[name] = LeanType(desc=f"Descs.{name}", lean=name, read="⟨{}⟩", write="({}).raw")
+        self.table[name] = LeanType(
+            desc=f"Descs.{name}",
+            lean=name,
+            read=f"({name}.ofValue {{}})",
+            write="({}).toValue",
+        )
 
 
 def _class_body_value(cls: ast.ClassDef, name: str) -> str | None:
@@ -398,23 +411,21 @@ def emit_dispatch(bindings: list[Binding]) -> list[str]:
     """A runner per bound function, and the match that selects one."""
     lines = []
     for binding in bindings:
-        steps = [f'  Pyspec.check (frames.size == {len(binding.params)}) "wrong argument count"']
+        steps = [f'  Spec.check (frames.size == {len(binding.params)}) "wrong argument count"']
         arguments = []
         for index, (_, kind) in enumerate(binding.params):
-            steps.append(f"  let value{index} \u2190 Pyspec.decodeArg {kind.desc} frames[{index}]!")
+            steps.append(f"  let value{index} \u2190 Spec.decodeArg {kind.desc} frames[{index}]!")
             arguments.append(kind.reader(f"value{index}"))
         call = " ".join([binding.name, *arguments])
         steps.append(f"  let result {'\u2190' if binding.monadic else ':='} {call}")
-        steps.append(
-            f"  Pyspec.encodeResult {binding.result.desc} {binding.result.writer('result')}"
-        )
+        steps.append(f"  Spec.encodeResult {binding.result.desc} {binding.result.writer('result')}")
         lines.append(
             f"private def run_{binding.name} (frames : Array ByteArray) : ByteArray :=\n"
-            "  Pyspec.reply do\n" + "\n".join(f"  {step}" for step in steps)
+            "  Spec.reply do\n" + "\n".join(f"  {step}" for step in steps)
         )
 
     arms = "\n".join(
-        f'  | "{binding.key}" => some (run_{binding.name} (Pyspec.unframe args))'
+        f'  | "{binding.key}" => some (run_{binding.name} (Spec.unframe args))'
         for binding in bindings
     )
     lines.append(
@@ -440,9 +451,9 @@ def generate(
         return []
 
     name = module_name(fork, preset)
-    namespace = f"Pyspec.Spec.{name}"
+    namespace = namespace_of(fork, preset)
     body = [
-        "import Pyspec.Runtime",
+        "import Spec.Runtime",
         "",
         f"/-! `{fork}` under the `{preset}` preset, generated from the markdown. -/",
         "",
@@ -474,38 +485,38 @@ def generate(
     return bindings
 
 
-def write_root(generated: dict[str, list[Binding]], lean_dir: Path) -> None:
+def write_root(generated: dict[tuple[str, str], list[Binding]], lean_dir: Path) -> None:
     """Write the module that gathers every fork and exports the entry point."""
-    modules = sorted(generated)
-    imports = [f"import Pyspec.Generated.{name}" for name in modules]
+    targets = sorted(generated)
+    imports = [f"import Spec.Generated.{module_name(*target)}" for target in targets]
     attempts = "\n".join(
-        f"    match Pyspec.Spec.{name}.dispatch key args with\n"
+        f"    match {namespace_of(*target)}.dispatch key args with\n"
         f"    | some reply => reply\n"
         f"    | none =>"
-        for name in modules
+        for target in targets
     )
-    unknown = '    Pyspec.failure s!"no lean definition bound for {key}"'
+    unknown = '    Spec.failure s!"no lean definition bound for {key}"'
     body = [
-        *(imports or ["import Pyspec.Runtime"]),
+        *(imports or ["import Spec.Runtime"]),
         "",
         "/-! Every fork and preset that defines a function in Lean. -/",
         "",
-        "namespace Pyspec.Generated",
+        "namespace Spec.Generated",
         "",
         "/--",
-        "Serve one call from Python.",
+        "Serve one call from the caller.",
         "",
         "The key is `<fork>/<preset>/<function>`, the arguments arrive framed, and",
         "the reply is a status byte followed by the result or the reason it failed.",
         "-/",
-        "@[export pyspec_dispatch]",
+        "@[export spec_dispatch]",
         "def dispatch (key : String) (args : ByteArray) : ByteArray :=",
-        *([attempts] if modules else []),
+        *([attempts] if targets else []),
         unknown,
         "",
-        "end Pyspec.Generated",
+        "end Spec.Generated",
     ]
-    path = lean_dir / "Pyspec" / "Generated.lean"
+    path = lean_dir / "Spec" / "Generated.lean"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(body) + "\n")
 
@@ -523,7 +534,7 @@ import sys
 from pathlib import Path
 
 # The compiled Lean specification, and the calls that reach it.
-_LEAN_DEFAULT_PATH = Path(__file__).resolve().parents[5] / "lean" / ".lake" / "build" / "libpyspec"
+_LEAN_LIBRARY_PATH = Path(__file__).resolve().parents[5] / "lean" / ".lake" / "build" / "libspec"
 
 
 class _LeanLibrary:
@@ -533,35 +544,35 @@ class _LeanLibrary:
         self._library = None
 
     def _open(self) -> ctypes.CDLL:
-        path = os.environ.get("PYSPEC_LEAN_LIB")
+        path = os.environ.get("LEAN_SPEC_LIB")
         if path is None:
             suffix = ".dylib" if sys.platform == "darwin" else ".so"
-            path = str(_LEAN_DEFAULT_PATH.with_suffix(suffix))
+            path = str(_LEAN_LIBRARY_PATH.with_suffix(suffix))
         if not Path(path).exists():
             raise RuntimeError(
                 f"the lean specification is not built: {path} is missing. Run 'make lean'."
             )
         library = ctypes.CDLL(path)
-        library.pyspec_call.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t]
-        library.pyspec_call.restype = ctypes.c_void_p
-        library.pyspec_size.argtypes = [ctypes.c_void_p]
-        library.pyspec_size.restype = ctypes.c_size_t
-        library.pyspec_data.argtypes = [ctypes.c_void_p]
-        library.pyspec_data.restype = ctypes.c_void_p
-        library.pyspec_release.argtypes = [ctypes.c_void_p]
-        library.pyspec_release.restype = None
+        library.spec_call.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t]
+        library.spec_call.restype = ctypes.c_void_p
+        library.spec_size.argtypes = [ctypes.c_void_p]
+        library.spec_size.restype = ctypes.c_size_t
+        library.spec_data.argtypes = [ctypes.c_void_p]
+        library.spec_data.restype = ctypes.c_void_p
+        library.spec_release.argtypes = [ctypes.c_void_p]
+        library.spec_release.restype = None
         self._library = library
         return library
 
     def invoke(self, key: str, payload: bytes) -> bytes:
         """Call into Lean, copying the reply out before releasing it."""
         library = self._library or self._open()
-        reply = library.pyspec_call(key.encode(), payload, len(payload))
+        reply = library.spec_call(key.encode(), payload, len(payload))
         try:
-            size = library.pyspec_size(reply)
-            return ctypes.string_at(library.pyspec_data(reply), size)
+            size = library.spec_size(reply)
+            return ctypes.string_at(library.spec_data(reply), size)
         finally:
-            library.pyspec_release(reply)
+            library.spec_release(reply)
 
 
 _lean_library = _LeanLibrary()
