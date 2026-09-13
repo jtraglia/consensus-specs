@@ -1,15 +1,18 @@
 import argparse
 import ast
 import copy
+import importlib.util
 import sys
 from collections import OrderedDict
 from collections.abc import Sequence
 from functools import cache
 from pathlib import Path
+from types import ModuleType
 from typing import cast
 
 from ruamel.yaml import YAML
 
+from pysetup import lean_gen
 from pysetup.constants import PHASE0
 from pysetup.helpers import (
     combine_spec_objects,
@@ -22,6 +25,31 @@ from pysetup.md_doc_paths import get_md_doc_paths, PREVIOUS_FORK_OF
 from pysetup.md_to_spec import MarkdownToSpec
 from pysetup.spec_builders import spec_builders
 from pysetup.typing import BuildTarget, SpecObject  # type: ignore[attr-defined]
+
+# Where the generated Python packages live, so that a module written by this
+# run can be imported back to read the values its preset resolved to.
+PYSPEC_DIR = Path("tests/core/pyspec")
+# The Lean package, beside the markdown it is generated from.
+LEAN_DIR = Path("lean")
+# What each fork and preset binds, collected as the forks are generated.
+LEAN_BINDINGS: dict[str, list[lean_gen.Binding]] = {}
+
+
+def import_generated_spec(fork: str, preset_name: str, out_dir: Path) -> ModuleType:
+    """Import a spec module that was just written, to read its resolved values."""
+    package = f"eth_consensus_specs.{fork}.{preset_name}"
+    if str(PYSPEC_DIR) not in sys.path:
+        sys.path.insert(0, str(PYSPEC_DIR))
+    if package in sys.modules:
+        del sys.modules[package]
+    location = out_dir / f"{preset_name}.py"
+    spec = importlib.util.spec_from_file_location(package, location)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[package] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def get_spec(
@@ -69,7 +97,7 @@ def build_spec(
     source_files: Sequence[Path],
     preset_files: Sequence[Path],
     config_file: Path,
-) -> str:
+) -> tuple[str, SpecObject, dict[str, str]]:
     """
     Build a complete spec Python module from markdown sources.
 
@@ -81,7 +109,9 @@ def build_spec(
         config_file: Path to config YAML file
 
     Returns:
-        A complete Python module as a string
+        The Python module as a string, the objects it was built from, and its
+        classes in dependency order. The latter two are what the Lean side of
+        the specification is generated from.
     """
     preset = load_preset(tuple(preset_files))
     config = load_config(config_file)
@@ -111,7 +141,11 @@ def build_spec(
 
     shared_types = collect_shared_types(fork, redefined, spec_object, class_objects)
 
-    return objects_to_spec(preset_name, spec_object, fork, class_objects, shared_types)
+    return (
+        objects_to_spec(preset_name, spec_object, fork, class_objects, shared_types),
+        spec_object,
+        class_objects,
+    )
 
 
 def collect_shared_types(
@@ -243,11 +277,12 @@ def generate_fork_specs(
         print(f"  Output directory: {out_dir}")
 
     # Generate spec for each build target (minimal, mainnet, etc.)
+    lean_targets: list[tuple[str, SpecObject, dict[str, str]]] = []
     for target in build_targets:
         if verbose:
             print(f"  Building target: {target.name}")
 
-        spec_str = build_spec(
+        spec_str, spec_object, class_objects = build_spec(
             spec_builders[fork].fork,
             target.name,
             source_files,
@@ -257,6 +292,8 @@ def generate_fork_specs(
 
         output_file = out_dir / f"{target.name}.py"
         output_file.write_text(spec_str)
+        if spec_object.lean_functions:
+            lean_targets.append((target.name, spec_object, class_objects))
 
         if verbose:
             print(f"    Wrote: {output_file} ({len(spec_str):,} bytes)")
@@ -267,6 +304,17 @@ def generate_fork_specs(
 
     if verbose:
         print(f"  Wrote: {init_file}")
+
+    # The Lean side needs the module that was just written, for the values of
+    # the preset and for the shape of each progressive container.
+    for preset_name, spec_object, class_objects in lean_targets:
+        module = import_generated_spec(fork, preset_name, out_dir)
+        bindings = lean_gen.generate(
+            fork, preset_name, spec_object, class_objects, module, LEAN_DIR / "Pyspec" / "Generated"
+        )
+        LEAN_BINDINGS[lean_gen.module_name(fork, preset_name)] = bindings
+        if verbose:
+            print(f"  Lean: {len(bindings)} function(s) for {fork}/{preset_name}")
 
 
 def main() -> int:
@@ -366,8 +414,11 @@ Examples:
                 verbose=args.verbose,
             )
 
+        lean_gen.write_root(LEAN_BINDINGS, LEAN_DIR)
+
         if args.verbose:
-            print(f"\nSuccessfully generated {len(forks)} fork(s)")
+            bound = sum(len(v) for v in LEAN_BINDINGS.values())
+            print(f"\nSuccessfully generated {len(forks)} fork(s), {bound} lean function(s)")
 
         return 0
 

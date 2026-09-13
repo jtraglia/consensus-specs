@@ -76,6 +76,7 @@ class MarkdownToSpec:
             "dataclasses": {},
             "func_dep_presets": {},
             "functions": {},
+            "lean_functions": {},
             "preset_dep_constant_vars": {},
             "preset_vars": {},
             "protocols": {},
@@ -145,6 +146,9 @@ class MarkdownToSpec:
         Processes a FencedCode block, ignoring non-Python code.
         - Extracts source code and determines if it is a function, dataclass, or class.
         """
+        if code_block.lang == "lean":
+            self._process_lean_block(code_block)
+            return
         if code_block.lang != "python":
             return
 
@@ -176,6 +180,21 @@ class MarkdownToSpec:
                 self._process_code_class(clean_source, element)
             else:
                 raise Exception("unrecognized python code element: " + source)
+
+    def _process_lean_block(self, code_block: FencedCode) -> None:
+        """
+        Stores a Lean definition of the function the current heading names.
+
+        The block sits beside the Python one and replaces it in the generated
+        specification. The Python stays the readable definition of record.
+        """
+        name = self.current_heading_name
+        if name is None:
+            raise Exception("lean code block outside of a named section")
+        source = _get_source_from_code_block(code_block)
+        if not re.search(rf"^def {re.escape(name)}\b", source, re.MULTILINE):
+            raise Exception(f"lean block under {name} does not define {name}")
+        self.spec["lean_functions"][name] = source
 
     def _process_code_def(self, source: str, fn: ast.FunctionDef) -> None:
         """
@@ -486,6 +505,7 @@ class MarkdownToSpec:
         """
         return SpecObject(
             config_vars=self.spec["config_vars"],
+            lean_functions=self.spec["lean_functions"],
             constant_vars=self.spec["constant_vars"],
             custom_types=self.spec["custom_types"],
             dataclasses=self.spec["dataclasses"],

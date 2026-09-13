@@ -19,6 +19,7 @@ endif
 help-nonverbose:
 	@echo "make $(BOLD)clean$(NORM)      -- delete all untracked files"
 	@echo "make $(BOLD)comptests$(NORM)  -- generate compliance tests"
+	@echo "make $(BOLD)lean$(NORM)       -- build the Lean specification"
 	@echo "make $(BOLD)lint$(NORM)       -- run linters and checks"
 	@echo "make $(BOLD)test$(NORM)       -- run pyspec tests"
 	@echo "make $(BOLD)website$(NORM)    -- build/serve website"
@@ -40,6 +41,14 @@ help-verbose:
 	@echo "           stash any important changes first."
 	@echo ""
 	@echo "  Example: make clean"
+	@echo ""
+	@echo "$(BOLD)make lean$(NORM)"
+	@echo ""
+	@echo "  Compiles the functions that the specifications define in Lean, and"
+	@echo "  links them into a shared library the pyspec calls into. Requires the"
+	@echo "  Lean toolchain: https://lean-lang.org/install/"
+	@echo ""
+	@echo "  Example: make lean"
 	@echo ""
 	@echo "$(BOLD)make lint$(NORM)"
 	@echo ""
@@ -140,6 +149,10 @@ sync: pyproject.toml
 build: MAYBE_VERBOSE := $(if $(filter true,$(verbose)),--verbose)
 build: sync
 	@uv run python -m pysetup.generate_specs --all-forks $(MAYBE_VERBOSE)
+
+# Build the Lean specification into a shared library.
+lean: build
+	@$(CURDIR)/lean/build.sh
 
 # Delete all untracked files.
 clean:

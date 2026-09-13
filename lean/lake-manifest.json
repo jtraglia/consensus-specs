@@ -1,0 +1,16 @@
+{"version": "1.2.0",
+ "packagesDir": ".lake/packages",
+ "packages":
+ [{"url": "https://github.com/tcoratger/ssz-specs.git",
+   "type": "git",
+   "subDir": "lean",
+   "scope": "",
+   "rev": "63e23f35d4927771bcf74fa275dd8eb996524f72",
+   "name": "ssz",
+   "manifestFile": "lake-manifest.json",
+   "inputRev": "63e23f35d4927771bcf74fa275dd8eb996524f72",
+   "inherited": false,
+   "configFile": "lakefile.toml"}],
+ "name": "Pyspec",
+ "lakeDir": ".lake",
+ "fixedToolchain": false}

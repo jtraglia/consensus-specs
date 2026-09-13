@@ -1,0 +1,19 @@
+name = "Pyspec"
+defaultTargets = ["Pyspec"]
+
+# The SSZ codec, merkleization and proofs, with their proofs, from ssz-specs.
+# Pinned: this is an unmerged branch.
+[[require]]
+name = "ssz"
+git = "https://github.com/tcoratger/ssz-specs.git"
+rev = "63e23f35d4927771bcf74fa275dd8eb996524f72"
+subDir = "lean"
+
+[leanOptions]
+# An unfinished proof is a warning by default, which would let one ship silently.
+warningAsError = true
+autoImplicit = false
+relaxedAutoImplicit = false
+
+[[lean_lib]]
+name = "Pyspec"

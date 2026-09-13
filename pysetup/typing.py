@@ -16,6 +16,8 @@ class VariableDefinition(NamedTuple):
 
 class SpecObject(NamedTuple):
     functions: dict[str, str]
+    # Lean sources for functions the specification defines in a ```lean block.
+    lean_functions: dict[str, str]
     protocols: dict[str, ProtocolDefinition]
     custom_types: dict[str, str]
     constant_vars: dict[str, VariableDefinition]

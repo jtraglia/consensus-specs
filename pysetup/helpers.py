@@ -2,6 +2,7 @@ import re
 import textwrap
 from functools import reduce
 
+from . import lean_gen
 from .constants import CONSTANT_DEP_SUNDRY_CONSTANTS_FUNCTIONS
 from .md_doc_paths import PREVIOUS_FORK_OF
 from .spec_builders import spec_builders
@@ -93,6 +94,9 @@ def objects_to_spec(
         lambda obj, builder: obj.union(builder.deprecate_functions()), builders, set()
     )
     functions = {k: v for k, v in functions.items() if k not in deprecate_functions}
+    # A function the specification writes in Lean calls across the boundary.
+    lean_replacements, lean_runtime = lean_gen.emit_python(fork, preset_name, spec_object)
+    functions = {**functions, **lean_replacements}
     functions_spec = "\n\n\n".join(functions.values())
     # Remove deprecated containers
     deprecate_containers = reduce(
@@ -247,6 +251,7 @@ def objects_to_spec(
         config_spec,
         # Custom classes which are not required to be SSZ containers.
         classes,
+        lean_runtime,
         ordered_class_objects_spec,
         protocols_spec,
         functions_spec,
@@ -330,6 +335,7 @@ def combine_spec_objects(spec0: SpecObject, spec1: SpecObject) -> SpecObject:
     """
     protocols = combine_protocols(spec0.protocols, spec1.protocols)
     functions = combine_dicts(spec0.functions, spec1.functions)
+    lean_functions = combine_dicts(spec0.lean_functions, spec1.lean_functions)
     custom_types = combine_dicts(spec0.custom_types, spec1.custom_types)
     constant_vars = combine_dicts(spec0.constant_vars, spec1.constant_vars)
     preset_dep_constant_vars = combine_dicts(
@@ -343,6 +349,7 @@ def combine_spec_objects(spec0: SpecObject, spec1: SpecObject) -> SpecObject:
     dataclasses = combine_dicts(spec0.dataclasses, spec1.dataclasses)
     return SpecObject(
         functions=functions,
+        lean_functions=lean_functions,
         protocols=protocols,
         custom_types=custom_types,
         constant_vars=constant_vars,
@@ -378,6 +385,7 @@ def finalized_spec_object(spec_object: SpecObject) -> SpecObject:
 
     return SpecObject(
         functions=spec_object.functions,
+        lean_functions=spec_object.lean_functions,
         protocols=spec_object.protocols,
         custom_types=custom_types,
         constant_vars=spec_object.constant_vars,

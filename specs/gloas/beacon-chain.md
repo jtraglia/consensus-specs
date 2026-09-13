@@ -1064,6 +1064,15 @@ def is_active_builder(state: BeaconState, builder_index: BuilderIndex) -> bool:
     )
 ```
 
+```lean
+def is_active_builder (state : BeaconState) (builder_index : BuilderIndex) : Bool :=
+  let builder := state.builders[builder_index.toNat]!
+  -- Placement in builder list is finalized
+  builder.deposit_epoch < state.finalized_checkpoint.epoch
+    -- Has not initiated exit
+    && builder.withdrawable_epoch == FAR_FUTURE_EPOCH
+```
+
 #### New `is_builder_withdrawal_credential`
 
 ```python

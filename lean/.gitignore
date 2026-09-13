@@ -1,0 +1,6 @@
+# Build output
+.lake/
+
+# Generated from the markdown specifications
+Pyspec/Generated.lean
+Pyspec/Generated/
