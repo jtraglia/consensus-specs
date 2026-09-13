@@ -1192,40 +1192,39 @@ def can_builder_cover_bid(
 
 #### New `compute_balance_weighted_selection`
 
-```python
-def compute_balance_weighted_selection(
-    state: BeaconState,
-    indices: Sequence[ValidatorIndex],
-    seed: Bytes32,
-    size: Uint64,
-    shuffle_indices: bool,
-) -> Sequence[ValidatorIndex]:
-    """
-    Return ``size`` indices sampled by effective balance, using ``indices``
-    as candidates. If ``shuffle_indices`` is ``True``, candidate indices
-    are themselves sampled from ``indices`` by shuffling it, otherwise
-    ``indices`` is traversed in order. The returned list can contain duplicates.
-    """
-    MAX_RANDOM_VALUE = 2**16 - 1
-    total = Uint64(len(indices))
-    assert total > 0
-    effective_balances = [state.validators[index].effective_balance for index in indices]
-    selected: list[ValidatorIndex] = []
-    i = Uint64(0)
-    while len(selected) < size:
-        offset = i % 16 * 2
-        if offset == 0:
-            random_bytes = sha256(seed + uint_to_bytes(i // 16))
-        next_index = i % total
-        if shuffle_indices:
-            next_index = compute_shuffled_index(next_index, total, seed)
-        weight = effective_balances[next_index] * MAX_RANDOM_VALUE
-        random_value = bytes_to_uint64(random_bytes[offset : offset + 2])
-        threshold = MAX_EFFECTIVE_BALANCE_ELECTRA * random_value
-        if weight >= threshold:
-            selected.append(indices[next_index])
-        i += 1
-    return selected
+```lean
+def compute_balance_weighted_selection
+    (state : BeaconState)
+    (indices : Sequence ValidatorIndex)
+    (seed : Bytes32)
+    (size : Uint64)
+    (shuffle_indices : Bool)
+    : Result (Sequence ValidatorIndex) := do
+  let MAX_RANDOM_VALUE := 65535
+  let total := indices.size
+  assert (total > 0)
+
+  let mut effective_balances : Array Gwei := #[]
+  for index in indices.elements do
+    let validator <- state.validators[index]
+    effective_balances := effective_balances.push validator.effective_balance
+
+  let mut selected : Array ValidatorIndex := #[]
+  let mut random_bytes := ByteArray.mk #[]
+  let mut i := 0
+  while selected.size < size do
+    let offset := i % 16 * 2
+    if offset == 0 then
+      random_bytes := sha256 (seed ++ uint_to_bytes (i / 16) 8)
+    let mut next_index := i % total
+    if shuffle_indices then
+      next_index <- compute_shuffled_index next_index total seed
+    let weight := effective_balances.getD next_index 0 * MAX_RANDOM_VALUE
+    let random_value := bytes_to_uint64 (random_bytes.extract offset (offset + 2))
+    if weight >= MAX_EFFECTIVE_BALANCE_ELECTRA * random_value then
+      selected := selected.push (indices.elements.getD next_index 0)
+    i := i + 1
+  return Sequence.mk selected
 ```
 
 #### Modified `compute_proposer_indices`

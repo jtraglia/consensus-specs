@@ -1016,6 +1016,20 @@ def uint_to_bytes(n: Uint) -> bytes:
     return ssz_serialize(n)
 ```
 
+Every unsigned integer is a `Nat` in Lean, which carries no width, so the Lean
+definition takes the width the Python takes from the type of `n`.
+
+```lean
+def uint_to_bytes
+    (n : Nat)
+    (width : Nat)
+    : ByteArray := Id.run do
+  let mut data := ByteArray.mk #[]
+  for position in [0:width] do
+    data := data.push (UInt8.ofNat (n >>> (8 * position) % 256))
+  return data
+```
+
 #### `bytes_to_uint64`
 
 *Note*: `data` may be shorter than eight bytes.
@@ -1028,6 +1042,18 @@ def bytes_to_uint64(data: bytes) -> Uint64:
     return Uint64(int.from_bytes(data, ENDIANNESS))
 ```
 
+```lean
+def bytes_to_uint64
+    (data : ByteArray)
+    : Uint64 := Id.run do
+  let mut value := 0
+  let mut shift := 0
+  for byte in data.data do
+    value := value + byte.toNat <<< shift
+    shift := shift + 8
+  return value
+```
+
 ### Crypto
 
 #### `sha256`
@@ -1038,6 +1064,13 @@ def sha256(data: bytes) -> Bytes32:
     Return the SHA256 hash of ``data``.
     """
     return Bytes32(sha256_hash(data).digest())
+```
+
+```lean
+def sha256
+    (data : ByteArray)
+    : Bytes32 :=
+  Ssz.Sha256.hash data
 ```
 
 #### `hash_tree_root`
@@ -1193,32 +1226,42 @@ def is_valid_merkle_branch(
 
 #### `compute_shuffled_permutation`
 
-```python
-def compute_shuffled_permutation(index_count: Uint64, seed: Bytes32) -> Sequence[Uint64]:
-    """
-    Return the full shuffled permutation corresponding to ``seed`` (and ``index_count``).
-    """
-    # Swap or not (https://link.springer.com/content/pdf/10.1007%2F978-3-642-32009-5_1.pdf)
-    # See the 'generalized domain' algorithm on page 3
-    indices = [Uint64(i) for i in range(index_count)]
-    for current_round in range(SHUFFLE_ROUND_COUNT):
-        round_bytes = uint_to_bytes(Uint8(current_round))
-        pivot = bytes_to_uint64(sha256(seed + round_bytes)[0:8]) % index_count
-        source_by_bucket: Dict[Uint64, Bytes32] = {}
-        for i in range(index_count):
-            flip = (pivot + index_count - indices[i]) % index_count
-            position = max(indices[i], flip)
-            position_bucket = position // 256
-            if position_bucket not in source_by_bucket:
-                source_by_bucket[position_bucket] = sha256(
-                    seed + round_bytes + uint_to_bytes(Uint32(position_bucket))
-                )
-            source = source_by_bucket[position_bucket]
-            byte_val = source[(position % 256) // 8]
-            bit = (byte_val >> (position % 8)) % 2
-            indices[i] = flip if bit else indices[i]
-    return indices
+This is the swap-or-not shuffle, the generalized domain algorithm on page 3 of
+[the paper][swap-or-not]. Where the Python keeps the hash of each bucket in a
+dictionary as it goes, the Lean computes all of them up front, which is the same
+set of hashes.
+
+```lean
+def compute_shuffled_permutation
+    (index_count : Uint64)
+    (seed : Bytes32)
+    : Sequence Uint64 := Id.run do
+  let mut indices : Array Uint64 := #[]
+  for index in [0:index_count] do
+    indices := indices.push index
+
+  for current_round in [0:SHUFFLE_ROUND_COUNT] do
+    let round_bytes := uint_to_bytes current_round 1
+    let pivot :=
+      bytes_to_uint64 ((sha256 (seed ++ round_bytes)).extract 0 8) % index_count
+
+    let mut sources : Array Bytes32 := #[]
+    for bucket in [0:(index_count + 255) / 256] do
+      sources := sources.push (sha256 (seed ++ round_bytes ++ uint_to_bytes bucket 4))
+
+    for position_index in [0:index_count] do
+      let current := indices.getD position_index 0
+      let flip := (pivot + index_count - current) % index_count
+      let position := max current flip
+      let source := sources.getD (position / 256) (ByteArray.mk #[])
+      let byte_value := source.data.getD ((position % 256) / 8) 0
+      if (byte_value.toNat >>> (position % 8)) % 2 == 1 then
+        indices := indices.setIfInBounds position_index flip
+
+  return Sequence.mk indices
 ```
+
+[swap-or-not]: https://link.springer.com/content/pdf/10.1007%2F978-3-642-32009-5_1.pdf
 
 #### `compute_shuffled_index`
 
@@ -1229,6 +1272,19 @@ def compute_shuffled_index(index: Uint64, index_count: Uint64, seed: Bytes32) ->
     """
     assert index < index_count
     return compute_shuffled_permutation(index_count, seed)[index]
+```
+
+*Note*: the Python definition stays, because the permutation it reads is cached
+across calls and a Lean definition would recompute it every time.
+
+```lean
+def compute_shuffled_index
+    (index : Uint64)
+    (index_count : Uint64)
+    (seed : Bytes32)
+    : Result Uint64 := do
+  assert (index < index_count)
+  (compute_shuffled_permutation index_count seed)[index]
 ```
 
 #### `compute_proposer_index`

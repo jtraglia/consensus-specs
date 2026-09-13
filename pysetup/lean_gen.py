@@ -157,6 +157,10 @@ class LeanTypes:
                 return self._collection(head, parts)
             if head == "Optional":
                 return self._optional(self.translate(parts[0]))
+            if head == "Sequence":
+                # A Python sequence has no bound, so it crosses progressively.
+                element = self.translate(parts[0])
+                return self._sequence(f"(Ssz.Desc.progressiveList {element.desc})", element)
         raise UnsupportedType(text)
 
     def _collection(self, head: str, parts: list[ast.expr]) -> LeanType:
@@ -393,15 +397,17 @@ class Facade(NamedTuple):
     params: list[tuple[str, str]]
     returns: str
     doc: str | None
-    # The Python block, where the specification still carries one.
-    source: str | None
 
 
 def _spec_name(lean_type: str) -> str:
     """The name the specification knows a Lean type by."""
-    inner = lean_type.removeprefix("Option ")
-    if inner != lean_type:
-        return f"Optional[{_spec_name(inner.strip())}]"
+    lean_type = lean_type.strip()
+    if lean_type.startswith("(") and lean_type.endswith(")"):
+        return _spec_name(lean_type[1:-1])
+    for head, spelling in (("Option ", "Optional"), ("Sequence ", "Sequence")):
+        inner = lean_type.removeprefix(head)
+        if inner != lean_type:
+            return f"{spelling}[{_spec_name(inner)}]"
     return LEAN_TO_PYTHON.get(lean_type, lean_type)
 
 
@@ -409,30 +415,36 @@ def facade_of(fork: str, preset: str, name: str, spec_object) -> Facade:
     """
     Work out what the generated Python declares for a Lean definition.
 
-    A specification that still carries the Python block is taken at its word. One
-    that has dropped it has its signature read off the Lean instead: a definition
-    whose result is the type of its first argument is one that edits it, which is
-    what `-> None` means on the Python side.
+    The signature is read off the Lean: a definition whose result is the type of
+    its first argument is one that edits it, which is what `-> None` means on the
+    Python side.
     """
     key = f"{fork}/{preset}/{name}"
-    source = spec_object.functions.get(name)
-    if source is not None:
-        function = ast.parse(source).body[0]
-        assert isinstance(function, ast.FunctionDef)
-        params = [(a.arg, ast.unparse(a.annotation)) for a in function.args.args]
-        return Facade(name, key, params, ast.unparse(function.returns), None, source)
-
     signature = parse_lean_signature(spec_object.lean_functions[name], name)
     params = [(argument, _spec_name(annotation)) for argument, annotation in signature.params]
     result = _spec_name(signature.returns.removeprefix("Result").strip())
     returns = "None" if params and result == params[0][1] else result
-    return Facade(name, key, params, returns, signature.doc, None)
+    return Facade(name, key, params, returns, signature.doc)
+
+
+def bound_names(spec_object) -> list[str]:
+    """
+    The Lean definitions the generated Python calls into.
+
+    A definition that has replaced its Python block is bound, and the generated
+    module calls it. One that sits beside a Python block is not: the Python is
+    still the definition of record, and the Lean is there for other Lean
+    definitions to call, which is the only way to write one whose arguments
+    cannot cross the boundary.
+    """
+    return [name for name in spec_object.lean_functions if name not in spec_object.functions]
 
 
 def collect_bindings(fork: str, preset: str, spec_object, types: LeanTypes) -> list[Binding]:
     """Match each Lean definition to the Python face the generated module keeps."""
     bindings = []
-    for name, lean_source in spec_object.lean_functions.items():
+    for name in bound_names(spec_object):
+        lean_source = spec_object.lean_functions[name]
         facade = facade_of(fork, preset, name, spec_object)
 
         def resolve(annotation: str, what: str, fn: str = name) -> LeanType:
@@ -630,6 +642,7 @@ def write_root(generated: dict[tuple[str, str], list[Binding]], lean_dir: Path) 
 # Python annotations that are not SSZ classes, and the SSZ class to send them as.
 PYTHON_COERCIONS = {"bool": "Boolean", "int": "Uint64"}
 OPTIONAL_TYPE = re.compile(r"^Optional\[(.+)\]$")
+SEQUENCE_TYPE = re.compile(r"^Sequence\[(.+)\]$")
 # A result declared as a plain Python type comes back as the SSZ class that
 # carried it, and has to be handed on as the type the specification declares.
 RESULT_COERCIONS = {"bool": "bool", "int": "int"}
@@ -696,7 +709,7 @@ def _lean_call(key, arguments, result_type):
     """
     frames = []
     for declared, value in arguments:
-        encoded = bytes(ssz_serialize(value if isinstance(value, declared) else declared(value)))
+        encoded = bytes(ssz_serialize(_lean_argument(declared, value)))
         frames.append(len(encoded).to_bytes(4, "little") + encoded)
     reply = _lean_library.invoke(key, b"".join(frames))
     if not reply:
@@ -712,6 +725,21 @@ def _lean_optional(element):
     return type(f"Optional{element.__name__}", (List[element],), {"LIMIT": 1})
 
 
+def _lean_argument(declared, value):
+    """Put an argument into the SSZ class it crosses as."""
+    if isinstance(value, declared):
+        return value
+    if "data" in getattr(declared, "model_fields", ()):
+        return declared(data=list(value))
+    return declared(value)
+
+
+@cache
+def _lean_sequence(element):
+    """The SSZ type a `Sequence` crosses as, which has no length to declare."""
+    return type(f"Sequence{element.__name__}", (ProgressiveList[element],), {})
+
+
 def _lean_copy(target, source) -> None:
     """Copy a returned value back over the argument the caller passed in."""
     for name in type(target).model_fields:
@@ -719,23 +747,11 @@ def _lean_copy(target, source) -> None:
 '''
 
 
-def _python_header(source: str) -> list[str]:
-    """The signature and docstring of a function, as source lines."""
-    function = ast.parse(source).body[0]
-    assert isinstance(function, ast.FunctionDef)
-    lines = source.split("\n")
-    first = function.body[0]
-    is_docstring = (
-        isinstance(first, ast.Expr)
-        and isinstance(first.value, ast.Constant)
-        and isinstance(first.value.value, str)
-    )
-    return lines[: first.end_lineno] if is_docstring else lines[: first.lineno - 1]
-
-
 def _ssz_class(annotation: str) -> str:
     if match := OPTIONAL_TYPE.match(annotation):
         return f"_lean_optional({_ssz_class(match.group(1))})"
+    if match := SEQUENCE_TYPE.match(annotation):
+        return f"_lean_sequence({_ssz_class(match.group(1))})"
     return PYTHON_COERCIONS.get(annotation, annotation)
 
 
@@ -752,9 +768,6 @@ def _call(key: str, arguments: str, result: str, indent: str) -> list[str]:
 
 def _header(facade: Facade) -> list[str]:
     """The signature and docstring the generated module declares."""
-    if facade.source is not None:
-        return _python_header(facade.source)
-
     arguments = ", ".join(f"{argument}: {annotation}" for argument, annotation in facade.params)
     lines = [f"def {facade.name}({arguments}) -> {facade.returns}:"]
     if len(lines[0]) > 100:
@@ -772,14 +785,14 @@ def emit_python(fork: str, preset: str, spec_object) -> tuple[dict[str, str], st
     """
     Give each Lean-defined function a Python face that calls across the boundary.
 
-    A specification that still carries the Python block keeps its signature and
-    docstring. One that has dropped it has them generated from the Lean.
+    Only a definition that has replaced its Python block gets one. A Lean
+    definition that sits beside a Python block is not called from Python.
     """
-    if not spec_object.lean_functions:
+    if not bound_names(spec_object):
         return {}, ""
 
     replacements = {}
-    for name in spec_object.lean_functions:
+    for name in bound_names(spec_object):
         facade = facade_of(fork, preset, name, spec_object)
         arguments = ", ".join(
             f"({_ssz_class(annotation)}, {argument})" for argument, annotation in facade.params
@@ -796,6 +809,12 @@ def emit_python(fork: str, preset: str, spec_object) -> tuple[dict[str, str], st
                 "    )",
             ]
             body[-2] += ","
+        elif SEQUENCE_TYPE.match(facade.returns):
+            # The result travels as a progressive list, and is handed on as the
+            # plain Python sequence the specification declares.
+            lines = _call(facade.key, arguments, _ssz_class(facade.returns), "    ")
+            body = [f"    return list({lines[0].lstrip()}", *lines[1:]]
+            body[-1] += ")"
         elif OPTIONAL_TYPE.match(facade.returns):
             # The result travels as a list holding at most one element, which is
             # what the specification declares as `Optional`.
