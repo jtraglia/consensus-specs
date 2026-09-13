@@ -1023,11 +1023,9 @@ definition takes the width the Python takes from the type of `n`.
 def uint_to_bytes
     (n : Nat)
     (width : Nat)
-    : ByteArray := Id.run do
-  let mut data := ByteArray.mk #[]
-  for position in [0:width] do
-    data := data.push (UInt8.ofNat (n >>> (8 * position) % 256))
-  return data
+    : ByteArray :=
+  ByteArray.mk (Array.ofFn fun index : Fin width =>
+    UInt8.ofNat (n / 256 ^ index.val % 256))
 ```
 
 #### `bytes_to_uint64`
@@ -1045,13 +1043,9 @@ def bytes_to_uint64(data: bytes) -> Uint64:
 ```lean
 def bytes_to_uint64
     (data : ByteArray)
-    : Uint64 := Id.run do
-  let mut value := 0
-  let mut shift := 0
-  for byte in data.data do
-    value := value + byte.toNat <<< shift
-    shift := shift + 8
-  return value
+    : Uint64 :=
+  (Array.ofFn fun index : Fin data.size =>
+    data[index].toNat * 256 ^ index.val).sum
 ```
 
 ### Crypto
@@ -1249,19 +1243,17 @@ def compute_shuffled_permutation
     for bucket in [0:(index_count + 255) / 256] do
       sources := sources.push (sha256 (seed ++ round_bytes ++ uint_to_bytes bucket 4))
 
-    for position_index in [0:index_count] do
-      let current := indices.getD position_index 0
+    for index in [0:index_count] do
+      let current := indices.getD index 0
       let flip := (pivot + index_count - current) % index_count
       let position := max current flip
       let source := sources.getD (position / 256) (ByteArray.mk #[])
       let byte_value := source.data.getD ((position % 256) / 8) 0
       if (byte_value.toNat >>> (position % 8)) % 2 == 1 then
-        indices := indices.setIfInBounds position_index flip
+        indices := indices.setIfInBounds index flip
 
   return Sequence.mk indices
 ```
-
-[swap-or-not]: https://link.springer.com/content/pdf/10.1007%2F978-3-642-32009-5_1.pdf
 
 #### `compute_shuffled_index`
 
@@ -2580,3 +2572,5 @@ def process_voluntary_exit(state: BeaconState, signed_voluntary_exit: SignedVolu
     # Initiate exit
     initiate_validator_exit(state, voluntary_exit.validator_index)
 ```
+
+[swap-or-not]: https://link.springer.com/content/pdf/10.1007%2F978-3-642-32009-5_1.pdf
