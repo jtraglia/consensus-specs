@@ -1043,11 +1043,6 @@ def is_valid_indexed_attestation(
 
 #### New `is_builder_index`
 
-```python
-def is_builder_index(validator_index: ValidatorIndex) -> bool:
-    return (validator_index & BUILDER_INDEX_FLAG) != 0
-```
-
 ```lean
 def is_builder_index (validator_index : ValidatorIndex) : Bool :=
   (validator_index &&& BUILDER_INDEX_FLAG) != 0
@@ -1055,21 +1050,8 @@ def is_builder_index (validator_index : ValidatorIndex) : Bool :=
 
 #### New `is_active_builder`
 
-```python
-def is_active_builder(state: BeaconState, builder_index: BuilderIndex) -> bool:
-    """
-    Check if the builder at ``builder_index`` is active for the given ``state``.
-    """
-    builder = state.builders[builder_index]
-    return (
-        # Placement in builder list is finalized
-        builder.deposit_epoch < state.finalized_checkpoint.epoch
-        # Has not initiated exit
-        and builder.withdrawable_epoch == FAR_FUTURE_EPOCH
-    )
-```
-
 ```lean
+/-- Check if the builder at `builder_index` is active for the given `state`. -/
 def is_active_builder (state : BeaconState) (builder_index : BuilderIndex) : Bool :=
   let builder := state.builders[builder_index.toNat]!
   -- Placement in builder list is finalized
@@ -1545,27 +1527,15 @@ def initiate_builder_exit(state: BeaconState, builder_index: BuilderIndex) -> No
 
 #### New `settle_builder_payment`
 
-```python
-def settle_builder_payment(state: BeaconState, payment_index: Uint64) -> None:
-    assert payment_index < len(state.builder_pending_payments)
-    payment = state.builder_pending_payments[payment_index]
-    if payment.withdrawal.amount > 0:
-        state.builder_pending_withdrawals.append(payment.withdrawal)
-    state.builder_pending_payments[payment_index] = BuilderPendingPayment.empty()
-```
-
 ```lean
-def settle_builder_payment (state : BeaconState) (payment_index : Uint64) : SpecM BeaconState := do
-  check (payment_index.toNat < state.builder_pending_payments.size)
-    "payment_index is past the end of the pending payments"
+def settle_builder_payment (state : BeaconState) (payment_index : Uint64) : Result BeaconState := do
+  assert payment_index.toNat < state.builder_pending_payments.size
   let mut state := state
   let payment := state.builder_pending_payments[payment_index.toNat]!
   if payment.withdrawal.amount > 0 then
-    state := { state with
-      builder_pending_withdrawals := state.builder_pending_withdrawals.push payment.withdrawal }
-  return { state with
-    builder_pending_payments :=
-      state.builder_pending_payments.set! payment_index.toNat BuilderPendingPayment.empty }
+    state.builder_pending_withdrawals := state.builder_pending_withdrawals.push payment.withdrawal
+  state.builder_pending_payments[payment_index.toNat] := BuilderPendingPayment.empty
+  return state
 ```
 
 ## Beacon chain state transition function
@@ -1995,26 +1965,15 @@ def update_builder_pending_withdrawals(
 
 ##### New `update_next_withdrawal_builder_index`
 
-```python
-def update_next_withdrawal_builder_index(
-    state: BeaconState, processed_builders_sweep_count: Uint64
-) -> None:
-    if len(state.builders) > 0:
-        # Update the next builder index to start the next withdrawal sweep
-        next_index = state.next_withdrawal_builder_index + processed_builders_sweep_count
-        next_builder_index = next_index % len(state.builders)
-        state.next_withdrawal_builder_index = next_builder_index
-```
-
 ```lean
 def update_next_withdrawal_builder_index
-    (state : BeaconState) (processed_builders_sweep_count : Uint64) : BeaconState :=
+    (state : BeaconState) (processed_builders_sweep_count : Uint64) : BeaconState := Id.run do
+  let mut state := state
   if state.builders.size > 0 then
     -- Update the next builder index to start the next withdrawal sweep
     let next_index := state.next_withdrawal_builder_index + processed_builders_sweep_count
-    { state with next_withdrawal_builder_index := next_index % UInt64.ofNat state.builders.size }
-  else
-    state
+    state.next_withdrawal_builder_index := next_index % UInt64.ofNat state.builders.size
+  return state
 ```
 
 ##### Modified `process_withdrawals`

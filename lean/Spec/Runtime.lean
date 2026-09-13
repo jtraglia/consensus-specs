@@ -1,3 +1,4 @@
+import Spec.Notation
 import Ssz
 
 /-!
@@ -8,7 +9,7 @@ Each SSZ type becomes an ordinary Lean structure, so a field is read as
 `do` block that declares `let mut state` can assign to `state.slot` directly.
 
 The helpers here are what the generated conversions to and from `Ssz.Value` are
-built out of. Writing a specification needs `check` and little else.
+built out of. Writing a specification needs `assert` and little else.
 -/
 
 namespace Spec
@@ -19,11 +20,14 @@ open Ssz
 instance : Repr ByteArray where
   reprPrec data precedence := reprPrec data.data precedence
 
-/-- A definition either produces a value or fails the way `assert` does. -/
-abbrev SpecM := Except String
+/-- A definition either produces a value, or rejects what it was given. -/
+abbrev Result := Except String
 
-/-- Fail the way a spec `assert` does. -/
-def check (condition : Bool) (reason : String) : SpecM Unit :=
+/-- Reject, naming the reason. -/
+def reject {α : Type} (reason : String) : Result α := .error reason
+
+/-- Reject unless a condition holds. -/
+def check (condition : Bool) (reason : String) : Result Unit :=
   if condition then .ok () else .error reason
 
 /-- The nth field of a struct, or the nth element of a sequence. -/
@@ -102,13 +106,13 @@ partial def unframe (data : ByteArray) : Array ByteArray :=
   go 0 #[]
 
 /-- Decode one argument against the type it is declared to have. -/
-def decodeArg (shape : Desc) (data : ByteArray) : SpecM Value :=
+def decodeArg (shape : Desc) (data : ByteArray) : Result Value :=
   match Ssz.deserialize shape data.data with
   | .ok value => .ok value
   | .error e => .error s!"argument did not decode: {repr e}"
 
 /-- Encode a result against the type it is declared to have. -/
-def encodeResult (shape : Desc) (value : Value) : SpecM ByteArray :=
+def encodeResult (shape : Desc) (value : Value) : Result ByteArray :=
   match Ssz.serialize shape value with
   | .ok bytes => .ok ⟨bytes⟩
   | .error e => .error s!"result did not encode: {repr e}"
@@ -122,7 +126,7 @@ def failure (reason : String) : ByteArray :=
   (ByteArray.mk #[1]) ++ reason.toUTF8
 
 /-- Turn a result into the reply the caller reads. -/
-def reply (result : SpecM ByteArray) : ByteArray :=
+def reply (result : Result ByteArray) : ByteArray :=
   match result with
   | .ok payload => ok payload
   | .error reason => failure reason

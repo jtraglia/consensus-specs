@@ -89,7 +89,7 @@ class Binding(NamedTuple):
     # Set when the Python signature returns None and the function edits its first
     # argument. Lean returns the new value and the caller copies it back.
     mutates: str | None
-    # Set when the Lean definition returns SpecM, so its result must be bound.
+    # Set when the Lean definition returns Result, so its result must be bound.
     monadic: bool
 
 
@@ -317,66 +317,142 @@ def _class_body_value(cls: ast.ClassDef, name: str) -> str | None:
     return None
 
 
-def _lean_return_type(source: str, name: str) -> str:
-    """The declared result of a Lean definition, read off its signature."""
-    start = source.index(f"def {name}")
+# How a Lean type is spelled when the generated Python declares it.
+LEAN_TO_PYTHON = {
+    "Bool": "bool",
+    "Nat": "int",
+    **{f"UInt{bits}": f"Uint{bits}" for bits in (8, 16, 32, 64)},
+}
+
+OPENERS, CLOSERS = "([{\u27e8", ")]}\u27e9"
+
+
+class LeanSignature(NamedTuple):
+    """What a Lean definition declares about itself."""
+
+    params: list[tuple[str, str]]
+    returns: str
+    doc: str | None
+
+
+def _top_level(text: str, start: int = 0):
+    """Walk a string, yielding each index that sits outside every bracket."""
     depth = 0
-    for offset in range(start, len(source) - 1):
-        character = source[offset]
-        if character in "([{⟨":
+    for index in range(start, len(text)):
+        character = text[index]
+        if character in OPENERS:
             depth += 1
-        elif character in ")]}⟩":
+        elif character in CLOSERS:
             depth -= 1
-        elif depth == 0 and source[offset : offset + 2] == ":=":
-            signature = source[start:offset]
-            colon = signature.rindex(":")
-            return signature[colon + 1 :].strip()
-    raise ValueError(f"could not read the result type of lean definition {name!r}")
+        elif depth == 0:
+            yield index
+
+
+def parse_lean_signature(source: str, name: str) -> LeanSignature:
+    """Read a Lean definition's parameters, result and doc comment."""
+    start = source.index(f"def {name}")
+
+    doc = None
+    preamble = source[:start].rstrip()
+    if preamble.endswith("-/") and "/--" in preamble:
+        doc = preamble[preamble.rindex("/--") + 3 : preamble.rindex("-/")].strip()
+
+    body = next(
+        (index for index in _top_level(source, start) if source[index : index + 2] == ":="), None
+    )
+    if body is None:
+        raise ValueError(f"lean definition {name!r} has no body")
+    signature = source[start:body]
+
+    colon = None
+    for index in _top_level(signature):
+        if signature[index] == ":" and signature[index : index + 2] != ":=":
+            colon = index
+    if colon is None:
+        raise ValueError(f"lean definition {name!r} declares no result type")
+
+    params = []
+    for group in re.findall(r"\(([^()]*)\)", signature[:colon]):
+        if ":" not in group:
+            continue
+        declared, _, annotation = group.partition(":")
+        params += [(argument, annotation.strip()) for argument in declared.split()]
+
+    return LeanSignature(params, signature[colon + 1 :].strip(), doc)
+
+
+class Facade(NamedTuple):
+    """The Python face of a Lean definition: what callers and tests still see."""
+
+    name: str
+    key: str
+    params: list[tuple[str, str]]
+    returns: str
+    doc: str | None
+    # The Python block, where the specification still carries one.
+    source: str | None
+
+
+def _spec_name(lean_type: str) -> str:
+    """The name the specification knows a Lean type by."""
+    return LEAN_TO_PYTHON.get(lean_type, lean_type)
+
+
+def facade_of(fork: str, preset: str, name: str, spec_object) -> Facade:
+    """
+    Work out what the generated Python declares for a Lean definition.
+
+    A specification that still carries the Python block is taken at its word. One
+    that has dropped it has its signature read off the Lean instead: a definition
+    whose result is the type of its first argument is one that edits it, which is
+    what `-> None` means on the Python side.
+    """
+    key = f"{fork}/{preset}/{name}"
+    source = spec_object.functions.get(name)
+    if source is not None:
+        function = ast.parse(source).body[0]
+        assert isinstance(function, ast.FunctionDef)
+        params = [(a.arg, ast.unparse(a.annotation)) for a in function.args.args]
+        return Facade(name, key, params, ast.unparse(function.returns), None, source)
+
+    signature = parse_lean_signature(spec_object.lean_functions[name], name)
+    params = [(argument, _spec_name(annotation)) for argument, annotation in signature.params]
+    result = _spec_name(signature.returns.removeprefix("Result").strip())
+    returns = "None" if params and result == params[0][1] else result
+    return Facade(name, key, params, returns, signature.doc, None)
 
 
 def collect_bindings(fork: str, preset: str, spec_object, types: LeanTypes) -> list[Binding]:
-    """Match each Lean definition to the Python signature it replaces."""
+    """Match each Lean definition to the Python face the generated module keeps."""
     bindings = []
     for name, lean_source in spec_object.lean_functions.items():
-        python_source = spec_object.functions.get(name)
-        if python_source is None:
-            raise ValueError(f"lean block defines {name!r}, which the specification does not")
-        function = ast.parse(python_source).body[0]
-        assert isinstance(function, ast.FunctionDef)
+        facade = facade_of(fork, preset, name, spec_object)
 
-        try:
-            params = [
-                (argument.arg, types.require(argument.annotation))
-                for argument in function.args.args
-            ]
-        except UnsupportedType as error:
-            raise ValueError(
-                f"{name}: parameter type {error} cannot cross the boundary yet"
-            ) from error
+        def resolve(annotation: str, what: str, fn: str = name) -> LeanType:
+            try:
+                return types.require(ast.parse(annotation).body[0].value)
+            except UnsupportedType as error:
+                raise ValueError(f"{fn}: {what} {error} cannot cross the boundary yet") from error
 
-        returns = ast.unparse(function.returns)
-        mutates = None
-        if returns == "None":
+        params = [
+            (argument, resolve(annotation, "parameter type"))
+            for argument, annotation in facade.params
+        ]
+        if facade.returns == "None":
             if not params:
                 raise ValueError(f"{name}: returns None but takes no argument to edit")
-            mutates = params[0][0]
-            result = params[0][1]
+            mutates, result = params[0][0], params[0][1]
         else:
-            try:
-                result = types.require(function.returns)
-            except UnsupportedType as error:
-                raise ValueError(
-                    f"{name}: result type {error} cannot cross the boundary yet"
-                ) from error
+            mutates, result = None, resolve(facade.returns, "result type")
 
         bindings.append(
             Binding(
                 name=name,
-                key=f"{fork}/{preset}/{name}",
+                key=facade.key,
                 params=params,
                 result=result,
                 mutates=mutates,
-                monadic=_lean_return_type(lean_source, name).startswith("SpecM"),
+                monadic=parse_lean_signature(lean_source, name).returns.startswith("Result"),
             )
         )
     return bindings
@@ -634,52 +710,64 @@ def _call(key: str, arguments: str, result: str, indent: str) -> list[str]:
     ]
 
 
+def _header(facade: Facade) -> list[str]:
+    """The signature and docstring the generated module declares."""
+    if facade.source is not None:
+        return _python_header(facade.source)
+
+    arguments = ", ".join(f"{argument}: {annotation}" for argument, annotation in facade.params)
+    lines = [f"def {facade.name}({arguments}) -> {facade.returns}:"]
+    if len(lines[0]) > 100:
+        lines = [f"def {facade.name}("]
+        lines += [f"    {a}: {t}," for a, t in facade.params]
+        lines.append(f") -> {facade.returns}:")
+    if facade.doc:
+        lines.append('    """')
+        lines += [f"    {line}".rstrip() for line in facade.doc.splitlines()]
+        lines.append('    """')
+    return lines
+
+
 def emit_python(fork: str, preset: str, spec_object) -> tuple[dict[str, str], str]:
     """
-    Rewrite each Lean-defined function to call across the boundary.
+    Give each Lean-defined function a Python face that calls across the boundary.
 
-    Returns the replacement sources, and the runtime block the module needs.
+    A specification that still carries the Python block keeps its signature and
+    docstring. One that has dropped it has them generated from the Lean.
     """
     if not spec_object.lean_functions:
         return {}, ""
 
     replacements = {}
     for name in spec_object.lean_functions:
-        source = spec_object.functions[name]
-        function = ast.parse(source).body[0]
-        assert isinstance(function, ast.FunctionDef)
-
+        facade = facade_of(fork, preset, name, spec_object)
         arguments = ", ".join(
-            f"({_ssz_class(ast.unparse(argument.annotation))}, {argument.arg})"
-            for argument in function.args.args
+            f"({_ssz_class(annotation)}, {argument})" for argument, annotation in facade.params
         )
-        returns = ast.unparse(function.returns)
-        key = f"{fork}/{preset}/{name}"
 
-        if returns == "None":
+        if facade.returns == "None":
             # The function edits its first argument, so Lean hands back the new
             # value and it is copied over the one the caller passed in.
-            first = function.args.args[0]
-            result = _ssz_class(ast.unparse(first.annotation))
+            first, annotation = facade.params[0]
             body = [
                 "    _lean_copy(",
-                f"        {first.arg},",
-                *_call(key, arguments, result, "        "),
+                f"        {first},",
+                *_call(facade.key, arguments, _ssz_class(annotation), "        "),
                 "    )",
             ]
             body[-2] += ","
-        elif returns in RESULT_COERCIONS:
+        elif facade.returns in RESULT_COERCIONS:
             # The result travels as an SSZ value, but the specification declares
             # it as a plain Python type.
             body = [
-                f"    return {RESULT_COERCIONS[returns]}(",
-                *_call(key, arguments, _ssz_class(returns), "        "),
+                f"    return {RESULT_COERCIONS[facade.returns]}(",
+                *_call(facade.key, arguments, _ssz_class(facade.returns), "        "),
                 "    )",
             ]
         else:
-            lines = _call(key, arguments, _ssz_class(returns), "    ")
+            lines = _call(facade.key, arguments, _ssz_class(facade.returns), "    ")
             body = [f"    return {lines[0].lstrip()}", *lines[1:]]
 
-        replacements[name] = "\n".join([*_python_header(source), *body])
+        replacements[name] = "\n".join([*_header(facade), *body])
 
     return replacements, LEAN_RUNTIME_BLOCK
