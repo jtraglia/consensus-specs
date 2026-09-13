@@ -1221,9 +1221,10 @@ def is_valid_merkle_branch(
 #### `compute_shuffled_permutation`
 
 This is the swap-or-not shuffle, the generalized domain algorithm on page 3 of
-[the paper][swap-or-not]. A round hashes each bucket of positions once, and then
-every index moves independently of the others, so a round is a map over the
-whole permutation.
+[the paper][swap-or-not]. Within a round every index moves independently of the
+others, so a round is a map over the whole permutation. Whether an index moves
+is decided by one bit of the hash covering its position, and an implementation
+is free to hash each of those once rather than once per index.
 
 ```lean
 def compute_shuffled_permutation
@@ -1236,15 +1237,12 @@ def compute_shuffled_permutation
     let round_bytes := uint_to_bytes current_round 1
     let pivot_source := sha256 (seed ++ round_bytes)
     let pivot := bytes_to_uint64 (pivot_source.extract 0 8) % index_count
-    let sources := Array.ofFn fun bucket : Fin ((index_count + 255) / 256) =>
-      sha256 (seed ++ round_bytes ++ uint_to_bytes bucket.val 4)
 
     indices := indices.map fun current =>
       let flip := (pivot + index_count - current) % index_count
       let position := max current flip
-      let source := sources.getD (position / 256) (ByteArray.mk #[])
-      let byte_value := source.data.getD ((position % 256) / 8) 0
-      if (byte_value.toNat >>> (position % 8)) % 2 == 1 then flip else current
+      let source := sha256 (seed ++ round_bytes ++ uint_to_bytes (position / 256) 4)
+      if bytes_to_uint64 source >>> (position % 256) % 2 == 1 then flip else current
 
   return Sequence.mk indices
 ```
