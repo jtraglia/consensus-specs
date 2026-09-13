@@ -1221,36 +1221,30 @@ def is_valid_merkle_branch(
 #### `compute_shuffled_permutation`
 
 This is the swap-or-not shuffle, the generalized domain algorithm on page 3 of
-[the paper][swap-or-not]. Where the Python keeps the hash of each bucket in a
-dictionary as it goes, the Lean computes all of them up front, which is the same
-set of hashes.
+[the paper][swap-or-not]. A round hashes each bucket of positions once, and then
+every index moves independently of the others, so a round is a map over the
+whole permutation.
 
 ```lean
 def compute_shuffled_permutation
     (index_count : Uint64)
     (seed : Bytes32)
     : Sequence Uint64 := Id.run do
-  let mut indices : Array Uint64 := #[]
-  for index in [0:index_count] do
-    indices := indices.push index
+  let mut indices := Array.range index_count
 
   for current_round in [0:SHUFFLE_ROUND_COUNT] do
     let round_bytes := uint_to_bytes current_round 1
-    let pivot :=
-      bytes_to_uint64 ((sha256 (seed ++ round_bytes)).extract 0 8) % index_count
+    let pivot_source := sha256 (seed ++ round_bytes)
+    let pivot := bytes_to_uint64 (pivot_source.extract 0 8) % index_count
+    let sources := Array.ofFn fun bucket : Fin ((index_count + 255) / 256) =>
+      sha256 (seed ++ round_bytes ++ uint_to_bytes bucket.val 4)
 
-    let mut sources : Array Bytes32 := #[]
-    for bucket in [0:(index_count + 255) / 256] do
-      sources := sources.push (sha256 (seed ++ round_bytes ++ uint_to_bytes bucket 4))
-
-    for index in [0:index_count] do
-      let current := indices.getD index 0
+    indices := indices.map fun current =>
       let flip := (pivot + index_count - current) % index_count
       let position := max current flip
       let source := sources.getD (position / 256) (ByteArray.mk #[])
       let byte_value := source.data.getD ((position % 256) / 8) 0
-      if (byte_value.toNat >>> (position % 8)) % 2 == 1 then
-        indices := indices.setIfInBounds index flip
+      if (byte_value.toNat >>> (position % 8)) % 2 == 1 then flip else current
 
   return Sequence.mk indices
 ```

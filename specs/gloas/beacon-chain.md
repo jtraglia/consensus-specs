@@ -1152,11 +1152,9 @@ def convert_validator_index_to_builder_index(validator_index: ValidatorIndex) ->
 ```lean
 def get_scheduled_gas_limit
     (epoch : Epoch)
-    : Option Uint64 := Id.run do
-  for entry in GAS_LIMIT_SCHEDULE.qsort fun a b => a.EPOCH > b.EPOCH do
-    if epoch >= entry.EPOCH then
-      return some entry.GAS_LIMIT
-  return none
+    : Option Uint64 :=
+  ((GAS_LIMIT_SCHEDULE.qsort fun a b => a.EPOCH > b.EPOCH).find?
+    fun entry => epoch >= entry.EPOCH).map fun entry => entry.GAS_LIMIT
 ```
 
 #### New `get_pending_balance_to_withdraw_for_builder`
