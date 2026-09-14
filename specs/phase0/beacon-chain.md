@@ -1193,6 +1193,8 @@ def is_valid_merkle_branch(
 
 #### `compute_shuffled_permutation`
 
+<!-- eth_consensus_specs: cache -->
+
 ```python
 def compute_shuffled_permutation(index_count: Uint64, seed: Bytes32) -> Sequence[Uint64]:
     """
@@ -1416,6 +1418,8 @@ def get_randao_mix(state: BeaconState, epoch: Epoch) -> Bytes32:
 
 #### `get_active_validator_indices`
 
+<!-- eth_consensus_specs: cache(state.validators, epoch) -->
+
 ```python
 def get_active_validator_indices(state: BeaconState, epoch: Epoch) -> Sequence[ValidatorIndex]:
     """
@@ -1454,6 +1458,8 @@ def get_seed(state: BeaconState, epoch: Epoch, domain_type: DomainType) -> Bytes
 
 #### `get_committee_count_per_slot`
 
+<!-- eth_consensus_specs: cache(state.validators, epoch) -->
+
 ```python
 def get_committee_count_per_slot(state: BeaconState, epoch: Epoch) -> Uint64:
     """
@@ -1471,6 +1477,8 @@ def get_committee_count_per_slot(state: BeaconState, epoch: Epoch) -> Uint64:
 ```
 
 #### `get_beacon_committee`
+
+<!-- eth_consensus_specs: cache(state.validators, state.randao_mixes, slot, index) -->
 
 ```python
 def get_beacon_committee(
@@ -1521,6 +1529,8 @@ def get_total_balance(state: BeaconState, indices: Set[ValidatorIndex]) -> Gwei:
 
 #### `get_total_active_balance`
 
+<!-- eth_consensus_specs: cache(state.validators, compute_epoch_at_slot(state.slot)) -->
+
 ```python
 def get_total_active_balance(state: BeaconState) -> Gwei:
     """
@@ -1565,6 +1575,8 @@ def get_indexed_attestation(state: BeaconState, attestation: Attestation) -> Ind
 ```
 
 #### `get_attesting_indices`
+
+<!-- eth_consensus_specs: cache(state.randao_mixes, state.validators, attestation) -->
 
 ```python
 def get_attesting_indices(state: BeaconState, attestation: Attestation) -> Set[ValidatorIndex]:
@@ -1944,6 +1956,8 @@ def weigh_justification_and_finalization(
 #### Rewards and penalties
 
 ##### Helpers
+
+<!-- eth_consensus_specs: cache(state.validators, state.slot, index) -->
 
 ```python
 def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:

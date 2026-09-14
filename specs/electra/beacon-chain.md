@@ -797,6 +797,8 @@ def get_pending_balance_to_withdraw(state: BeaconState, validator_index: Validat
 
 *Note*: The function `get_attesting_indices` is modified to support EIP7549.
 
+<!-- eth_consensus_specs: cache(state.randao_mixes, state.validators, attestation) -->
+
 ```python
 def get_attesting_indices(state: BeaconState, attestation: Attestation) -> Set[ValidatorIndex]:
     """

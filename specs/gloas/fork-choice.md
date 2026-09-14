@@ -364,6 +364,8 @@ def payload_data_availability(store: Store, root: Root, available: bool) -> bool
 
 ### New `get_parent_payload_status`
 
+<!-- eth_consensus_specs: cache(block) -->
+
 ```python
 def get_parent_payload_status(store: Store, block: BeaconBlock) -> PayloadStatus:
     parent = store.blocks[block.parent_root]

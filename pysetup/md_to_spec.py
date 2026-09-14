@@ -13,7 +13,7 @@ from marko.ext.gfm import gfm
 from marko.ext.gfm.elements import Table, TableCell, TableRow
 from marko.inline import CodeSpan
 
-from .typing import ProtocolDefinition, SpecObject, VariableDefinition
+from .typing import CacheDefinition, ProtocolDefinition, SpecObject, VariableDefinition
 
 COLLECTION_BASE_CLASSES = (
     "BitList",
@@ -45,6 +45,11 @@ SCALAR_BASE_CLASSES = (
     "Uint256",
 )
 
+# Marks the function in the next code block as one to memoize. Bare, the key is
+# every parameter. Parenthesized, it is the expressions named instead, which is how
+# a function keyed on part of a large argument says so.
+CACHE_COMMENT = re.compile(r"<!--\s*eth_consensus_specs:\s*cache(?:\((?P<keys>.*)\))?\s*-->")
+
 # Calls a collection's bound may contain. Anything else is a spec helper, which
 # the generated specification defines after its types.
 BOUND_SAFE_CALLS = frozenset({"active_fields", "ceillog2", "floorlog2", *SCALAR_BASE_CLASSES})
@@ -65,8 +70,12 @@ class MarkdownToSpec:
         self.config = config
         self.preset_name = preset_name
 
+        self.file_name = file_name
         self.document_iterator: Iterator[Element] = self._parse_document(file_name)
         self.current_heading_name: str | None = None
+        # The cache comment awaiting the function it sits above, as written.
+        self.pending_cache_keys: str | None = None
+        self.has_pending_cache: bool = False
 
         # Use a single dict to hold all SpecObject fields
         self.spec: dict[str, dict] = {
@@ -81,6 +90,7 @@ class MarkdownToSpec:
             "protocols": {},
             "ssz_dep_constants": {},
             "ssz_objects": {},
+            "cached_functions": {},
         }
 
     def run(self) -> SpecObject:
@@ -185,6 +195,11 @@ class MarkdownToSpec:
 
         if self_type_name is None:
             self.spec["functions"][fn.name] = source
+            if self.has_pending_cache:
+                self.has_pending_cache = False
+                self.spec["cached_functions"][fn.name] = _make_cache_definition(
+                    fn, self.pending_cache_keys
+                )
         else:
             self._add_protocol_function(self_type_name, fn.name, source)
 
@@ -467,6 +482,12 @@ class MarkdownToSpec:
         # This comment marks that we should skip the next element
         if body == "<!-- eth_consensus_specs: skip -->":
             self._skip_element()
+            return
+
+        # This comment marks that the function in the next code block is memoized
+        if (match := CACHE_COMMENT.fullmatch(body)) is not None:
+            self._process_cache_comment(body, match.group("keys"))
+            return
 
         # Handle list-of-records tables
         # This comment marks that the next table is a list-of-records
@@ -479,6 +500,21 @@ class MarkdownToSpec:
                     f"expected table after list-of-records comment, got {type(table_element)}"
                 )
             self._process_list_of_records_table(table_element, match.group(1).upper())
+
+    def _process_cache_comment(self, body: str, keys: str | None) -> None:
+        """
+        Applies a cache comment to the function defined in the code block below it.
+        """
+        code_block = self._get_next_element()
+        if not isinstance(code_block, FencedCode) or code_block.lang != "python":
+            raise Exception(f"expected a python code block after {body} in {self.file_name}")
+
+        self.pending_cache_keys = keys
+        self.has_pending_cache = True
+        self._process_code_block(code_block)
+        if self.has_pending_cache:
+            self.has_pending_cache = False
+            raise Exception(f"no function to cache after {body} in {self.file_name}")
 
     def _build_spec_object(self) -> SpecObject:
         """
@@ -496,7 +532,33 @@ class MarkdownToSpec:
             protocols=self.spec["protocols"],
             ssz_dep_constants=self.spec["ssz_dep_constants"],
             ssz_objects=self.spec["ssz_objects"],
+            cached_functions=self.spec["cached_functions"],
         )
+
+
+def _make_cache_definition(fn: ast.FunctionDef, keys: str | None) -> CacheDefinition:
+    """
+    Builds the cache declaration for a function from its signature and its comment.
+
+    The wrapper forwards whatever it was called with to a lambda over the same
+    parameters, so a signature it cannot spell -- defaults, keyword-only parameters,
+    ``*args`` -- has no wrapper to build. No spec function has one.
+    """
+    args = fn.args
+    if args.posonlyargs or args.kwonlyargs or args.vararg or args.kwarg or args.defaults:
+        raise Exception(f"cannot cache {fn.name}: it takes more than plain parameters")
+
+    params = tuple(arg.arg for arg in args.args)
+    if keys is None:
+        expressions = params
+    else:
+        # Parsed rather than split on commas, which a nested call would fool.
+        elements = cast("ast.List", ast.parse(f"[{keys}]", mode="eval").body).elts
+        expressions = tuple(ast.unparse(element) for element in elements)
+
+    if not expressions:
+        raise Exception(f"cannot cache {fn.name}: its key is empty")
+    return CacheDefinition(params=params, keys=expressions)
 
 
 @cache

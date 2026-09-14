@@ -96,6 +96,31 @@ comments cannot. A note should not simply restate how the item now behaves,
 since that is clear from reading the item itself. Use a note only to call out a
 subtle change the reader might otherwise miss.
 
+### Caching
+
+A `<!-- eth_consensus_specs: cache -->` comment above a code block memoizes the
+function defined in it. The cache is unbounded and lives for as long as the
+process does.
+
+Bare, the key is every parameter of the function. A parameter that is a scalar
+is its own key, and every other SSZ value is keyed by its hash tree root.
+
+Keying on a whole `BeaconState` is almost always wrong. Its root changes on
+every mutation, including ones the function does not read, so the key never
+repeats and the cache only costs. Name the parts the result actually depends on
+instead:
+
+```markdown
+<!-- eth_consensus_specs: cache(state.validators, epoch) -->
+```
+
+The names are expressions over the function's parameters, and may call other
+spec functions. Each is keyed the same way a parameter would be.
+
+A later spec that redefines a cached function must repeat the comment, since the
+cache is applied by name and would otherwise be lost without anyone noticing.
+The build fails until the comment is repeated or the original one is removed.
+
 ### Deprecations
 
 If an existing spec item is no longer needed in a newer spec, mark it as

@@ -1,11 +1,13 @@
 import re
 import textwrap
 from functools import reduce
+from pathlib import Path
 
 from .constants import CONSTANT_DEP_SUNDRY_CONSTANTS_FUNCTIONS
 from .md_doc_paths import PREVIOUS_FORK_OF
 from .spec_builders import spec_builders
 from .typing import (
+    CacheDefinition,
     ProtocolDefinition,
     SpecObject,
     VariableDefinition,
@@ -23,6 +25,41 @@ def collect_prev_forks(fork: str) -> list[str]:
 
 def gen_new_type_definition(name: str, value: str) -> str:
     return f"class {name}({value}):\n    pass"
+
+
+def format_cache(name: str, cache_def: CacheDefinition) -> str:
+    """
+    Renders the wrapper that memoizes one function.
+
+    The original is kept under an underscored name, as the value the wrapper computes
+    on a miss. The key is a lambda over the same parameters, so it reads the arguments
+    of the call it is keying.
+    """
+    # A key of one value still has to read as a tuple, which takes a trailing comma.
+    keys = ", ".join(cache_def.keys) + ("," if len(cache_def.keys) == 1 else "")
+    return (
+        f"_{name} = {name}\n"
+        f"{name} = cache_this(\n"
+        f"    lambda {', '.join(cache_def.params)}: ({keys}),\n"
+        f"    _{name},\n"
+        f")"
+    )
+
+
+def check_cache_comments(source_file: Path, combined: SpecObject, parsed: SpecObject) -> None:
+    """
+    Insists that a redefinition of a cached function carries a cache comment of its own.
+
+    A cached function is wrapped by name, so a fork that redefines one without saying
+    anything would quietly lose the cache. Whether the new definition still wants one,
+    and under which key, is a judgment call, so ask for it rather than guess.
+    """
+    for name in parsed.functions:
+        if name in combined.cached_functions and name not in parsed.cached_functions:
+            raise Exception(
+                f"{name} is cached where it is defined earlier, but its redefinition in "
+                f"{source_file} has no cache comment: add one above it, or stop caching it"
+            )
 
 
 def make_function_abstract(protocol_def: ProtocolDefinition, key: str):
@@ -94,6 +131,10 @@ def objects_to_spec(
     )
     functions = {k: v for k, v in functions.items() if k not in deprecate_functions}
     functions_spec = "\n\n\n".join(functions.values())
+    # Memoized functions are wrapped by name, after every function is defined: a key
+    # expression may call one. A function this fork drops takes its cache with it.
+    cached_functions = {k: v for k, v in spec_object.cached_functions.items() if k in functions}
+    cache_spec = "\n\n\n".join(format_cache(k, v) for k, v in cached_functions.items())
     # Remove deprecated containers
     deprecate_containers = reduce(
         lambda obj, builder: obj.union(builder.deprecate_containers()), builders, set()
@@ -113,6 +154,7 @@ def objects_to_spec(
         ordered_class_objects_spec = re.sub(
             rf"(?<!['\"])\b{name}\b(?!['\"])", "config." + name, ordered_class_objects_spec
         )
+        cache_spec = re.sub(rf"(?<!['\"])\b{name}\b(?!['\"])", "config." + name, cache_spec)
 
     def format_config_var(name: str, vardef) -> str:
         if isinstance(vardef, list):
@@ -179,6 +221,8 @@ def objects_to_spec(
     imports = reduce(
         lambda txt, builder: (txt + "\n\n" + builder.imports(preset_name)).strip("\n"), builders, ""
     )
+    if cached_functions:
+        imports += "\nfrom eth_consensus_specs.utils.caching import cache_this"
     classes = reduce(
         lambda txt, builder: (txt + "\n\n" + builder.classes()).strip("\n"), builders, ""
     )
@@ -250,6 +294,7 @@ def objects_to_spec(
         ordered_class_objects_spec,
         protocols_spec,
         functions_spec,
+        cache_spec,
         sundry_functions,
         execution_engine_cls,
         proof_engine_cls,
@@ -341,6 +386,7 @@ def combine_spec_objects(spec0: SpecObject, spec1: SpecObject) -> SpecObject:
     func_dep_presets = combine_dicts(spec0.func_dep_presets, spec1.func_dep_presets)
     ssz_objects = combine_ssz_objects(spec0.ssz_objects, spec1.ssz_objects)
     dataclasses = combine_dicts(spec0.dataclasses, spec1.dataclasses)
+    cached_functions = combine_dicts(spec0.cached_functions, spec1.cached_functions)
     return SpecObject(
         functions=functions,
         protocols=protocols,
@@ -353,6 +399,7 @@ def combine_spec_objects(spec0: SpecObject, spec1: SpecObject) -> SpecObject:
         func_dep_presets=func_dep_presets,
         ssz_objects=ssz_objects,
         dataclasses=dataclasses,
+        cached_functions=cached_functions,
     )
 
 
@@ -388,6 +435,7 @@ def finalized_spec_object(spec_object: SpecObject) -> SpecObject:
         func_dep_presets=spec_object.func_dep_presets,
         ssz_objects=ssz_objects,
         dataclasses=spec_object.dataclasses,
+        cached_functions=spec_object.cached_functions,
     )
 
 

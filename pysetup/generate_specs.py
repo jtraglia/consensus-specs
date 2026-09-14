@@ -12,6 +12,7 @@ from ruamel.yaml import YAML
 
 from pysetup.constants import PHASE0
 from pysetup.helpers import (
+    check_cache_comments,
     combine_spec_objects,
     dependency_order_class_objects,
     finalized_spec_object,
@@ -88,7 +89,8 @@ def build_spec(
     all_specs = [get_spec(spec, preset, config, preset_name) for spec in source_files]
 
     spec_object = all_specs[0]
-    for value in all_specs[1:]:
+    for source_file, value in zip(source_files[1:], all_specs[1:], strict=True):
+        check_cache_comments(source_file, spec_object, value)
         spec_object = combine_spec_objects(spec_object, value)
     spec_object = finalized_spec_object(spec_object)
 

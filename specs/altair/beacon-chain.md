@@ -382,6 +382,8 @@ def get_base_reward_per_increment(state: BeaconState) -> Gwei:
 *Note*: On average an optimally performing validator earns one base reward per
 epoch.
 
+<!-- eth_consensus_specs: cache(state.validators, state.slot, index) -->
+
 ```python
 def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
     """

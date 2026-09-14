@@ -7,6 +7,11 @@ class ProtocolDefinition(NamedTuple):
     functions: dict[str, str]
 
 
+class CacheDefinition(NamedTuple):
+    params: tuple[str, ...]  # the cached function's parameter names, in order
+    keys: tuple[str, ...]  # expressions over those parameters that make up the cache key
+
+
 class VariableDefinition(NamedTuple):
     type_name: str | None
     value: str
@@ -26,6 +31,7 @@ class SpecObject(NamedTuple):
     func_dep_presets: dict[str, str]  # the constants that depend on functions
     ssz_objects: dict[str, str]
     dataclasses: dict[str, str]
+    cached_functions: dict[str, CacheDefinition]  # the functions to memoize, by name
 
 
 class BuildTarget(NamedTuple):
