@@ -8,9 +8,10 @@ have alternatives for) generic SSZ encoding/decoding.
 
 This test-format ensures these direct serializations are covered.
 
-Note that this test suite does not cover the invalid-encoding case: SSZ
-implementations should be hardened against invalid inputs with the other SSZ
-tests as guide, along with fuzzing.
+Note that this test suite does not cover the invalid-encoding case, with one
+exception: the over-limit cases of the `ssz_limit` suite described below. SSZ
+implementations should otherwise be hardened against invalid inputs with the
+other SSZ tests as guide, along with fuzzing.
 
 ## Test case format
 
@@ -37,6 +38,29 @@ The SSZ-snappy encoded bytes.
 ### `value.yaml`
 
 The same value as `serialized.ssz_snappy`, represented as YAML.
+
+## Limit suite
+
+Since Gloas, list types with a declared `LIMIT` are handlers as well, named after
+the type (e.g. `Attestations`). These handlers, and every container handler with
+a field of such a type, have an `ssz_limit` suite whose cases carry a `meta.yaml`:
+
+```yaml
+valid: bool           -- whether a decoder must accept `serialized`
+```
+
+- `at_limit`: the list filled to exactly `LIMIT` default elements, `valid: true`,
+  with the standard output parts. A limit set too low rejects this encoding.
+- `over_limit`: the list filled to `LIMIT + 1` default elements, `valid: false`,
+  with `serialized.ssz_snappy` only. Deserialization MUST fail. A limit set too
+  high accepts this encoding.
+
+Under a container handler the cases are named `<field>_at_limit` and
+`<field>_over_limit`, with the other fields at their defaults. This checks the
+limit where the field declares it and not only on the standalone type.
+
+Runners branch on `valid`, a case without `meta.yaml` is valid. Lists whose
+encoding at the limit would exceed 16 MiB are not covered.
 
 ## Condition
 
