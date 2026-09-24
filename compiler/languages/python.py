@@ -22,9 +22,40 @@ from compiler.model import (
     Variable,
     WRAPPER,
 )
-from compiler.order import ALIAS, CONFIGURATION, Node, PROTOCOL, VARIABLE
+from compiler.order import (
+    ALIAS,
+    CLASS,
+    CONFIGURATION,
+    CONSTANTS,
+    CONTAINER,
+    DATACLASS,
+    FUNCTIONS,
+    HELPER,
+    Node,
+    PRESETS,
+    PROTOCOL,
+    TYPE as TYPE_GROUP,
+    VALUES,
+    WRAPPERS,
+)
 
 RECORDS_TYPE = "tuple[frozendict[str, Any], ...]"
+BANNER = "#" * 100
+SECTION_TITLES = {
+    ALIAS: "Aliases",
+    HELPER: "Helpers",
+    TYPE_GROUP: "Types",
+    CONSTANTS: "Constants",
+    PRESETS: "Presets",
+    CONFIGURATION: "Configuration",
+    CONTAINER: "Containers",
+    DATACLASS: "Dataclasses",
+    PROTOCOL: "Protocols",
+    CLASS: "Classes",
+    VALUES: "Values",
+    FUNCTIONS: "Functions",
+    WRAPPERS: "Caches",
+}
 SPEC_FIELDS = (
     "functions",
     "types",
@@ -190,8 +221,20 @@ class Emitter:
     def alias(self, name: str, module: str) -> str:
         return f"{name}: TypeAlias = {module}.{name}"
 
-    def module(self, imports: list[str], blocks: list[str]) -> str:
-        text = "\n\n\n".join(blocks)
+    def module(self, imports: list[str], blocks: list[tuple[str, str]]) -> str:
+        text = ""
+        previous = None
+        for group, block in blocks:
+            if previous is None or group != previous[0]:
+                if previous is not None:
+                    text += "\n\n\n"
+                text += f"{BANNER}\n# {SECTION_TITLES[group]}\n{BANNER}\n\n\n"
+            elif "\n" not in block and "\n" not in previous[1]:
+                text += "\n"
+            else:
+                text += "\n\n\n"
+            text += block
+            previous = (group, block)
         ancestors = [
             f"from ..{ancestor} import {self.preset} as {ancestor}"
             for ancestor in self.lineage[:-1]
@@ -207,21 +250,24 @@ def render(spec: Spec, nodes: list[Node], preset: str) -> str:
         for key, item in spec.items.items()
         if isinstance(item, Variable) and item.kind == CONFIG
     }
-    blocks = []
+    blocks: list[tuple[str, str]] = []
     for node in nodes:
         for item in node.items:
             if isinstance(item, Definition) and item.lang != "python":
                 raise DeclarationError(f"{item.path}: cannot emit `{item.name}` from {item.lang}")
-        if node.kind == ALIAS:
-            blocks.append(emitter.alias(node.key, spec.lineage[-2]))
-        elif node.kind == CONFIGURATION:
-            blocks.append(emitter.configuration())
-        elif node.kind == PROTOCOL:
-            blocks.append(emitter.protocol(node.key, node.items))
-        elif node.kind == VARIABLE:
-            blocks.extend(emitter.variable(item) for item in node.items)
+        if node.group == ALIAS:
+            texts = [emitter.alias(node.key, spec.lineage[-2])]
+        elif node.group == CONFIGURATION:
+            texts = [emitter.configuration()]
+        elif node.group == PROTOCOL:
+            texts = [emitter.protocol(node.key, node.items)]
+        elif node.group in (CONSTANTS, PRESETS):
+            texts = [emitter.variable(item) for item in node.items if isinstance(item, Variable)]
         else:
-            blocks.extend(emitter.definition(item) for item in node.items)
+            texts = [
+                emitter.definition(item) for item in node.items if isinstance(item, Definition)
+            ]
+        blocks.extend((node.group, text) for text in texts)
     imports = [
         item.source
         for item in spec.items.values()
@@ -298,3 +344,15 @@ def spec_object(spec: Spec, preset: str, module: ModuleType) -> dict[str, dict]:
         elif item.kind == TYPE:
             result[_type_field(item.source)][item.name] = _node_source(item.source)
     return result
+
+
+def classify(definition: Definition) -> str:
+    field = _type_field(definition.source)
+    if field == "dataclasses":
+        return DATACLASS
+    node = _parse(definition.source).body[0]
+    assert isinstance(node, ast.ClassDef)
+    scalar = all(isinstance(base, ast.Name) for base in node.bases) and not any(
+        isinstance(statement, ast.Assign | ast.AnnAssign) for statement in node.body
+    )
+    return TYPE_GROUP if scalar else CONTAINER

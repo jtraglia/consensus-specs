@@ -28,6 +28,10 @@ def references(item: Item) -> tuple[frozenset[str], frozenset[str]]:
     return eager, frozenset()
 
 
+def classify(definition: Definition) -> str:
+    return LANGUAGES[definition.lang].classify(definition)
+
+
 def everything(item: Item) -> frozenset[str]:
     eager, lazy = references(item)
     return eager | lazy
@@ -55,7 +59,7 @@ def build(out: Path, selected: list[str], verbose: bool) -> None:
     specs: dict[str, Spec] = {}
     for name in targets:
         spec = merge(forks, documents, name)
-        nodes = order(spec, shared_types(spec, everything), references)
+        nodes = order(spec, shared_types(spec, everything), references, classify)
         directory = package / name
         directory.mkdir(parents=True, exist_ok=True)
         for preset in PRESETS:
