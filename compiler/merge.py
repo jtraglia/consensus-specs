@@ -14,6 +14,7 @@ from .model import (
     TYPE,
     VALUE,
     Variable,
+    WRAPPER,
 )
 
 REMOVABLE = {
@@ -63,6 +64,7 @@ def remove(items: dict[str, Item], document: Document) -> None:
             if item.kind not in REMOVABLE[section]:
                 raise SpecError(f"{document.path}: `{name}` is a {item.kind}, not in {section}")
             del items[name]
+            items.pop(f"{name}@{WRAPPER}", None)
 
 
 def merge(forks: dict[str, Fork], documents: dict[str, list[Document]], fork: str) -> Spec:

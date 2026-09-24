@@ -8,6 +8,7 @@ IMPORT = "import"
 METHOD = "method"
 TYPE = "type"
 VALUE = "value"
+WRAPPER = "wrapper"
 
 CONSTANT = "constant"
 PRESET = "preset"
@@ -29,6 +30,8 @@ class Definition:
 
     @property
     def key(self) -> str:
+        if self.kind == WRAPPER:
+            return f"{self.name}@{WRAPPER}"
         return f"{self.receiver}.{self.name}" if self.receiver else self.name
 
 

@@ -1239,6 +1239,22 @@ def compute_balance_weighted_selection(
     return selected
 ```
 
+<!-- eth_consensus_specs: build
+```python
+compute_balance_weighted_selection = cache_this(
+    lambda state, indices, seed, size, shuffle_indices: (
+        state.validators.hash_tree_root(),
+        tuple(indices),
+        seed,
+        size,
+        shuffle_indices,
+    ),
+    compute_balance_weighted_selection,
+    lru_size=SLOTS_PER_EPOCH * 6,
+)
+```
+-->
+
 #### Modified `compute_proposer_indices`
 
 *Note*: `compute_proposer_indices` is modified to use

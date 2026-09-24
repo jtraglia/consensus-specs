@@ -41,8 +41,9 @@ def document(spec: Spec, source: Any, kind: str) -> str:
 
 def emit_yaml(out: Path, specs: Mapping[str, Spec]) -> None:
     package = str(out.resolve() / "pyspec" / "eth_consensus_specs")
-    if package not in eth_consensus_specs.__path__:
-        eth_consensus_specs.__path__.append(package)
+    if package in eth_consensus_specs.__path__:
+        eth_consensus_specs.__path__.remove(package)
+    eth_consensus_specs.__path__.insert(0, package)
 
     for fork, spec in specs.items():
         for preset in PRESETS:

@@ -2,7 +2,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from .discover import SpecError
-from .model import CONFIG, Definition, FUNCTION, IMPORT, Item, METHOD, Spec, Variable
+from .model import CONFIG, Definition, FUNCTION, IMPORT, Item, METHOD, Spec, Variable, WRAPPER
 
 ALIAS = "alias"
 CONFIGURATION = "configuration"
@@ -27,7 +27,7 @@ def build_nodes(spec: Spec, aliases: set[str], references: References) -> dict[s
     nodes: dict[str, Node] = {}
     owner: dict[str, str] = {}
     for key, item in spec.items.items():
-        if item.kind == IMPORT:
+        if item.kind in (IMPORT, WRAPPER):
             continue
         if isinstance(item, Variable) and item.kind == CONFIG:
             node = nodes.setdefault(CONFIGURATION, Node(CONFIGURATION, CONFIGURATION))
@@ -89,4 +89,7 @@ def order(spec: Spec, aliases: set[str], references: References) -> list[Node]:
     for key, node in nodes.items():
         if node.lazy and key not in emitted:
             emitted[key] = node
-    return list(emitted.values())
+    wrappers = [
+        Node(key, DEFINITION, [item]) for key, item in spec.items.items() if item.kind == WRAPPER
+    ]
+    return [*emitted.values(), *wrappers]

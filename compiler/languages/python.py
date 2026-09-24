@@ -16,6 +16,7 @@ from compiler.model import (
     TYPE,
     VALUE,
     Variable,
+    WRAPPER,
 )
 from compiler.order import ALIAS, CONFIGURATION, Node, PROTOCOL, VARIABLE
 
@@ -47,6 +48,10 @@ def read_declaration(source: str) -> tuple[str, str, str | None]:
             return METHOD, name, first.annotation.id
         case ast.FunctionDef(name=name):
             return FUNCTION, name, None
+        case ast.Assign(targets=[ast.Name(id=name)], value=value) if any(
+            isinstance(node, ast.Name) and node.id == name for node in ast.walk(value)
+        ):
+            return WRAPPER, name, None
         case ast.ClassDef(name=name):
             return TYPE, name, None
         case ast.Assign(targets=[ast.Name(id=name)]) | ast.AnnAssign(target=ast.Name(id=name)):

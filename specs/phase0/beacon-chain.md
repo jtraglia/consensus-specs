@@ -185,6 +185,7 @@ from dataclasses import dataclass, field
 from hashlib import sha256 as sha256_hash
 from typing import Any, Final, NamedTuple, TypeAlias
 
+from lru import LRU
 from ssz.bitfields import BitList, BitVector
 from ssz.boolean import Boolean
 from ssz.collections import List, ProgressiveList, Vector
@@ -1097,6 +1098,21 @@ def floorlog2(x: int) -> Uint64:
 ```
 -->
 
+<!-- eth_consensus_specs: build
+```python
+def cache_this(key_fn, value_fn, lru_size):
+    cache_dict = LRU(size=lru_size)
+
+    def wrapper(*args, **kw):
+        key = key_fn(*args, **kw)
+        if key not in cache_dict:
+            cache_dict[key] = value_fn(*args, **kw)
+        return cache_dict[key]
+
+    return wrapper
+```
+-->
+
 ### Crypto
 
 #### `sha256`
@@ -1288,6 +1304,16 @@ def compute_shuffled_permutation(index_count: Uint64, seed: Bytes32) -> Sequence
             indices[i] = flip if bit else indices[i]
     return indices
 ```
+
+<!-- eth_consensus_specs: build
+```python
+compute_shuffled_permutation = cache_this(
+    lambda index_count, seed: (index_count, seed),
+    compute_shuffled_permutation,
+    lru_size=256,
+)
+```
+-->
 
 #### `compute_shuffled_index`
 
@@ -1530,6 +1556,16 @@ def get_active_validator_indices(state: BeaconState, epoch: Epoch) -> Sequence[V
     ]
 ```
 
+<!-- eth_consensus_specs: build
+```python
+get_active_validator_indices = cache_this(
+    lambda state, epoch: (state.validators.hash_tree_root(), epoch),
+    get_active_validator_indices,
+    lru_size=3,
+)
+```
+-->
+
 #### `get_validator_churn_limit`
 
 ```python
@@ -1574,6 +1610,16 @@ def get_committee_count_per_slot(state: BeaconState, epoch: Epoch) -> Uint64:
     )
 ```
 
+<!-- eth_consensus_specs: build
+```python
+get_committee_count_per_slot = cache_this(
+    lambda state, epoch: (state.validators.hash_tree_root(), epoch),
+    get_committee_count_per_slot,
+    lru_size=SLOTS_PER_EPOCH * 3,
+)
+```
+-->
+
 #### `get_beacon_committee`
 
 ```python
@@ -1592,6 +1638,21 @@ def get_beacon_committee(
         count=committees_per_slot * Uint64(SLOTS_PER_EPOCH),
     )
 ```
+
+<!-- eth_consensus_specs: build
+```python
+get_beacon_committee = cache_this(
+    lambda state, slot, index: (
+        state.validators.hash_tree_root(),
+        state.randao_mixes.hash_tree_root(),
+        slot,
+        index,
+    ),
+    get_beacon_committee,
+    lru_size=SLOTS_PER_EPOCH * MAX_COMMITTEES_PER_SLOT * 3,
+)
+```
+-->
 
 #### `get_beacon_proposer_index`
 
@@ -1636,6 +1697,19 @@ def get_total_active_balance(state: BeaconState) -> Gwei:
     )
 ```
 
+<!-- eth_consensus_specs: build
+```python
+get_total_active_balance = cache_this(
+    lambda state: (
+        state.validators.hash_tree_root(),
+        compute_epoch_at_slot(state.slot),
+    ),
+    get_total_active_balance,
+    lru_size=10,
+)
+```
+-->
+
 #### `get_domain`
 
 ```python
@@ -1676,6 +1750,20 @@ def get_attesting_indices(state: BeaconState, attestation: Attestation) -> set[V
     committee = get_beacon_committee(state, attestation.data.slot, attestation.data.index)
     return {index for i, index in enumerate(committee) if attestation.aggregation_bits[i]}
 ```
+
+<!-- eth_consensus_specs: build
+```python
+get_attesting_indices = cache_this(
+    lambda state, attestation: (
+        state.randao_mixes.hash_tree_root(),
+        state.validators.hash_tree_root(),
+        attestation.hash_tree_root(),
+    ),
+    get_attesting_indices,
+    lru_size=SLOTS_PER_EPOCH * MAX_COMMITTEES_PER_SLOT * 3,
+)
+```
+-->
 
 #### `get_pending_attesting_indices`
 
@@ -2055,6 +2143,16 @@ def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
         // BASE_REWARDS_PER_EPOCH
     )
 ```
+
+<!-- eth_consensus_specs: build
+```python
+get_base_reward = cache_this(
+    lambda state, index: (state.validators.hash_tree_root(), state.slot, index),
+    get_base_reward,
+    lru_size=2048,
+)
+```
+-->
 
 ```python
 def get_proposer_reward(state: BeaconState, attesting_index: ValidatorIndex) -> Gwei:

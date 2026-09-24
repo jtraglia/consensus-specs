@@ -426,6 +426,16 @@ def get_parent_payload_status(store: Store, block: BeaconBlock) -> PayloadStatus
     return PAYLOAD_STATUS_FULL if parent_block_hash == message_block_hash else PAYLOAD_STATUS_EMPTY
 ```
 
+<!-- eth_consensus_specs: build
+```python
+get_parent_payload_status = cache_this(
+    lambda _store, block: block.hash_tree_root(),
+    get_parent_payload_status,
+    lru_size=1024,
+)
+```
+-->
+
 ### New `is_parent_node_full`
 
 ```python
