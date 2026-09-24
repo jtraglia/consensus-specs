@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=electra -->
+
 # Fulu -- Fork Choice
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -96,6 +98,13 @@ def is_data_available(beacon_block_root: Root) -> bool:
         for column_sidecar in column_sidecars
     )
 ```
+
+<!-- eth_consensus_specs: build
+```python
+def retrieve_column_sidecars(beacon_block_root: Root) -> Sequence[DataColumnSidecar]:
+    return []
+```
+-->
 
 ## Handlers
 

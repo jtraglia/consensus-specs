@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=altair -->
+
 # Bellatrix -- Fork Choice
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -132,6 +134,13 @@ if the requested block is not yet available.
 
 *Note*: The `eth_getBlockByHash` JSON-RPC method may be used to pull this
 information from an execution client.
+
+<!-- eth_consensus_specs: build
+```python
+def get_pow_block(hash: Hash32) -> Optional[PowBlock]:
+    return PowBlock(block_hash=hash, parent_hash=Hash32(), total_difficulty=Uint256(0))
+```
+-->
 
 ### `is_valid_terminal_pow_block`
 

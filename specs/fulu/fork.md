@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=electra -->
+
 # Fulu -- Fork Logic
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -20,10 +22,10 @@ This document describes the process of the Fulu upgrade.
 
 Warning: this configuration is not definitive.
 
-| Name                | Value                                              |
-| ------------------- | -------------------------------------------------- |
-| `FULU_FORK_VERSION` | `Version('0x06000000')`                            |
-| `FULU_FORK_EPOCH`   | `Epoch(411392)` (December 3, 2025, 09:49:11pm UTC) |
+| Name                | Mainnet                                            | Minimal                       |
+| ------------------- | -------------------------------------------------- | ----------------------------- |
+| `FULU_FORK_VERSION` | `Version('0x06000000')`                            | `Version('0x06000001')`       |
+| `FULU_FORK_EPOCH`   | `Epoch(411392)` (December 3, 2025, 09:49:11pm UTC) | `Epoch(18446744073709551615)` |
 
 ## Helpers
 

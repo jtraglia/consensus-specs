@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=none -->
+
 # Phase 0 -- Fast Confirmation
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -75,9 +77,9 @@ blocks can be reorged without any adversarial behavior and without slashing.
 
 ### Configs
 
-| Name                               | Value        | Max. Value   | Description                                                                |
-| ---------------------------------- | ------------ | ------------ | -------------------------------------------------------------------------- |
-| `CONFIRMATION_BYZANTINE_THRESHOLD` | `Uint64(25)` | `Uint64(25)` | Assumed maximum percentage of Byzantine validators among the validator set |
+| Name                               | Mainnet      | Minimal | Max. Value   | Description                                                                |
+| ---------------------------------- | ------------ | ------- | ------------ | -------------------------------------------------------------------------- |
+| `CONFIRMATION_BYZANTINE_THRESHOLD` | `Uint64(25)` |         | `Uint64(25)` | Assumed maximum percentage of Byzantine validators among the validator set |
 
 ### Helpers
 

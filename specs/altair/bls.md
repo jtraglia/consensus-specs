@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=phase0 -->
+
 # Altair -- BLS extensions
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -51,6 +53,13 @@ def eth_aggregate_pubkeys(pubkeys: Sequence[BLSPubkey]) -> BLSPubkey:
         result += pubkey
     return result
 ```
+
+<!-- eth_consensus_specs: build
+```python
+def eth_aggregate_pubkeys(pubkeys: Sequence[BLSPubkey]) -> BLSPubkey:
+    return bls.AggregatePKs(pubkeys)
+```
+-->
 
 ### `eth_fast_aggregate_verify`
 

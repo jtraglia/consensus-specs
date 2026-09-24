@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=phase0 -->
+
 # Altair Light Client -- Networking
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -45,9 +47,9 @@ class LightClientUpdates(List[LightClientUpdate]):
 
 ### Configs
 
-| Name                               | Value                  | Description                                                         |
-| ---------------------------------- | ---------------------- | ------------------------------------------------------------------- |
-| `MAX_REQUEST_LIGHT_CLIENT_UPDATES` | `Uint64(2**7)` (= 128) | Maximum number of `LightClientUpdate` instances in a single request |
+| Name                               | Mainnet                | Minimal | Description                                                         |
+| ---------------------------------- | ---------------------- | ------- | ------------------------------------------------------------------- |
+| `MAX_REQUEST_LIGHT_CLIENT_UPDATES` | `Uint64(2**7)` (= 128) |         | Maximum number of `LightClientUpdate` instances in a single request |
 
 ### The gossip domain: gossipsub
 

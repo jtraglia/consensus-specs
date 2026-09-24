@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=none -->
+
 # Phase 0 -- Weak Subjectivity Guide
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -55,9 +57,9 @@ class Ether(Uint64):
 
 ## Configs
 
-| Name           | Value        |
-| -------------- | ------------ |
-| `SAFETY_DECAY` | `Uint64(10)` |
+| Name           | Mainnet      | Minimal |
+| -------------- | ------------ | ------- |
+| `SAFETY_DECAY` | `Uint64(10)` |         |
 
 ## Weak Subjectivity Checkpoint
 

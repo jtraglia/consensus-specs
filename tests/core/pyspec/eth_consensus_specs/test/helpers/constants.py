@@ -1,3 +1,5 @@
+from eth_consensus_specs.forks import PREVIOUS_FORK_OF as GENERATED_PREVIOUS_FORK_OF
+
 from .typing import PresetBaseName, SpecForkName
 
 #
@@ -49,24 +51,8 @@ TESTGEN_FORKS = (*MAINNET_FORKS, GLOAS, HEZE)
 # Forks allowed in the test runner `--fork` flag, to fail fast in case of typos
 ALLOWED_TEST_RUNNER_FORKS = ALL_PHASES
 
-# NOTE: the same definition as in `pysetup/md_doc_paths.py`
-PREVIOUS_FORK_OF = {
-    # post_fork_name: pre_fork_name
-    PHASE0: None,
-    ALTAIR: PHASE0,
-    BELLATRIX: ALTAIR,
-    CAPELLA: BELLATRIX,
-    DENEB: CAPELLA,
-    ELECTRA: DENEB,
-    FULU: ELECTRA,
-    GLOAS: FULU,
-    HEZE: GLOAS,
-    # Experimental patches
-    EIP8025: GLOAS,
-    EIP8148: HEZE,
-    EIP8205: HEZE,
-    EIP8321: HEZE,
-}
+# The fork graph that the compiler detects from the markdown specifications
+PREVIOUS_FORK_OF: dict[SpecForkName, SpecForkName | None] = dict(GENERATED_PREVIOUS_FORK_OF)
 
 # For fork transition tests
 POST_FORK_OF = {

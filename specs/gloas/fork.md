@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=fulu -->
+
 # Gloas -- Fork Logic
 
 *Note*: This document is a work-in-progress for researchers and implementers.
@@ -24,10 +26,10 @@ This document describes the process of the Gloas upgrade.
 
 Warning: this configuration is not definitive.
 
-| Name                 | Value                                 |
-| -------------------- | ------------------------------------- |
-| `GLOAS_FORK_VERSION` | `Version('0x07000000')`               |
-| `GLOAS_FORK_EPOCH`   | `Epoch(18446744073709551615)` **TBD** |
+| Name                 | Mainnet                               | Minimal                 |
+| -------------------- | ------------------------------------- | ----------------------- |
+| `GLOAS_FORK_VERSION` | `Version('0x07000000')`               | `Version('0x07000001')` |
+| `GLOAS_FORK_EPOCH`   | `Epoch(18446744073709551615)` **TBD** |                         |
 
 ## Helpers
 

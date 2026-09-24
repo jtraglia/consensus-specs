@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=fulu -->
+
 # Gloas -- Networking
 
 *Note*: This document is a work-in-progress for researchers and implementers.
@@ -70,17 +72,17 @@ These constants supersede
 for the corresponding variable-size libp2p messages. The bound for
 `DataColumnSidecar` is given by `compute_max_data_column_sidecar_size()`.
 
-| Name                                    | Value                         |
-| --------------------------------------- | ----------------------------- |
-| `MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE`   | `Uint64(16829)` (= ~16 KiB)   |
-| `MAX_ATTESTER_SLASHING_SIZE`            | `Uint64(2097616)` (= ~2 MiB)  |
-| `MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE` | `Uint64(196932)` (= ~192 KiB) |
+| Name                                    | Mainnet                       | Minimal          |
+| --------------------------------------- | ----------------------------- | ---------------- |
+| `MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE`   | `Uint64(16829)` (= ~16 KiB)   | `Uint64(1462)`   |
+| `MAX_ATTESTER_SLASHING_SIZE`            | `Uint64(2097616)` (= ~2 MiB)  | `Uint64(131536)` |
+| `MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE` | `Uint64(196932)` (= ~192 KiB) |                  |
 
 ## Configs
 
-| Name                   | Value                  |
-| ---------------------- | ---------------------- |
-| `MAX_REQUEST_PAYLOADS` | `Uint64(2**7)` (= 128) |
+| Name                   | Mainnet                | Minimal |
+| ---------------------- | ---------------------- | ------- |
+| `MAX_REQUEST_PAYLOADS` | `Uint64(2**7)` (= 128) |         |
 
 ## Types
 

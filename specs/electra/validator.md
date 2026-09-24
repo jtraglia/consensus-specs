@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=deneb -->
+
 # Electra -- Honest Validator
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->

@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=electra -->
+
 # Fulu -- The Beacon Chain
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -34,6 +36,12 @@
     - [New `process_proposer_lookahead`](#new-process_proposer_lookahead)
 
 <!-- mdformat-toc end -->
+
+<!-- eth_consensus_specs: build
+```python
+from frozendict import frozendict
+```
+-->
 
 ## Introduction
 
@@ -84,7 +92,7 @@ The epoch value in each entry MUST be greater than or equal to
 than or equal to `MAX_BLOB_COMMITMENTS_PER_BLOCK`. The blob schedule entries
 SHOULD be sorted by epoch in ascending order. The blob schedule MAY be empty.
 
-<!-- list-of-records:blob_schedule -->
+<!-- eth_consensus_specs: list-of-records=blob_schedule preset=mainnet -->
 
 |  Epoch | Max Blobs Per Block |                             Date |
 | -----: | ------------------: | -------------------------------: |

@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=phase0 -->
+
 # Altair -- Fork Logic
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -17,10 +19,10 @@ the Altair upgrade, introducing light client support and other improvements.
 
 ## Configs
 
-| Name                  | Value                                         |
-| --------------------- | --------------------------------------------- |
-| `ALTAIR_FORK_VERSION` | `Version('0x01000000')`                       |
-| `ALTAIR_FORK_EPOCH`   | `Epoch(74240)` (Oct 27, 2021, 10:56:23am UTC) |
+| Name                  | Mainnet                                       | Minimal                       |
+| --------------------- | --------------------------------------------- | ----------------------------- |
+| `ALTAIR_FORK_VERSION` | `Version('0x01000000')`                       | `Version('0x01000001')`       |
+| `ALTAIR_FORK_EPOCH`   | `Epoch(74240)` (Oct 27, 2021, 10:56:23am UTC) | `Epoch(18446744073709551615)` |
 
 ## Fork to Altair
 
@@ -68,8 +70,9 @@ def translate_participation(
         for index in attesting_indices:
             for flag_index in participation_flag_indices:
                 epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
+```
 
-
+```python
 def upgrade_to_altair(pre: phase0.BeaconState) -> BeaconState:
     epoch = phase0.get_current_epoch(pre)
     post = BeaconState(

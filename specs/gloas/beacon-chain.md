@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=fulu -->
+
 # Gloas -- The Beacon Chain
 
 *Note*: This document is a work-in-progress for researchers and implementers.
@@ -159,6 +161,13 @@
         - [Modified `process_proposer_slashing`](#modified-process_proposer_slashing)
 
 <!-- mdformat-toc end -->
+
+<!-- eth_consensus_specs: build
+```python
+from ssz.bitfields import ProgressiveBitList
+from ssz.container import active_fields, ProgressiveContainer
+```
+-->
 
 ## Introduction
 
@@ -595,44 +604,44 @@ same `Withdrawal` container can be used for validators and builders.
 
 ### Misc
 
-| Name       | Value                  |
-| ---------- | ---------------------- |
-| `PTC_SIZE` | `Uint64(2**9)` (= 512) |
+| Name       | Mainnet                | Minimal               |
+| ---------- | ---------------------- | --------------------- |
+| `PTC_SIZE` | `Uint64(2**9)` (= 512) | `Uint64(2**4)` (= 16) |
 
 ### Max operations per block
 
-| Name                       | Value                |
-| -------------------------- | -------------------- |
-| `MAX_PAYLOAD_ATTESTATIONS` | `Uint64(2**2)` (= 4) |
+| Name                       | Mainnet              | Minimal |
+| -------------------------- | -------------------- | ------- |
+| `MAX_PAYLOAD_ATTESTATIONS` | `Uint64(2**2)` (= 4) |         |
 
 ### Execution
 
-| Name                                       | Value                 |
-| ------------------------------------------ | --------------------- |
-| `MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD` | `Uint64(2**6)` (= 64) |
-| `MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD`    | `Uint64(2**4)` (= 16) |
+| Name                                       | Mainnet               | Minimal |
+| ------------------------------------------ | --------------------- | ------- |
+| `MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD` | `Uint64(2**6)` (= 64) |         |
+| `MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD`    | `Uint64(2**4)` (= 16) |         |
 
 ### Withdrawals processing
 
-| Name                                 | Value                      |
-| ------------------------------------ | -------------------------- |
-| `MAX_BUILDERS_PER_WITHDRAWALS_SWEEP` | `Uint64(2**14)` (= 16,384) |
+| Name                                 | Mainnet                    | Minimal               |
+| ------------------------------------ | -------------------------- | --------------------- |
+| `MAX_BUILDERS_PER_WITHDRAWALS_SWEEP` | `Uint64(2**14)` (= 16,384) | `Uint64(2**4)` (= 16) |
 
 ## Configs
 
 ### Validator cycle
 
-| Name                                         | Value                                    |
-| -------------------------------------------- | ---------------------------------------- |
-| `CHURN_LIMIT_QUOTIENT_GLOAS`                 | `Uint64(2**15)` (= 32,768)               |
-| `CONSOLIDATION_CHURN_LIMIT_QUOTIENT`         | `Uint64(2**16)` (= 65,536)               |
-| `MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS` | `Gwei(2**8 * 10**9)` (= 256,000,000,000) |
+| Name                                         | Mainnet                                  | Minimal               |
+| -------------------------------------------- | ---------------------------------------- | --------------------- |
+| `CHURN_LIMIT_QUOTIENT_GLOAS`                 | `Uint64(2**15)` (= 32,768)               | `Uint64(2**4)` (= 16) |
+| `CONSOLIDATION_CHURN_LIMIT_QUOTIENT`         | `Uint64(2**16)` (= 65,536)               | `Uint64(2**5)` (= 32) |
+| `MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS` | `Gwei(2**8 * 10**9)` (= 256,000,000,000) | `Gwei(128000000000)`  |
 
 ### Time parameters
 
-| Name                                | Value                |
-| ----------------------------------- | -------------------- |
-| `MIN_BUILDER_WITHDRAWABILITY_DELAY` | `Epoch(2**6)` (= 64) |
+| Name                                | Mainnet              | Minimal             |
+| ----------------------------------- | -------------------- | ------------------- |
+| `MIN_BUILDER_WITHDRAWABILITY_DELAY` | `Epoch(2**6)` (= 64) | `Epoch(2**1)` (= 2) |
 
 ### Gas limit schedule
 
@@ -645,7 +654,7 @@ value. The epoch value in each entry MUST be greater than or equal to
 `GLOAS_FORK_EPOCH`. The gas limit schedule entries SHOULD be sorted by epoch in
 ascending order. The gas limit schedule MAY be empty.
 
-<!-- list-of-records:gas_limit_schedule -->
+<!-- eth_consensus_specs: list-of-records=gas_limit_schedule -->
 
 | Epoch | Gas Limit | Date |
 | ----: | --------: | ---: |

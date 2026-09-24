@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=heze -->
+
 # EIP-8148 -- The Beacon Chain
 
 *Note*: This document is a work-in-progress for researchers and implementers.
@@ -99,9 +101,9 @@ class SweepThresholds(ProgressiveList[Gwei]):
 
 ### Execution
 
-| Name                                           | Value                 | Description                                                                                       |
-| ---------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------- |
-| `MAX_SET_SWEEP_THRESHOLD_REQUESTS_PER_PAYLOAD` | `Uint64(2**4)` (= 16) | *[New in EIP8148]* Maximum number of execution layer set sweep threshold requests in each payload |
+| Name                                           | Mainnet               | Minimal | Description                                                                                       |
+| ---------------------------------------------- | --------------------- | ------- | ------------------------------------------------------------------------------------------------- |
+| `MAX_SET_SWEEP_THRESHOLD_REQUESTS_PER_PAYLOAD` | `Uint64(2**4)` (= 16) |         | *[New in EIP8148]* Maximum number of execution layer set sweep threshold requests in each payload |
 
 ## Containers
 

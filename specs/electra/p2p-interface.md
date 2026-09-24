@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=deneb -->
+
 # Electra -- Networking
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -39,9 +41,9 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 
 *[New in Electra:EIP7691]*
 
-| Name                                | Value       | Description                                                   |
-| ----------------------------------- | ----------- | ------------------------------------------------------------- |
-| `BLOB_SIDECAR_SUBNET_COUNT_ELECTRA` | `Uint64(9)` | Number of blob sidecar subnets used in the gossipsub protocol |
+| Name                                | Mainnet     | Minimal | Description                                                   |
+| ----------------------------------- | ----------- | ------- | ------------------------------------------------------------- |
+| `BLOB_SIDECAR_SUBNET_COUNT_ELECTRA` | `Uint64(9)` |         | Number of blob sidecar subnets used in the gossipsub protocol |
 
 ## Helpers
 

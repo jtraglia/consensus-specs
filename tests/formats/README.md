@@ -241,27 +241,20 @@ The runtime-configurables may be different for specific tests. When present,
 this replaces the default runtime-config that comes with the otherwise
 compile-time preset settings.
 
-The format matches that of the `mainnet_config.yaml` and `minimal_config.yaml`,
-see the [`/configs`](../../configs/README.md#format) documentation. Config
-values that are introduced at a later fork may be omitted from tests of previous
-forks.
+The format matches that of the generated `mainnet.yaml` and `minimal.yaml`
+configs of each fork: one `KEY: value` entry per line, where a value is an
+unsigned integer, a `0x`-prefixed hex string, a quoted string, or a list of
+records. Config values that are introduced at a later fork may be omitted from
+tests of previous forks.
 
 ## Config sourcing
 
-The constants configurations are located in:
+The configs are generated from the specifications with `make build`, and are
+written to:
 
 ```
-<specs repo root>/configs/<config name>.yaml
+<specs repo root>/build/configs/<fork>/<config name>.yaml
 ```
-
-And copied by CI for testing purposes to:
-
-```
-<tests repo root>/tests/<config name>/<config name>.yaml
-```
-
-The first `<config name>` is a directory, which contains exactly all tests that
-make use of the given config.
 
 ## Note for implementers
 

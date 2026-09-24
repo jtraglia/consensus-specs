@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=bellatrix -->
+
 # Capella Light Client -- Sync Protocol
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->

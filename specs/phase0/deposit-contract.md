@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=none -->
+
 # Phase 0 -- Deposit Contract
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -46,11 +48,11 @@ specification.
 *Note*: The default mainnet configuration values are included here for
 specification-design purposes.
 
-| Name                       | Value                                                            |
-| -------------------------- | ---------------------------------------------------------------- |
-| `DEPOSIT_CHAIN_ID`         | `Uint64(1)`                                                      |
-| `DEPOSIT_NETWORK_ID`       | `Uint64(1)`                                                      |
-| `DEPOSIT_CONTRACT_ADDRESS` | `ExecutionAddress('0x00000000219ab540356cBB839Cbe05303d7705Fa')` |
+| Name                       | Mainnet                                                          | Minimal                                                          |
+| -------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `DEPOSIT_CHAIN_ID`         | `Uint64(1)`                                                      | `Uint64(5)`                                                      |
+| `DEPOSIT_NETWORK_ID`       | `Uint64(1)`                                                      | `Uint64(5)`                                                      |
+| `DEPOSIT_CONTRACT_ADDRESS` | `ExecutionAddress('0x00000000219ab540356cBB839Cbe05303d7705Fa')` | `ExecutionAddress('0x1234567890123456789012345678901234567890')` |
 
 ## Staking deposit contract
 

@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=heze -->
+
 # EIP-8321 -- The Beacon Chain
 
 *Note*: This document is a work-in-progress for researchers and implementers.
@@ -42,6 +44,12 @@
         - [New `process_randao_commitment_registration`](#new-process_randao_commitment_registration)
 
 <!-- mdformat-toc end -->
+
+<!-- eth_consensus_specs: build
+```python
+from blake3 import blake3 as blake3_hash
+```
+-->
 
 ## Introduction
 
@@ -132,10 +140,10 @@ class RandaoCommitments(ProgressiveList[Bytes32]):
 
 ### Hash-chain RANDAO
 
-| Name                                  | Value                  |
-| ------------------------------------- | ---------------------- |
-| `COMMITMENT_REGISTRATION_DELAY`       | `Epoch(3)` (= 3)       |
-| `MAX_RANDAO_COMMITMENT_REGISTRATIONS` | `Uint64(2**7)` (= 128) |
+| Name                                  | Mainnet                | Minimal |
+| ------------------------------------- | ---------------------- | ------- |
+| `COMMITMENT_REGISTRATION_DELAY`       | `Epoch(3)` (= 3)       |         |
+| `MAX_RANDAO_COMMITMENT_REGISTRATIONS` | `Uint64(2**7)` (= 128) |         |
 
 *Note*: `COMMITMENT_REGISTRATION_DELAY` must be at least
 `MIN_SEED_LOOKAHEAD + 2` so that a registrant cannot know whether it proposes in

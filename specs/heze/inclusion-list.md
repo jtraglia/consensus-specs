@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=gloas -->
+
 # Heze -- Inclusion List
 
 *Note*: This document is a work-in-progress for researchers and implementers.
@@ -57,6 +59,16 @@ def get_inclusion_list_store() -> InclusionListStore:
 
     return inclusion_list_store
 ```
+
+<!-- eth_consensus_specs: build
+```python
+def cached_or_new_inclusion_list_store() -> InclusionListStore:
+    return InclusionListStore(
+        inclusion_lists=defaultdict(dict),
+        equivocators=defaultdict(set),
+    )
+```
+-->
 
 ### New `process_inclusion_list`
 

@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=gloas -->
+
 # Heze -- Fork Choice
 
 *Note*: This document is a work-in-progress for researchers and implementers.
@@ -33,9 +35,9 @@ This is the modification of the fork choice accompanying the Heze upgrade.
 
 ### Time parameters
 
-| Name                     | Value          | Duration                   |
-| ------------------------ | -------------- | -------------------------- |
-| `INCLUSION_LIST_DUE_BPS` | `Uint64(6667)` | ~67% of `SLOT_DURATION_MS` |
+| Name                     | Mainnet        | Minimal | Duration                   |
+| ------------------------ | -------------- | ------- | -------------------------- |
+| `INCLUSION_LIST_DUE_BPS` | `Uint64(6667)` |         | ~67% of `SLOT_DURATION_MS` |
 
 ## Protocols
 
@@ -61,6 +63,60 @@ def is_inclusion_list_satisfied(
     list constraints with respect to ``inclusion_list_transactions``.
     """
 ```
+
+<!-- eth_consensus_specs: build
+```python
+class NoopExecutionEngine(ExecutionEngine):
+    def notify_new_payload(
+        self: ExecutionEngine,
+        execution_payload: ExecutionPayload,
+        parent_beacon_block_root: Root,
+        execution_requests_list: Sequence[bytes],
+    ) -> bool:
+        return True
+
+    def notify_forkchoice_updated(
+        self: ExecutionEngine,
+        head_block_hash: Hash32,
+        safe_block_hash: Hash32,
+        finalized_block_hash: Hash32,
+        payload_attributes: Optional[PayloadAttributes],
+        custody_columns: Optional[CustodyColumnBits],
+    ) -> Optional[PayloadId]:
+        pass
+
+    def get_payload(self: ExecutionEngine, payload_id: PayloadId) -> GetPayloadResponse:
+        raise NotImplementedError("no default block production")
+
+    def is_valid_block_hash(
+        self: ExecutionEngine,
+        execution_payload: ExecutionPayload,
+        parent_beacon_block_root: Root,
+        execution_requests_list: Sequence[bytes],
+    ) -> bool:
+        return True
+
+    def is_valid_versioned_hashes(
+        self: ExecutionEngine, new_payload_request: NewPayloadRequest
+    ) -> bool:
+        return True
+
+    def verify_and_notify_new_payload(
+        self: ExecutionEngine, new_payload_request: NewPayloadRequest
+    ) -> bool:
+        return True
+
+    def get_inclusion_list(self: ExecutionEngine) -> GetInclusionListResponse:
+        raise NotImplementedError("no default inclusion list production")
+
+    def is_inclusion_list_satisfied(
+        self: ExecutionEngine,
+        execution_payload: ExecutionPayload,
+        inclusion_list_transactions: Sequence[Transaction],
+    ) -> bool:
+        return True
+```
+-->
 
 #### Modified `notify_forkchoice_updated`
 

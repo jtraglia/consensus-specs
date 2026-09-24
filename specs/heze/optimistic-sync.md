@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=gloas -->
+
 # Heze -- Optimistic Sync
 
 *Note*: This document is a work-in-progress for researchers and implementers.

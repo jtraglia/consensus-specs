@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=deneb -->
+
 # Electra -- The Beacon Chain
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -295,67 +297,67 @@ specification.
 
 ### Gwei values
 
-| Name                            | Value                                       | Description                                           |
-| ------------------------------- | ------------------------------------------- | ----------------------------------------------------- |
-| `MIN_ACTIVATION_BALANCE`        | `Gwei(2**5 * 10**9)` (= 32,000,000,000)     | Minimum balance for a validator to become active      |
-| `MAX_EFFECTIVE_BALANCE_ELECTRA` | `Gwei(2**11 * 10**9)` (= 2,048,000,000,000) | Maximum effective balance for a compounding validator |
+| Name                            | Mainnet                                     | Minimal | Description                                           |
+| ------------------------------- | ------------------------------------------- | ------- | ----------------------------------------------------- |
+| `MIN_ACTIVATION_BALANCE`        | `Gwei(2**5 * 10**9)` (= 32,000,000,000)     |         | Minimum balance for a validator to become active      |
+| `MAX_EFFECTIVE_BALANCE_ELECTRA` | `Gwei(2**11 * 10**9)` (= 2,048,000,000,000) |         | Maximum effective balance for a compounding validator |
 
 ### Rewards and penalties
 
-| Name                                    | Value                     |
-| --------------------------------------- | ------------------------- |
-| `MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA` | `Uint64(2**12)` (= 4,096) |
-| `WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA` | `Uint64(2**12)` (= 4,096) |
+| Name                                    | Mainnet                   | Minimal |
+| --------------------------------------- | ------------------------- | ------- |
+| `MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA` | `Uint64(2**12)` (= 4,096) |         |
+| `WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA` | `Uint64(2**12)` (= 4,096) |         |
 
 ### State list lengths
 
-| Name                                | Value                           |
-| ----------------------------------- | ------------------------------- |
-| `PENDING_DEPOSITS_LIMIT`            | `Uint64(2**27)` (= 134,217,728) |
-| `PENDING_PARTIAL_WITHDRAWALS_LIMIT` | `Uint64(2**27)` (= 134,217,728) |
-| `PENDING_CONSOLIDATIONS_LIMIT`      | `Uint64(2**18)` (= 262,144)     |
+| Name                                | Mainnet                         | Minimal               |
+| ----------------------------------- | ------------------------------- | --------------------- |
+| `PENDING_DEPOSITS_LIMIT`            | `Uint64(2**27)` (= 134,217,728) |                       |
+| `PENDING_PARTIAL_WITHDRAWALS_LIMIT` | `Uint64(2**27)` (= 134,217,728) | `Uint64(2**6)` (= 64) |
+| `PENDING_CONSOLIDATIONS_LIMIT`      | `Uint64(2**18)` (= 262,144)     | `Uint64(2**6)` (= 64) |
 
 ### Max operations per block
 
-| Name                             | Value                |
-| -------------------------------- | -------------------- |
-| `MAX_ATTESTER_SLASHINGS_ELECTRA` | `Uint64(2**0)` (= 1) |
-| `MAX_ATTESTATIONS_ELECTRA`       | `Uint64(2**3)` (= 8) |
+| Name                             | Mainnet              | Minimal |
+| -------------------------------- | -------------------- | ------- |
+| `MAX_ATTESTER_SLASHINGS_ELECTRA` | `Uint64(2**0)` (= 1) |         |
+| `MAX_ATTESTATIONS_ELECTRA`       | `Uint64(2**3)` (= 8) |         |
 
 ### Execution
 
-| Name                                     | Value                     | Description                                                              |
-| ---------------------------------------- | ------------------------- | ------------------------------------------------------------------------ |
-| `MAX_DEPOSIT_REQUESTS_PER_PAYLOAD`       | `Uint64(2**13)` (= 8,192) | Maximum number of execution-layer deposit requests in each payload       |
-| `MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD`    | `Uint64(2**4)` (= 16)     | Maximum number of execution-layer withdrawal requests in each payload    |
-| `MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD` | `Uint64(2**1)` (= 2)      | Maximum number of execution-layer consolidation requests in each payload |
+| Name                                     | Mainnet                   | Minimal | Description                                                              |
+| ---------------------------------------- | ------------------------- | ------- | ------------------------------------------------------------------------ |
+| `MAX_DEPOSIT_REQUESTS_PER_PAYLOAD`       | `Uint64(2**13)` (= 8,192) |         | Maximum number of execution-layer deposit requests in each payload       |
+| `MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD`    | `Uint64(2**4)` (= 16)     |         | Maximum number of execution-layer withdrawal requests in each payload    |
+| `MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD` | `Uint64(2**1)` (= 2)      |         | Maximum number of execution-layer consolidation requests in each payload |
 
 ### Withdrawals processing
 
-| Name                                         | Value                | Description                                                          |
-| -------------------------------------------- | -------------------- | -------------------------------------------------------------------- |
-| `MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP` | `Uint64(2**3)` (= 8) | Maximum number of pending partial withdrawals to process per payload |
+| Name                                         | Mainnet              | Minimal              | Description                                                          |
+| -------------------------------------------- | -------------------- | -------------------- | -------------------------------------------------------------------- |
+| `MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP` | `Uint64(2**3)` (= 8) | `Uint64(2**1)` (= 2) | Maximum number of pending partial withdrawals to process per payload |
 
 ### Pending deposits processing
 
-| Name                             | Value                 | Description                                             |
-| -------------------------------- | --------------------- | ------------------------------------------------------- |
-| `MAX_PENDING_DEPOSITS_PER_EPOCH` | `Uint64(2**4)` (= 16) | Maximum number of pending deposits to process per epoch |
+| Name                             | Mainnet               | Minimal | Description                                             |
+| -------------------------------- | --------------------- | ------- | ------------------------------------------------------- |
+| `MAX_PENDING_DEPOSITS_PER_EPOCH` | `Uint64(2**4)` (= 16) |         | Maximum number of pending deposits to process per epoch |
 
 ## Configs
 
 ### Execution
 
-| Name                          | Value       | Description                                                                           |
-| ----------------------------- | ----------- | ------------------------------------------------------------------------------------- |
-| `MAX_BLOBS_PER_BLOCK_ELECTRA` | `Uint64(9)` | Maximum number of blobs in a single block limited by `MAX_BLOB_COMMITMENTS_PER_BLOCK` |
+| Name                          | Mainnet     | Minimal | Description                                                                           |
+| ----------------------------- | ----------- | ------- | ------------------------------------------------------------------------------------- |
+| `MAX_BLOBS_PER_BLOCK_ELECTRA` | `Uint64(9)` |         | Maximum number of blobs in a single block limited by `MAX_BLOB_COMMITMENTS_PER_BLOCK` |
 
 ### Validator cycle
 
-| Name                                        | Value                                    |
-| ------------------------------------------- | ---------------------------------------- |
-| `MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA`         | `Gwei(2**7 * 10**9)` (= 128,000,000,000) |
-| `MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT` | `Gwei(2**8 * 10**9)` (= 256,000,000,000) |
+| Name                                        | Mainnet                                  | Minimal              |
+| ------------------------------------------- | ---------------------------------------- | -------------------- |
+| `MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA`         | `Gwei(2**7 * 10**9)` (= 128,000,000,000) | `Gwei(64000000000)`  |
+| `MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT` | `Gwei(2**8 * 10**9)` (= 256,000,000,000) | `Gwei(128000000000)` |
 
 ## Containers
 
@@ -1331,6 +1333,49 @@ def verify_and_notify_new_payload(
 
     return True
 ```
+
+<!-- eth_consensus_specs: build
+```python
+class NoopExecutionEngine(ExecutionEngine):
+    def notify_new_payload(
+        self: ExecutionEngine,
+        execution_payload: ExecutionPayload,
+        parent_beacon_block_root: Root,
+        execution_requests_list: Sequence[bytes],
+    ) -> bool:
+        return True
+
+    def notify_forkchoice_updated(
+        self: ExecutionEngine,
+        head_block_hash: Hash32,
+        safe_block_hash: Hash32,
+        finalized_block_hash: Hash32,
+        payload_attributes: Optional[PayloadAttributes],
+    ) -> Optional[PayloadId]:
+        pass
+
+    def get_payload(self: ExecutionEngine, payload_id: PayloadId) -> GetPayloadResponse:
+        raise NotImplementedError("no default block production")
+
+    def is_valid_block_hash(
+        self: ExecutionEngine,
+        execution_payload: ExecutionPayload,
+        parent_beacon_block_root: Root,
+        execution_requests_list: Sequence[bytes],
+    ) -> bool:
+        return True
+
+    def is_valid_versioned_hashes(
+        self: ExecutionEngine, new_payload_request: NewPayloadRequest
+    ) -> bool:
+        return True
+
+    def verify_and_notify_new_payload(
+        self: ExecutionEngine, new_payload_request: NewPayloadRequest
+    ) -> bool:
+        return True
+```
+-->
 
 ### Block processing
 

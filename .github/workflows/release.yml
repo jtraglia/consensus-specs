@@ -148,7 +148,10 @@ jobs:
           enable-cache: true
 
       - name: Generate specs
-        run: uv run python -m pysetup.generate_specs --all-forks
+        run: uv run python -m compiler
+
+      - name: Stage generated specs in the package
+        run: cp -R build/pyspec/eth_consensus_specs/. tests/core/pyspec/eth_consensus_specs/
 
       - name: Build package
         run: uv build

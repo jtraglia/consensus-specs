@@ -72,7 +72,7 @@ def run_fork_test(post_spec, pre_state):
     assert len(post_state.validator_preregistrations) == 0
 
     assert pre_state.fork.current_version == post_state.fork.previous_version
-    assert post_state.fork.current_version == post_spec.EIP8205_FORK_VERSION
+    assert post_state.fork.current_version == post_spec.config.EIP8205_FORK_VERSION
     assert post_state.fork.epoch == post_spec.get_current_epoch(post_state)
 
     yield "post", post_state

@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=phase0 -->
+
 # Altair Light Client -- Full Node
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -30,6 +32,13 @@ generalized index `index`.
 ```python
 def compute_merkle_proof(object: SSZObject, index: GeneralizedIndex) -> Sequence[Bytes32]: ...
 ```
+
+<!-- eth_consensus_specs: build
+```python
+def compute_merkle_proof(object: SSZObject, index: GeneralizedIndex) -> list[Bytes32]:
+    return [Bytes32(chunk) for chunk in build_proof(object, index)]
+```
+-->
 
 ### `block_to_light_client_header`
 

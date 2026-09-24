@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=bellatrix -->
+
 # Capella -- Fork Logic
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -16,10 +18,10 @@ This document describes the process of the Capella upgrade.
 
 ## Configs
 
-| Name                   | Value                                            |
-| ---------------------- | ------------------------------------------------ |
-| `CAPELLA_FORK_VERSION` | `Version('0x03000000')`                          |
-| `CAPELLA_FORK_EPOCH`   | `Epoch(194048)` (April 12, 2023, 10:27:35pm UTC) |
+| Name                   | Mainnet                                          | Minimal                       |
+| ---------------------- | ------------------------------------------------ | ----------------------------- |
+| `CAPELLA_FORK_VERSION` | `Version('0x03000000')`                          | `Version('0x03000001')`       |
+| `CAPELLA_FORK_EPOCH`   | `Epoch(194048)` (April 12, 2023, 10:27:35pm UTC) | `Epoch(18446744073709551615)` |
 
 ## Fork to Capella
 

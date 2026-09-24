@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=gloas -->
+
 # Heze -- The Beacon Chain
 
 *Note*: This document is a work-in-progress for researchers and implementers.
@@ -76,9 +78,9 @@ class InclusionListCommittee(Vector[ValidatorIndex]):
 
 ### Inclusion list committee
 
-| Name                            | Value                 |
-| ------------------------------- | --------------------- |
-| `INCLUSION_LIST_COMMITTEE_SIZE` | `Uint64(2**4)` (= 16) |
+| Name                            | Mainnet               | Minimal |
+| ------------------------------- | --------------------- | ------- |
+| `INCLUSION_LIST_COMMITTEE_SIZE` | `Uint64(2**4)` (= 16) |         |
 
 ## Containers
 

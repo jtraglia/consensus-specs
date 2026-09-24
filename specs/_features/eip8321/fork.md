@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=heze -->
+
 # EIP-8321 -- Fork Logic
 
 *Note*: This document is a work-in-progress for researchers and implementers.
@@ -18,10 +20,10 @@ This document describes the process of the EIP-8321 upgrade.
 
 Warning: this configuration is not definitive.
 
-| Name                   | Value                                 |
-| ---------------------- | ------------------------------------- |
-| `EIP8321_FORK_VERSION` | `Version('0xe8321000')`               |
-| `EIP8321_FORK_EPOCH`   | `Epoch(18446744073709551615)` **TBD** |
+| Name                   | Mainnet                               | Minimal                 |
+| ---------------------- | ------------------------------------- | ----------------------- |
+| `EIP8321_FORK_VERSION` | `Version('0xe8321000')`               | `Version('0xe8321001')` |
+| `EIP8321_FORK_EPOCH`   | `Epoch(18446744073709551615)` **TBD** |                         |
 
 ## Fork to EIP-8321
 

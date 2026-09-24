@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=fulu -->
+
 # Gloas -- Fork Choice
 
 *Note*: This document is a work-in-progress for researchers and implementers.
@@ -143,6 +145,50 @@ def notify_forkchoice_updated(
     custody_columns: Optional[CustodyColumnBits],
 ) -> Optional[PayloadId]: ...
 ```
+
+<!-- eth_consensus_specs: build
+```python
+class NoopExecutionEngine(ExecutionEngine):
+    def notify_new_payload(
+        self: ExecutionEngine,
+        execution_payload: ExecutionPayload,
+        parent_beacon_block_root: Root,
+        execution_requests_list: Sequence[bytes],
+    ) -> bool:
+        return True
+
+    def notify_forkchoice_updated(
+        self: ExecutionEngine,
+        head_block_hash: Hash32,
+        safe_block_hash: Hash32,
+        finalized_block_hash: Hash32,
+        payload_attributes: Optional[PayloadAttributes],
+        custody_columns: Optional[CustodyColumnBits],
+    ) -> Optional[PayloadId]:
+        pass
+
+    def get_payload(self: ExecutionEngine, payload_id: PayloadId) -> GetPayloadResponse:
+        raise NotImplementedError("no default block production")
+
+    def is_valid_block_hash(
+        self: ExecutionEngine,
+        execution_payload: ExecutionPayload,
+        parent_beacon_block_root: Root,
+        execution_requests_list: Sequence[bytes],
+    ) -> bool:
+        return True
+
+    def is_valid_versioned_hashes(
+        self: ExecutionEngine, new_payload_request: NewPayloadRequest
+    ) -> bool:
+        return True
+
+    def verify_and_notify_new_payload(
+        self: ExecutionEngine, new_payload_request: NewPayloadRequest
+    ) -> bool:
+        return True
+```
+-->
 
 ## Helpers
 
@@ -306,6 +352,15 @@ def is_data_available(beacon_block_root: Root) -> bool:
         for column_sidecar in column_sidecars
     )
 ```
+
+<!-- eth_consensus_specs: build
+```python
+def retrieve_column_sidecars_and_kzg_commitments(
+    beacon_block_root: Root,
+) -> tuple[Sequence[DataColumnSidecar], BlobKZGCommitments]:
+    return [], BlobKZGCommitments()
+```
+-->
 
 ### New `is_payload_verified`
 

@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=capella -->
+
 # Deneb -- Fork Choice
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -78,6 +80,15 @@ def verify_blob_kzg_proof_batch(
     commitments.
     """
 ```
+
+<!-- eth_consensus_specs: build
+```python
+def retrieve_blobs_and_proofs(
+    beacon_block_root: Root,
+) -> Tuple[Sequence[Blob], Sequence[KZGProof]]:
+    return [], []
+```
+-->
 
 ## Handlers
 

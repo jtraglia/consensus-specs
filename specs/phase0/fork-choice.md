@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=none -->
+
 # Phase 0 -- Beacon Chain Fork Choice
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -127,12 +129,12 @@ handlers must not modify `store`.
 
 ### Configs
 
-| Name                                  | Value         |
-| ------------------------------------- | ------------- |
-| `PROPOSER_SCORE_BOOST`                | `Uint64(40)`  |
-| `REORG_HEAD_WEIGHT_THRESHOLD`         | `Uint64(20)`  |
-| `REORG_PARENT_WEIGHT_THRESHOLD`       | `Uint64(160)` |
-| `REORG_MAX_EPOCHS_SINCE_FINALIZATION` | `Epoch(2)`    |
+| Name                                  | Mainnet       | Minimal |
+| ------------------------------------- | ------------- | ------- |
+| `PROPOSER_SCORE_BOOST`                | `Uint64(40)`  |         |
+| `REORG_HEAD_WEIGHT_THRESHOLD`         | `Uint64(20)`  |         |
+| `REORG_PARENT_WEIGHT_THRESHOLD`       | `Uint64(160)` |         |
+| `REORG_MAX_EPOCHS_SINCE_FINALIZATION` | `Epoch(2)`    |         |
 
 - The proposer score boost and re-org weight threshold are percentage values
   that are measured with respect to the weight of a single committee. See
@@ -140,9 +142,9 @@ handlers must not modify `store`.
 
 #### Time parameters
 
-| Name                        | Value          | Duration                   |
-| --------------------------- | -------------- | -------------------------- |
-| `PROPOSER_REORG_CUTOFF_BPS` | `Uint64(1667)` | ~17% of `SLOT_DURATION_MS` |
+| Name                        | Mainnet        | Minimal | Duration                   |
+| --------------------------- | -------------- | ------- | -------------------------- |
+| `PROPOSER_REORG_CUTOFF_BPS` | `Uint64(1667)` |         | ~17% of `SLOT_DURATION_MS` |
 
 ### Helpers
 

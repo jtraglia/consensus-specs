@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=gloas -->
+
 # EIP-8025 -- Networking
 
 This document contains the networking specifications for EIP-8025.

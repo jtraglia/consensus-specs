@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=gloas -->
+
 # EIP-8025 -- Honest Prover
 
 *Note*: This document is a work-in-progress for researchers and implementers.

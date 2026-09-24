@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=none -->
+
 # Phase 0 -- Honest Validator
 
 This is an accompanying document to
@@ -108,10 +110,10 @@ specifications before continuing and use as a reference throughout.
 
 ### Time parameters
 
-| Name                  | Value          | Duration                   |
-| --------------------- | -------------- | -------------------------- |
-| `ATTESTATION_DUE_BPS` | `Uint64(3333)` | ~33% of `SLOT_DURATION_MS` |
-| `AGGREGATE_DUE_BPS`   | `Uint64(6667)` | ~67% of `SLOT_DURATION_MS` |
+| Name                  | Mainnet        | Minimal | Duration                   |
+| --------------------- | -------------- | ------- | -------------------------- |
+| `ATTESTATION_DUE_BPS` | `Uint64(3333)` |         | ~33% of `SLOT_DURATION_MS` |
+| `AGGREGATE_DUE_BPS`   | `Uint64(6667)` |         | ~67% of `SLOT_DURATION_MS` |
 
 ## Containers
 
@@ -508,6 +510,17 @@ def get_eth1_vote(state: BeaconState, eth1_chain: Sequence[Eth1Block]) -> Eth1Da
         default=default_vote,
     )
 ```
+
+<!-- eth_consensus_specs: build
+```python
+def get_eth1_data(block: Eth1Block) -> Eth1Data:
+    return Eth1Data(
+        deposit_root=block.deposit_root,
+        deposit_count=block.deposit_count,
+        block_hash=Hash32(hash_tree_root(block)),
+    )
+```
+-->
 
 ##### Proposer slashings
 

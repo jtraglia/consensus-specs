@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=gloas -->
+
 # Heze -- Networking
 
 *Note*: This document is a work-in-progress for researchers and implementers.
@@ -37,18 +39,18 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 
 ### Type-specific SSZ bounds
 
-| Name                                         | Value                         |
-| -------------------------------------------- | ----------------------------- |
-| `MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE` | `Uint64(196934)` (= ~192 KiB) |
-| `MAX_SIGNED_INCLUSION_LIST_SIZE`             | `Uint64(41112)` (= ~40 KiB)   |
+| Name                                         | Mainnet                       | Minimal |
+| -------------------------------------------- | ----------------------------- | ------- |
+| `MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE` | `Uint64(196934)` (= ~192 KiB) |         |
+| `MAX_SIGNED_INCLUSION_LIST_SIZE`             | `Uint64(41112)` (= ~40 KiB)   |         |
 
 ## Configs
 
-| Name                                        | Value                     | Description                                                     |
-| ------------------------------------------- | ------------------------- | --------------------------------------------------------------- |
-| `MAX_REQUEST_INCLUSION_LIST`                | `Uint64(2**4)` (= 16)     | Maximum number of inclusion lists in a single request           |
-| `MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS`    | `Slot(1)`                 | Minimum slot range over which a node must serve inclusion lists |
-| `MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST` | `Uint64(2**13)` (= 8,192) | Maximum size of the inclusion list's transactions in bytes      |
+| Name                                        | Mainnet                   | Minimal | Description                                                     |
+| ------------------------------------------- | ------------------------- | ------- | --------------------------------------------------------------- |
+| `MAX_REQUEST_INCLUSION_LIST`                | `Uint64(2**4)` (= 16)     |         | Maximum number of inclusion lists in a single request           |
+| `MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS`    | `Slot(1)`                 |         | Minimum slot range over which a node must serve inclusion lists |
+| `MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST` | `Uint64(2**13)` (= 8,192) |         | Maximum size of the inclusion list's transactions in bytes      |
 
 ## Types
 

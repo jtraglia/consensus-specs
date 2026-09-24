@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=gloas -->
+
 # EIP-8025 -- The Beacon Chain
 
 *Note*: This document is a work-in-progress for researchers and implementers.

@@ -8,18 +8,9 @@ from pathlib import Path
 
 import ckzg
 
+TRUSTED_SETUP_PATH = Path(__file__).parent / "trusted_setups" / "trusted_setup_4096.json"
+
 trusted_setup = None
-
-
-def _find_trusted_setup_path() -> Path:
-    """
-    Locate the trusted setup JSON by walking up from this file to the repo root.
-    """
-    for parent in Path(__file__).resolve().parents:
-        candidate = parent / "presets" / "mainnet" / "trusted_setups" / "trusted_setup_4096.json"
-        if candidate.exists():
-            return candidate
-    raise FileNotFoundError("could not locate trusted setup")
 
 
 def load_trusted_setup(precompute: int = 0):
@@ -32,7 +23,7 @@ def load_trusted_setup(precompute: int = 0):
     if trusted_setup is not None:
         return trusted_setup
 
-    with _find_trusted_setup_path().open() as f:
+    with TRUSTED_SETUP_PATH.open() as f:
         data = json.load(f)
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".txt") as tf:

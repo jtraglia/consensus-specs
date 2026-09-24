@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=altair -->
+
 # Bellatrix -- The Beacon Chain
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -44,6 +46,16 @@
     - [Slashings](#slashings)
 
 <!-- mdformat-toc end -->
+
+<!-- eth_consensus_specs: build
+```python
+from typing import Protocol
+
+from ssz.byte_arrays import ByteList, ByteVector
+
+from eth_consensus_specs.utils.ssz.bytes import Bytes8
+```
+-->
 
 ## Introduction
 
@@ -119,30 +131,30 @@ class Transactions(List[Transaction]):
 Bellatrix updates a few configuration values to move penalty parameters to their
 final, maximum security values.
 
-| Name                                         | Value                          |
-| -------------------------------------------- | ------------------------------ |
-| `INACTIVITY_PENALTY_QUOTIENT_BELLATRIX`      | `Uint64(2**24)` (= 16,777,216) |
-| `MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX`    | `Uint64(2**5)` (= 32)          |
-| `PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX` | `Uint64(3)`                    |
+| Name                                         | Mainnet                        | Minimal |
+| -------------------------------------------- | ------------------------------ | ------- |
+| `INACTIVITY_PENALTY_QUOTIENT_BELLATRIX`      | `Uint64(2**24)` (= 16,777,216) |         |
+| `MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX`    | `Uint64(2**5)` (= 32)          |         |
+| `PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX` | `Uint64(3)`                    |         |
 
 ### Execution
 
-| Name                           | Value                             |
-| ------------------------------ | --------------------------------- |
-| `MAX_BYTES_PER_TRANSACTION`    | `Uint64(2**30)` (= 1,073,741,824) |
-| `MAX_TRANSACTIONS_PER_PAYLOAD` | `Uint64(2**20)` (= 1,048,576)     |
-| `BYTES_PER_LOGS_BLOOM`         | `Uint64(2**8)` (= 256)            |
-| `MAX_EXTRA_DATA_BYTES`         | `Uint64(2**5)` (= 32)             |
+| Name                           | Mainnet                           | Minimal |
+| ------------------------------ | --------------------------------- | ------- |
+| `MAX_BYTES_PER_TRANSACTION`    | `Uint64(2**30)` (= 1,073,741,824) |         |
+| `MAX_TRANSACTIONS_PER_PAYLOAD` | `Uint64(2**20)` (= 1,048,576)     |         |
+| `BYTES_PER_LOGS_BLOOM`         | `Uint64(2**8)` (= 256)            |         |
+| `MAX_EXTRA_DATA_BYTES`         | `Uint64(2**5)` (= 32)             |         |
 
 ## Configs
 
 ### Transition settings
 
-| Name                                   | Value                              |
-| -------------------------------------- | ---------------------------------- |
-| `TERMINAL_TOTAL_DIFFICULTY`            | `Uint256(58750000000000000000000)` |
-| `TERMINAL_BLOCK_HASH`                  | `Hash32()`                         |
-| `TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH` | `Epoch(FAR_FUTURE_EPOCH)`          |
+| Name                                   | Mainnet                            | Minimal                                                                                                                             |
+| -------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `TERMINAL_TOTAL_DIFFICULTY`            | `Uint256(58750000000000000000000)` | `Uint256(2**256-2**10)` (= 115,792,089,237,316,195,423,570,985,008,687,907,853,269,984,665,640,564,039,457,584,007,913,129,638,912) |
+| `TERMINAL_BLOCK_HASH`                  | `Hash32()`                         |                                                                                                                                     |
+| `TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH` | `Epoch(FAR_FUTURE_EPOCH)`          |                                                                                                                                     |
 
 ## Containers
 
@@ -408,6 +420,46 @@ def verify_and_notify_new_payload(
 
     return True
 ```
+
+<!-- eth_consensus_specs: build
+```python
+class NoopExecutionEngine(ExecutionEngine):
+    def notify_new_payload(
+        self: ExecutionEngine,
+        execution_payload: ExecutionPayload,
+    ) -> bool:
+        return True
+
+    def notify_forkchoice_updated(
+        self: ExecutionEngine,
+        head_block_hash: Hash32,
+        safe_block_hash: Hash32,
+        finalized_block_hash: Hash32,
+        payload_attributes: Optional[PayloadAttributes],
+    ) -> Optional[PayloadId]:
+        pass
+
+    def get_payload(self: ExecutionEngine, payload_id: PayloadId) -> GetPayloadResponse:
+        raise NotImplementedError("no default block production")
+
+    def is_valid_block_hash(
+        self: ExecutionEngine,
+        execution_payload: ExecutionPayload,
+    ) -> bool:
+        return True
+
+    def verify_and_notify_new_payload(
+        self: ExecutionEngine, new_payload_request: NewPayloadRequest
+    ) -> bool:
+        return True
+```
+-->
+
+<!-- eth_consensus_specs: build
+```python
+EXECUTION_ENGINE = NoopExecutionEngine()
+```
+-->
 
 ### Block processing
 

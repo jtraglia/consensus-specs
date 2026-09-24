@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=phase0 -->
+
 # Altair -- Honest Validator
 
 This is an accompanying document to
@@ -99,10 +101,10 @@ class SyncSubcommitteeBits(BitVector):
 
 ### Time parameters
 
-| Name                   | Value          | Duration                   |
-| ---------------------- | -------------- | -------------------------- |
-| `SYNC_MESSAGE_DUE_BPS` | `Uint64(3333)` | ~33% of `SLOT_DURATION_MS` |
-| `CONTRIBUTION_DUE_BPS` | `Uint64(6667)` | ~67% of `SLOT_DURATION_MS` |
+| Name                   | Mainnet        | Minimal | Duration                   |
+| ---------------------- | -------------- | ------- | -------------------------- |
+| `SYNC_MESSAGE_DUE_BPS` | `Uint64(3333)` |         | ~33% of `SLOT_DURATION_MS` |
+| `CONTRIBUTION_DUE_BPS` | `Uint64(6667)` |         | ~67% of `SLOT_DURATION_MS` |
 
 ## Containers
 

@@ -46,8 +46,9 @@ def test_from_syncing_to_invalid(spec, state):
 
     next_epoch(spec, state)
 
+    bellatrix = spec if spec.fork == BELLATRIX else spec.bellatrix
     current_time_ms = spec.compute_time_at_slot_ms(
-        fc_store.genesis_time_ms, spec.SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY * 10 + state.slot
+        fc_store.genesis_time_ms, bellatrix.SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY * 10 + state.slot
     )
     on_tick_and_append_step(spec, fc_store, current_time_ms, test_steps)
 

@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=capella -->
+
 # Deneb -- The Beacon Chain
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -48,6 +50,12 @@
     - [Registry updates](#registry-updates)
 
 <!-- mdformat-toc end -->
+
+<!-- eth_consensus_specs: build
+```python
+from eth_consensus_specs.utils import kzg
+```
+-->
 
 ## Introduction
 
@@ -148,23 +156,23 @@ class VersionedHashes(List[VersionedHash]):
 
 ### Blob
 
-| Name                      | Value          | Description                        |
-| ------------------------- | -------------- | ---------------------------------- |
-| `FIELD_ELEMENTS_PER_BLOB` | `Uint64(4096)` | Number of field elements in a blob |
+| Name                      | Mainnet        | Minimal | Description                        |
+| ------------------------- | -------------- | ------- | ---------------------------------- |
+| `FIELD_ELEMENTS_PER_BLOB` | `Uint64(4096)` |         | Number of field elements in a blob |
 
 ### Execution
 
-| Name                             | Value                     | Description                                                                     |
-| -------------------------------- | ------------------------- | ------------------------------------------------------------------------------- |
-| `MAX_BLOB_COMMITMENTS_PER_BLOCK` | `Uint64(2**12)` (= 4,096) | Upgrade independent fixed theoretical limit same as `TARGET_BLOB_GAS_PER_BLOCK` |
+| Name                             | Mainnet                   | Minimal | Description                                                                     |
+| -------------------------------- | ------------------------- | ------- | ------------------------------------------------------------------------------- |
+| `MAX_BLOB_COMMITMENTS_PER_BLOCK` | `Uint64(2**12)` (= 4,096) |         | Upgrade independent fixed theoretical limit same as `TARGET_BLOB_GAS_PER_BLOCK` |
 
 ## Configs
 
 ### Execution
 
-| Name                  | Value       | Description                                                                           |
-| --------------------- | ----------- | ------------------------------------------------------------------------------------- |
-| `MAX_BLOBS_PER_BLOCK` | `Uint64(6)` | Maximum number of blobs in a single block limited by `MAX_BLOB_COMMITMENTS_PER_BLOCK` |
+| Name                  | Mainnet     | Minimal | Description                                                                           |
+| --------------------- | ----------- | ------- | ------------------------------------------------------------------------------------- |
+| `MAX_BLOBS_PER_BLOCK` | `Uint64(6)` |         | Maximum number of blobs in a single block limited by `MAX_BLOB_COMMITMENTS_PER_BLOCK` |
 
 *Note*: The blob transactions are packed into the execution payload by the
 EL/builder with their corresponding blobs being independently transmitted and
@@ -173,9 +181,9 @@ independently defined by `MAX_BLOBS_PER_BLOCK`.
 
 ### Validator cycle
 
-| Name                                   | Value                |
-| -------------------------------------- | -------------------- |
-| `MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT` | `Uint64(2**3)` (= 8) |
+| Name                                   | Mainnet              | Minimal              |
+| -------------------------------------- | -------------------- | -------------------- |
+| `MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT` | `Uint64(2**3)` (= 8) | `Uint64(2**2)` (= 4) |
 
 ## Containers
 
@@ -444,6 +452,47 @@ def verify_and_notify_new_payload(
 
     return True
 ```
+
+<!-- eth_consensus_specs: build
+```python
+class NoopExecutionEngine(ExecutionEngine):
+    def notify_new_payload(
+        self: ExecutionEngine,
+        execution_payload: ExecutionPayload,
+        parent_beacon_block_root: Root,
+    ) -> bool:
+        return True
+
+    def notify_forkchoice_updated(
+        self: ExecutionEngine,
+        head_block_hash: Hash32,
+        safe_block_hash: Hash32,
+        finalized_block_hash: Hash32,
+        payload_attributes: Optional[PayloadAttributes],
+    ) -> Optional[PayloadId]:
+        pass
+
+    def get_payload(self: ExecutionEngine, payload_id: PayloadId) -> GetPayloadResponse:
+        raise NotImplementedError("no default block production")
+
+    def is_valid_block_hash(
+        self: ExecutionEngine,
+        execution_payload: ExecutionPayload,
+        parent_beacon_block_root: Root,
+    ) -> bool:
+        return True
+
+    def is_valid_versioned_hashes(
+        self: ExecutionEngine, new_payload_request: NewPayloadRequest
+    ) -> bool:
+        return True
+
+    def verify_and_notify_new_payload(
+        self: ExecutionEngine, new_payload_request: NewPayloadRequest
+    ) -> bool:
+        return True
+```
+-->
 
 ### Block processing
 

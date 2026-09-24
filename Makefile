@@ -139,7 +139,7 @@ sync: pyproject.toml
 # Generate executable specifications.
 build: MAYBE_VERBOSE := $(if $(filter true,$(verbose)),--verbose)
 build: sync
-	@uv run python -m pysetup.generate_specs --all-forks $(MAYBE_VERBOSE)
+	@uv run python -m compiler $(MAYBE_VERBOSE)
 
 # Delete all untracked files.
 clean:
@@ -165,13 +165,15 @@ lint: sync
 	@uv run python $(CURDIR)/scripts/check_markdown_headings.py
 	@uv run python $(CURDIR)/scripts/check_value_annotations.py
 	@uv run mdformat --number --wrap=80 $(MARKDOWN_FILES)
-	@uv run ruff check --fix --quiet $(CURDIR)/tests $(CURDIR)/pysetup $(CURDIR)/specs
-	@uv run ruff format --quiet $(CURDIR)/tests $(CURDIR)/pysetup
+	@uv run ruff check --fix --quiet $(CURDIR)/tests $(CURDIR)/compiler $(CURDIR)/specs
+	@uv run ruff format --quiet $(CURDIR)/tests $(CURDIR)/compiler
 	@uv run ruff format --preview --quiet $(CURDIR)/specs
 	@$(MAKE) --no-print-directory --assume-old=sync build
 	@uv run ty check --no-progress \
-		$(PYSPEC_DIR)/eth_consensus_specs/*/mainnet.py \
-		$(PYSPEC_DIR)/eth_consensus_specs/*/minimal.py
+		--extra-search-path $(PYSPEC_DIR) \
+		--extra-search-path $(CURDIR)/build/pyspec \
+		$(CURDIR)/build/pyspec/eth_consensus_specs/*/mainnet.py \
+		$(CURDIR)/build/pyspec/eth_consensus_specs/*/minimal.py
 	@git diff > $(LINT_DIFF_AFTER)
 	@diff -q $(LINT_DIFF_BEFORE) $(LINT_DIFF_AFTER) >/dev/null 2>&1 || \
 		echo "$(BOLD)Note: make lint modified tracked files$(NORM)"

@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=heze -->
+
 # EIP-8205 -- Fork Logic
 
 *Note*: This document is a work-in-progress for researchers and implementers.
@@ -18,10 +20,10 @@ This document describes the process of the EIP-8205 upgrade.
 
 Warning: this configuration is not definitive.
 
-| Name                   | Value                                 |
-| ---------------------- | ------------------------------------- |
-| `EIP8205_FORK_VERSION` | `Version('0xe8205000')`               |
-| `EIP8205_FORK_EPOCH`   | `Epoch(18446744073709551615)` **TBD** |
+| Name                   | Mainnet                               | Minimal                 |
+| ---------------------- | ------------------------------------- | ----------------------- |
+| `EIP8205_FORK_VERSION` | `Version('0xe8205000')`               | `Version('0xe8205001')` |
+| `EIP8205_FORK_EPOCH`   | `Epoch(18446744073709551615)` **TBD** |                         |
 
 ## Fork to EIP-8205
 

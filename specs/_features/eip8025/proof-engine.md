@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=gloas -->
+
 # EIP-8025 -- Proof Engine
 
 *Note*: This document is a work-in-progress for researchers and implementers.
@@ -99,3 +101,31 @@ def get_proof(
     and ``proof_type`` to complete, then return the execution proof.
     """
 ```
+
+<!-- eth_consensus_specs: build
+```python
+class NoopProofEngine(ProofEngine):
+    def verify_execution_proof(self: ProofEngine, execution_proof: ExecutionProof) -> bool:
+        return False
+
+    def request_proofs(
+        self: ProofEngine,
+        new_payload_request: NewPayloadRequest,
+        chain_id: Uint64,
+        schema_id: Uint16,
+        proof_attributes: ProofAttributes,
+    ) -> Root:
+        raise NotImplementedError("no default proof generation")
+
+    def get_proof(
+        self: ProofEngine, new_payload_request_root: Root, proof_type: ProofType
+    ) -> ExecutionProof:
+        raise NotImplementedError("no default proof retrieval")
+```
+-->
+
+<!-- eth_consensus_specs: build
+```python
+PROOF_ENGINE = NoopProofEngine()
+```
+-->

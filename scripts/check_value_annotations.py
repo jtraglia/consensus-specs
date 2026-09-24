@@ -15,9 +15,6 @@ from pathlib import Path
 # Pattern for markdown: `EXPR` ... (= VALUE)
 MD_ANNOTATION_PATTERN = re.compile(r"`([^`]+)`[^(`]*\(=\s*([^)]+)\)")
 
-# Pattern for YAML comments: # EXPR (= VALUE)
-YAML_ANNOTATION_PATTERN = re.compile(r"^#\s*(?:\[customized\]\s*)?(.+?)\s+\(=\s*([^)]+)\)")
-
 # Type wrappers to strip before evaluation: any Identifier(...) pattern
 TYPE_WRAPPER = re.compile(r"^[A-Za-z_]\w*\((.+)\)$")
 
@@ -94,22 +91,20 @@ def check_file(file_path):
     except (UnicodeDecodeError, IOError):
         return violations
 
-    is_yaml = str(file_path).endswith((".yaml", ".yml"))
-    pattern = YAML_ANNOTATION_PATTERN if is_yaml else MD_ANNOTATION_PATTERN
     in_code_block = False
 
     for line_num, line in enumerate(lines, 1):
         stripped = line.rstrip()
 
-        # Track code blocks to skip annotations inside them (markdown only)
-        if not is_yaml and stripped.lstrip().startswith("```"):
+        # Track code blocks to skip annotations inside them
+        if stripped.lstrip().startswith("```"):
             in_code_block = not in_code_block
             continue
 
         if in_code_block:
             continue
 
-        for match in pattern.finditer(line):
+        for match in MD_ANNOTATION_PATTERN.finditer(line):
             expr = match.group(1)
             value_str = match.group(2)
 
@@ -154,10 +149,8 @@ def main():
         # Check specific files passed as arguments
         files_to_check = sys.argv[1:]
     else:
-        # Check all markdown files in specs and YAML files in configs/presets
+        # Check all markdown files in specs
         files_to_check = list(Path("specs").rglob("*.md"))
-        files_to_check += list(Path("configs").rglob("*.yaml"))
-        files_to_check += list(Path("presets").rglob("*.yaml"))
 
     all_violations = []
 

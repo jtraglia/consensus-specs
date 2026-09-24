@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=heze -->
+
 # EIP-8205 -- The Beacon Chain
 
 *Note*: This document is a work-in-progress for researchers and implementers.
@@ -105,11 +107,11 @@ cross-network replay.
 
 ### Execution
 
-| Name                                       | Value                       |
-| ------------------------------------------ | --------------------------- |
-| `MAX_PREREGISTRATION_REQUESTS_PER_PAYLOAD` | `Uint64(2**2)` (= 4)        |
-| `PREREGISTRATIONS_LIMIT`                   | `Uint64(2**19)` (= 524,288) |
-| `PREREGISTRATION_EXPIRY_SLOTS`             | `Slot(2**18)` (= 262,144)   |
+| Name                                       | Mainnet                     | Minimal               |
+| ------------------------------------------ | --------------------------- | --------------------- |
+| `MAX_PREREGISTRATION_REQUESTS_PER_PAYLOAD` | `Uint64(2**2)` (= 4)        |                       |
+| `PREREGISTRATIONS_LIMIT`                   | `Uint64(2**19)` (= 524,288) | `Uint64(2**6)` (= 64) |
+| `PREREGISTRATION_EXPIRY_SLOTS`             | `Slot(2**18)` (= 262,144)   | `Slot(2**6)` (= 64)   |
 
 ## Containers
 

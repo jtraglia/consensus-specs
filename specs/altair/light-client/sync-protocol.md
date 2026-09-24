@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=phase0 -->
+
 # Altair Light Client -- Sync Protocol
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -104,14 +106,20 @@ class NextSyncCommitteeBranch(Vector[Bytes32]):
 | `CURRENT_SYNC_COMMITTEE_GINDEX` | `get_generalized_index(BeaconState, 'current_sync_committee')` (= 54)        |
 | `NEXT_SYNC_COMMITTEE_GINDEX`    | `get_generalized_index(BeaconState, 'next_sync_committee')` (= 55)           |
 
+<!-- eth_consensus_specs: build
+```python
+GeneralizedIndex = int
+```
+-->
+
 ## Presets
 
 ### Misc
 
-| Name                              | Value                                                      |
-| --------------------------------- | ---------------------------------------------------------- |
-| `MIN_SYNC_COMMITTEE_PARTICIPANTS` | `Uint64(1)`                                                |
-| `UPDATE_TIMEOUT`                  | `Slot(SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)` |
+| Name                              | Mainnet                                                                    | Minimal |
+| --------------------------------- | -------------------------------------------------------------------------- | ------- |
+| `MIN_SYNC_COMMITTEE_PARTICIPANTS` | `Uint64(1)`                                                                |         |
+| `UPDATE_TIMEOUT`                  | `Slot(Uint64(SLOTS_PER_EPOCH) * Uint64(EPOCHS_PER_SYNC_COMMITTEE_PERIOD))` |         |
 
 ## Containers
 

@@ -1,3 +1,5 @@
+<!-- eth_consensus_specs: parent=capella -->
+
 # Deneb -- Fork Logic
 
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
@@ -18,10 +20,10 @@ This document describes the process of Deneb upgrade.
 
 Warning: this configuration is not definitive.
 
-| Name                 | Value                                            |
-| -------------------- | ------------------------------------------------ |
-| `DENEB_FORK_VERSION` | `Version('0x04000000')`                          |
-| `DENEB_FORK_EPOCH`   | `Epoch(269568)` (March 13, 2024, 01:55:35pm UTC) |
+| Name                 | Mainnet                                          | Minimal                       |
+| -------------------- | ------------------------------------------------ | ----------------------------- |
+| `DENEB_FORK_VERSION` | `Version('0x04000000')`                          | `Version('0x04000001')`       |
+| `DENEB_FORK_EPOCH`   | `Epoch(269568)` (March 13, 2024, 01:55:35pm UTC) | `Epoch(18446744073709551615)` |
 
 ## Fork to Deneb
 
