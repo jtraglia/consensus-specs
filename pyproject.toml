@@ -57,13 +57,13 @@ docs = [
 include-package-data = false
 
 [tool.setuptools.package-dir]
-configs = "build/configs"
+configs = "configs"
 eth_consensus_specs = "tests/core/pyspec/eth_consensus_specs"
-presets = "build/presets"
+presets = "presets"
 specs = "specs"
 
 [tool.setuptools.packages.find]
-where = ["tests/core/pyspec", ".", "build"]
+where = ["tests/core/pyspec", "."]
 include = ["eth_consensus_specs*", "configs", "presets", "specs"]
 namespaces = true
 

@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from .discover import discover_forks, lineage, SpecError
+from .emit_json import emit_json
 from .emit_yaml import emit_yaml
 from .languages import LANGUAGES
 from .languages.python import render
@@ -44,17 +45,18 @@ def build(out: Path, selected: list[str], verbose: bool) -> None:
         for name in forks
     }
 
-    pyspec = out / "pyspec" / "eth_consensus_specs"
+    package = out / "specs"
     if not selected:
-        for directory in ("pyspec", "configs", "presets"):
+        for directory in ("specs", "configs", "presets"):
             shutil.rmtree(out / directory, ignore_errors=True)
-    pyspec.mkdir(parents=True, exist_ok=True)
+        (out / "spec.json").unlink(missing_ok=True)
+    package.mkdir(parents=True, exist_ok=True)
 
     specs: dict[str, Spec] = {}
     for name in targets:
         spec = merge(forks, documents, name)
         nodes = order(spec, shared_types(spec, everything), references)
-        directory = pyspec / name
+        directory = package / name
         directory.mkdir(parents=True, exist_ok=True)
         for preset in PRESETS:
             (directory / f"{preset}.py").write_text(render(spec, nodes, preset))
@@ -64,10 +66,11 @@ def build(out: Path, selected: list[str], verbose: bool) -> None:
             print(f"built {name}")
 
     graph = "\n".join(f"    {name!r}: {fork.parent!r}," for name, fork in forks.items())
-    (pyspec / "forks.py").write_text(f"PREVIOUS_FORK_OF = {{\n{graph}\n}}\n")
+    (package / "forks.py").write_text(f"PREVIOUS_FORK_OF = {{\n{graph}\n}}\n")
 
     if not selected:
         emit_yaml(out, specs)
+        emit_json(out, {name: merge(forks, documents, name, build=False) for name in targets})
 
 
 def main() -> int:

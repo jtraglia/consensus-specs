@@ -172,9 +172,9 @@ lint: sync
 	@$(MAKE) --no-print-directory --assume-old=sync build
 	@uv run ty check --no-progress \
 		--extra-search-path $(PYSPEC_DIR) \
-		--extra-search-path $(CURDIR)/build/pyspec \
-		$(CURDIR)/build/pyspec/eth_consensus_specs/*/mainnet.py \
-		$(CURDIR)/build/pyspec/eth_consensus_specs/*/minimal.py
+		--extra-search-path $(CURDIR)/build \
+		$(CURDIR)/build/specs/*/mainnet.py \
+		$(CURDIR)/build/specs/*/minimal.py
 	@git diff > $(LINT_DIFF_AFTER)
 	@diff -q $(LINT_DIFF_BEFORE) $(LINT_DIFF_AFTER) >/dev/null 2>&1 || \
 		echo "$(BOLD)Note: make lint modified tracked files$(NORM)"

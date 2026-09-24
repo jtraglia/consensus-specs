@@ -36,10 +36,12 @@ def same_variable(a: Item, b: Item) -> bool:
     )
 
 
-def fork_items(documents: list[Document]) -> dict[str, Item]:
+def fork_items(documents: list[Document], build: bool) -> dict[str, Item]:
     items: dict[str, Item] = {}
     for document in documents:
         for item in document.items:
+            if not build and isinstance(item, Definition) and item.build:
+                continue
             existing = items.get(item.key)
             if existing is None:
                 items[item.key] = item
@@ -53,12 +55,14 @@ def fork_items(documents: list[Document]) -> dict[str, Item]:
     return items
 
 
-def remove(items: dict[str, Item], document: Document) -> None:
+def remove(items: dict[str, Item], document: Document, build: bool) -> None:
     for section, names in document.removed.items():
         if section not in REMOVABLE:
             raise SpecError(f"{document.path}: unknown section `{section}`")
         for name in names:
             item = items.get(name)
+            if item is None and not build:
+                continue
             if item is None:
                 raise SpecError(f"{document.path}: `{name}` is not defined by an earlier fork")
             if item.kind not in REMOVABLE[section]:
@@ -67,12 +71,14 @@ def remove(items: dict[str, Item], document: Document) -> None:
             items.pop(f"{name}@{WRAPPER}", None)
 
 
-def merge(forks: dict[str, Fork], documents: dict[str, list[Document]], fork: str) -> Spec:
+def merge(
+    forks: dict[str, Fork], documents: dict[str, list[Document]], fork: str, build: bool = True
+) -> Spec:
     items: dict[str, Item] = {}
     own: set[str] = set()
     chain = lineage(forks, fork)
     for name in chain:
-        new = fork_items(documents[name])
+        new = fork_items(documents[name], build)
         removals = [document for document in documents[name] if document.removed]
         for document in removals:
             for names in document.removed.values():
@@ -82,7 +88,7 @@ def merge(forks: dict[str, Fork], documents: dict[str, list[Document]], fork: st
                     )
         items.update(new)
         for document in removals:
-            remove(items, document)
+            remove(items, document, build)
         if name == fork:
             own = set(new)
     return Spec(fork, chain, items, own)

@@ -1,9 +1,12 @@
 import ast
+import re
 import textwrap
 from collections.abc import Callable, Iterator
 from functools import cache
+from types import ModuleType
 
 from compiler.discover import SpecError
+from compiler.emit_yaml import hex_text
 from compiler.model import (
     CONFIG,
     CONSTANT,
@@ -11,6 +14,7 @@ from compiler.model import (
     FUNCTION,
     IMPORT,
     METHOD,
+    PRESET,
     Records,
     Spec,
     TYPE,
@@ -21,6 +25,15 @@ from compiler.model import (
 from compiler.order import ALIAS, CONFIGURATION, Node, PROTOCOL, VARIABLE
 
 RECORDS_TYPE = "tuple[frozendict[str, Any], ...]"
+SPEC_FIELDS = (
+    "functions",
+    "types",
+    "constants",
+    "presets",
+    "configs",
+    "containers",
+    "dataclasses",
+)
 
 
 class DeclarationError(SpecError):
@@ -180,7 +193,7 @@ class Emitter:
     def module(self, imports: list[str], blocks: list[str]) -> str:
         text = "\n\n\n".join(blocks)
         ancestors = [
-            f"from eth_consensus_specs.{ancestor} import {self.preset} as {ancestor}"
+            f"from ..{ancestor} import {self.preset} as {ancestor}"
             for ancestor in self.lineage[:-1]
         ]
         header = "\n\n".join([*imports, "\n".join(ancestors)]) + f"\n\n\nfork = '{self.fork}'"
@@ -215,3 +228,73 @@ def render(spec: Spec, nodes: list[Node], preset: str) -> str:
         if isinstance(item, Definition) and item.kind == IMPORT
     ]
     return emitter.module(imports, blocks)
+
+
+def _split(expression: str) -> tuple[str | None, str]:
+    match = re.fullmatch(r"([A-Z]\w*)\((.*)\)", expression, re.DOTALL)
+    if match is None:
+        return None, expression
+    return match.group(1), match.group(2)
+
+
+def _literal(value: object, expression: object = None) -> str:
+    if isinstance(value, tuple):
+        lines = ["("]
+        for record in value:
+            lines.append("    frozendict({")
+            lines.extend(f'        "{key}": {_literal(field)},' for key, field in record.items())
+            lines.append("    }),")
+        return "\n".join([*lines, ")"])
+    if isinstance(value, bytes):
+        return f"'{hex_text(value, expression)}'"
+    if isinstance(value, str):
+        return f"'{value}'"
+    assert isinstance(value, int)
+    return str(int(value))
+
+
+def _node_source(source: str) -> str:
+    node = _parse(source).body[0]
+    decorators = getattr(node, "decorator_list", [])
+    start = min([node.lineno, *(decorator.lineno for decorator in decorators)])
+    return "\n".join(source.split("\n")[start - 1 : node.end_lineno])
+
+
+def _is_dataclass(decorator: ast.expr) -> bool:
+    target = decorator.func if isinstance(decorator, ast.Call) else decorator
+    return isinstance(target, ast.Name) and target.id == "dataclass"
+
+
+def _type_field(source: str) -> str:
+    node = _parse(source).body[0]
+    assert isinstance(node, ast.ClassDef)
+    if any(_is_dataclass(decorator) for decorator in node.decorator_list):
+        return "dataclasses"
+    if any(isinstance(statement, ast.AnnAssign) for statement in node.body):
+        return "containers"
+    return "types"
+
+
+def spec_object(spec: Spec, preset: str, module: ModuleType) -> dict[str, dict]:
+    result: dict[str, dict] = {field: {} for field in SPEC_FIELDS}
+    for key, item in spec.items.items():
+        if isinstance(item, Variable):
+            expression = item.values[preset]
+            if item.kind == CONSTANT:
+                assert isinstance(expression, str)
+                type_name, value = _split(expression)
+                hint = "Final" if expression.startswith(("'", '"')) else None
+                result["constants"][key] = [type_name, value, None, hint]
+            elif item.kind == PRESET:
+                assert isinstance(expression, str)
+                value = _literal(getattr(module, key), expression)
+                result["presets"][key] = [_split(expression)[0], value, None, None]
+            else:
+                value = _literal(getattr(module.config, key), expression)
+                type_name = RECORDS_TYPE if isinstance(expression, list) else _split(expression)[0]
+                result["configs"][key] = [type_name, value, None, None]
+        elif item.kind == FUNCTION:
+            result["functions"][key] = _node_source(item.source)
+        elif item.kind == TYPE:
+            result[_type_field(item.source)][item.name] = _node_source(item.source)
+    return result

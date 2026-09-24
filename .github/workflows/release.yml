@@ -151,7 +151,9 @@ jobs:
         run: uv run python -m compiler
 
       - name: Stage generated specs in the package
-        run: cp -R build/pyspec/eth_consensus_specs/. tests/core/pyspec/eth_consensus_specs/
+        run: |
+          cp -R build/specs/. tests/core/pyspec/eth_consensus_specs/
+          cp -R build/configs build/presets .
 
       - name: Build package
         run: uv build
