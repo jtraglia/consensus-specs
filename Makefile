@@ -137,6 +137,7 @@ sync: pyproject.toml
 	@uv sync --all-extras $(MAYBE_VERBOSE)
 
 # Generate executable specifications.
+.PHONY: build
 build: MAYBE_VERBOSE := $(if $(filter true,$(verbose)),--verbose)
 build: sync
 	@uv run python -m compiler $(MAYBE_VERBOSE)

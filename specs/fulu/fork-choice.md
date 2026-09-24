@@ -101,7 +101,7 @@ def is_data_available(beacon_block_root: Root) -> bool:
 
 <!-- eth_consensus_specs: build
 ```python
-def retrieve_column_sidecars(beacon_block_root: Root) -> Sequence[DataColumnSidecar]:
+def retrieve_column_sidecars(_beacon_block_root: Root) -> Sequence[DataColumnSidecar]:
     return []
 ```
 -->

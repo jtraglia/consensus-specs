@@ -270,7 +270,7 @@ post-state.
 #### New `get_stored_preregistration_index`
 
 ```python
-def get_stored_preregistration_index(state: BeaconState, pubkey: BLSPubkey) -> Optional[Uint64]:
+def get_stored_preregistration_index(state: BeaconState, pubkey: BLSPubkey) -> Uint64 | None:
     for index, preregistration in enumerate(state.validator_preregistrations):
         if preregistration.pubkey == pubkey:
             return Uint64(index)
@@ -282,7 +282,7 @@ def get_stored_preregistration_index(state: BeaconState, pubkey: BLSPubkey) -> O
 ```python
 def get_active_preregistration(
     state: BeaconState, pubkey: BLSPubkey
-) -> Optional[StoredPreregistration]:
+) -> StoredPreregistration | None:
     index = get_stored_preregistration_index(state, pubkey)
     if index is None:
         return None
@@ -363,7 +363,7 @@ def process_preregistration_expiry(state: BeaconState) -> None:
 
 ```python
 def get_execution_requests_list(execution_requests: ExecutionRequests) -> Sequence[bytes]:
-    requests: Sequence[Tuple[Bytes1, ProgressiveList]] = [
+    requests: Sequence[tuple[Bytes1, ProgressiveList]] = [
         (DEPOSIT_REQUEST_TYPE, execution_requests.deposits),
         (WITHDRAWAL_REQUEST_TYPE, execution_requests.withdrawals),
         (CONSOLIDATION_REQUEST_TYPE, execution_requests.consolidations),

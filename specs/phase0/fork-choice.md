@@ -197,13 +197,13 @@ class Store:
     unrealized_justified_checkpoint: Checkpoint
     unrealized_finalized_checkpoint: Checkpoint
     proposer_boost_root: Root
-    equivocating_indices: Set[ValidatorIndex]
-    blocks: Dict[Root, BeaconBlock]
-    block_states: Dict[Root, BeaconState]
-    block_timeliness: Dict[Root, bool]
-    checkpoint_states: Dict[Checkpoint, BeaconState]
-    latest_messages: Dict[ValidatorIndex, LatestMessage]
-    unrealized_justifications: Dict[Root, Checkpoint]
+    equivocating_indices: set[ValidatorIndex]
+    blocks: dict[Root, BeaconBlock]
+    block_states: dict[Root, BeaconState]
+    block_timeliness: dict[Root, bool]
+    checkpoint_states: dict[Checkpoint, BeaconState]
+    latest_messages: dict[ValidatorIndex, LatestMessage]
+    unrealized_justifications: dict[Root, Checkpoint]
 ```
 
 #### `get_forkchoice_store`
@@ -413,7 +413,7 @@ by the recursive logic in this function) MUST set `block_root` to
 `store.justified_checkpoint.root`.
 
 ```python
-def filter_block_tree(store: Store, block_root: Root, blocks: Dict[Root, BeaconBlock]) -> bool:
+def filter_block_tree(store: Store, block_root: Root, blocks: dict[Root, BeaconBlock]) -> bool:
     block = store.blocks[block_root]
     children = [root for root in store.blocks if store.blocks[root].parent_root == block_root]
 
@@ -460,13 +460,13 @@ def filter_block_tree(store: Store, block_root: Root, blocks: Dict[Root, BeaconB
 #### `get_filtered_block_tree`
 
 ```python
-def get_filtered_block_tree(store: Store) -> Dict[Root, BeaconBlock]:
+def get_filtered_block_tree(store: Store) -> dict[Root, BeaconBlock]:
     """
     Retrieve a filtered block tree from ``store``, only returning branches
     whose leaf state's justified/finalized info agrees with that in ``store``.
     """
     base = store.justified_checkpoint.root
-    blocks: Dict[Root, BeaconBlock] = {}
+    blocks: dict[Root, BeaconBlock] = {}
     filter_block_tree(store, base, blocks)
     return blocks
 ```
@@ -476,7 +476,7 @@ def get_filtered_block_tree(store: Store) -> Dict[Root, BeaconBlock]:
 ```python
 def get_node_children(
     store: Store,  # noqa: ARG001
-    blocks: Dict[Root, BeaconBlock],
+    blocks: dict[Root, BeaconBlock],
     node: ForkChoiceNode,
 ) -> Sequence[ForkChoiceNode]:
     return [ForkChoiceNode(root=root) for root in blocks if blocks[root].parent_root == node.root]

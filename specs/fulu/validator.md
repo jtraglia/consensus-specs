@@ -236,7 +236,7 @@ def get_data_column_sidecars(
     signed_block_header: SignedBeaconBlockHeader,
     kzg_commitments: BlobKZGCommitments,
     kzg_commitments_inclusion_proof: KZGCommitmentsInclusionProof,
-    cells_and_kzg_proofs: Sequence[Tuple[Cells, Proofs]],
+    cells_and_kzg_proofs: Sequence[tuple[Cells, Proofs]],
 ) -> Sequence[DataColumnSidecar]:
     """
     Given a signed block header and the commitments, inclusion proof, cells/proofs associated with
@@ -269,7 +269,7 @@ def get_data_column_sidecars(
 ```python
 def get_data_column_sidecars_from_block(
     signed_block: SignedBeaconBlock,
-    cells_and_kzg_proofs: Sequence[Tuple[Cells, Proofs]],
+    cells_and_kzg_proofs: Sequence[tuple[Cells, Proofs]],
 ) -> Sequence[DataColumnSidecar]:
     """
     Given a signed block and the cells/proofs associated with each blob in the
@@ -296,7 +296,7 @@ def get_data_column_sidecars_from_block(
 ```python
 def get_data_column_sidecars_from_column_sidecar(
     sidecar: DataColumnSidecar,
-    cells_and_kzg_proofs: Sequence[Tuple[Cells, Proofs]],
+    cells_and_kzg_proofs: Sequence[tuple[Cells, Proofs]],
 ) -> Sequence[DataColumnSidecar]:
     """
     Given a data column sidecar and the cells/proofs associated with each blob corresponding

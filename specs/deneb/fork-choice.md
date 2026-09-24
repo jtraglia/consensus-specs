@@ -84,8 +84,8 @@ def verify_blob_kzg_proof_batch(
 <!-- eth_consensus_specs: build
 ```python
 def retrieve_blobs_and_proofs(
-    beacon_block_root: Root,
-) -> Tuple[Sequence[Blob], Sequence[KZGProof]]:
+    _beacon_block_root: Root,
+) -> tuple[Sequence[Blob], Sequence[KZGProof]]:
     return [], []
 ```
 -->

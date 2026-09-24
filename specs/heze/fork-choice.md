@@ -80,9 +80,9 @@ class NoopExecutionEngine(ExecutionEngine):
         head_block_hash: Hash32,
         safe_block_hash: Hash32,
         finalized_block_hash: Hash32,
-        payload_attributes: Optional[PayloadAttributes],
-        custody_columns: Optional[CustodyColumnBits],
-    ) -> Optional[PayloadId]:
+        payload_attributes: PayloadAttributes | None,
+        custody_columns: CustodyColumnBits | None,
+    ) -> PayloadId | None:
         pass
 
     def get_payload(self: ExecutionEngine, payload_id: PayloadId) -> GetPayloadResponse:
@@ -135,9 +135,9 @@ def notify_forkchoice_updated(
     head_block_hash: Hash32,
     safe_block_hash: Hash32,
     finalized_block_hash: Hash32,
-    payload_attributes: Optional[PayloadAttributes],
-    custody_columns: Optional[CustodyColumnBits],
-) -> Optional[PayloadId]: ...
+    payload_attributes: PayloadAttributes | None,
+    custody_columns: CustodyColumnBits | None,
+) -> PayloadId | None: ...
 ```
 
 ## Helpers
@@ -175,18 +175,18 @@ class Store:
     unrealized_justified_checkpoint: Checkpoint
     unrealized_finalized_checkpoint: Checkpoint
     proposer_boost_root: Root
-    equivocating_indices: Set[ValidatorIndex]
-    blocks: Dict[Root, BeaconBlock]
-    block_states: Dict[Root, BeaconState]
-    block_timeliness: Dict[Root, list[bool]]
-    checkpoint_states: Dict[Checkpoint, BeaconState]
-    latest_messages: Dict[ValidatorIndex, LatestMessage]
-    unrealized_justifications: Dict[Root, Checkpoint]
-    payloads: Dict[Root, ExecutionPayloadEnvelope]
-    payload_timeliness_vote: Dict[Root, list[Optional[Boolean]]]
-    payload_data_availability_vote: Dict[Root, list[Optional[Boolean]]]
+    equivocating_indices: set[ValidatorIndex]
+    blocks: dict[Root, BeaconBlock]
+    block_states: dict[Root, BeaconState]
+    block_timeliness: dict[Root, list[bool]]
+    checkpoint_states: dict[Checkpoint, BeaconState]
+    latest_messages: dict[ValidatorIndex, LatestMessage]
+    unrealized_justifications: dict[Root, Checkpoint]
+    payloads: dict[Root, ExecutionPayloadEnvelope]
+    payload_timeliness_vote: dict[Root, list[Boolean | None]]
+    payload_data_availability_vote: dict[Root, list[Boolean | None]]
     # [New in Heze:EIP7805]
-    payload_inclusion_list_satisfaction: Dict[Root, bool]
+    payload_inclusion_list_satisfaction: dict[Root, bool]
 ```
 
 ### Modified `get_forkchoice_store`

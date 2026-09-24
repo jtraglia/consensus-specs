@@ -140,10 +140,10 @@ def notify_forkchoice_updated(
     head_block_hash: Hash32,
     safe_block_hash: Hash32,
     finalized_block_hash: Hash32,
-    payload_attributes: Optional[PayloadAttributes],
+    payload_attributes: PayloadAttributes | None,
     # [New in Gloas:EIP8070]
-    custody_columns: Optional[CustodyColumnBits],
-) -> Optional[PayloadId]: ...
+    custody_columns: CustodyColumnBits | None,
+) -> PayloadId | None: ...
 ```
 
 <!-- eth_consensus_specs: build
@@ -162,9 +162,9 @@ class NoopExecutionEngine(ExecutionEngine):
         head_block_hash: Hash32,
         safe_block_hash: Hash32,
         finalized_block_hash: Hash32,
-        payload_attributes: Optional[PayloadAttributes],
-        custody_columns: Optional[CustodyColumnBits],
-    ) -> Optional[PayloadId]:
+        payload_attributes: PayloadAttributes | None,
+        custody_columns: CustodyColumnBits | None,
+    ) -> PayloadId | None:
         pass
 
     def get_payload(self: ExecutionEngine, payload_id: PayloadId) -> GetPayloadResponse:
@@ -242,20 +242,20 @@ class Store:
     unrealized_justified_checkpoint: Checkpoint
     unrealized_finalized_checkpoint: Checkpoint
     proposer_boost_root: Root
-    equivocating_indices: Set[ValidatorIndex]
-    blocks: Dict[Root, BeaconBlock]
-    block_states: Dict[Root, BeaconState]
+    equivocating_indices: set[ValidatorIndex]
+    blocks: dict[Root, BeaconBlock]
+    block_states: dict[Root, BeaconState]
     # [Modified in Gloas:EIP7732]
-    block_timeliness: Dict[Root, list[bool]]
-    checkpoint_states: Dict[Checkpoint, BeaconState]
-    latest_messages: Dict[ValidatorIndex, LatestMessage]
-    unrealized_justifications: Dict[Root, Checkpoint]
+    block_timeliness: dict[Root, list[bool]]
+    checkpoint_states: dict[Checkpoint, BeaconState]
+    latest_messages: dict[ValidatorIndex, LatestMessage]
+    unrealized_justifications: dict[Root, Checkpoint]
     # [New in Gloas:EIP7732]
-    payloads: Dict[Root, ExecutionPayloadEnvelope]
+    payloads: dict[Root, ExecutionPayloadEnvelope]
     # [New in Gloas:EIP7732]
-    payload_timeliness_vote: Dict[Root, list[Optional[Boolean]]]
+    payload_timeliness_vote: dict[Root, list[Boolean | None]]
     # [New in Gloas:EIP7732]
-    payload_data_availability_vote: Dict[Root, list[Optional[Boolean]]]
+    payload_data_availability_vote: dict[Root, list[Boolean | None]]
 ```
 
 ### Modified `get_forkchoice_store`
@@ -356,7 +356,7 @@ def is_data_available(beacon_block_root: Root) -> bool:
 <!-- eth_consensus_specs: build
 ```python
 def retrieve_column_sidecars_and_kzg_commitments(
-    beacon_block_root: Root,
+    _beacon_block_root: Root,
 ) -> tuple[Sequence[DataColumnSidecar], BlobKZGCommitments]:
     return [], BlobKZGCommitments()
 ```
@@ -650,7 +650,7 @@ representing *full* and *empty* blocks.
 
 ```python
 def get_node_children(
-    store: Store, blocks: Dict[Root, BeaconBlock], node: ForkChoiceNode
+    store: Store, blocks: dict[Root, BeaconBlock], node: ForkChoiceNode
 ) -> Sequence[ForkChoiceNode]:
     if node.payload_status == PAYLOAD_STATUS_PENDING:
         children = [ForkChoiceNode(root=node.root, payload_status=PAYLOAD_STATUS_EMPTY)]

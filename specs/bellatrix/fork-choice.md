@@ -76,8 +76,8 @@ def notify_forkchoice_updated(
     head_block_hash: Hash32,
     safe_block_hash: Hash32,
     finalized_block_hash: Hash32,
-    payload_attributes: Optional[PayloadAttributes],
-) -> Optional[PayloadId]: ...
+    payload_attributes: PayloadAttributes | None,
+) -> PayloadId | None: ...
 ```
 
 *Note*: The `(head_block_hash, finalized_block_hash)` values of the
@@ -128,16 +128,16 @@ class PowBlock(Container):
 
 ### `get_pow_block`
 
-Let `get_pow_block(block_hash: Hash32) -> Optional[PowBlock]` be the function
-that given the hash of the PoW block returns its data. It may result in `None`
-if the requested block is not yet available.
+Let `get_pow_block(block_hash: Hash32) -> PowBlock | None` be the function that
+given the hash of the PoW block returns its data. It may result in `None` if the
+requested block is not yet available.
 
 *Note*: The `eth_getBlockByHash` JSON-RPC method may be used to pull this
 information from an execution client.
 
 <!-- eth_consensus_specs: build
 ```python
-def get_pow_block(hash: Hash32) -> Optional[PowBlock]:
+def get_pow_block(hash: Hash32) -> PowBlock | None:
     return PowBlock(block_hash=hash, parent_hash=Hash32(), total_difficulty=Uint256(0))
 ```
 -->
