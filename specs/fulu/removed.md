@@ -5,7 +5,9 @@
 ## Containers
 
 - `BlobIdentifier`
+- `BlobIdentifiers`
 - `BlobSidecar`
+- `BlobSidecars`
 - `KZGCommitmentInclusionProof`
 
 ## Functions
