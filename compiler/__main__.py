@@ -45,8 +45,7 @@ def build(out: Path, selected: list[str], verbose: bool) -> None:
     targets = [name for name in forks if name in wanted]
 
     documents = {
-        name: [parse_document(path, name, forks[name].parent) for path in forks[name].documents]
-        for name in forks
+        name: [parse_document(path, name) for path in forks[name].documents] for name in forks
     }
 
     package = out / "specs"

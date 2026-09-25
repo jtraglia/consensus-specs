@@ -52,9 +52,9 @@ def code_of(element: Element) -> str | None:
 
 
 class Parser:
-    def __init__(self, path: Path, fork: str, parent: str | None) -> None:
+    def __init__(self, path: Path, fork: str) -> None:
         self.path = path
-        self.document = Document(path, fork, parent)
+        self.document = Document(path, fork)
         self.headings: list[tuple[int, str, str | None]] = []
         self.records: dict[str, Variable] = {}
 
@@ -214,5 +214,5 @@ class Parser:
                     self.document.removed[section].append(name)
 
 
-def parse_document(path: Path, fork: str, parent: str | None) -> Document:
-    return Parser(path, fork, parent).run()
+def parse_document(path: Path, fork: str) -> Document:
+    return Parser(path, fork).run()

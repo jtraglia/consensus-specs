@@ -57,7 +57,6 @@ Item = Definition | Variable
 class Document:
     path: Path
     fork: str
-    parent: str | None
     items: list[Item] = field(default_factory=list)
     removed: dict[str, list[str]] = field(default_factory=dict)
 
