@@ -7,7 +7,7 @@
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
-- [Configuration](#configuration)
+- [Configs](#configs)
   - [Slot duration schedule](#slot-duration-schedule)
 - [Helpers](#helpers)
   - [Misc](#misc)
@@ -51,7 +51,7 @@ counts, so their wall-clock spans scale with the slot duration.
 
 *Note*: This specification is built upon [Heze](../../heze/beacon-chain.md).
 
-## Configuration
+## Configs
 
 ### Slot duration schedule
 
