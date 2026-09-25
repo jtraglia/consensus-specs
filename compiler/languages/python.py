@@ -24,38 +24,18 @@ from compiler.model import (
 )
 from compiler.order import (
     ALIAS,
-    CLASS,
     CONFIGURATION,
     CONSTANTS,
     CONTAINER,
     DATACLASS,
-    FUNCTIONS,
-    HELPER,
     Node,
     PRESETS,
     PROTOCOL,
+    TITLES,
     TYPE as TYPE_GROUP,
-    VALUES,
-    WRAPPERS,
 )
 
 RECORDS_TYPE = "tuple[frozendict[str, Any], ...]"
-BANNER = "#" * 100
-SECTION_TITLES = {
-    ALIAS: "Aliases",
-    HELPER: "Helpers",
-    TYPE_GROUP: "Types",
-    CONSTANTS: "Constants",
-    PRESETS: "Presets",
-    CONFIGURATION: "Configuration",
-    CONTAINER: "Containers",
-    DATACLASS: "Dataclasses",
-    PROTOCOL: "Protocols",
-    CLASS: "Classes",
-    VALUES: "Values",
-    FUNCTIONS: "Functions",
-    WRAPPERS: "Caches",
-}
 SPEC_FIELDS = (
     "functions",
     "types",
@@ -228,7 +208,7 @@ class Emitter:
             if previous is None or group != previous[0]:
                 if previous is not None:
                     text += "\n\n\n"
-                text += f"{BANNER}\n# {SECTION_TITLES[group]}\n{BANNER}\n\n\n"
+                text += f"{'#' * 100}\n# {TITLES[group]}\n{'#' * 100}\n\n\n"
             elif "\n" not in block and "\n" not in previous[1]:
                 text += "\n"
             else:

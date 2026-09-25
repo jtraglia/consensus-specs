@@ -47,6 +47,22 @@ GROUPS = (
     WRAPPERS,
 )
 
+TITLES = {
+    ALIAS: "Aliases",
+    HELPER: "Helpers",
+    TYPE: "Types",
+    CONSTANTS: "Constants",
+    PRESETS: "Presets",
+    CONFIGURATION: "Configuration",
+    CONTAINER: "Containers",
+    DATACLASS: "Dataclasses",
+    PROTOCOL: "Protocols",
+    CLASS: "Classes",
+    VALUES: "Values",
+    FUNCTIONS: "Functions",
+    WRAPPERS: "Caches",
+}
+
 References = Callable[[Item], tuple[frozenset[str], frozenset[str]]]
 Classify = Callable[[Definition], str]
 

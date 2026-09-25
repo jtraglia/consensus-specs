@@ -221,7 +221,7 @@ def test_light_client_sync(spec, state):
     # ```
     attested_block = block.copy()
     attested_state = state.copy()
-    next_slots(spec, state, spec.UPDATE_TIMEOUT - 1)
+    next_slots(spec, state, spec.compute_update_timeout() - 1)
     yield from emit_force_update(test, spec, state)
     assert test.store.finalized_header.beacon.slot == store_state.slot
     assert test.store.next_sync_committee == store_state.next_sync_committee
@@ -495,7 +495,7 @@ def test_light_client_sync_no_force_update(spec, state):
     """Test that force update does not occur before timeout threshold is reached.
 
     This test verifies that even with a best_valid_update present, the light client
-    will not perform a force update until sufficient time (UPDATE_TIMEOUT slots) has passed
+    will not perform a force update until sufficient time (compute_update_timeout() slots) has passed
     since the last finalized header.
 
     Test progression:
@@ -510,12 +510,12 @@ def test_light_client_sync_no_force_update(spec, state):
          |                                                V                              |
          |                                           best_valid_update                   |
          |                                                                               |
-         +------------------- (UPDATE_TIMEOUT) ------------------------------------------+
+         +------------------- (compute_update_timeout()) --------------------------------+
 
     Delays:
     * finalized to attested: 2 epochs
     * attested to signature: 1 slot
-    * signature to current slot (N): UPDATE_TIMEOUT - (2 * SLOTS_PER_EPOCH + 1) slots
+    * signature to current slot (N): compute_update_timeout() - (2 * SLOTS_PER_EPOCH + 1) slots
     ```
 
     Key points:
@@ -555,12 +555,14 @@ def test_light_client_sync_no_force_update(spec, state):
     assert test.store.best_valid_update == update
 
     # Advance just short of timeout
-    next_slots(spec, state, spec.UPDATE_TIMEOUT - (2 * spec.SLOTS_PER_EPOCH + 1))
+    next_slots(spec, state, spec.compute_update_timeout() - (2 * spec.SLOTS_PER_EPOCH + 1))
 
     # Verify force update conditions
     current_slot = state.slot
     assert test.store.best_valid_update is not None
-    assert not (current_slot > test.store.finalized_header.beacon.slot + spec.UPDATE_TIMEOUT)
+    assert not (
+        current_slot > test.store.finalized_header.beacon.slot + spec.compute_update_timeout()
+    )
 
     # Try force update
     yield from emit_force_update(test, spec, state)

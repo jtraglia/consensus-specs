@@ -82,7 +82,7 @@ def test_process_light_client_update_at_period_boundary(spec, state):
     genesis_block, store = setup_test(spec, state)
 
     # Forward to slot before next sync committee period so that next block is final one in period
-    next_slots(spec, state, spec.UPDATE_TIMEOUT - 2)
+    next_slots(spec, state, spec.compute_update_timeout() - 2)
     store_period = spec.compute_sync_committee_period_at_slot(store.optimistic_header.beacon.slot)
     update_period = spec.compute_sync_committee_period_at_slot(state.slot)
     assert store_period == update_period
@@ -124,7 +124,7 @@ def test_process_light_client_update_timeout(spec, state):
     genesis_block, store = setup_test(spec, state)
 
     # Forward to next sync committee period
-    next_slots(spec, state, spec.UPDATE_TIMEOUT)
+    next_slots(spec, state, spec.compute_update_timeout())
     store_period = spec.compute_sync_committee_period_at_slot(store.optimistic_header.beacon.slot)
     update_period = spec.compute_sync_committee_period_at_slot(state.slot)
     assert store_period + 1 == update_period

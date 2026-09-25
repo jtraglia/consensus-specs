@@ -32,6 +32,7 @@
   - [`get_subtree_index`](#get_subtree_index)
   - [`is_valid_normalized_merkle_branch`](#is_valid_normalized_merkle_branch)
   - [`compute_sync_committee_period_at_slot`](#compute_sync_committee_period_at_slot)
+  - [`compute_update_timeout`](#compute_update_timeout)
 - [Light client initialization](#light-client-initialization)
   - [`initialize_light_client_store`](#initialize_light_client_store)
 - [Light client state updates](#light-client-state-updates)
@@ -116,10 +117,9 @@ GeneralizedIndex = int
 
 ### Misc
 
-| Name                              | Mainnet                                                                    | Minimal                                                                    |
-| --------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `MIN_SYNC_COMMITTEE_PARTICIPANTS` | `Uint64(1)`                                                                | *same*                                                                     |
-| `UPDATE_TIMEOUT`                  | `Slot(Uint64(SLOTS_PER_EPOCH) * Uint64(EPOCHS_PER_SYNC_COMMITTEE_PERIOD))` | `Slot(Uint64(SLOTS_PER_EPOCH) * Uint64(EPOCHS_PER_SYNC_COMMITTEE_PERIOD))` |
+| Name                              | Mainnet     | Minimal |
+| --------------------------------- | ----------- | ------- |
+| `MIN_SYNC_COMMITTEE_PARTICIPANTS` | `Uint64(1)` | *same*  |
 
 ## Containers
 
@@ -358,6 +358,13 @@ def compute_sync_committee_period_at_slot(slot: Slot) -> Uint64:
     return compute_sync_committee_period(compute_epoch_at_slot(slot))
 ```
 
+### `compute_update_timeout`
+
+```python
+def compute_update_timeout() -> Slot:
+    return Slot(Uint64(SLOTS_PER_EPOCH) * Uint64(EPOCHS_PER_SYNC_COMMITTEE_PERIOD))
+```
+
 ## Light client initialization
 
 A light client maintains its state in a `store` object of type
@@ -523,7 +530,7 @@ def apply_light_client_update(store: LightClientStore, update: LightClientUpdate
 ```python
 def process_light_client_store_force_update(store: LightClientStore, current_slot: Slot) -> None:
     if (
-        current_slot > store.finalized_header.beacon.slot + UPDATE_TIMEOUT
+        current_slot > store.finalized_header.beacon.slot + compute_update_timeout()
         and store.best_valid_update is not None
     ):
         # Forced best update when the update timeout has elapsed.
