@@ -131,10 +131,10 @@ handlers must not modify `store`.
 
 | Name                                  | Mainnet       | Minimal |
 | ------------------------------------- | ------------- | ------- |
-| `PROPOSER_SCORE_BOOST`                | `Uint64(40)`  |         |
-| `REORG_HEAD_WEIGHT_THRESHOLD`         | `Uint64(20)`  |         |
-| `REORG_PARENT_WEIGHT_THRESHOLD`       | `Uint64(160)` |         |
-| `REORG_MAX_EPOCHS_SINCE_FINALIZATION` | `Epoch(2)`    |         |
+| `PROPOSER_SCORE_BOOST`                | `Uint64(40)`  | *same*  |
+| `REORG_HEAD_WEIGHT_THRESHOLD`         | `Uint64(20)`  | *same*  |
+| `REORG_PARENT_WEIGHT_THRESHOLD`       | `Uint64(160)` | *same*  |
+| `REORG_MAX_EPOCHS_SINCE_FINALIZATION` | `Epoch(2)`    | *same*  |
 
 - The proposer score boost and re-org weight threshold are percentage values
   that are measured with respect to the weight of a single committee. See
@@ -144,7 +144,7 @@ handlers must not modify `store`.
 
 | Name                        | Mainnet        | Minimal | Duration                   |
 | --------------------------- | -------------- | ------- | -------------------------- |
-| `PROPOSER_REORG_CUTOFF_BPS` | `Uint64(1667)` |         | ~17% of `SLOT_DURATION_MS` |
+| `PROPOSER_REORG_CUTOFF_BPS` | `Uint64(1667)` | *same*  | ~17% of `SLOT_DURATION_MS` |
 
 ### Helpers
 

@@ -59,7 +59,7 @@ class Ether(Uint64):
 
 | Name           | Mainnet      | Minimal |
 | -------------- | ------------ | ------- |
-| `SAFETY_DECAY` | `Uint64(10)` |         |
+| `SAFETY_DECAY` | `Uint64(10)` | *same*  |
 
 ## Weak Subjectivity Checkpoint
 

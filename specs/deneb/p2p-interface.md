@@ -59,7 +59,7 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 
 | Name                                   | Mainnet                                                                                                                                   | Minimal | Description                                             |
 | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------- |
-| `KZG_COMMITMENT_INCLUSION_PROOF_DEPTH` | `Uint64(floorlog2(get_generalized_index(BeaconBlockBody, 'blob_kzg_commitments')) + 1 + ceillog2(MAX_BLOB_COMMITMENTS_PER_BLOCK))` (= 17) |         | Merkle proof depth for `blob_kzg_commitments` list item |
+| `KZG_COMMITMENT_INCLUSION_PROOF_DEPTH` | `Uint64(floorlog2(get_generalized_index(BeaconBlockBody, 'blob_kzg_commitments')) + 1 + ceillog2(MAX_BLOB_COMMITMENTS_PER_BLOCK))` (= 17) | *same*  | Merkle proof depth for `blob_kzg_commitments` list item |
 
 ## Configs
 
@@ -67,9 +67,9 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 
 | Name                                    | Mainnet                  | Minimal | Description                                                    |
 | --------------------------------------- | ------------------------ | ------- | -------------------------------------------------------------- |
-| `MAX_REQUEST_BLOCKS_DENEB`              | `Uint64(2**7)` (= 128)   |         | Maximum number of blocks in a single request                   |
-| `MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS` | `Epoch(2**12)` (= 4,096) |         | Minimum epoch range over which a node must serve blob sidecars |
-| `BLOB_SIDECAR_SUBNET_COUNT`             | `Uint64(6)`              |         | Number of blob sidecar subnets used in the gossipsub protocol  |
+| `MAX_REQUEST_BLOCKS_DENEB`              | `Uint64(2**7)` (= 128)   | *same*  | Maximum number of blocks in a single request                   |
+| `MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS` | `Epoch(2**12)` (= 4,096) | *same*  | Minimum epoch range over which a node must serve blob sidecars |
+| `BLOB_SIDECAR_SUBNET_COUNT`             | `Uint64(6)`              | *same*  | Number of blob sidecar subnets used in the gossipsub protocol  |
 
 ## Types
 

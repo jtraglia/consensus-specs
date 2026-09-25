@@ -80,7 +80,7 @@ class InclusionListCommittee(Vector[ValidatorIndex]):
 
 | Name                            | Mainnet               | Minimal |
 | ------------------------------- | --------------------- | ------- |
-| `INCLUSION_LIST_COMMITTEE_SIZE` | `Uint64(2**4)` (= 16) |         |
+| `INCLUSION_LIST_COMMITTEE_SIZE` | `Uint64(2**4)` (= 16) | *same*  |
 
 ## Containers
 

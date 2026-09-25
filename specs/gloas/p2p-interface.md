@@ -76,13 +76,13 @@ for the corresponding variable-size libp2p messages. The bound for
 | --------------------------------------- | ----------------------------- | ---------------- |
 | `MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE`   | `Uint64(16829)` (= ~16 KiB)   | `Uint64(1462)`   |
 | `MAX_ATTESTER_SLASHING_SIZE`            | `Uint64(2097616)` (= ~2 MiB)  | `Uint64(131536)` |
-| `MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE` | `Uint64(196932)` (= ~192 KiB) |                  |
+| `MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE` | `Uint64(196932)` (= ~192 KiB) | *same*           |
 
 ## Configs
 
 | Name                   | Mainnet                | Minimal |
 | ---------------------- | ---------------------- | ------- |
-| `MAX_REQUEST_PAYLOADS` | `Uint64(2**7)` (= 128) |         |
+| `MAX_REQUEST_PAYLOADS` | `Uint64(2**7)` (= 128) | *same*  |
 
 ## Types
 

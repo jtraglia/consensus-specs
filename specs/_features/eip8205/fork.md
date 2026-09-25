@@ -23,7 +23,7 @@ Warning: this configuration is not definitive.
 | Name                   | Mainnet                               | Minimal                 |
 | ---------------------- | ------------------------------------- | ----------------------- |
 | `EIP8205_FORK_VERSION` | `Version('0xe8205000')`               | `Version('0xe8205001')` |
-| `EIP8205_FORK_EPOCH`   | `Epoch(18446744073709551615)` **TBD** |                         |
+| `EIP8205_FORK_EPOCH`   | `Epoch(18446744073709551615)` **TBD** | *same*                  |
 
 ## Fork to EIP-8205
 

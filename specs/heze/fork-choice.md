@@ -37,7 +37,7 @@ This is the modification of the fork choice accompanying the Heze upgrade.
 
 | Name                     | Mainnet        | Minimal | Duration                   |
 | ------------------------ | -------------- | ------- | -------------------------- |
-| `INCLUSION_LIST_DUE_BPS` | `Uint64(6667)` |         | ~67% of `SLOT_DURATION_MS` |
+| `INCLUSION_LIST_DUE_BPS` | `Uint64(6667)` | *same*  | ~67% of `SLOT_DURATION_MS` |
 
 ## Protocols
 

@@ -60,8 +60,39 @@ def load_module(out: Path, fork: str, preset: str) -> ModuleType:
     return importlib.import_module(f"eth_consensus_specs.{fork}.{preset}")
 
 
+def plain(value: Any) -> object:
+    if isinstance(value, bytes):
+        return bytes(value)
+    if isinstance(value, str):
+        return value
+    if isinstance(value, tuple):
+        return tuple(
+            tuple((key, plain(field)) for key, field in record.items()) for record in value
+        )
+    return int(value)
+
+
+def check_same(out: Path, fork: str, spec: Spec) -> None:
+    default = load_module(out, fork, PRESETS[0])
+    for key, item in spec.items.items():
+        if not (isinstance(item, Variable) and item.same and key in spec.own):
+            continue
+        for preset in item.same:
+            module = load_module(out, fork, preset)
+            source, base = (
+                (module.config, default.config) if item.kind == CONFIG else (module, default)
+            )
+            value, expected = getattr(source, key), getattr(base, key)
+            if plain(value) != plain(expected):
+                raise SpecError(
+                    f"{item.path}: `{key}` is marked *same* but is {value!r} on {preset} "
+                    f"and {expected!r} on {PRESETS[0]}"
+                )
+
+
 def emit_yaml(out: Path, specs: Mapping[str, Spec]) -> None:
     for fork, spec in specs.items():
+        check_same(out, fork, spec)
         for preset in PRESETS:
             module = load_module(out, fork, preset)
             for directory, source, kind in (

@@ -116,10 +116,10 @@ GeneralizedIndex = int
 
 ### Misc
 
-| Name                              | Mainnet                                                                    | Minimal |
-| --------------------------------- | -------------------------------------------------------------------------- | ------- |
-| `MIN_SYNC_COMMITTEE_PARTICIPANTS` | `Uint64(1)`                                                                |         |
-| `UPDATE_TIMEOUT`                  | `Slot(Uint64(SLOTS_PER_EPOCH) * Uint64(EPOCHS_PER_SYNC_COMMITTEE_PERIOD))` |         |
+| Name                              | Mainnet                                                                    | Minimal                                                                    |
+| --------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `MIN_SYNC_COMMITTEE_PARTICIPANTS` | `Uint64(1)`                                                                | *same*                                                                     |
+| `UPDATE_TIMEOUT`                  | `Slot(Uint64(SLOTS_PER_EPOCH) * Uint64(EPOCHS_PER_SYNC_COMMITTEE_PERIOD))` | `Slot(Uint64(SLOTS_PER_EPOCH) * Uint64(EPOCHS_PER_SYNC_COMMITTEE_PERIOD))` |
 
 ## Containers
 

@@ -112,8 +112,8 @@ specifications before continuing and use as a reference throughout.
 
 | Name                  | Mainnet        | Minimal | Duration                   |
 | --------------------- | -------------- | ------- | -------------------------- |
-| `ATTESTATION_DUE_BPS` | `Uint64(3333)` |         | ~33% of `SLOT_DURATION_MS` |
-| `AGGREGATE_DUE_BPS`   | `Uint64(6667)` |         | ~67% of `SLOT_DURATION_MS` |
+| `ATTESTATION_DUE_BPS` | `Uint64(3333)` | *same*  | ~33% of `SLOT_DURATION_MS` |
+| `AGGREGATE_DUE_BPS`   | `Uint64(6667)` | *same*  | ~67% of `SLOT_DURATION_MS` |
 
 ## Containers
 

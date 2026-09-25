@@ -28,6 +28,7 @@ BUILD = re.compile(
     r"<!--\s*eth_consensus_specs:\s*build\s*\n```(\w+)\n(.*?)\n```\s*\n-->", re.DOTALL
 )
 RECORD_NOTES = ("Date", "Description")
+SAME = "same"
 
 
 def text_of(element: Element | str) -> str:
@@ -160,11 +161,19 @@ class Parser:
                 values: dict[str, str | Records] = dict.fromkeys(PRESETS, value)
             else:
                 values = {}
-                for preset, cell in zip(PRESETS, cells[1:], strict=False):
+                same = []
+                for preset, cell in zip(PRESETS, cells[1 : 1 + len(PRESETS)], strict=True):
                     value = code_of(cell)
-                    if value is None and preset == PRESETS[0]:
+                    if value is None and preset != PRESETS[0] and text_of(cell).strip() == SAME:
+                        value = values[PRESETS[0]]
+                        same.append(preset)
+                    if value is None:
                         raise self.error(f"`{name}` has no {preset} value")
-                    values[preset] = value if value is not None else values[PRESETS[0]]
+                    values[preset] = value
+                self.document.items.append(
+                    Variable(name, kind, values, self.document.fork, self.path, tuple(same))
+                )
+                continue
             self.document.items.append(Variable(name, kind, values, self.document.fork, self.path))
 
     def list_of_records(self, table: Table, directive: dict[str, str]) -> None:

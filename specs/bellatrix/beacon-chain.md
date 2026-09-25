@@ -133,18 +133,18 @@ final, maximum security values.
 
 | Name                                         | Mainnet                        | Minimal |
 | -------------------------------------------- | ------------------------------ | ------- |
-| `INACTIVITY_PENALTY_QUOTIENT_BELLATRIX`      | `Uint64(2**24)` (= 16,777,216) |         |
-| `MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX`    | `Uint64(2**5)` (= 32)          |         |
-| `PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX` | `Uint64(3)`                    |         |
+| `INACTIVITY_PENALTY_QUOTIENT_BELLATRIX`      | `Uint64(2**24)` (= 16,777,216) | *same*  |
+| `MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX`    | `Uint64(2**5)` (= 32)          | *same*  |
+| `PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX` | `Uint64(3)`                    | *same*  |
 
 ### Execution
 
 | Name                           | Mainnet                           | Minimal |
 | ------------------------------ | --------------------------------- | ------- |
-| `MAX_BYTES_PER_TRANSACTION`    | `Uint64(2**30)` (= 1,073,741,824) |         |
-| `MAX_TRANSACTIONS_PER_PAYLOAD` | `Uint64(2**20)` (= 1,048,576)     |         |
-| `BYTES_PER_LOGS_BLOOM`         | `Uint64(2**8)` (= 256)            |         |
-| `MAX_EXTRA_DATA_BYTES`         | `Uint64(2**5)` (= 32)             |         |
+| `MAX_BYTES_PER_TRANSACTION`    | `Uint64(2**30)` (= 1,073,741,824) | *same*  |
+| `MAX_TRANSACTIONS_PER_PAYLOAD` | `Uint64(2**20)` (= 1,048,576)     | *same*  |
+| `BYTES_PER_LOGS_BLOOM`         | `Uint64(2**8)` (= 256)            | *same*  |
+| `MAX_EXTRA_DATA_BYTES`         | `Uint64(2**5)` (= 32)             | *same*  |
 
 ## Configs
 
@@ -153,8 +153,8 @@ final, maximum security values.
 | Name                                   | Mainnet                            | Minimal                                                                                                                             |
 | -------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `TERMINAL_TOTAL_DIFFICULTY`            | `Uint256(58750000000000000000000)` | `Uint256(2**256-2**10)` (= 115,792,089,237,316,195,423,570,985,008,687,907,853,269,984,665,640,564,039,457,584,007,913,129,638,912) |
-| `TERMINAL_BLOCK_HASH`                  | `Hash32()`                         |                                                                                                                                     |
-| `TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH` | `Epoch(FAR_FUTURE_EPOCH)`          |                                                                                                                                     |
+| `TERMINAL_BLOCK_HASH`                  | `Hash32()`                         | *same*                                                                                                                              |
+| `TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH` | `Epoch(FAR_FUTURE_EPOCH)`          | *same*                                                                                                                              |
 
 ## Containers
 

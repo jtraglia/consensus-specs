@@ -42,6 +42,7 @@ class Variable:
     values: dict[str, str | Records]
     fork: str
     path: Path
+    same: tuple[str, ...] = ()
 
     @property
     def key(self) -> str:

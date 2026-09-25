@@ -29,7 +29,7 @@ Warning: this configuration is not definitive.
 | Name                 | Mainnet                               | Minimal                 |
 | -------------------- | ------------------------------------- | ----------------------- |
 | `GLOAS_FORK_VERSION` | `Version('0x07000000')`               | `Version('0x07000001')` |
-| `GLOAS_FORK_EPOCH`   | `Epoch(18446744073709551615)` **TBD** |                         |
+| `GLOAS_FORK_EPOCH`   | `Epoch(18446744073709551615)` **TBD** | *same*                  |
 
 ## Helpers
 

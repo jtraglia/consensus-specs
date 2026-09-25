@@ -613,11 +613,11 @@ operation, e.g. testing, but not generally between different networks.
 | -------------------------------- | ------------------------- | -------------------- |
 | `MAX_COMMITTEES_PER_SLOT`        | `Uint64(2**6)` (= 64)     | `Uint64(2**2)` (= 4) |
 | `TARGET_COMMITTEE_SIZE`          | `Uint64(2**7)` (= 128)    | `Uint64(2**2)` (= 4) |
-| `MAX_VALIDATORS_PER_COMMITTEE`   | `Uint64(2**11)` (= 2,048) |                      |
+| `MAX_VALIDATORS_PER_COMMITTEE`   | `Uint64(2**11)` (= 2,048) | *same*               |
 | `SHUFFLE_ROUND_COUNT`            | `Uint64(90)`              | `Uint64(10)`         |
-| `HYSTERESIS_QUOTIENT`            | `Uint64(4)`               |                      |
-| `HYSTERESIS_DOWNWARD_MULTIPLIER` | `Uint64(1)`               |                      |
-| `HYSTERESIS_UPWARD_MULTIPLIER`   | `Uint64(5)`               |                      |
+| `HYSTERESIS_QUOTIENT`            | `Uint64(4)`               | *same*               |
+| `HYSTERESIS_DOWNWARD_MULTIPLIER` | `Uint64(1)`               | *same*               |
+| `HYSTERESIS_UPWARD_MULTIPLIER`   | `Uint64(5)`               | *same*               |
 
 - For the safety of committees, `TARGET_COMMITTEE_SIZE` exceeds
   [the recommended minimum committee size of 111](http://web.archive.org/web/20190504131341/https://vitalik.ca/files/Ithaca201807_Sharding.pdf);
@@ -631,19 +631,19 @@ operation, e.g. testing, but not generally between different networks.
 
 | Name                          | Mainnet                                 | Minimal |
 | ----------------------------- | --------------------------------------- | ------- |
-| `MIN_DEPOSIT_AMOUNT`          | `Gwei(2**0 * 10**9)` (= 1,000,000,000)  |         |
-| `MAX_EFFECTIVE_BALANCE`       | `Gwei(2**5 * 10**9)` (= 32,000,000,000) |         |
-| `EFFECTIVE_BALANCE_INCREMENT` | `Gwei(2**0 * 10**9)` (= 1,000,000,000)  |         |
+| `MIN_DEPOSIT_AMOUNT`          | `Gwei(2**0 * 10**9)` (= 1,000,000,000)  | *same*  |
+| `MAX_EFFECTIVE_BALANCE`       | `Gwei(2**5 * 10**9)` (= 32,000,000,000) | *same*  |
+| `EFFECTIVE_BALANCE_INCREMENT` | `Gwei(2**0 * 10**9)` (= 1,000,000,000)  | *same*  |
 
 ### Time parameters
 
 | Name                               | Mainnet                 | Minimal             |
 | ---------------------------------- | ----------------------- | ------------------- |
-| `MIN_ATTESTATION_INCLUSION_DELAY`  | `Slot(2**0)` (= 1)      |                     |
+| `MIN_ATTESTATION_INCLUSION_DELAY`  | `Slot(2**0)` (= 1)      | *same*              |
 | `SLOTS_PER_EPOCH`                  | `Slot(2**5)` (= 32)     | `Slot(2**3)` (= 8)  |
-| `MIN_SEED_LOOKAHEAD`               | `Epoch(2**0)` (= 1)     |                     |
-| `MAX_SEED_LOOKAHEAD`               | `Epoch(2**2)` (= 4)     |                     |
-| `MIN_EPOCHS_TO_INACTIVITY_PENALTY` | `Epoch(2**2)` (= 4)     |                     |
+| `MIN_SEED_LOOKAHEAD`               | `Epoch(2**0)` (= 1)     | *same*              |
+| `MAX_SEED_LOOKAHEAD`               | `Epoch(2**2)` (= 4)     | *same*              |
+| `MIN_EPOCHS_TO_INACTIVITY_PENALTY` | `Epoch(2**2)` (= 4)     | *same*              |
 | `EPOCHS_PER_ETH1_VOTING_PERIOD`    | `Epoch(2**6)` (= 64)    | `Epoch(2**2)` (= 4) |
 | `SLOTS_PER_HISTORICAL_ROOT`        | `Slot(2**13)` (= 8,192) | `Slot(2**6)` (= 64) |
 
@@ -653,16 +653,16 @@ operation, e.g. testing, but not generally between different networks.
 | ------------------------------ | ------------------------------------- | -------------------- |
 | `EPOCHS_PER_HISTORICAL_VECTOR` | `Epoch(2**16)` (= 65,536)             | `Epoch(2**6)` (= 64) |
 | `EPOCHS_PER_SLASHINGS_VECTOR`  | `Epoch(2**13)` (= 8,192)              | `Epoch(2**6)` (= 64) |
-| `HISTORICAL_ROOTS_LIMIT`       | `Uint64(2**24)` (= 16,777,216)        |                      |
-| `VALIDATOR_REGISTRY_LIMIT`     | `Uint64(2**40)` (= 1,099,511,627,776) |                      |
+| `HISTORICAL_ROOTS_LIMIT`       | `Uint64(2**24)` (= 16,777,216)        | *same*               |
+| `VALIDATOR_REGISTRY_LIMIT`     | `Uint64(2**40)` (= 1,099,511,627,776) | *same*               |
 
 ### Rewards and penalties
 
 | Name                               | Mainnet                        | Minimal                        |
 | ---------------------------------- | ------------------------------ | ------------------------------ |
-| `BASE_REWARD_FACTOR`               | `Uint64(2**6)` (= 64)          |                                |
-| `WHISTLEBLOWER_REWARD_QUOTIENT`    | `Uint64(2**9)` (= 512)         |                                |
-| `PROPOSER_REWARD_QUOTIENT`         | `Uint64(2**3)` (= 8)           |                                |
+| `BASE_REWARD_FACTOR`               | `Uint64(2**6)` (= 64)          | *same*                         |
+| `WHISTLEBLOWER_REWARD_QUOTIENT`    | `Uint64(2**9)` (= 512)         | *same*                         |
+| `PROPOSER_REWARD_QUOTIENT`         | `Uint64(2**3)` (= 8)           | *same*                         |
 | `INACTIVITY_PENALTY_QUOTIENT`      | `Uint64(2**26)` (= 67,108,864) | `Uint64(2**25)` (= 33,554,432) |
 | `MIN_SLASHING_PENALTY_QUOTIENT`    | `Uint64(2**7)` (= 128)         | `Uint64(2**6)` (= 64)          |
 | `PROPORTIONAL_SLASHING_MULTIPLIER` | `Uint64(1)`                    | `Uint64(2)`                    |
@@ -686,11 +686,11 @@ operation, e.g. testing, but not generally between different networks.
 
 | Name                     | Mainnet                | Minimal |
 | ------------------------ | ---------------------- | ------- |
-| `MAX_PROPOSER_SLASHINGS` | `Uint64(2**4)` (= 16)  |         |
-| `MAX_ATTESTER_SLASHINGS` | `Uint64(2**1)` (= 2)   |         |
-| `MAX_ATTESTATIONS`       | `Uint64(2**7)` (= 128) |         |
-| `MAX_DEPOSITS`           | `Uint64(2**4)` (= 16)  |         |
-| `MAX_VOLUNTARY_EXITS`    | `Uint64(2**4)` (= 16)  |         |
+| `MAX_PROPOSER_SLASHINGS` | `Uint64(2**4)` (= 16)  | *same*  |
+| `MAX_ATTESTER_SLASHINGS` | `Uint64(2**1)` (= 2)   | *same*  |
+| `MAX_ATTESTATIONS`       | `Uint64(2**7)` (= 128) | *same*  |
+| `MAX_DEPOSITS`           | `Uint64(2**4)` (= 16)  | *same*  |
+| `MAX_VOLUNTARY_EXITS`    | `Uint64(2**4)` (= 16)  | *same*  |
 
 ## Configs
 
@@ -720,8 +720,8 @@ different configuration.
 | Name                                  | Mainnet                   | Minimal               |
 | ------------------------------------- | ------------------------- | --------------------- |
 | `SLOT_DURATION_MS`                    | `Uint64(12000)`           | `Uint64(6000)`        |
-| `SECONDS_PER_ETH1_BLOCK`              | `Uint64(14)`              |                       |
-| `MIN_VALIDATOR_WITHDRAWABILITY_DELAY` | `Epoch(2**8)` (= 256)     |                       |
+| `SECONDS_PER_ETH1_BLOCK`              | `Uint64(14)`              | *same*                |
+| `MIN_VALIDATOR_WITHDRAWABILITY_DELAY` | `Epoch(2**8)` (= 256)     | *same*                |
 | `SHARD_COMMITTEE_PERIOD`              | `Epoch(2**8)` (= 256)     | `Epoch(2**6)` (= 64)  |
 | `ETH1_FOLLOW_DISTANCE`                | `Uint64(2**11)` (= 2,048) | `Uint64(2**4)` (= 16) |
 
@@ -729,7 +729,7 @@ different configuration.
 
 | Name                        | Mainnet                                 | Minimal               |
 | --------------------------- | --------------------------------------- | --------------------- |
-| `EJECTION_BALANCE`          | `Gwei(2**4 * 10**9)` (= 16,000,000,000) |                       |
+| `EJECTION_BALANCE`          | `Gwei(2**4 * 10**9)` (= 16,000,000,000) | *same*                |
 | `MIN_PER_EPOCH_CHURN_LIMIT` | `Uint64(2**2)` (= 4)                    | `Uint64(2**1)` (= 2)  |
 | `CHURN_LIMIT_QUOTIENT`      | `Uint64(2**16)` (= 65,536)              | `Uint64(2**5)` (= 32) |
 

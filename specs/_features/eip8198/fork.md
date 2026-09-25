@@ -23,7 +23,7 @@ Warning: this configuration is not definitive.
 | Name                   | Mainnet                               | Minimal                 |
 | ---------------------- | ------------------------------------- | ----------------------- |
 | `EIP8198_FORK_VERSION` | `Version('0xe8198000')`               | `Version('0xe8198001')` |
-| `EIP8198_FORK_EPOCH`   | `Epoch(18446744073709551615)` **TBD** |                         |
+| `EIP8198_FORK_EPOCH`   | `Epoch(18446744073709551615)` **TBD** | *same*                  |
 
 ## Fork to EIP-8198
 

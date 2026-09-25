@@ -142,8 +142,8 @@ class RandaoCommitments(ProgressiveList[Bytes32]):
 
 | Name                                  | Mainnet                | Minimal |
 | ------------------------------------- | ---------------------- | ------- |
-| `COMMITMENT_REGISTRATION_DELAY`       | `Epoch(3)` (= 3)       |         |
-| `MAX_RANDAO_COMMITMENT_REGISTRATIONS` | `Uint64(2**7)` (= 128) |         |
+| `COMMITMENT_REGISTRATION_DELAY`       | `Epoch(3)` (= 3)       | *same*  |
+| `MAX_RANDAO_COMMITMENT_REGISTRATIONS` | `Uint64(2**7)` (= 128) | *same*  |
 
 *Note*: `COMMITMENT_REGISTRATION_DELAY` must be at least
 `MIN_SEED_LOOKAHEAD + 2` so that a registrant cannot know whether it proposes in

@@ -43,7 +43,7 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 
 | Name                                | Mainnet     | Minimal | Description                                                   |
 | ----------------------------------- | ----------- | ------- | ------------------------------------------------------------- |
-| `BLOB_SIDECAR_SUBNET_COUNT_ELECTRA` | `Uint64(9)` |         | Number of blob sidecar subnets used in the gossipsub protocol |
+| `BLOB_SIDECAR_SUBNET_COUNT_ELECTRA` | `Uint64(9)` | *same*  | Number of blob sidecar subnets used in the gossipsub protocol |
 
 ## Helpers
 

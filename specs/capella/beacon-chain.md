@@ -131,7 +131,7 @@ class Withdrawals(List[Withdrawal]):
 
 | Name                           | Mainnet               | Minimal |
 | ------------------------------ | --------------------- | ------- |
-| `MAX_BLS_TO_EXECUTION_CHANGES` | `Uint64(2**4)` (= 16) |         |
+| `MAX_BLS_TO_EXECUTION_CHANGES` | `Uint64(2**4)` (= 16) | *same*  |
 
 ### Execution
 

@@ -109,7 +109,7 @@ cross-network replay.
 
 | Name                                       | Mainnet                     | Minimal               |
 | ------------------------------------------ | --------------------------- | --------------------- |
-| `MAX_PREREGISTRATION_REQUESTS_PER_PAYLOAD` | `Uint64(2**2)` (= 4)        |                       |
+| `MAX_PREREGISTRATION_REQUESTS_PER_PAYLOAD` | `Uint64(2**2)` (= 4)        | *same*                |
 | `PREREGISTRATIONS_LIMIT`                   | `Uint64(2**19)` (= 524,288) | `Uint64(2**6)` (= 64) |
 | `PREREGISTRATION_EXPIRY_SLOTS`             | `Slot(2**18)` (= 262,144)   | `Slot(2**6)` (= 64)   |
 

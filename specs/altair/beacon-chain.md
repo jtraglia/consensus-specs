@@ -178,9 +178,9 @@ to their final, maximum security values.
 
 | Name                                      | Mainnet                            | Minimal |
 | ----------------------------------------- | ---------------------------------- | ------- |
-| `INACTIVITY_PENALTY_QUOTIENT_ALTAIR`      | `Uint64(3 * 2**24)` (= 50,331,648) |         |
-| `MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR`    | `Uint64(2**6)` (= 64)              |         |
-| `PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR` | `Uint64(2)`                        |         |
+| `INACTIVITY_PENALTY_QUOTIENT_ALTAIR`      | `Uint64(3 * 2**24)` (= 50,331,648) | *same*  |
+| `MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR`    | `Uint64(2**6)` (= 64)              | *same*  |
+| `PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR` | `Uint64(2)`                        | *same*  |
 
 ### Sync committee
 
@@ -195,8 +195,8 @@ to their final, maximum security values.
 
 | Name                             | Mainnet               | Minimal | Description                      |
 | -------------------------------- | --------------------- | ------- | -------------------------------- |
-| `INACTIVITY_SCORE_BIAS`          | `Uint64(2**2)` (= 4)  |         | Score points per inactive epoch  |
-| `INACTIVITY_SCORE_RECOVERY_RATE` | `Uint64(2**4)` (= 16) |         | Score points per leak-free epoch |
+| `INACTIVITY_SCORE_BIAS`          | `Uint64(2**2)` (= 4)  | *same*  | Score points per inactive epoch  |
+| `INACTIVITY_SCORE_RECOVERY_RATE` | `Uint64(2**4)` (= 16) | *same*  | Score points per leak-free epoch |
 
 ## Containers
 
