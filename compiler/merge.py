@@ -75,7 +75,6 @@ def merge(
     forks: dict[str, Fork], documents: dict[str, list[Document]], fork: str, build: bool = True
 ) -> Spec:
     items: dict[str, Item] = {}
-    own: set[str] = set()
     chain = lineage(forks, fork)
     for name in chain:
         new = fork_items(documents[name], build)
@@ -89,9 +88,7 @@ def merge(
         items.update(new)
         for document in removals:
             remove(items, document, build)
-        if name == fork:
-            own = set(new)
-    return Spec(fork, chain, items, own)
+    return Spec(fork, chain, items)
 
 
 def shared_types(spec: Spec, references: Callable[[Item], frozenset[str]]) -> set[str]:

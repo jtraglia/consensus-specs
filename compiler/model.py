@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from functools import cached_property
 from pathlib import Path
 
 PRESETS = ("mainnet", "minimal")
@@ -73,4 +74,7 @@ class Spec:
     fork: str
     lineage: tuple[str, ...]
     items: dict[str, Item]
-    own: set[str]
+
+    @cached_property
+    def own(self) -> set[str]:
+        return {key for key, item in self.items.items() if item.fork == self.fork}
