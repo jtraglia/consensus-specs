@@ -8,6 +8,7 @@ from .model import (
     Document,
     Fork,
     FUNCTION,
+    IMPORT,
     Item,
     PRESET,
     Spec,
@@ -25,6 +26,7 @@ REMOVABLE = {
     "Containers": (TYPE,),
     "Dataclasses": (TYPE,),
     "Functions": (FUNCTION,),
+    "Imports": (IMPORT,),
 }
 
 

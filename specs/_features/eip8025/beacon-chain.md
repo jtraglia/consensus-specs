@@ -30,6 +30,12 @@
 
 <!-- mdformat-toc end -->
 
+<!-- eth_consensus_specs: build
+```python
+from ssz.uint import Uint16
+```
+-->
+
 ## Introduction
 
 These are the beacon-chain specifications that introduce execution proofs which

@@ -30,6 +30,12 @@
 
 <!-- mdformat-toc end -->
 
+<!-- eth_consensus_specs: build
+```python
+from collections import Counter, defaultdict
+```
+-->
+
 ## Introduction
 
 Heze is a consensus-layer upgrade containing a number of features. Including:

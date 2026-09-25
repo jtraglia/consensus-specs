@@ -1,5 +1,6 @@
 import ast
 import re
+import sys
 import textwrap
 from collections.abc import Callable, Iterator
 from functools import cache
@@ -81,6 +82,43 @@ def read_declaration(source: str) -> tuple[str, str, str | None]:
         case ast.Assign(targets=[ast.Name(id=name)]) | ast.AnnAssign(target=ast.Name(id=name)):
             return VALUE, name, None
     raise DeclarationError(f"unrecognized definition: {source.splitlines()[0]}")
+
+
+def split_imports(source: str) -> list[tuple[str, str]]:
+    imports = []
+    for node in _parse(source).body:
+        for alias in node.names:
+            if isinstance(node, ast.ImportFrom):
+                statement = f"from {node.module} import {alias.name}"
+                name = alias.asname or alias.name
+            else:
+                statement = f"import {alias.name}"
+                name = alias.asname or alias.name.split(".")[0]
+            if alias.asname and alias.asname != alias.name:
+                statement += f" as {alias.asname}"
+            imports.append((name, statement))
+    return imports
+
+
+def _imports(statements: list[str]) -> list[str]:
+    modules: dict[str, list[str]] = {}
+    for statement in statements:
+        node = _parse(statement).body[0]
+        alias = node.names[0]
+        part = alias.name if alias.asname is None else f"{alias.name} as {alias.asname}"
+        module = node.module if isinstance(node, ast.ImportFrom) else None
+        modules.setdefault(str(module), []).append(part)
+    groups: list[list[str]] = [[], [], []]
+    for module in sorted(modules):
+        parts = modules[module]
+        if module == "None":
+            lines = [f"import {part}" for part in parts]
+        else:
+            lines = [f"from {module} import {', '.join(parts)}"]
+        root = (parts[0] if module == "None" else module).split(".")[0]
+        group = 0 if root in sys.stdlib_module_names else 2 if root == "eth_consensus_specs" else 1
+        groups[group].extend(lines)
+    return ["\n".join(group) for group in groups if group]
 
 
 def _names(node: ast.AST, lazy: bool = False) -> Iterator[tuple[ast.Name, bool]]:
@@ -242,11 +280,18 @@ def render(spec: Spec, nodes: list[Node], preset: str) -> str:
             ]
         blocks.extend((node.group, text) for text in texts)
     imports = [
-        item.source
-        for item in spec.items.values()
-        if isinstance(item, Definition) and item.kind == IMPORT
+        item for item in spec.items.values() if isinstance(item, Definition) and item.kind == IMPORT
     ]
-    return emitter.module(imports, blocks)
+    used = {
+        node.id
+        for _, text in blocks
+        for node in ast.walk(_parse(text))
+        if isinstance(node, ast.Name)
+    }
+    for item in imports:
+        if item.fork == spec.fork and item.name not in used:
+            raise DeclarationError(f"{item.path}: `{item.name}` is imported but not used")
+    return emitter.module(_imports([item.source for item in imports]), blocks)
 
 
 def _split(expression: str) -> tuple[str | None, str]:

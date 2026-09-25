@@ -125,6 +125,12 @@
 
 <!-- mdformat-toc end -->
 
+<!-- eth_consensus_specs: build
+```python
+from eth_consensus_specs.utils.ssz.ssz_impl import ssz_deserialize
+```
+-->
+
 ## Introduction
 
 Electra is a consensus-layer upgrade containing a number of features. Including:

@@ -62,7 +62,9 @@
 
 <!-- eth_consensus_specs: build
 ```python
-from typing import NewType, Union as PyUnion
+from typing import TypeAlias
+
+from ssz.collections import ProgressiveList
 
 from eth_consensus_specs.test.helpers.merkle import build_proof, get_generalized_index
 ```

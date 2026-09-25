@@ -48,6 +48,12 @@
 
 <!-- mdformat-toc end -->
 
+<!-- eth_consensus_specs: build
+```python
+from ssz.uint import Uint16
+```
+-->
+
 ## Introduction
 
 This upgrade adds custom validator sweep threshold functionality to the beacon

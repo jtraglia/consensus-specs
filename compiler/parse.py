@@ -15,6 +15,7 @@ from .model import (
     CONSTANT,
     Definition,
     Document,
+    IMPORT,
     PRESET,
     PRESETS,
     Records,
@@ -110,6 +111,12 @@ class Parser:
             heading = self.headings[-1][2] if self.headings else None
             if heading is not None and heading != name:
                 raise self.error(f"type `{name}` is under the heading for `{heading}`")
+        if kind == IMPORT:
+            for imported, statement in language.split_imports(source):
+                self.document.items.append(
+                    Definition(imported, kind, lang, statement, self.document.fork, self.path)
+                )
+            return
         self.document.items.append(
             Definition(name, kind, lang, source, self.document.fork, self.path, receiver, build)
         )

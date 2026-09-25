@@ -179,23 +179,22 @@
 
 <!-- eth_consensus_specs: build
 ```python
-from collections import Counter, defaultdict
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from hashlib import sha256 as sha256_hash
-from typing import Any, Final, NamedTuple, TypeAlias
+from typing import Any, Final, NamedTuple
 
 from lru import LRU
 from ssz.bitfields import BitList, BitVector
 from ssz.boolean import Boolean
-from ssz.collections import List, ProgressiveList, Vector
+from ssz.collections import List, Vector
 from ssz.container import Container
 from ssz.ssz_base import SSZType
-from ssz.uint import BaseUint as Uint, Byte, Uint8, Uint16, Uint32, Uint64, Uint256
+from ssz.uint import BaseUint as Uint, Byte, Uint8, Uint32, Uint64, Uint256
 
 from eth_consensus_specs.utils import bls
 from eth_consensus_specs.utils.ssz.bytes import Bytes1, Bytes4, Bytes20, Bytes32, Bytes48, Bytes96
-from eth_consensus_specs.utils.ssz.ssz_impl import ssz_deserialize, ssz_serialize
+from eth_consensus_specs.utils.ssz.ssz_impl import ssz_serialize
 ```
 -->
 
