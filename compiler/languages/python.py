@@ -151,21 +151,6 @@ class Emitter:
     def to_config(self, name: str) -> str | None:
         return f"config.{name}" if name in self.configs else None
 
-    def config_value(self, name: str, seen: tuple[str, ...] = ()) -> str | Records:
-        if name in seen:
-            raise DeclarationError(f"configs reference each other: {' -> '.join((*seen, name))}")
-        value = self.configs[name].values[self.preset]
-        if isinstance(value, list):
-            return value
-
-        def inline(reference: str) -> str | None:
-            if reference not in self.configs:
-                return None
-            inner = self.config_value(reference, (*seen, name))
-            return f"({inner})" if isinstance(inner, str) else _records(inner)
-
-        return rewrite(value, inline)
-
     def variable(self, variable: Variable) -> str:
         value = variable.values[self.preset]
         assert isinstance(value, str)
@@ -180,9 +165,17 @@ class Emitter:
             for name, variable in self.configs.items()
         )
         values = []
-        for name in self.configs:
-            value = self.config_value(name)
-            values.append(f"    {name}={_records(value) if isinstance(value, list) else value},")
+        for name, variable in self.configs.items():
+            value = variable.values[self.preset]
+            if isinstance(value, list):
+                values.append(f"    {name}={_records(value)},")
+                continue
+            if others := references(value)[0] & self.configs.keys():
+                raise DeclarationError(
+                    f"{variable.path}: config `{name}` must not reference other configs: "
+                    f"{', '.join(sorted(others))}"
+                )
+            values.append(f"    {name}={value},")
         return (
             f"class Configuration(NamedTuple):\n{fields}\n\n\n"
             f"config = Configuration(\n" + "\n".join(values) + "\n)"
