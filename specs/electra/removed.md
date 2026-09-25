@@ -2,6 +2,12 @@
 
 # Electra -- Removed
 
+## Configs
+
+- `BLOB_SIDECAR_SUBNET_COUNT`
+- `MAX_BLOBS_PER_BLOCK`
+- `MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT`
+
 ## Functions
 
 - `get_validator_activation_churn_limit`

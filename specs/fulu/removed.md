@@ -2,6 +2,10 @@
 
 # Fulu -- Removed
 
+## Configs
+
+- `BLOB_SIDECAR_SUBNET_COUNT_ELECTRA`
+
 ## Containers
 
 - `BlobIdentifier`

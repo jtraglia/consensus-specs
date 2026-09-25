@@ -2,6 +2,11 @@
 
 # Deneb -- Removed
 
+## Configs
+
+- `ATTESTATION_PROPAGATION_SLOT_RANGE`
+- `MAX_REQUEST_BLOCKS`
+
 ## Functions
 
 - `upgrade_lc_bootstrap_to_capella`

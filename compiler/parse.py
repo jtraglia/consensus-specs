@@ -22,8 +22,8 @@ from .model import (
     Variable,
 )
 
-SECTIONS = {"constants": CONSTANT, "presets": PRESET, "configs": CONFIG}
-SECTION = re.compile(r"\b(constants|presets|configs)\b", re.IGNORECASE)
+SECTIONS = {"constants": CONSTANT, "presets": PRESET, "configs": CONFIG, "configuration": CONFIG}
+SECTION = re.compile(r"\b(constants|presets|configs|configuration)\b", re.IGNORECASE)
 BUILD = re.compile(
     r"<!--\s*eth_consensus_specs:\s*build\s*\n```(\w+)\n(.*?)\n```\s*\n-->", re.DOTALL
 )

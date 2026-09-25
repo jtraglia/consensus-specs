@@ -2147,7 +2147,7 @@ def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
 <!-- eth_consensus_specs: build
 ```python
 get_base_reward = cache_this(
-    lambda state, index: (state.validators.hash_tree_root(), state.slot, index),
+    lambda state, index, *args: (state.validators.hash_tree_root(), state.slot, index, *args),
     get_base_reward,
     lru_size=2048,
 )

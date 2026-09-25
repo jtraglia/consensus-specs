@@ -6,6 +6,11 @@
 
 - `SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY`
 
+## Configs
+
+- `TERMINAL_BLOCK_HASH`
+- `TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH`
+
 ## Containers
 
 - `HistoricalBatch`
