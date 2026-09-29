@@ -8,28 +8,25 @@ from marko.ext.gfm import gfm
 from marko.ext.gfm.elements import Table
 from marko.inline import CodeSpan
 
-from .discover import DeclarationError, DIRECTIVE, parse_directive, REMOVED, SpecError
 from .languages import LANGUAGES
-from .model import (
-    CONFIG,
-    CONSTANT,
-    Definition,
-    Document,
-    IMPORT,
-    PRESET,
-    PRESETS,
-    Records,
-    TYPE,
-    Variable,
-)
+from .model import Definition, Document, Kind, PRESETS, Records, SpecError, Variable
 
-SECTIONS = {"constants": CONSTANT, "presets": PRESET, "configs": CONFIG}
-SECTION = re.compile(r"\b(constants|presets|configs)\b", re.IGNORECASE)
+DIRECTIVE = re.compile(r"<!--\s*eth_consensus_specs:\s*(.*?)\s*-->", re.DOTALL)
 BUILD = re.compile(
     r"<!--\s*eth_consensus_specs:\s*build\s*\n```(\w+)\n(.*?)\n```\s*\n-->", re.DOTALL
 )
+SECTIONS = {"constants": Kind.CONSTANT, "presets": Kind.PRESET, "configs": Kind.CONFIG}
+SECTION = re.compile(rf"\b({'|'.join(SECTIONS)})\b", re.IGNORECASE)
+REMOVED = "removed.md"
 RECORD_NOTES = ("Date", "Description")
 SAME = "same"
+
+
+def parse_directive(text: str) -> dict[str, str]:
+    match = DIRECTIVE.fullmatch(text.strip())
+    if match is None:
+        return {}
+    return dict(word.partition("=")[::2] for word in match.group(1).split())
 
 
 def text_of(element: Element | str) -> str:
@@ -92,7 +89,7 @@ class Parser:
         self.headings = [h for h in self.headings if h[0] < heading.level]
         self.headings.append((heading.level, text_of(heading), name))
 
-    def section(self) -> str | None:
+    def section(self) -> Kind | None:
         for _, text, _ in reversed(self.headings):
             if match := SECTION.search(text):
                 return SECTIONS[match.group(1).lower()]
@@ -104,22 +101,17 @@ class Parser:
             return
         source = "\n".join(line.rstrip() for line in source.split("\n"))
         try:
-            kind, name, receiver = language.read_declaration(source)
-        except DeclarationError as error:
+            declarations = language.declarations(source)
+        except SpecError as error:
             raise self.error(str(error)) from None
-        if kind == TYPE and not build:
-            heading = self.headings[-1][2] if self.headings else None
-            if heading is not None and heading != name:
-                raise self.error(f"type `{name}` is under the heading for `{heading}`")
-        if kind == IMPORT:
-            for imported, statement in language.split_imports(source):
-                self.document.items.append(
-                    Definition(imported, kind, lang, statement, self.document.fork, self.path)
-                )
-            return
-        self.document.items.append(
-            Definition(name, kind, lang, source, self.document.fork, self.path, receiver, build)
-        )
+        for kind, name, text, receiver in declarations:
+            if kind == Kind.TYPE and not build:
+                heading = self.headings[-1][2] if self.headings else None
+                if heading is not None and heading != name:
+                    raise self.error(f"type `{name}` is under the heading for `{heading}`")
+            self.document.items.append(
+                Definition(name, kind, lang, text, self.document.fork, self.path, receiver, build)
+            )
 
     def html(self, body: str, elements: Iterator[Element]) -> None:
         body = body.strip()
@@ -151,7 +143,7 @@ class Parser:
         if kind is None:
             return
         header, rows = self.rows(table)
-        if kind == CONSTANT:
+        if kind == Kind.CONSTANT:
             expected = ["Name", "Value"]
         else:
             expected = ["Name", *(preset.capitalize() for preset in PRESETS)]
@@ -161,27 +153,23 @@ class Parser:
             name = code_of(cells[0])
             if name is None:
                 raise self.error(f"table row has no name: {text_of(cells[0])}")
-            if kind == CONSTANT:
-                value = code_of(cells[1])
-                if value is None:
-                    raise self.error(f"`{name}` has no value")
-                values: dict[str, str | Records] = dict.fromkeys(PRESETS, value)
+            if kind == Kind.CONSTANT:
+                columns = [cells[1]] * len(PRESETS)
             else:
-                values = {}
-                same = []
-                for preset, cell in zip(PRESETS, cells[1 : 1 + len(PRESETS)], strict=True):
-                    value = code_of(cell)
-                    if value is None and preset != PRESETS[0] and text_of(cell).strip() == SAME:
-                        value = values[PRESETS[0]]
-                        same.append(preset)
-                    if value is None:
-                        raise self.error(f"`{name}` has no {preset} value")
-                    values[preset] = value
-                self.document.items.append(
-                    Variable(name, kind, values, self.document.fork, self.path, tuple(same))
-                )
-                continue
-            self.document.items.append(Variable(name, kind, values, self.document.fork, self.path))
+                columns = cells[1 : 1 + len(PRESETS)]
+            values: dict[str, str | Records] = {}
+            same = []
+            for preset, cell in zip(PRESETS, columns, strict=True):
+                value = code_of(cell)
+                if value is None and preset != PRESETS[0] and text_of(cell).strip() == SAME:
+                    value = values[PRESETS[0]]
+                    same.append(preset)
+                if value is None:
+                    raise self.error(f"`{name}` has no {preset} value")
+                values[preset] = value
+            self.document.items.append(
+                Variable(name, kind, values, self.document.fork, self.path, tuple(same))
+            )
 
     def list_of_records(self, table: Table, directive: dict[str, str]) -> None:
         name = directive["list-of-records"].upper()
@@ -198,7 +186,7 @@ class Parser:
         ]
         if name not in self.records:
             variable = Variable(
-                name, CONFIG, {preset: [] for preset in PRESETS}, self.document.fork, self.path
+                name, Kind.CONFIG, {preset: [] for preset in PRESETS}, self.document.fork, self.path
             )
             self.records[name] = variable
             self.document.items.append(variable)

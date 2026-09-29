@@ -1,36 +1,24 @@
+import re
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
+from typing import NamedTuple
 
-from compiler.discover import DeclarationError
 from compiler.model import (
-    CONFIG,
-    CONSTANT,
     Definition,
-    FUNCTION,
-    IMPORT,
+    Group,
     Item,
-    PRESET,
+    Kind,
+    PRESETS,
     Records,
+    References,
+    Shape,
     Spec,
-    TYPE,
+    SpecError,
+    Values,
     Variable,
 )
-from compiler.order import (
-    ALIAS,
-    CONFIGURATION,
-    CONSTANTS,
-    CONTAINER,
-    DATACLASS,
-    Node,
-    PRESETS,
-    PROTOCOL,
-    TITLES,
-    TYPE as TYPE_GROUP,
-)
-from compiler.values import Values
-
-References = tuple[frozenset[str], frozenset[str]]
+from compiler.order import Node, order
 
 SPEC_FIELDS = (
     "functions",
@@ -41,48 +29,29 @@ SPEC_FIELDS = (
     "containers",
     "dataclasses",
 )
+TYPE_FIELDS = {
+    Shape.SCALAR: "types",
+    Shape.COLLECTION: "types",
+    Shape.CONTAINER: "containers",
+    Shape.DATACLASS: "dataclasses",
+}
 
-SCALAR = "scalar"
-COLLECTION = "collection"
-STRUCTURE = "container"
-RECORD = "dataclass"
+
+class Declaration(NamedTuple):
+    kind: Kind
+    name: str
+    source: str
+    receiver: str | None = None
 
 
 class Language(ABC):
     name: str
 
     @abstractmethod
-    def read_declaration(self, source: str) -> tuple[str, str, str | None]: ...
-
-    @abstractmethod
-    def split_imports(self, source: str) -> list[tuple[str, str]]: ...
+    def declarations(self, source: str) -> list[Declaration]: ...
 
     @abstractmethod
     def references(self, source: str) -> References: ...
-
-    def item_references(self, item: Item) -> References:
-        if isinstance(item, Definition):
-            return LANGUAGES[item.lang].references(item.source)
-        eager: frozenset[str] = frozenset()
-        for value in item.values.values():
-            if isinstance(value, str):
-                sources = [value]
-            else:
-                sources = [field for record in value for field in record.values()]
-            for source in sources:
-                eager |= self.references(source)[0]
-        return eager, frozenset()
-
-    def all_references(self, item: Item) -> frozenset[str]:
-        eager, deferred = self.item_references(item)
-        return eager | deferred
-
-
-LANGUAGES: dict[str, Language] = {}
-
-
-def register(language: Language) -> None:
-    LANGUAGES[language.name] = language
 
 
 class Foreign(Language):
@@ -90,24 +59,31 @@ class Foreign(Language):
     def signature(self, definition: Definition) -> tuple[list[tuple[str, str]], str]: ...
 
     @abstractmethod
-    def build(self, directory: Path, preset: str, definitions: list[Definition]) -> None: ...
+    def build(
+        self, directory: Path, preset: str, definitions: list[Definition], cache: Path
+    ) -> None: ...
 
 
 class Target(Language):
+    extension: str
     separator: str
+    banner: str
+    alias: str
+    config_reference: str
+    foreign_import: str
 
-    # Reading
+    def __init__(self, *foreign: Foreign) -> None:
+        self.foreign = {language.name: language for language in foreign}
+        self.languages: dict[str, Language] = {self.name: self, **self.foreign}
 
     @abstractmethod
     def rewrite(self, source: str, replace: Callable[[str], str | None]) -> str: ...
 
     @abstractmethod
-    def shape(self, definition: Definition) -> str: ...
-
-    # Writing
+    def shape(self, definition: Definition) -> Shape: ...
 
     @abstractmethod
-    def config_reference(self, name: str) -> str: ...
+    def expression(self, value: str | Records) -> str: ...
 
     @abstractmethod
     def variable(self, variable: Variable, value: str) -> str: ...
@@ -119,36 +95,7 @@ class Target(Language):
     def protocol(self, name: str, methods: list[str]) -> str: ...
 
     @abstractmethod
-    def alias(self, name: str, module: str) -> str: ...
-
-    @abstractmethod
-    def banner(self, title: str) -> str: ...
-
-    @abstractmethod
     def header(self, imports: list[str], spec: Spec, preset: str) -> str: ...
-
-    # Values
-
-    @abstractmethod
-    def load(self, out: Path, fork: str, preset: str) -> object: ...
-
-    @abstractmethod
-    def lookup(self, module: object, variable: Variable) -> object: ...
-
-    @abstractmethod
-    def source(self, definition: Definition) -> str: ...
-
-    @abstractmethod
-    def split_expression(self, expression: str) -> tuple[str | None, str]: ...
-
-    @abstractmethod
-    def literal(self, value: object, expression: object) -> str: ...
-
-    @abstractmethod
-    def constant_hint(self, expression: str) -> str | None: ...
-
-    @abstractmethod
-    def records_type(self) -> str: ...
 
     @abstractmethod
     def foreign_function(
@@ -160,94 +107,107 @@ class Target(Language):
     ) -> str: ...
 
     @abstractmethod
-    def foreign_imports(self) -> list[str]: ...
+    def write_forks(self, out: Path, parents: dict[str, str | None]) -> None: ...
 
-    # Shared
+    @abstractmethod
+    def load(self, out: Path, fork: str, preset: str) -> Mapping[str, object]: ...
 
-    def classify(self, definition: Definition) -> str:
-        shape = self.shape(definition)
-        if shape == RECORD:
-            return DATACLASS
-        return TYPE_GROUP if shape == SCALAR else CONTAINER
+    @abstractmethod
+    def source(self, definition: Definition) -> str: ...
+
+    @abstractmethod
+    def split_expression(self, value: str | Records) -> tuple[str | None, str]: ...
+
+    @abstractmethod
+    def literal(self, value: object, expression: str) -> str: ...
+
+    @abstractmethod
+    def constant_hint(self, expression: str) -> str | None: ...
+
+    def item_references(self, item: Item) -> References:
+        if isinstance(item, Definition):
+            return self.languages[item.lang].references(item.source)
+        sources = (self.expression(value) for value in item.values.values())
+        return frozenset().union(*(self.references(source)[0] for source in sources)), frozenset()
+
+    def write(self, out: Path, spec: Spec) -> Path:
+        nodes = order(spec, self.item_references, self.shape)
+        directory = out / "specs" / spec.fork
+        directory.mkdir(parents=True, exist_ok=True)
+        for preset in PRESETS:
+            (directory / f"{preset}.{self.extension}").write_text(self.render(spec, nodes, preset))
+        for name, language in self.foreign.items():
+            definitions = [
+                item
+                for item in spec.items.values()
+                if isinstance(item, Definition) and item.lang == name
+            ]
+            if any(item.key in spec.own for item in definitions):
+                for preset in PRESETS:
+                    language.build(directory, preset, definitions, out / "cache" / name)
+        return directory
 
     def render(self, spec: Spec, nodes: list[Node], preset: str) -> str:
         configs = {
             key: item
             for key, item in spec.items.items()
-            if isinstance(item, Variable) and item.kind == CONFIG
+            if isinstance(item, Variable) and item.kind == Kind.CONFIG
         }
 
         def to_config(name: str) -> str | None:
-            return self.config_reference(name) if name in configs else None
+            return self.config_reference.format(name) if name in configs else None
 
-        def emit(item: Definition) -> str:
+        def emit(item: Item) -> str:
+            if isinstance(item, Variable):
+                value = self.expression(item.values[preset])
+                return self.variable(item, self.rewrite(value, to_config))
             if item.lang == self.name:
                 return self.rewrite(item.source, to_config)
-            language = LANGUAGES[item.lang]
-            if not isinstance(language, Foreign) or item.kind != FUNCTION:
-                raise DeclarationError(f"{item.path}: cannot emit `{item.name}` from {item.lang}")
-            return self.foreign_function(item, *language.signature(item), preset)
+            return self.foreign_function(item, *self.foreign[item.lang].signature(item), preset)
 
-        blocks: list[tuple[str, str]] = []
-        for node in nodes:
-            definitions = [item for item in node.items if isinstance(item, Definition)]
-            if node.group == ALIAS:
-                texts = [self.alias(node.key, spec.lineage[-2])]
-            elif node.group == CONFIGURATION:
-                texts = [self.render_configuration(configs, preset)]
-            elif node.group == PROTOCOL:
-                methods = [emit(item) for item in definitions]
-                texts = [self.protocol(node.key, methods)]
-            elif node.group in (CONSTANTS, PRESETS):
-                texts = [
-                    self.variable(item, self.rewrite(item.values[preset], to_config))
-                    for item in node.items
-                    if isinstance(item, Variable) and isinstance(item.values[preset], str)
-                ]
-            else:
-                texts = [emit(item) for item in definitions]
-            blocks.extend((node.group, text) for text in texts)
+        def text(node: Node) -> str:
+            if node.group == Group.ALIAS:
+                return self.alias.format(name=node.key, module=spec.lineage[-2])
+            if node.group == Group.CONFIGURATION:
+                return self.render_configuration(configs, preset)
+            if node.group == Group.PROTOCOL:
+                return self.protocol(node.key, [emit(item) for item in node.items])
+            return emit(node.items[0])
 
-        imports = [
-            item
-            for item in spec.items.values()
-            if isinstance(item, Definition) and item.kind == IMPORT
-        ]
+        blocks = [(node.group, text(node)) for node in nodes]
         used: set[str] = set()
-        for _, text in blocks:
-            used.update(*self.references(text))
+        for _, block in blocks:
+            used.update(*self.references(block))
+        definitions = [item for item in spec.items.values() if isinstance(item, Definition)]
+        imports = [item for item in definitions if item.kind == Kind.IMPORT]
         for item in imports:
             if item.fork == spec.fork and item.name not in used:
-                raise DeclarationError(f"{item.path}: `{item.name}` is imported but not used")
-        foreign = any(
-            isinstance(item, Definition) and item.lang != self.name for item in spec.items.values()
-        )
+                raise SpecError(f"{item.path}: `{item.name}` is imported but not used")
         statements = [item.source for item in imports]
-        header = self.header(
-            [*statements, *(self.foreign_imports() if foreign else [])], spec, preset
-        )
-        return header + self.separator + self.join(blocks) + "\n"
+        if any(item.lang in self.foreign for item in definitions):
+            statements.append(self.foreign_import)
+        return self.header(statements, spec, preset) + self.separator + self.join(blocks) + "\n"
 
     def render_configuration(self, configs: dict[str, Variable], preset: str) -> str:
-        entries: list[tuple[str, str | Records]] = []
         for name, variable in configs.items():
-            value = variable.values[preset]
-            if isinstance(value, str) and (others := self.references(value)[0] & configs.keys()):
-                raise DeclarationError(
+            source = self.expression(variable.values[preset])
+            if others := self.references(source)[0] & configs.keys():
+                raise SpecError(
                     f"{variable.path}: config `{name}` must not reference other configs: "
                     f"{', '.join(sorted(others))}"
                 )
-            entries.append((name, value))
-        return self.configuration(entries)
+        return self.configuration(
+            [(name, variable.values[preset]) for name, variable in configs.items()]
+        )
 
-    def join(self, blocks: list[tuple[str, str]]) -> str:
+    def join(self, blocks: list[tuple[Group, str]]) -> str:
         text = ""
         previous = None
         for group, block in blocks:
             if previous is None or group != previous[0]:
                 if previous is not None:
                     text += self.separator
-                text += self.banner(TITLES[group]) + self.separator
+                text += self.banner.format(group) + self.separator
             elif "\n" not in block and "\n" not in previous[1]:
                 text += "\n"
             else:
@@ -257,42 +217,32 @@ class Target(Language):
         return text
 
     def evaluate(self, out: Path, spec: Spec, preset: str) -> Values:
-        module = self.load(out, spec.fork, preset)
+        namespace = self.load(out, spec.fork, preset)
         return {
-            key: plain(self.lookup(module, item))
+            key: plain(namespace[key])
             for key, item in spec.items.items()
-            if isinstance(item, Variable) and item.kind in (PRESET, CONFIG)
+            if item.kind in (Kind.PRESET, Kind.CONFIG)
         }
 
     def spec_object(self, spec: Spec, preset: str, values: Values) -> dict[str, dict]:
         result: dict[str, dict] = {field: {} for field in SPEC_FIELDS}
         for key, item in spec.items.items():
             if isinstance(item, Variable):
-                expression = item.values[preset]
-                if item.kind == CONSTANT:
-                    assert isinstance(expression, str)
-                    type_name, value = self.split_expression(expression)
-                    result["constants"][key] = [
-                        type_name,
-                        value,
-                        None,
-                        self.constant_hint(expression),
-                    ]
-                    continue
-                if isinstance(expression, str):
-                    type_name = self.split_expression(expression)[0]
+                expression = self.expression(item.values[preset])
+                type_name, value = self.split_expression(item.values[preset])
+                if item.kind == Kind.CONSTANT:
+                    hint = self.constant_hint(expression)
+                    result["constants"][key] = [type_name, value, None, hint]
                 else:
-                    type_name = self.records_type()
-                field = "presets" if item.kind == PRESET else "configs"
-                result[field][key] = [type_name, self.literal(values[key], expression), None, None]
-            elif item.kind == FUNCTION:
+                    field = "presets" if item.kind == Kind.PRESET else "configs"
+                    literal = self.literal(values[key], expression)
+                    result[field][key] = [type_name, literal, None, None]
+            elif item.kind == Kind.FUNCTION:
                 result["functions"][key] = (
                     self.source(item) if item.lang == self.name else item.source
                 )
-            elif item.kind == TYPE:
-                shape = self.shape(item)
-                field = {RECORD: "dataclasses", STRUCTURE: "containers"}.get(shape, "types")
-                result[field][item.name] = self.source(item)
+            elif item.kind == Kind.TYPE:
+                result[TYPE_FIELDS[self.shape(item)]][item.name] = self.source(item)
         return result
 
 
@@ -305,3 +255,12 @@ def plain(value: object) -> object:
         return tuple({key: plain(field) for key, field in record.items()} for record in value)
     assert isinstance(value, int)
     return int(value)
+
+
+def hex_text(value: bytes, expression: object = None) -> str:
+    text = "0x" + value.hex()
+    if isinstance(expression, str):
+        for literal in re.findall(r"0x[0-9a-fA-F]+", expression):
+            if literal.lower() == text:
+                return literal
+    return text

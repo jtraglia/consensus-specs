@@ -1,8 +1,8 @@
-from .base import Foreign, Language, LANGUAGES, register, Target
+from .base import Target
 from .lean import Lean
 from .python import Python
 
-register(Python())
-register(Lean())
+PYTHON = Python(Lean())
+LANGUAGES = PYTHON.languages
 
-__all__ = ["LANGUAGES", "Foreign", "Language", "Target"]
+__all__ = ["LANGUAGES", "PYTHON", "Target"]

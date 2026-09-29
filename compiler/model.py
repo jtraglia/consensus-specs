@@ -1,27 +1,63 @@
 from dataclasses import dataclass, field
+from enum import auto, StrEnum
 from functools import cached_property
 from pathlib import Path
+from typing import ClassVar
 
 PRESETS = ("mainnet", "minimal")
 
-FUNCTION = "function"
-IMPORT = "import"
-METHOD = "method"
-TYPE = "type"
-VALUE = "value"
-WRAPPER = "wrapper"
-
-CONSTANT = "constant"
-PRESET = "preset"
-CONFIG = "config"
-
 Records = list[dict[str, str]]
+References = tuple[frozenset[str], frozenset[str]]
+Values = dict[str, object]
+
+
+class SpecError(Exception):
+    pass
+
+
+class Kind(StrEnum):
+    FUNCTION = auto()
+    IMPORT = auto()
+    METHOD = auto()
+    TYPE = auto()
+    VALUE = auto()
+    WRAPPER = auto()
+    CONSTANT = auto()
+    PRESET = auto()
+    CONFIG = auto()
+
+
+class Group(StrEnum):
+    ALIAS = "Aliases"
+    HELPER = "Helpers"
+    TYPE = "Types"
+    PRESET = "Presets"
+    CONSTANT = "Constants"
+    CONFIGURATION = "Configuration"
+    CONTAINER = "Containers"
+    DATACLASS = "Dataclasses"
+    PROTOCOL = "Protocols"
+    CLASS = "Classes"
+    VALUE = "Values"
+    FUNCTION = "Functions"
+    CACHE = "Caches"
+
+
+class Shape(StrEnum):
+    SCALAR = auto()
+    COLLECTION = auto()
+    CONTAINER = auto()
+    DATACLASS = auto()
+
+
+def wrapper_key(name: str) -> str:
+    return f"{name}@{Kind.WRAPPER}"
 
 
 @dataclass(frozen=True)
 class Definition:
     name: str
-    kind: str
+    kind: Kind
     lang: str
     source: str
     fork: str
@@ -31,19 +67,20 @@ class Definition:
 
     @property
     def key(self) -> str:
-        if self.kind == WRAPPER:
-            return f"{self.name}@{WRAPPER}"
+        if self.kind == Kind.WRAPPER:
+            return wrapper_key(self.name)
         return f"{self.receiver}.{self.name}" if self.receiver else self.name
 
 
 @dataclass(frozen=True)
 class Variable:
     name: str
-    kind: str
+    kind: Kind
     values: dict[str, str | Records]
     fork: str
     path: Path
     same: tuple[str, ...] = ()
+    build: ClassVar[bool] = False
 
     @property
     def key(self) -> str:

@@ -1,37 +1,16 @@
-import re
 from pathlib import Path
 
-from .model import Fork
-
-DIRECTIVE = re.compile(r"<!--\s*eth_consensus_specs:\s*(.*?)\s*-->", re.DOTALL)
-REMOVED = "removed.md"
-
-
-class SpecError(Exception):
-    pass
-
-
-class DeclarationError(SpecError):
-    pass
-
-
-def parse_directive(text: str) -> dict[str, str]:
-    match = DIRECTIVE.fullmatch(text.strip())
-    if match is None:
-        return {}
-    words = match.group(1).split()
-    return dict(word.partition("=")[::2] for word in words)
+from .model import Fork, SpecError
+from .parse import parse_directive, REMOVED
 
 
 def read_parent(path: Path) -> str | None:
-    first_line = path.read_text().split("\n", 1)[0]
-    directive = parse_directive(first_line)
+    directive = parse_directive(path.read_text().split("\n", 1)[0])
     if "parent" not in directive:
         raise SpecError(
             f"{path}: first line must declare `<!-- eth_consensus_specs: parent=... -->`"
         )
-    parent = directive["parent"]
-    return None if parent == "none" else parent
+    return None if directive["parent"] == "none" else directive["parent"]
 
 
 def document_order(path: Path) -> tuple[int, str]:

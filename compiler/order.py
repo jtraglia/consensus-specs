@@ -1,160 +1,117 @@
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from .discover import SpecError
-from .model import (
-    CONFIG,
-    CONSTANT,
-    Definition,
-    FUNCTION,
-    IMPORT,
-    Item,
-    METHOD,
-    PRESET,
-    Spec,
-    VALUE,
-    Variable,
-    WRAPPER,
-)
+from .model import Definition, Group, Item, Kind, References, Shape, Spec, SpecError
 
-ALIAS = "alias"
-TYPE = "type"
-CONSTANTS = "constant"
-PRESETS = "preset"
-CONFIGURATION = "configuration"
-CONTAINER = "container"
-DATACLASS = "dataclass"
-PROTOCOL = "protocol"
-CLASS = "class"
-VALUES = "value"
-HELPER = "helper"
-FUNCTIONS = "function"
-WRAPPERS = "wrapper"
+ReferencesOf = Callable[[Item], References]
+ShapeOf = Callable[[Definition], Shape]
 
-GROUPS = (
-    ALIAS,
-    HELPER,
-    TYPE,
-    PRESETS,
-    CONSTANTS,
-    CONFIGURATION,
-    CONTAINER,
-    DATACLASS,
-    PROTOCOL,
-    CLASS,
-    VALUES,
-    FUNCTIONS,
-    WRAPPERS,
-)
-
-TITLES = {
-    ALIAS: "Aliases",
-    HELPER: "Helpers",
-    TYPE: "Types",
-    CONSTANTS: "Constants",
-    PRESETS: "Presets",
-    CONFIGURATION: "Configuration",
-    CONTAINER: "Containers",
-    DATACLASS: "Dataclasses",
-    PROTOCOL: "Protocols",
-    CLASS: "Classes",
-    VALUES: "Values",
-    FUNCTIONS: "Functions",
-    WRAPPERS: "Caches",
+KINDS = {
+    Kind.CONSTANT: Group.CONSTANT,
+    Kind.PRESET: Group.PRESET,
+    Kind.CONFIG: Group.CONFIGURATION,
+    Kind.METHOD: Group.PROTOCOL,
+    Kind.FUNCTION: Group.FUNCTION,
+    Kind.VALUE: Group.VALUE,
+    Kind.WRAPPER: Group.CACHE,
 }
-
-References = Callable[[Item], tuple[frozenset[str], frozenset[str]]]
-Classify = Callable[[Definition], str]
+SHAPES = {
+    Shape.SCALAR: Group.TYPE,
+    Shape.COLLECTION: Group.CONTAINER,
+    Shape.CONTAINER: Group.CONTAINER,
+    Shape.DATACLASS: Group.DATACLASS,
+}
+LATE = (Group.FUNCTION, Group.CACHE)
 
 
 @dataclass
 class Node:
     key: str
-    group: str
+    group: Group
     items: list[Item] = field(default_factory=list)
     eager: set[str] = field(default_factory=set)
     deferred: set[str] = field(default_factory=set)
 
 
-def group_of(item: Item, classify: Classify) -> str:
-    if isinstance(item, Variable):
-        return {CONSTANT: CONSTANTS, PRESET: PRESETS, CONFIG: CONFIGURATION}[item.kind]
-    if item.kind == METHOD:
-        return PROTOCOL
-    if item.kind == FUNCTION:
-        return FUNCTIONS
-    if item.kind == VALUE:
-        return VALUES
-    if item.kind == WRAPPER:
-        return WRAPPERS
-    return CLASS if item.build else classify(item)
+def aliases(spec: Spec, references: ReferencesOf) -> set[str]:
+    if len(spec.lineage) == 1:
+        return set()
+    types = {
+        key: frozenset().union(*references(item))
+        for key, item in spec.items.items()
+        if item.kind == Kind.TYPE and not item.build
+    }
+    redefined = {key for key in types if key in spec.own}
+    candidates = set(types) - redefined
+    while newly := {key for key in candidates if types[key] & redefined}:
+        candidates -= newly
+        redefined |= newly
+    return candidates
 
 
-def build_nodes(
-    spec: Spec, aliases: set[str], references: References, classify: Classify
-) -> dict[str, Node]:
+def group_of(item: Item, shape: ShapeOf) -> Group:
+    if isinstance(item, Definition) and item.kind == Kind.TYPE:
+        return Group.CLASS if item.build else SHAPES[shape(item)]
+    return KINDS[item.kind]
+
+
+def build_nodes(spec: Spec, references: ReferencesOf, shape: ShapeOf) -> dict[str, Node]:
+    shared = aliases(spec, references)
     nodes: dict[str, Node] = {}
     owner: dict[str, str] = {}
     for key, item in spec.items.items():
-        if item.kind == IMPORT:
+        if item.kind == Kind.IMPORT:
             continue
-        if key in aliases:
-            nodes[key] = Node(key, ALIAS, [item])
+        if key in shared:
+            nodes[key] = Node(key, Group.ALIAS, [item])
             owner[key] = key
             continue
-        group = group_of(item, classify)
-        if group == CONFIGURATION:
-            node_key = CONFIGURATION
-        elif group == PROTOCOL:
+        group = group_of(item, shape)
+        if group == Group.PROTOCOL:
             assert isinstance(item, Definition)
             assert item.receiver is not None
             node_key = item.receiver
+        elif group == Group.CONFIGURATION:
+            node_key = group
         else:
             node_key = key
-        node = nodes.setdefault(node_key, Node(node_key, group))
-        node.items.append(item)
-        if group != WRAPPERS:
-            owner[item.receiver if group == PROTOCOL else item.name] = node_key
+        nodes.setdefault(node_key, Node(node_key, group)).items.append(item)
+        if group != Group.CACHE:
+            owner[node_key if group == Group.PROTOCOL else item.name] = node_key
 
     for node in nodes.values():
-        if node.group == ALIAS:
+        if node.group == Group.ALIAS:
             continue
         for item in node.items:
             eager, deferred = references(item)
-            for names, targets in ((eager, node.eager), (deferred, node.deferred)):
-                for name in names:
-                    target = owner.get(name)
-                    if target is not None and target != node.key:
-                        targets.add(target)
+            node.eager |= {owner[name] for name in eager if name in owner} - {node.key}
+            node.deferred |= {owner[name] for name in deferred if name in owner} - {node.key}
     return nodes
 
 
-def requirements(nodes: dict[str, Node]) -> dict[str, set[str]]:
-    functions = {key for key, node in nodes.items() if node.group == FUNCTIONS}
-    needed: dict[str, set[str]] = {}
-    for key, node in nodes.items():
-        need = set(node.eager)
-        if node.group not in (FUNCTIONS, WRAPPERS):
-            pending = [reference for reference in need if reference in functions]
-            while pending:
-                function = nodes[pending.pop()]
-                for reference in function.eager | function.deferred:
-                    if reference not in need:
-                        need.add(reference)
-                        if reference in functions:
-                            pending.append(reference)
-        needed[key] = need
-    for key, need in needed.items():
-        if nodes[key].group not in (FUNCTIONS, WRAPPERS):
-            for reference in need & functions:
-                nodes[reference].group = HELPER
-    return needed
+def closure(node: Node, nodes: dict[str, Node], functions: set[str]) -> set[str]:
+    need = set(node.eager)
+    pending = list(need & functions)
+    while pending:
+        function = nodes[pending.pop()]
+        for reference in (function.eager | function.deferred) - need:
+            need.add(reference)
+            if reference in functions:
+                pending.append(reference)
+    return need
 
 
-def order(spec: Spec, aliases: set[str], references: References, classify: Classify) -> list[Node]:
-    nodes = build_nodes(spec, aliases, references, classify)
-    needed = requirements(nodes)
-    rank = {group: index for index, group in enumerate(GROUPS)}
+def order(spec: Spec, references: ReferencesOf, shape: ShapeOf) -> list[Node]:
+    nodes = build_nodes(spec, references, shape)
+    functions = {key for key, node in nodes.items() if node.group == Group.FUNCTION}
+    needed = {
+        key: node.eager if node.group in LATE else closure(node, nodes, functions)
+        for key, node in nodes.items()
+    }
+    early = [needed[key] for key, node in nodes.items() if node.group not in LATE]
+    for key in functions & set().union(*early):
+        nodes[key].group = Group.HELPER
+
     remaining = dict(nodes)
     emitted: list[Node] = []
     done: set[str] = set()
@@ -166,9 +123,8 @@ def order(spec: Spec, aliases: set[str], references: References, classify: Class
         candidates = ready()
         if not candidates:
             raise SpecError(f"{spec.fork}: definitions depend on each other: {sorted(remaining)}")
-        group = min((remaining[key].group for key in candidates), key=rank.__getitem__)
+        group = min((remaining[key].group for key in candidates), key=list(Group).index)
         while batch := [key for key in ready() if remaining[key].group == group]:
-            for key in batch:
-                emitted.append(remaining.pop(key))
-                done.add(key)
+            emitted.extend(remaining.pop(key) for key in batch)
+            done.update(batch)
     return emitted

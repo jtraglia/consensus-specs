@@ -1,32 +1,15 @@
-from collections.abc import Callable
-
-from .discover import lineage, SpecError
-from .model import (
-    CONFIG,
-    CONSTANT,
-    Definition,
-    Document,
-    Fork,
-    FUNCTION,
-    IMPORT,
-    Item,
-    PRESET,
-    Spec,
-    TYPE,
-    VALUE,
-    Variable,
-    WRAPPER,
-)
+from .discover import lineage
+from .model import Document, Fork, Item, Kind, Spec, SpecError, Variable, wrapper_key
 
 REMOVABLE = {
-    "Constants": (CONSTANT,),
-    "Presets": (PRESET,),
-    "Configs": (CONFIG,),
-    "Types": (TYPE, VALUE),
-    "Containers": (TYPE,),
-    "Dataclasses": (TYPE,),
-    "Functions": (FUNCTION,),
-    "Imports": (IMPORT,),
+    "Constants": (Kind.CONSTANT,),
+    "Presets": (Kind.PRESET,),
+    "Configs": (Kind.CONFIG,),
+    "Types": (Kind.TYPE, Kind.VALUE),
+    "Containers": (Kind.TYPE,),
+    "Dataclasses": (Kind.TYPE,),
+    "Functions": (Kind.FUNCTION,),
+    "Imports": (Kind.IMPORT,),
 }
 
 
@@ -42,18 +25,13 @@ def fork_items(documents: list[Document], build: bool) -> dict[str, Item]:
     items: dict[str, Item] = {}
     for document in documents:
         for item in document.items:
-            if not build and isinstance(item, Definition) and item.build:
+            if item.build and not build:
                 continue
             existing = items.get(item.key)
-            if existing is None:
+            if existing is None or (item.build and not existing.build):
                 items[item.key] = item
-                continue
-            new_build = isinstance(item, Definition) and item.build
-            old_build = isinstance(existing, Definition) and existing.build
-            if new_build == old_build and not same_variable(existing, item):
+            elif item.build == existing.build and not same_variable(existing, item):
                 raise SpecError(f"`{item.key}` is defined in both {existing.path} and {item.path}")
-            if new_build and not old_build:
-                items[item.key] = item
     return items
 
 
@@ -62,15 +40,12 @@ def remove(items: dict[str, Item], document: Document, build: bool) -> None:
         if section not in REMOVABLE:
             raise SpecError(f"{document.path}: unknown section `{section}`")
         for name in names:
-            item = items.get(name)
-            if item is None and not build:
-                continue
-            if item is None:
+            item = items.pop(name, None)
+            if item is None and build:
                 raise SpecError(f"{document.path}: `{name}` is not defined by an earlier fork")
-            if item.kind not in REMOVABLE[section]:
+            if item is not None and item.kind not in REMOVABLE[section]:
                 raise SpecError(f"{document.path}: `{name}` is a {item.kind}, not in {section}")
-            del items[name]
-            items.pop(f"{name}@{WRAPPER}", None)
+            items.pop(wrapper_key(name), None)
 
 
 def merge(
@@ -91,20 +66,3 @@ def merge(
         for document in removals:
             remove(items, document, build)
     return Spec(fork, chain, items)
-
-
-def shared_types(spec: Spec, references: Callable[[Item], frozenset[str]]) -> set[str]:
-    if len(spec.lineage) == 1:
-        return set()
-    types = {
-        key: item
-        for key, item in spec.items.items()
-        if isinstance(item, Definition) and item.kind == TYPE and not item.build
-    }
-    built_from = {key: references(item) for key, item in types.items()}
-    redefined = {key for key in types if key in spec.own}
-    candidates = set(types) - redefined
-    while newly := {key for key in candidates if built_from[key] & redefined}:
-        candidates -= newly
-        redefined |= newly
-    return candidates
