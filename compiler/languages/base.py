@@ -90,7 +90,7 @@ class Foreign(Language):
     def signature(self, definition: Definition) -> tuple[list[tuple[str, str]], str]: ...
 
     @abstractmethod
-    def build(self, out: Path, definitions: list[Definition]) -> None: ...
+    def build(self, directory: Path, preset: str, definitions: list[Definition]) -> None: ...
 
 
 class Target(Language):
@@ -152,7 +152,11 @@ class Target(Language):
 
     @abstractmethod
     def foreign_function(
-        self, definition: Definition, parameters: list[tuple[str, str]], result: str
+        self,
+        definition: Definition,
+        parameters: list[tuple[str, str]],
+        result: str,
+        preset: str,
     ) -> str: ...
 
     @abstractmethod
@@ -182,7 +186,7 @@ class Target(Language):
             language = LANGUAGES[item.lang]
             if not isinstance(language, Foreign) or item.kind != FUNCTION:
                 raise DeclarationError(f"{item.path}: cannot emit `{item.name}` from {item.lang}")
-            return self.foreign_function(item, *language.signature(item))
+            return self.foreign_function(item, *language.signature(item), preset)
 
         blocks: list[tuple[str, str]] = []
         for node in nodes:

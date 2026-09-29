@@ -50,15 +50,18 @@ def build(out: Path, selected: list[str], verbose: bool) -> None:
         if verbose:
             print(f"built {name}")
 
-    foreign: dict[str, dict[tuple[str, str], Definition]] = {}
     for spec in specs.values():
-        for item in spec.items.values():
-            if isinstance(item, Definition) and item.lang != TARGET.name:
-                foreign.setdefault(item.lang, {})[item.fork, item.name] = item
-    for lang, definitions in foreign.items():
-        language = LANGUAGES[lang]
-        assert isinstance(language, Foreign)
-        language.build(out, list(definitions.values()))
+        foreign = [
+            item
+            for item in spec.items.values()
+            if isinstance(item, Definition) and item.lang != TARGET.name
+        ]
+        for lang in sorted({item.lang for item in foreign if item.key in spec.own}):
+            language = LANGUAGES[lang]
+            assert isinstance(language, Foreign)
+            definitions = [item for item in foreign if item.lang == lang]
+            for preset in PRESETS:
+                language.build(package / spec.fork, preset, definitions)
 
     graph = "\n".join(f"    {name!r}: {fork.parent!r}," for name, fork in forks.items())
     (package / "forks.py").write_text(f"PREVIOUS_FORK_OF = {{\n{graph}\n}}\n")

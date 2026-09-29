@@ -271,14 +271,19 @@ class Python(Target):
         return RECORDS_TYPE
 
     def foreign_function(
-        self, definition: Definition, parameters: list[tuple[str, str]], result: str
+        self,
+        definition: Definition,
+        parameters: list[tuple[str, str]],
+        result: str,
+        preset: str,
     ) -> str:
         names = ", ".join(name for name, _ in parameters)
         typed = ", ".join(f"{name}: {kind}" for name, kind in parameters)
-        key = f"{definition.fork}.{definition.name}"
+        location = f"{definition.fork}/{preset}"
         return (
             f"def {definition.name}({typed}) -> {result}:\n"
-            f'    return call_foreign("{definition.lang}", "{key}", {result}, {names})'
+            f'    return call_foreign("{definition.lang}", "{location}", "{definition.name}", '
+            f"{result}, {names})"
         )
 
     def foreign_imports(self) -> list[str]:

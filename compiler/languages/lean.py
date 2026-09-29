@@ -2,6 +2,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from compiler.discover import DeclarationError, SpecError
@@ -55,7 +56,7 @@ SHIM = """\
 #define SPEC_EXPORT __attribute__((visibility("default"), used))
 
 extern void lean_initialize_runtime_module(void);
-extern lean_object *initialize_Spec(uint8_t builtin);
+extern lean_object *initialize_{module}(uint8_t builtin);
 extern lean_object *spec_dispatch(lean_object *key, lean_object *args);
 
 static int initialized = 0;
@@ -63,7 +64,7 @@ static int initialized = 0;
 static void spec_init(void) {
     if (initialized) return;
     lean_initialize_runtime_module();
-    lean_object *result = initialize_Spec(1);
+    lean_object *result = initialize_{module}(1);
     if (lean_io_result_is_ok(result)) {
         lean_dec_ref(result);
     } else {
@@ -143,7 +144,7 @@ class Lean(Foreign):
 
     def dispatch(self, definition: Definition) -> str:
         parameters, result = self.signature(definition)
-        lines = [f'  | "{definition.fork}.{definition.name}" =>']
+        lines = [f'  | "{definition.name}" =>']
         offset = 0
         for name, kind in parameters:
             lines.append(f"    let {name} := decode {_width(definition, kind)} args {offset}")
@@ -155,10 +156,7 @@ class Lean(Foreign):
         lines.append(f"    {finish} {_width(definition, result)} ({call})")
         return "\n".join(lines)
 
-    def build(self, out: Path, definitions: list[Definition]) -> None:
-        directory = out / "lean"
-        shutil.rmtree(directory, ignore_errors=True)
-        directory.mkdir(parents=True)
+    def build(self, directory: Path, preset: str, definitions: list[Definition]) -> None:
         dispatcher = "\n".join(self.dispatch(definition) for definition in definitions)
         module = "\n\n".join(
             [
@@ -173,21 +171,26 @@ class Lean(Foreign):
                 ),
             ]
         )
-        (directory / "Spec.lean").write_text(module + "\n")
-        (directory / "shim.c").write_text(SHIM)
-        _run(["lean", "-c", "Spec.c", "Spec.lean"], directory)
-        libdir = _run(["lean", "--print-libdir"], directory)
+        source = directory / f"{preset}.lean"
+        source.write_text(module + "\n")
         extension = "dylib" if sys.platform == "darwin" else "so"
-        _run(
-            [
-                "leanc",
-                "-shared",
-                "-o",
-                f"libspec.{extension}",
-                "Spec.c",
-                "shim.c",
-                "-lleanshared",
-                f"-Wl,-rpath,{libdir}",
-            ],
-            directory,
-        )
+        with tempfile.TemporaryDirectory() as scratch:
+            work = Path(scratch)
+            shutil.copy(source, work / source.name)
+            (work / "shim.c").write_text(SHIM.replace("{module}", preset))
+            _run(["lean", "-c", f"{preset}.c", source.name], work)
+            libdir = _run(["lean", "--print-libdir"], work)
+            _run(
+                [
+                    "leanc",
+                    "-shared",
+                    "-o",
+                    f"{preset}.{extension}",
+                    f"{preset}.c",
+                    "shim.c",
+                    "-lleanshared",
+                    f"-Wl,-rpath,{libdir}",
+                ],
+                work,
+            )
+            shutil.copy(work / f"{preset}.{extension}", directory / f"{preset}.{extension}")
