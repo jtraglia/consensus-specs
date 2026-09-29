@@ -8,7 +8,7 @@ from marko.ext.gfm import gfm
 from marko.ext.gfm.elements import Table
 from marko.inline import CodeSpan
 
-from .discover import DIRECTIVE, parse_directive, REMOVED, SpecError
+from .discover import DeclarationError, DIRECTIVE, parse_directive, REMOVED, SpecError
 from .languages import LANGUAGES
 from .model import (
     CONFIG,
@@ -105,7 +105,7 @@ class Parser:
         source = "\n".join(line.rstrip() for line in source.split("\n"))
         try:
             kind, name, receiver = language.read_declaration(source)
-        except language.DeclarationError as error:
+        except DeclarationError as error:
             raise self.error(str(error)) from None
         if kind == TYPE and not build:
             heading = self.headings[-1][2] if self.headings else None

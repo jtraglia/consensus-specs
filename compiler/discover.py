@@ -11,6 +11,10 @@ class SpecError(Exception):
     pass
 
 
+class DeclarationError(SpecError):
+    pass
+
+
 def parse_directive(text: str) -> dict[str, str]:
     match = DIRECTIVE.fullmatch(text.strip())
     if match is None:

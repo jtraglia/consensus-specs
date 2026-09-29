@@ -2,15 +2,17 @@ import json
 from collections.abc import Mapping
 from pathlib import Path
 
-from .emit_yaml import load_module
-from .languages.python import spec_object
+from .languages import Language
 from .model import PRESETS, Spec
+from .values import Values
 
 
-def emit_json(out: Path, specs: Mapping[str, Spec]) -> None:
+def emit_json(
+    out: Path, target: Language, specs: Mapping[str, Spec], values: Mapping[str, dict[str, Values]]
+) -> None:
     data = {
         preset: {
-            fork: spec_object(spec, preset, load_module(out, fork, preset))
+            fork: target.spec_object(spec, preset, values[fork][preset])
             for fork, spec in specs.items()
         }
         for preset in PRESETS

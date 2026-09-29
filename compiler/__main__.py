@@ -7,34 +7,14 @@ from .discover import discover_forks, lineage, SpecError
 from .emit_json import emit_json
 from .emit_yaml import emit_yaml
 from .languages import LANGUAGES
-from .languages.python import render
 from .merge import merge, shared_types
-from .model import Definition, Item, PRESETS, Spec
+from .model import PRESETS, Spec
 from .order import order
 from .parse import parse_document
+from .values import check_same, Values
 
 REPO = Path(__file__).resolve().parent.parent
-
-
-def references(item: Item) -> tuple[frozenset[str], frozenset[str]]:
-    language = LANGUAGES["python" if not isinstance(item, Definition) else item.lang]
-    if isinstance(item, Definition):
-        return language.references(item.source)
-    eager: frozenset[str] = frozenset()
-    for value in item.values.values():
-        sources = [value] if isinstance(value, str) else [v for r in value for v in r.values()]
-        for source in sources:
-            eager |= language.references(source)[0]
-    return eager, frozenset()
-
-
-def classify(definition: Definition) -> str:
-    return LANGUAGES[definition.lang].classify(definition)
-
-
-def everything(item: Item) -> frozenset[str]:
-    eager, lazy = references(item)
-    return eager | lazy
+TARGET = LANGUAGES["python"]
 
 
 def build(out: Path, selected: list[str], verbose: bool) -> None:
@@ -58,11 +38,12 @@ def build(out: Path, selected: list[str], verbose: bool) -> None:
     specs: dict[str, Spec] = {}
     for name in targets:
         spec = merge(forks, documents, name)
-        nodes = order(spec, shared_types(spec, everything), references, classify)
+        aliases = shared_types(spec, TARGET.all_references)
+        nodes = order(spec, aliases, TARGET.item_references, TARGET.classify)
         directory = package / name
         directory.mkdir(parents=True, exist_ok=True)
         for preset in PRESETS:
-            (directory / f"{preset}.py").write_text(render(spec, nodes, preset))
+            (directory / f"{preset}.py").write_text(TARGET.render(spec, nodes, preset))
         (directory / "__init__.py").write_text("from . import mainnet as spec  # noqa:F401\n")
         specs[name] = spec
         if verbose:
@@ -72,8 +53,13 @@ def build(out: Path, selected: list[str], verbose: bool) -> None:
     (package / "forks.py").write_text(f"PREVIOUS_FORK_OF = {{\n{graph}\n}}\n")
 
     if not selected:
-        emit_yaml(out, specs)
-        emit_json(out, {name: merge(forks, documents, name, build=False) for name in targets})
+        values: dict[str, dict[str, Values]] = {}
+        for name, spec in specs.items():
+            values[name] = {preset: TARGET.evaluate(out, spec, preset) for preset in PRESETS}
+            check_same(spec, values[name])
+        emit_yaml(out, specs, values)
+        normative = {name: merge(forks, documents, name, build=False) for name in targets}
+        emit_json(out, TARGET, normative, values)
 
 
 def main() -> int:

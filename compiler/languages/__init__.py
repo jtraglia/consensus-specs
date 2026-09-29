@@ -1,3 +1,4 @@
-from . import python
+from .base import Language
+from .python import Python
 
-LANGUAGES = {"python": python}
+LANGUAGES: dict[str, Language] = {language.name: language for language in (Python(),)}
