@@ -6,15 +6,16 @@ from pathlib import Path
 from .discover import discover_forks, lineage, SpecError
 from .emit_json import emit_json
 from .emit_yaml import emit_yaml
-from .languages import LANGUAGES
+from .languages import Foreign, LANGUAGES, Target
 from .merge import merge, shared_types
-from .model import PRESETS, Spec
+from .model import Definition, PRESETS, Spec
 from .order import order
 from .parse import parse_document
 from .values import check_same, Values
 
 REPO = Path(__file__).resolve().parent.parent
 TARGET = LANGUAGES["python"]
+assert isinstance(TARGET, Target)
 
 
 def build(out: Path, selected: list[str], verbose: bool) -> None:
@@ -48,6 +49,16 @@ def build(out: Path, selected: list[str], verbose: bool) -> None:
         specs[name] = spec
         if verbose:
             print(f"built {name}")
+
+    foreign: dict[str, dict[tuple[str, str], Definition]] = {}
+    for spec in specs.values():
+        for item in spec.items.values():
+            if isinstance(item, Definition) and item.lang != TARGET.name:
+                foreign.setdefault(item.lang, {})[item.fork, item.name] = item
+    for lang, definitions in foreign.items():
+        language = LANGUAGES[lang]
+        assert isinstance(language, Foreign)
+        language.build(out, list(definitions.values()))
 
     graph = "\n".join(f"    {name!r}: {fork.parent!r}," for name, fork in forks.items())
     (package / "forks.py").write_text(f"PREVIOUS_FORK_OF = {{\n{graph}\n}}\n")

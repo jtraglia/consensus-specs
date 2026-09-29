@@ -2,13 +2,13 @@ import json
 from collections.abc import Mapping
 from pathlib import Path
 
-from .languages import Language
+from .languages import Target
 from .model import PRESETS, Spec
 from .values import Values
 
 
 def emit_json(
-    out: Path, target: Language, specs: Mapping[str, Spec], values: Mapping[str, dict[str, Values]]
+    out: Path, target: Target, specs: Mapping[str, Spec], values: Mapping[str, dict[str, Values]]
 ) -> None:
     data = {
         preset: {

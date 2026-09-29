@@ -1016,19 +1016,11 @@ def get_set_bit_count(bits: Sequence[Boolean]) -> Uint64:
 
 #### `integer_squareroot`
 
-```python
-def integer_squareroot(n: Uint64) -> Uint64:
-    """
-    Return the largest integer ``x`` such that ``x**2 <= n``.
-    """
-    if n == UINT64_MAX:
-        return UINT64_MAX_SQRT
-    x = n
-    y = (x + 1) // 2
-    while y < x:
-        x = y
-        y = (x + n // x) // 2
-    return x
+```lean
+def integer_squareroot
+    (n : Uint64)
+    : Uint64 :=
+  Nat.sqrt n
 ```
 
 #### `xor`

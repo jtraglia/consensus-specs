@@ -11,11 +11,11 @@ import eth_consensus_specs
 from compiler.discover import DeclarationError
 from compiler.languages.base import (
     COLLECTION,
-    Language,
     RECORD,
     References,
     SCALAR,
     STRUCTURE,
+    Target,
 )
 from compiler.model import (
     CONFIG,
@@ -115,7 +115,7 @@ def _import_lines(statements: list[str]) -> list[str]:
     return ["\n".join(group) for group in groups if group]
 
 
-class Python(Language):
+class Python(Target):
     name = "python"
     separator = "\n\n\n"
 
@@ -269,3 +269,17 @@ class Python(Language):
 
     def records_type(self) -> str:
         return RECORDS_TYPE
+
+    def foreign_function(
+        self, definition: Definition, parameters: list[tuple[str, str]], result: str
+    ) -> str:
+        names = ", ".join(name for name, _ in parameters)
+        typed = ", ".join(f"{name}: {kind}" for name, kind in parameters)
+        key = f"{definition.fork}.{definition.name}"
+        return (
+            f"def {definition.name}({typed}) -> {result}:\n"
+            f'    return call_foreign("{definition.lang}", "{key}", {result}, {names})'
+        )
+
+    def foreign_imports(self) -> list[str]:
+        return ["from eth_consensus_specs.utils.foreign import call_foreign"]

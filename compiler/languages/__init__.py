@@ -1,4 +1,8 @@
-from .base import Language
+from .base import Foreign, Language, LANGUAGES, register, Target
+from .lean import Lean
 from .python import Python
 
-LANGUAGES: dict[str, Language] = {language.name: language for language in (Python(),)}
+register(Python())
+register(Lean())
+
+__all__ = ["LANGUAGES", "Foreign", "Language", "Target"]
