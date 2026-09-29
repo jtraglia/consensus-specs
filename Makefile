@@ -170,6 +170,9 @@ lint: sync
 	@uv run ruff format --quiet $(CURDIR)/tests $(CURDIR)/compiler
 	@uv run ruff format --preview --quiet $(CURDIR)/specs
 	@$(MAKE) --no-print-directory --assume-old=sync build
+	@uv run ruff check --quiet \
+		$(CURDIR)/build/specs/*/mainnet.py \
+		$(CURDIR)/build/specs/*/minimal.py
 	@uv run ty check --no-progress \
 		--extra-search-path $(PYSPEC_DIR) \
 		--extra-search-path $(CURDIR)/build \

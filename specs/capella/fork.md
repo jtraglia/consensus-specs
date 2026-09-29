@@ -20,7 +20,7 @@ This document describes the process of the Capella upgrade.
 
 | Name                   | Mainnet                                          | Minimal                       |
 | ---------------------- | ------------------------------------------------ | ----------------------------- |
-| `CAPELLA_FORK_VERSION` | `Version('0x03000000')`                          | `Version('0x03000001')`       |
+| `CAPELLA_FORK_VERSION` | `Version("0x03000000")`                          | `Version("0x03000001")`       |
 | `CAPELLA_FORK_EPOCH`   | `Epoch(194048)` (April 12, 2023, 10:27:35pm UTC) | `Epoch(18446744073709551615)` |
 
 ## Fork to Capella

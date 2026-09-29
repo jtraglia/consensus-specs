@@ -250,7 +250,7 @@ class Emitter:
             f"from ..{ancestor} import {self.preset} as {ancestor}"
             for ancestor in self.lineage[:-1]
         ]
-        header = "\n\n".join([*imports, "\n".join(ancestors)]) + f"\n\n\nfork = '{self.fork}'"
+        header = "\n\n".join([*imports, "\n".join(ancestors)]) + f'\n\n\nfork = "{self.fork}"'
         return header + "\n\n\n" + text + "\n"
 
 
@@ -310,9 +310,9 @@ def _literal(value: object, expression: object = None) -> str:
             lines.append("    }),")
         return "\n".join([*lines, ")"])
     if isinstance(value, bytes):
-        return f"'{hex_text(value, expression)}'"
+        return f'"{hex_text(value, expression)}"'
     if isinstance(value, str):
-        return f"'{value}'"
+        return f'"{value}"'
     assert isinstance(value, int)
     return str(int(value))
 

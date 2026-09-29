@@ -22,7 +22,7 @@ Warning: this configuration is not definitive.
 
 | Name                   | Mainnet                                       | Minimal                       |
 | ---------------------- | --------------------------------------------- | ----------------------------- |
-| `ELECTRA_FORK_VERSION` | `Version('0x05000000')`                       | `Version('0x05000001')`       |
+| `ELECTRA_FORK_VERSION` | `Version("0x05000000")`                       | `Version("0x05000001")`       |
 | `ELECTRA_FORK_EPOCH`   | `Epoch(364032)` (May 7, 2025, 10:05:11am UTC) | `Epoch(18446744073709551615)` |
 
 ## Fork to Electra

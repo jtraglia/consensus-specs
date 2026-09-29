@@ -572,27 +572,27 @@ specification.
 | `FAR_FUTURE_EPOCH`          | `Epoch(2**64 - 1)`   |
 | `BASE_REWARDS_PER_EPOCH`    | `Uint64(4)`          |
 | `JUSTIFICATION_BITS_LENGTH` | `Uint64(4)`          |
-| `ENDIANNESS`                | `'little'`           |
+| `ENDIANNESS`                | `"little"`           |
 
 ### Withdrawal prefixes
 
 | Name                             | Value            |
 | -------------------------------- | ---------------- |
-| `BLS_WITHDRAWAL_PREFIX`          | `Bytes1('0x00')` |
-| `ETH1_ADDRESS_WITHDRAWAL_PREFIX` | `Bytes1('0x01')` |
+| `BLS_WITHDRAWAL_PREFIX`          | `Bytes1("0x00")` |
+| `ETH1_ADDRESS_WITHDRAWAL_PREFIX` | `Bytes1("0x01")` |
 
 ### Domains
 
 | Name                         | Value                      |
 | ---------------------------- | -------------------------- |
-| `DOMAIN_BEACON_PROPOSER`     | `DomainType('0x00000000')` |
-| `DOMAIN_BEACON_ATTESTER`     | `DomainType('0x01000000')` |
-| `DOMAIN_RANDAO`              | `DomainType('0x02000000')` |
-| `DOMAIN_DEPOSIT`             | `DomainType('0x03000000')` |
-| `DOMAIN_VOLUNTARY_EXIT`      | `DomainType('0x04000000')` |
-| `DOMAIN_SELECTION_PROOF`     | `DomainType('0x05000000')` |
-| `DOMAIN_AGGREGATE_AND_PROOF` | `DomainType('0x06000000')` |
-| `DOMAIN_APPLICATION_MASK`    | `DomainType('0x00000001')` |
+| `DOMAIN_BEACON_PROPOSER`     | `DomainType("0x00000000")` |
+| `DOMAIN_BEACON_ATTESTER`     | `DomainType("0x01000000")` |
+| `DOMAIN_RANDAO`              | `DomainType("0x02000000")` |
+| `DOMAIN_DEPOSIT`             | `DomainType("0x03000000")` |
+| `DOMAIN_VOLUNTARY_EXIT`      | `DomainType("0x04000000")` |
+| `DOMAIN_SELECTION_PROOF`     | `DomainType("0x05000000")` |
+| `DOMAIN_AGGREGATE_AND_PROOF` | `DomainType("0x06000000")` |
+| `DOMAIN_APPLICATION_MASK`    | `DomainType("0x00000001")` |
 
 *Note*: `DOMAIN_APPLICATION_MASK` reserves the rest of the bitspace in
 `DomainType` for application usage. This means for some `DomainType`
@@ -702,8 +702,8 @@ different configuration.
 
 | Name          | Mainnet     | Minimal     | Description                                             |
 | ------------- | ----------- | ----------- | ------------------------------------------------------- |
-| `PRESET_BASE` | `'mainnet'` | `'minimal'` | The preset that this configuration extends              |
-| `CONFIG_NAME` | `'mainnet'` | `'minimal'` | The short name of the network this configuration is for |
+| `PRESET_BASE` | `"mainnet"` | `"minimal"` | The preset that this configuration extends              |
+| `CONFIG_NAME` | `"mainnet"` | `"minimal"` | The short name of the network this configuration is for |
 
 ### Genesis settings
 
@@ -711,7 +711,7 @@ different configuration.
 | ------------------------------------ | -------------------------------------------- | ----------------------- |
 | `MIN_GENESIS_ACTIVE_VALIDATOR_COUNT` | `Uint64(2**14)` (= 16,384)                   | `Uint64(2**6)` (= 64)   |
 | `MIN_GENESIS_TIME`                   | `Uint64(1606824000)` (Dec 1, 2020, 12pm UTC) | `Uint64(1578009600)`    |
-| `GENESIS_FORK_VERSION`               | `Version('0x00000000')`                      | `Version('0x00000001')` |
+| `GENESIS_FORK_VERSION`               | `Version("0x00000000")`                      | `Version("0x00000001")` |
 | `GENESIS_DELAY`                      | `Uint64(604800)` (7 days)                    | `Uint64(300)`           |
 
 ### Time parameters
@@ -2159,8 +2159,8 @@ def get_proposer_reward(state: BeaconState, attesting_index: ValidatorIndex) -> 
 ```
 
 ```python
-def get_finality_delay(state: BeaconState) -> Uint64:
-    return Uint64(get_previous_epoch(state) - state.finalized_checkpoint.epoch)
+def get_finality_delay(state: BeaconState) -> Epoch:
+    return get_previous_epoch(state) - state.finalized_checkpoint.epoch
 ```
 
 ```python
@@ -2288,7 +2288,9 @@ def get_inactivity_penalty_deltas(state: BeaconState) -> tuple[Sequence[Gwei], S
             if index not in matching_target_attesting_indices:
                 effective_balance = state.validators[index].effective_balance
                 penalties[index] += (
-                    effective_balance * get_finality_delay(state) // INACTIVITY_PENALTY_QUOTIENT
+                    effective_balance
+                    * Uint64(get_finality_delay(state))
+                    // INACTIVITY_PENALTY_QUOTIENT
                 )
 
     # No rewards associated with inactivity penalties

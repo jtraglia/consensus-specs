@@ -123,7 +123,7 @@ class Withdrawals(List[Withdrawal]):
 
 | Name                             | Value                      |
 | -------------------------------- | -------------------------- |
-| `DOMAIN_BLS_TO_EXECUTION_CHANGE` | `DomainType('0x0A000000')` |
+| `DOMAIN_BLS_TO_EXECUTION_CHANGE` | `DomainType("0x0A000000")` |
 
 ## Presets
 

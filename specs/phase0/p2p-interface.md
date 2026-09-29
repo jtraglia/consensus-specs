@@ -303,8 +303,8 @@ This section outlines configurations that are used in this specification.
 | `EPOCHS_PER_SUBNET_SUBSCRIPTION`     | `Epoch(2**8)` (= 256)                       | *same*  | Number of epochs on a subnet subscription                                         |
 | `ATTESTATION_PROPAGATION_SLOT_RANGE` | `Slot(32)`                                  | *same*  | Maximum number of slots during which an attestation can be propagated             |
 | `MAXIMUM_GOSSIP_CLOCK_DISPARITY`     | `Uint64(500)`                               | *same*  | Maximum **milliseconds** of clock disparity assumed between honest nodes          |
-| `MESSAGE_DOMAIN_INVALID_SNAPPY`      | `DomainType('0x00000000')`                  | *same*  | 4-byte domain for gossip message-id isolation of *invalid* snappy messages        |
-| `MESSAGE_DOMAIN_VALID_SNAPPY`        | `DomainType('0x01000000')`                  | *same*  | 4-byte domain for gossip message-id isolation of *valid* snappy messages          |
+| `MESSAGE_DOMAIN_INVALID_SNAPPY`      | `DomainType("0x00000000")`                  | *same*  | 4-byte domain for gossip message-id isolation of *invalid* snappy messages        |
+| `MESSAGE_DOMAIN_VALID_SNAPPY`        | `DomainType("0x01000000")`                  | *same*  | 4-byte domain for gossip message-id isolation of *valid* snappy messages          |
 | `SUBNETS_PER_NODE`                   | `Uint64(2)`                                 | *same*  | Number of long-lived subnets a beacon node should be subscribed to                |
 | `ATTESTATION_SUBNET_COUNT`           | `Uint64(2**6)` (= 64)                       | *same*  | Number of attestation subnets used in the gossipsub protocol                      |
 | `ATTESTATION_SUBNET_EXTRA_BITS`      | `Uint64(0)`                                 | *same*  | Number of extra bits of a NodeId to use when mapping to a subscribed subnet       |
@@ -426,11 +426,11 @@ def compute_attestation_subnet_prefix_bits() -> Uint64:
 #### `compute_min_epochs_for_block_requests`
 
 ```python
-def compute_min_epochs_for_block_requests() -> Uint64:
+def compute_min_epochs_for_block_requests() -> Epoch:
     """
     Return the minimum epoch range over which a node must serve blocks.
     """
-    return Uint64(MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2)
+    return MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2
 ```
 
 #### `is_non_strict_superset`
@@ -1545,6 +1545,12 @@ Clients MUST keep a record of signed blocks seen on the epoch range
 where `current_epoch` is defined by the current wall-clock time, and clients
 MUST support serving requests of blocks on this range.
 
+*Note*: The epoch range above is based on the current wall-clock time and does
+not account for finality. Clients MUST also keep a record of all blocks more
+recent than their latest finalized checkpoint and MUST support serving requests
+of these blocks, even if outside of this range, as peers need them to sync
+during an extended period of non-finality.
+
 Peers that are unable to reply to block requests within the
 `compute_min_epochs_for_block_requests()` epoch range SHOULD respond with error
 code `3: ResourceUnavailable`. Such peers that are unable to successfully reply
@@ -2458,8 +2464,8 @@ These checkpoints *in the worst case* (i.e. very large validator set and maximal
 allowed safety decay) must be from the most recent
 `compute_min_epochs_for_block_requests()` epochs, and thus a user must be able
 to block sync to the head from this starting point. Thus, this defines the epoch
-range outside which nodes may prune blocks, and the epoch range that a new node
-syncing from a checkpoint must backfill.
+range outside which nodes may prune finalized blocks, and the epoch range that a
+new node syncing from a checkpoint must backfill.
 
 `compute_min_epochs_for_block_requests()` is calculated using the arithmetic
 from `compute_weak_subjectivity_period` found in the
