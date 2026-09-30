@@ -34,6 +34,7 @@ def build(out: Path, selected: list[str], verbose: bool) -> None:
         PYTHON.write(out, specs[name])
         if verbose:
             print(f"built {name}")
+    PYTHON.wait()
     PYTHON.write_forks(out, {name: fork.parent for name, fork in forks.items()})
 
     if not selected:

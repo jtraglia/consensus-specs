@@ -1052,25 +1052,23 @@ def is_valid_indexed_attestation(
 
 #### New `is_builder_index`
 
-```python
-def is_builder_index(validator_index: ValidatorIndex) -> bool:
-    return (validator_index & BUILDER_INDEX_FLAG) != 0
+```lean
+def is_builder_index
+    (validator_index : ValidatorIndex)
+    : Bool :=
+  (validator_index &&& BUILDER_INDEX_FLAG) != 0
 ```
 
 #### New `is_active_builder`
 
-```python
-def is_active_builder(state: BeaconState, builder_index: BuilderIndex) -> bool:
-    """
-    Check if the builder at ``builder_index`` is active for the given ``state``.
-    """
-    builder = state.builders[builder_index]
-    return (
-        # Placement in builder list is finalized
-        builder.deposit_epoch < state.finalized_checkpoint.epoch
-        # Has not initiated exit
-        and builder.withdrawable_epoch == FAR_FUTURE_EPOCH
-    )
+```lean
+def is_active_builder
+    (state : BeaconState)
+    (builder_index : BuilderIndex)
+    : Result Bool := do
+  let builder <- state.builders[builder_index]?
+  return builder.deposit_epoch < state.finalized_checkpoint.epoch
+    && builder.withdrawable_epoch == FAR_FUTURE_EPOCH
 ```
 
 #### New `is_builder_withdrawal_credential`
@@ -1173,18 +1171,19 @@ def get_scheduled_gas_limit(epoch: Epoch) -> Uint64 | None:
 
 #### New `get_pending_balance_to_withdraw_for_builder`
 
-```python
-def get_pending_balance_to_withdraw_for_builder(
-    state: BeaconState, builder_index: BuilderIndex
-) -> Gwei:
-    balance = Gwei(0)
-    for withdrawal in state.builder_pending_withdrawals:
-        if withdrawal.builder_index == builder_index:
-            balance += withdrawal.amount
-    for payment in state.builder_pending_payments:
-        if payment.withdrawal.builder_index == builder_index:
-            balance += payment.withdrawal.amount
-    return balance
+```lean
+def get_pending_balance_to_withdraw_for_builder
+    (state : BeaconState)
+    (builder_index : BuilderIndex)
+    : Gwei := Id.run do
+  let mut balance := 0
+  for withdrawal in state.builder_pending_withdrawals do
+    if withdrawal.builder_index == builder_index then
+      balance := balance + withdrawal.amount
+  for payment in state.builder_pending_payments do
+    if payment.withdrawal.builder_index == builder_index then
+      balance := balance + payment.withdrawal.amount
+  return balance
 ```
 
 #### New `can_builder_cover_bid`
@@ -1557,13 +1556,20 @@ def initiate_builder_exit(state: BeaconState, builder_index: BuilderIndex) -> No
 
 #### New `settle_builder_payment`
 
-```python
-def settle_builder_payment(state: BeaconState, payment_index: Uint64) -> None:
-    assert payment_index < len(state.builder_pending_payments)
-    payment = state.builder_pending_payments[payment_index]
-    if payment.withdrawal.amount > 0:
-        state.builder_pending_withdrawals.append(payment.withdrawal)
-    state.builder_pending_payments[payment_index] = BuilderPendingPayment.empty()
+```lean
+def settle_builder_payment
+    (state : BeaconState)
+    (payment_index : Uint64)
+    : Result BeaconState := do
+  require (payment_index < state.builder_pending_payments.size)
+  let payment <- state.builder_pending_payments[payment_index]?
+  let mut withdrawals := state.builder_pending_withdrawals
+  if payment.withdrawal.amount > 0 then
+    withdrawals := withdrawals.push payment.withdrawal
+  return { state with
+    builder_pending_withdrawals := withdrawals
+    builder_pending_payments := state.builder_pending_payments.set! payment_index default
+  }
 ```
 
 ## Beacon chain state transition function
@@ -1994,15 +2000,16 @@ def update_builder_pending_withdrawals(
 
 ##### New `update_next_withdrawal_builder_index`
 
-```python
-def update_next_withdrawal_builder_index(
-    state: BeaconState, processed_builders_sweep_count: Uint64
-) -> None:
-    if len(state.builders) > 0:
-        # Update the next builder index to start the next withdrawal sweep
-        next_index = state.next_withdrawal_builder_index + processed_builders_sweep_count
-        next_builder_index = next_index % len(state.builders)
-        state.next_withdrawal_builder_index = next_builder_index
+```lean
+def update_next_withdrawal_builder_index
+    (state : BeaconState)
+    (processed_builders_sweep_count : Uint64)
+    : BeaconState :=
+  if state.builders.size > 0 then
+    let next_index := state.next_withdrawal_builder_index + processed_builders_sweep_count
+    { state with next_withdrawal_builder_index := next_index % state.builders.size }
+  else
+    state
 ```
 
 ##### Modified `process_withdrawals`

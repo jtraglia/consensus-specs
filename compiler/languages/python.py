@@ -7,8 +7,19 @@ from collections.abc import Callable, Iterator, Mapping
 from functools import cache
 from pathlib import Path
 
+import ssz
+
 import eth_consensus_specs
-from compiler.languages.base import Declaration, hex_text, Target
+from compiler.languages.base import (
+    Declaration,
+    Environment,
+    hex_text,
+    plain,
+    Signature,
+    SszType,
+    Target,
+    Type,
+)
 from compiler.model import (
     Definition,
     Kind,
@@ -22,6 +33,33 @@ from compiler.model import (
 
 CALL = re.compile(r"([A-Z]\w*)\((.*)\)", re.DOTALL)
 RECORDS_TYPE = "tuple[frozendict[str, Any], ...]"
+SSZ_KINDS = (
+    (ssz.Boolean, "bool"),
+    (ssz.BaseUint, "uint"),
+    (ssz.ByteVector, "byteVector"),
+    (ssz.ByteList, "byteList"),
+    (ssz.BitVector, "bitVector"),
+    (ssz.ProgressiveBitList, "progressiveBitList"),
+    (ssz.BitList, "bitList"),
+    (ssz.Vector, "vector"),
+    (ssz.ProgressiveList, "progressiveList"),
+    (ssz.List, "list"),
+    (ssz.ProgressiveContainer, "progressiveContainer"),
+    (ssz.Container, "container"),
+)
+SIZES = {
+    "uint": "BYTE_LENGTH",
+    "byteVector": "LENGTH",
+    "byteList": "LIMIT",
+    "bitVector": "LENGTH",
+    "bitList": "LIMIT",
+    "progressiveBitList": "LIMIT",
+    "vector": "LENGTH",
+    "list": "LIMIT",
+    "progressiveList": "LIMIT",
+}
+UNBOUNDED = ("bool", "progressiveBitList", "progressiveList")
+PLAIN_TYPES = {bool: "bool", int: "int", bytes: "bytes", str: "str"}
 
 
 @cache
@@ -85,6 +123,32 @@ def _records(records: Records) -> str:
     return "\n".join([*lines, ")"])
 
 
+def _ssz_type(cls: type) -> tuple[SszType, tuple[type, ...]] | None:
+    kind = next((kind for base, kind in SSZ_KINDS if issubclass(cls, base)), None)
+    if kind is None:
+        return None
+    if kind in ("container", "progressiveContainer"):
+        fields = cls._FIELD_TYPES
+        if not fields:
+            return None
+        names = tuple((name, field.__name__) for name, field in fields)
+        layout = tuple(bool(bit) for bit in getattr(cls, "ACTIVE_FIELDS", ()))
+        return SszType(kind, fields=names, layout=layout), tuple(field for _, field in fields)
+    size = getattr(cls, SIZES[kind], None) if kind in SIZES else None
+    if size is None and kind not in UNBOUNDED:
+        return None
+    if kind not in ("vector", "list", "progressiveList"):
+        return SszType(kind, size), ()
+    element = getattr(cls, "ELEMENT_TYPE", None)
+    return (SszType(kind, size, element.__name__), (element,)) if element else None
+
+
+def _python_type(kind: Type) -> str:
+    if kind.element is not None:
+        return f"Sequence[{_python_type(kind.element)}]"
+    return kind.name
+
+
 def _imports(body: list[ast.stmt]) -> list[Declaration]:
     imports = []
     for node in body:
@@ -131,7 +195,10 @@ class Python(Target):
     banner = f"{'#' * 100}\n# {{}}\n{'#' * 100}"
     alias = "{name}: TypeAlias = {module}.{name}"
     config_reference = "config.{}"
-    foreign_import = "from eth_consensus_specs.utils.foreign import call_foreign"
+    foreign_imports = (
+        "from eth_consensus_specs.utils.foreign import call_foreign",
+        "from eth_consensus_specs.utils.foreign import copy_into",
+    )
 
     def declarations(self, source: str) -> list[Declaration]:
         body = _parse(source).body
@@ -222,18 +289,77 @@ class Python(Target):
     def foreign_function(
         self,
         definition: Definition,
-        parameters: list[tuple[str, str]],
-        result: str,
-        preset: str,
+        signature: Signature,
+        edits: tuple[str | None, ...],
+        location: str,
     ) -> str:
-        names = ", ".join(name for name, _ in parameters)
-        typed = ", ".join(f"{name}: {kind}" for name, kind in parameters)
-        location = f"{definition.fork}/{preset}"
-        return (
-            f"def {definition.name}({typed}) -> {result}:\n"
-            f'    return call_foreign("{definition.lang}", "{location}", "{definition.name}", '
-            f"{result}, {names})"
+        typed = ", ".join(f"{name}: {_python_type(kind)}" for name, kind in signature.parameters)
+        arguments = ", ".join(
+            f"({name}, {_python_type(kind)})" for name, kind in signature.parameters
         )
+        types = [_python_type(kind) for kind in signature.results]
+        returned = [index for index, edit in enumerate(edits) if edit is None]
+        if len(returned) == 1:
+            result = types[returned[0]]
+        else:
+            result = (
+                f"tuple[{', '.join(types[index] for index in returned)}]" if returned else "None"
+            )
+        lines = [
+            f"def {definition.name}({typed}) -> {result}:",
+            f"    {'results = ' if types else ''}call_foreign(",
+            f'        "{definition.lang}",',
+            f'        "{location}",',
+            f'        "{definition.name}",',
+            "        config,",
+            f"        [{arguments}],",
+            f"        [{', '.join(types)}],",
+            "    )",
+            *(
+                f"    copy_into({edit}, results[{index}])"
+                for index, edit in enumerate(edits)
+                if edit
+            ),
+        ]
+        if returned:
+            lines.append(f"    return {', '.join(f'results[{index}]' for index in returned)}")
+        return "\n".join(lines)
+
+    def environment(self, out: Path, spec: Spec, preset: str, names: set[str]) -> Environment:
+        namespace = self.load(out, spec.fork, preset)
+        types: dict[str, SszType] = {}
+        classes: dict[str, type] = {}
+
+        def describe(cls: type) -> str | None:
+            if classes.get(cls.__name__, cls) is not cls:
+                raise SpecError(f"{spec.fork} has two types named `{cls.__name__}`")
+            if cls.__name__ not in types:
+                described = _ssz_type(cls)
+                if described is None:
+                    return None
+                for child in described[1]:
+                    if describe(child) is None:
+                        raise SpecError(f"`{cls.__name__}` holds `{child.__name__}`, not SSZ")
+                classes[cls.__name__] = cls
+                types[cls.__name__] = described[0]
+            return cls.__name__
+
+        values: dict[str, tuple[str, object]] = {}
+        configs: dict[str, str] = {}
+        for name in sorted(names):
+            item, value = spec.items.get(name), namespace.get(name)
+            if isinstance(item, Variable):
+                typed = isinstance(value, ssz.SSZType)
+                kind = describe(type(value)) if typed else PLAIN_TYPES.get(type(value))
+                if kind is None or (item.kind == Kind.CONFIG and not typed):
+                    raise SpecError(f"{item.path}: `{name}` cannot be read from another language")
+                if item.kind == Kind.CONFIG:
+                    configs[name] = kind
+                else:
+                    values[name] = (kind, plain(value))
+            elif isinstance(value, type) and issubclass(value, ssz.SSZType):
+                describe(value)
+        return Environment(types, values, configs)
 
     def write(self, out: Path, spec: Spec) -> Path:
         directory = super().write(out, spec)

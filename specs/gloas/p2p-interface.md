@@ -223,26 +223,18 @@ class Seen:
 
 ### Modified `compute_fork_version`
 
-```python
-def compute_fork_version(epoch: Epoch) -> Version:
-    """
-    Return the fork version at the given ``epoch``.
-    """
-    if epoch >= GLOAS_FORK_EPOCH:
-        return GLOAS_FORK_VERSION
-    if epoch >= FULU_FORK_EPOCH:
-        return FULU_FORK_VERSION
-    if epoch >= ELECTRA_FORK_EPOCH:
-        return ELECTRA_FORK_VERSION
-    if epoch >= DENEB_FORK_EPOCH:
-        return DENEB_FORK_VERSION
-    if epoch >= CAPELLA_FORK_EPOCH:
-        return CAPELLA_FORK_VERSION
-    if epoch >= BELLATRIX_FORK_EPOCH:
-        return BELLATRIX_FORK_VERSION
-    if epoch >= ALTAIR_FORK_EPOCH:
-        return ALTAIR_FORK_VERSION
-    return GENESIS_FORK_VERSION
+```lean
+def compute_fork_version
+    (epoch : Epoch)
+    : Version :=
+  if epoch >= GLOAS_FORK_EPOCH then GLOAS_FORK_VERSION
+  else if epoch >= FULU_FORK_EPOCH then FULU_FORK_VERSION
+  else if epoch >= ELECTRA_FORK_EPOCH then ELECTRA_FORK_VERSION
+  else if epoch >= DENEB_FORK_EPOCH then DENEB_FORK_VERSION
+  else if epoch >= CAPELLA_FORK_EPOCH then CAPELLA_FORK_VERSION
+  else if epoch >= BELLATRIX_FORK_EPOCH then BELLATRIX_FORK_VERSION
+  else if epoch >= ALTAIR_FORK_EPOCH then ALTAIR_FORK_VERSION
+  else GENESIS_FORK_VERSION
 ```
 
 ### Modified `compute_min_epochs_for_block_requests`

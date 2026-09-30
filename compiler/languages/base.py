@@ -44,6 +44,30 @@ class Declaration(NamedTuple):
     receiver: str | None = None
 
 
+class Type(NamedTuple):
+    name: str
+    element: "Type | None" = None
+
+
+class Signature(NamedTuple):
+    parameters: tuple[tuple[str, Type], ...]
+    results: tuple[Type, ...]
+
+
+class SszType(NamedTuple):
+    kind: str
+    size: int | None = None
+    element: str | None = None
+    fields: tuple[tuple[str, str], ...] = ()
+    layout: tuple[bool, ...] = ()
+
+
+class Environment(NamedTuple):
+    types: dict[str, SszType]
+    values: dict[str, tuple[str, object]]
+    configs: dict[str, str]
+
+
 class Language(ABC):
     name: str
 
@@ -62,13 +86,23 @@ def register(language: Language) -> None:
 
 
 class Foreign(Language):
+    builtins: frozenset[str] = frozenset()
+
     @abstractmethod
-    def signature(self, definition: Definition) -> tuple[list[tuple[str, str]], str]: ...
+    def signature(self, definition: Definition) -> Signature: ...
 
     @abstractmethod
     def build(
-        self, directory: Path, preset: str, definitions: list[Definition], cache: Path
+        self,
+        directory: Path,
+        preset: str,
+        definitions: list[Definition],
+        environment: Environment,
+        cache: Path,
     ) -> None: ...
+
+    @abstractmethod
+    def wait(self) -> None: ...
 
 
 class Target(Language):
@@ -77,7 +111,7 @@ class Target(Language):
     banner: str
     alias: str
     config_reference: str
-    foreign_import: str
+    foreign_imports: tuple[str, ...]
 
     @abstractmethod
     def rewrite(self, source: str, replace: Callable[[str], str | None]) -> str: ...
@@ -104,10 +138,13 @@ class Target(Language):
     def foreign_function(
         self,
         definition: Definition,
-        parameters: list[tuple[str, str]],
-        result: str,
-        preset: str,
+        signature: Signature,
+        edits: tuple[str | None, ...],
+        location: str,
     ) -> str: ...
+
+    @abstractmethod
+    def environment(self, out: Path, spec: Spec, preset: str, names: set[str]) -> Environment: ...
 
     @abstractmethod
     def write_forks(self, out: Path, parents: dict[str, str | None]) -> None: ...
@@ -137,17 +174,63 @@ class Target(Language):
         for preset in PRESETS:
             (directory / f"{preset}.{self.extension}").write_text(self.render(spec, nodes, preset))
         for language in LANGUAGES.values():
-            if not isinstance(language, Foreign):
-                continue
             definitions = [
                 item
                 for item in spec.items.values()
                 if isinstance(item, Definition) and item.lang == language.name
             ]
-            if any(item.key in spec.own for item in definitions):
-                for preset in PRESETS:
-                    language.build(directory, preset, definitions, out / "cache" / language.name)
+            if not isinstance(language, Foreign) or not definitions:
+                continue
+            names = self.foreign_names(spec, language, definitions)
+            for preset in PRESETS:
+                environment = self.environment(out, spec, preset, names)
+                cache = out / "cache" / language.name
+                language.build(directory, preset, definitions, environment, cache)
         return directory
+
+    def wait(self) -> None:
+        for language in LANGUAGES.values():
+            if isinstance(language, Foreign):
+                language.wait()
+
+    def foreign_names(
+        self, spec: Spec, language: Foreign, definitions: list[Definition]
+    ) -> set[str]:
+        functions = {
+            key
+            for key, item in spec.items.items()
+            if isinstance(item, Definition)
+            and item.kind == Kind.FUNCTION
+            and item.lang == self.name
+        }
+        names: set[str] = set()
+        for definition in definitions:
+            used = frozenset().union(*language.references(definition.source))
+            if calls := sorted(used & functions - language.builtins):
+                raise SpecError(
+                    f"{definition.path}: `{definition.name}` calls "
+                    f"{', '.join(f'`{call}`' for call in calls)}, "
+                    f"which {'is' if len(calls) == 1 else 'are'} written in {self.name}"
+                )
+            names |= used
+        return names
+
+    def edits(self, spec: Spec, signature: Signature) -> tuple[str | None, ...]:
+        edits = []
+        for result in signature.results:
+            item = spec.items.get(result.name)
+            mutable = (
+                isinstance(item, Definition)
+                and item.kind == Kind.TYPE
+                and self.shape(item) != Shape.SCALAR
+            )
+            matching = [name for name, kind in signature.parameters if kind == result]
+            if mutable and len(matching) > 1:
+                raise SpecError(
+                    f"a result of type `{result.name}` could edit any of {', '.join(matching)}"
+                )
+            edits.append(matching[0] if mutable and matching else None)
+        return tuple(edits)
 
     def render(self, spec: Spec, nodes: list[Node], preset: str) -> str:
         configs = {
@@ -167,9 +250,18 @@ class Target(Language):
                 return self.rewrite(item.source, to_config)
             language = LANGUAGES[item.lang]
             assert isinstance(language, Foreign)
-            return self.foreign_function(item, *language.signature(item), preset)
+            signature = language.signature(item)
+            edits = self.edits(spec, signature)
+            return self.foreign_function(item, signature, edits, f"{spec.fork}/{preset}")
 
         def text(node: Node) -> str:
+            first = node.items[0]
+            if node.group == Group.HELPER and isinstance(first, Definition):
+                if first.lang != self.name:
+                    raise SpecError(
+                        f"{first.path}: `{node.key}` is written in {first.lang}, "
+                        f"but is needed while the {self.name} module loads"
+                    )
             if node.group == Group.ALIAS:
                 return self.alias.format(name=node.key, module=spec.lineage[-2])
             if node.group == Group.CONFIGURATION:
@@ -189,7 +281,7 @@ class Target(Language):
                 raise SpecError(f"{item.path}: `{item.name}` is imported but not used")
         statements = [item.source for item in imports]
         if any(item.lang != self.name for item in definitions):
-            statements.append(self.foreign_import)
+            statements.extend(self.foreign_imports)
         return self.header(statements, spec, preset) + self.separator + self.join(blocks) + "\n"
 
     def render_configuration(self, configs: dict[str, Variable], preset: str) -> str:
