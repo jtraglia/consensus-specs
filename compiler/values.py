@@ -2,8 +2,7 @@ import json
 from collections.abc import Mapping
 from pathlib import Path
 
-from .languages import Target
-from .languages.base import hex_text
+from .languages.base import hex_text, Target
 from .model import Kind, PRESETS, Spec, SpecError, Values, Variable
 
 

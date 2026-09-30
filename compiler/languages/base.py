@@ -54,6 +54,13 @@ class Language(ABC):
     def references(self, source: str) -> References: ...
 
 
+LANGUAGES: dict[str, Language] = {}
+
+
+def register(language: Language) -> None:
+    LANGUAGES[language.name] = language
+
+
 class Foreign(Language):
     @abstractmethod
     def signature(self, definition: Definition) -> tuple[list[tuple[str, str]], str]: ...
@@ -71,10 +78,6 @@ class Target(Language):
     alias: str
     config_reference: str
     foreign_import: str
-
-    def __init__(self, *foreign: Foreign) -> None:
-        self.foreign = {language.name: language for language in foreign}
-        self.languages: dict[str, Language] = {self.name: self, **self.foreign}
 
     @abstractmethod
     def rewrite(self, source: str, replace: Callable[[str], str | None]) -> str: ...
@@ -126,7 +129,7 @@ class Target(Language):
 
     def item_references(self, item: Item) -> References:
         if isinstance(item, Definition):
-            return self.languages[item.lang].references(item.source)
+            return LANGUAGES[item.lang].references(item.source)
         sources = (self.expression(value) for value in item.values.values())
         return frozenset().union(*(self.references(source)[0] for source in sources)), frozenset()
 
@@ -136,15 +139,17 @@ class Target(Language):
         directory.mkdir(parents=True, exist_ok=True)
         for preset in PRESETS:
             (directory / f"{preset}.{self.extension}").write_text(self.render(spec, nodes, preset))
-        for name, language in self.foreign.items():
+        for language in LANGUAGES.values():
+            if not isinstance(language, Foreign):
+                continue
             definitions = [
                 item
                 for item in spec.items.values()
-                if isinstance(item, Definition) and item.lang == name
+                if isinstance(item, Definition) and item.lang == language.name
             ]
             if any(item.key in spec.own for item in definitions):
                 for preset in PRESETS:
-                    language.build(directory, preset, definitions, out / "cache" / name)
+                    language.build(directory, preset, definitions, out / "cache" / language.name)
         return directory
 
     def render(self, spec: Spec, nodes: list[Node], preset: str) -> str:
@@ -163,7 +168,9 @@ class Target(Language):
                 return self.variable(item, self.rewrite(value, to_config))
             if item.lang == self.name:
                 return self.rewrite(item.source, to_config)
-            return self.foreign_function(item, *self.foreign[item.lang].signature(item), preset)
+            language = LANGUAGES[item.lang]
+            assert isinstance(language, Foreign)
+            return self.foreign_function(item, *language.signature(item), preset)
 
         def text(node: Node) -> str:
             if node.group == Group.ALIAS:
@@ -184,7 +191,7 @@ class Target(Language):
             if item.fork == spec.fork and item.name not in used:
                 raise SpecError(f"{item.path}: `{item.name}` is imported but not used")
         statements = [item.source for item in imports]
-        if any(item.lang in self.foreign for item in definitions):
+        if any(item.lang != self.name for item in definitions):
             statements.append(self.foreign_import)
         return self.header(statements, spec, preset) + self.separator + self.join(blocks) + "\n"
 

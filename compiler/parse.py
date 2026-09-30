@@ -8,7 +8,7 @@ from marko.ext.gfm import gfm
 from marko.ext.gfm.elements import Table
 from marko.inline import CodeSpan
 
-from .languages import LANGUAGES
+from .languages.base import LANGUAGES
 from .model import Definition, Document, Kind, PRESETS, Records, SpecError, Variable
 
 DIRECTIVE = re.compile(r"<!--\s*eth_consensus_specs:\s*(.*?)\s*-->", re.DOTALL)
