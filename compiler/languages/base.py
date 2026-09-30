@@ -124,9 +124,6 @@ class Target(Language):
     @abstractmethod
     def literal(self, value: object, expression: str) -> str: ...
 
-    @abstractmethod
-    def constant_hint(self, expression: str) -> str | None: ...
-
     def item_references(self, item: Item) -> References:
         if isinstance(item, Definition):
             return LANGUAGES[item.lang].references(item.source)
@@ -231,19 +228,23 @@ class Target(Language):
             if item.kind in (Kind.PRESET, Kind.CONFIG)
         }
 
-    def spec_object(self, spec: Spec, preset: str, values: Values) -> dict[str, dict]:
+    def spec_object(self, out: Path, spec: Spec) -> dict[str, dict]:
+        namespaces = {preset: self.load(out, spec.fork, preset) for preset in PRESETS}
+
+        def entry(item: Variable, preset: str) -> list:
+            value = namespaces[preset][item.name]
+            type_name, text = self.split_expression(item.values[preset])
+            if item.kind != Kind.CONSTANT:
+                text = self.literal(plain(value), self.expression(item.values[preset]))
+            return [type_name or type(value).__name__, text]
+
         result: dict[str, dict] = {field: {} for field in SPEC_FIELDS}
         for key, item in spec.items.items():
-            if isinstance(item, Variable):
-                expression = self.expression(item.values[preset])
-                type_name, value = self.split_expression(item.values[preset])
-                if item.kind == Kind.CONSTANT:
-                    hint = self.constant_hint(expression)
-                    result["constants"][key] = [type_name, value, None, hint]
-                else:
-                    field = "presets" if item.kind == Kind.PRESET else "configs"
-                    literal = self.literal(values[key], expression)
-                    result[field][key] = [type_name, literal, None, None]
+            if isinstance(item, Variable) and item.kind == Kind.CONSTANT:
+                result["constants"][key] = entry(item, PRESETS[0])
+            elif isinstance(item, Variable):
+                field = "presets" if item.kind == Kind.PRESET else "configs"
+                result[field][key] = {preset: entry(item, preset) for preset in PRESETS}
             elif item.kind == Kind.FUNCTION:
                 result["functions"][key] = (
                     self.source(item) if item.lang == self.name else item.source

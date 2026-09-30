@@ -270,6 +270,3 @@ class Python(Target):
             return f'"{value}"'
         assert isinstance(value, int)
         return str(value)
-
-    def constant_hint(self, expression: str) -> str | None:
-        return "Final" if _is_string(expression) else None

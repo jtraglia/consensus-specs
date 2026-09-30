@@ -58,17 +58,6 @@ def write_yaml(
                 path.write_text(text + "\n")
 
 
-def write_json(
-    out: Path,
-    target: Target,
-    specs: Mapping[str, Spec],
-    values: Mapping[str, Mapping[str, Values]],
-) -> None:
-    data = {
-        preset: {
-            fork: target.spec_object(spec, preset, values[fork][preset])
-            for fork, spec in specs.items()
-        }
-        for preset in PRESETS
-    }
+def write_json(out: Path, target: Target, specs: Mapping[str, Spec]) -> None:
+    data = {fork: target.spec_object(out, spec) for fork, spec in specs.items()}
     (out / "spec.json").write_text(json.dumps(data))

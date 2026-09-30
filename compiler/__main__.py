@@ -45,7 +45,7 @@ def build(out: Path, selected: list[str], verbose: bool) -> None:
             check_same(spec, values[name])
         write_yaml(out, specs, values)
         normative = {name: merge(forks, documents, name, build=False) for name in targets}
-        write_json(out, PYTHON, normative, values)
+        write_json(out, PYTHON, normative)
 
 
 def main() -> int:
