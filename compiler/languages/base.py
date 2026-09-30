@@ -246,9 +246,8 @@ class Target(Language):
                 field = "presets" if item.kind == Kind.PRESET else "configs"
                 result[field][key] = {preset: entry(item, preset) for preset in PRESETS}
             elif item.kind == Kind.FUNCTION:
-                result["functions"][key] = (
-                    self.source(item) if item.lang == self.name else item.source
-                )
+                source = self.source(item) if item.lang == self.name else item.source
+                result["functions"][key] = [item.lang, source]
             elif item.kind == Kind.TYPE:
                 result[TYPE_FIELDS[self.shape(item)]][item.name] = self.source(item)
         return result
