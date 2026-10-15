@@ -1025,12 +1025,13 @@ def integer_squareroot
 
 #### `xor`
 
-```python
-def xor(bytes_1: Bytes32, bytes_2: Bytes32) -> Bytes32:
-    """
-    Return the exclusive-or of two 32-byte strings.
-    """
-    return Bytes32(byte_1 ^ byte_2 for byte_1, byte_2 in zip(bytes_1, bytes_2, strict=True))
+```lean
+def xor
+    (bytes_1 : Bytes32)
+    (bytes_2 : Bytes32)
+    : Bytes32 :=
+  ByteArray.mk <|
+    Array.zipWith (fun byte_1 byte_2 => byte_1 ^^^ byte_2) bytes_1.data bytes_2.data
 ```
 
 #### `uint_to_bytes`
@@ -1187,30 +1188,30 @@ def is_eligible_for_activation(state: BeaconState, validator: Validator) -> bool
 
 #### `is_slashable_validator`
 
-```python
-def is_slashable_validator(validator: Validator, epoch: Epoch) -> bool:
-    """
-    Check if ``validator`` is slashable.
-    """
-    return (not validator.slashed) and (
-        validator.activation_epoch <= epoch < validator.withdrawable_epoch
-    )
+```lean
+def is_slashable_validator
+    (validator : Validator)
+    (epoch : Epoch)
+    : Bool :=
+  !validator.slashed
+    && validator.activation_epoch <= epoch
+    && epoch < validator.withdrawable_epoch
 ```
 
 #### `is_slashable_attestation_data`
 
-```python
-def is_slashable_attestation_data(data_1: AttestationData, data_2: AttestationData) -> bool:
-    """
-    Check if ``data_1`` and ``data_2`` are slashable according to Casper FFG rules.
-    """
-    return (
-        # Double vote
-        (data_1 != data_2 and data_1.target.epoch == data_2.target.epoch)
-        or
-        # Surround vote
-        (data_1.source.epoch < data_2.source.epoch and data_2.target.epoch < data_1.target.epoch)
-    )
+```lean
+def is_slashable_attestation_data
+    (data_1 : AttestationData)
+    (data_2 : AttestationData)
+    : Bool :=
+  let source_1 := data_1.source.epoch
+  let source_2 := data_2.source.epoch
+  let target_1 := data_1.target.epoch
+  let target_2 := data_2.target.epoch
+  let double_vote := data_1 != data_2 && target_1 == target_2
+  let surround_vote := source_1 < source_2 && target_2 < target_1
+  double_vote || surround_vote
 ```
 
 #### `is_valid_indexed_attestation`
@@ -1235,34 +1236,37 @@ def is_valid_indexed_attestation(
 
 #### `compute_merkle_branch_root`
 
-```python
-def compute_merkle_branch_root(
-    leaf: Bytes32, branch: Sequence[Bytes32], depth: Uint64, index: Uint64
-) -> Root:
-    """
-    Return the Merkle root obtained by hashing ``leaf`` at ``index`` with ``branch``.
-    """
-    value = leaf
-    for i in range(depth):
-        if index // (2**i) % 2:
-            value = sha256(branch[i] + value)
-        else:
-            value = sha256(value + branch[i])
-    return Root(value)
+```lean
+def compute_merkle_branch_root
+    (leaf : Bytes32)
+    (branch : Array Bytes32)
+    (depth : Uint64)
+    (index : Uint64)
+    : Result Root := do
+  let mut value := leaf
+  for i in [0:depth] do
+    let node <- branch[i]?
+    if index / 2 ^ i % 2 == 1 then
+      value := sha256 (node ++ value)
+    else
+      value := sha256 (value ++ node)
+  return value
 ```
 
 #### `is_valid_merkle_branch`
 
-```python
-def is_valid_merkle_branch(
-    leaf: Bytes32, branch: Sequence[Bytes32], depth: Uint64, index: Uint64, root: Root
-) -> bool:
-    """
-    Check if ``leaf`` at ``index`` verifies against the Merkle ``root`` and ``branch``.
-    """
-    if depth != len(branch):
-        return False
-    return compute_merkle_branch_root(leaf, branch, depth, index) == root
+```lean
+def is_valid_merkle_branch
+    (leaf : Bytes32)
+    (branch : Array Bytes32)
+    (depth : Uint64)
+    (index : Uint64)
+    (root : Root)
+    : Result Bool := do
+  if depth != branch.size then
+    return false
+  let computed_root <- compute_merkle_branch_root leaf branch depth index
+  return computed_root == root
 ```
 
 ### Misc
@@ -1414,22 +1418,20 @@ def compute_epoch_at_slot(slot: Slot) -> Epoch:
 
 #### `compute_start_slot_at_epoch`
 
-```python
-def compute_start_slot_at_epoch(epoch: Epoch) -> Slot:
-    """
-    Return the start slot of ``epoch``.
-    """
-    return Slot(epoch) * SLOTS_PER_EPOCH
+```lean
+def compute_start_slot_at_epoch
+    (epoch : Epoch)
+    : Slot :=
+  epoch * SLOTS_PER_EPOCH
 ```
 
 #### `compute_activation_exit_epoch`
 
-```python
-def compute_activation_exit_epoch(epoch: Epoch) -> Epoch:
-    """
-    Return the epoch during which validator activations and exits initiated in ``epoch`` take effect.
-    """
-    return epoch + 1 + MAX_SEED_LOOKAHEAD
+```lean
+def compute_activation_exit_epoch
+    (epoch : Epoch)
+    : Epoch :=
+  epoch + 1 + MAX_SEED_LOOKAHEAD
 ```
 
 #### `compute_fork_data_root`
@@ -2418,21 +2420,23 @@ def process_eth1_data_reset(state: BeaconState) -> None:
 
 #### Effective balances updates
 
-```python
-def process_effective_balance_updates(state: BeaconState) -> None:
-    # Update effective balances with hysteresis
-    for index, validator in enumerate(state.validators):
-        balance = state.balances[index]
-        HYSTERESIS_INCREMENT = Uint64(EFFECTIVE_BALANCE_INCREMENT // HYSTERESIS_QUOTIENT)
-        DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER
-        UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER
-        if (
-            balance + DOWNWARD_THRESHOLD < validator.effective_balance
-            or validator.effective_balance + UPWARD_THRESHOLD < balance
-        ):
-            validator.effective_balance = min(
-                balance - balance % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE
-            )
+```lean
+def process_effective_balance_updates
+    (state : BeaconState)
+    : Result BeaconState := do
+  let HYSTERESIS_INCREMENT := EFFECTIVE_BALANCE_INCREMENT / HYSTERESIS_QUOTIENT
+  let DOWNWARD_THRESHOLD := HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER
+  let UPWARD_THRESHOLD := HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER
+  let mut validators := state.validators
+  for index in [0:validators.size] do
+    let validator <- validators[index]?
+    let balance <- state.balances[index]?
+    if balance + DOWNWARD_THRESHOLD < validator.effective_balance
+        || validator.effective_balance + UPWARD_THRESHOLD < balance then
+      let rounded_balance := balance - balance % EFFECTIVE_BALANCE_INCREMENT
+      let effective_balance := min rounded_balance MAX_EFFECTIVE_BALANCE
+      validators := validators.set! index { validator with effective_balance }
+  return { state with validators }
 ```
 
 #### Slashings balances updates
@@ -2639,22 +2643,24 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
 
 ##### Deposits
 
-```python
-def get_validator_from_deposit(
-    pubkey: BLSPubkey, withdrawal_credentials: Bytes32, amount: Gwei
-) -> Validator:
-    effective_balance = min(amount - amount % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
-
-    return Validator(
-        pubkey=pubkey,
-        withdrawal_credentials=withdrawal_credentials,
-        effective_balance=effective_balance,
-        slashed=Boolean(False),
-        activation_eligibility_epoch=FAR_FUTURE_EPOCH,
-        activation_epoch=FAR_FUTURE_EPOCH,
-        exit_epoch=FAR_FUTURE_EPOCH,
-        withdrawable_epoch=FAR_FUTURE_EPOCH,
-    )
+```lean
+def get_validator_from_deposit
+    (pubkey : BLSPubkey)
+    (withdrawal_credentials : Bytes32)
+    (amount : Gwei)
+    : Validator :=
+  let rounded_amount := amount - amount % EFFECTIVE_BALANCE_INCREMENT
+  let effective_balance := min rounded_amount MAX_EFFECTIVE_BALANCE
+  {
+    pubkey
+    withdrawal_credentials
+    effective_balance
+    slashed := false
+    activation_eligibility_epoch := FAR_FUTURE_EPOCH
+    activation_epoch := FAR_FUTURE_EPOCH
+    exit_epoch := FAR_FUTURE_EPOCH
+    withdrawable_epoch := FAR_FUTURE_EPOCH
+  }
 ```
 
 ```python

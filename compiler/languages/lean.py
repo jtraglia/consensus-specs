@@ -108,8 +108,14 @@ class Merkleizable (value : Type) where
 def require (condition : Bool) : Result Unit :=
   if condition then .ok () else .error "assertion failed"
 
-def hash (data : ByteArray) : ByteArray :=
+def sha256 (data : ByteArray) : ByteArray :=
   Ssz.Sha256.hash data
+
+def bytes_to_uint64 (data : ByteArray) : Nat :=
+  data.data.foldr (fun byte total => total * 256 + byte.toNat) 0
+
+def uint_to_bytes (size : Nat) (value : Nat) : ByteArray :=
+  ByteArray.mk ((Array.range size).map fun index => (value >>> (8 * index)).toUInt8)
 
 def hash_tree_root {value : Type} [Merkleizable value] (object : value) : Result ByteArray :=
   match Ssz.hashTreeRoot (Merkleizable.desc value) (Merkleizable.toValue object) with
@@ -171,12 +177,6 @@ def encodeWith (desc : Ssz.Desc) (value : Ssz.Value) : Result ByteArray :=
   | .ok data => .ok (ByteArray.mk data)
   | .error reason => .error reason.reason
 
-def readLength (data : ByteArray) (start : Nat) : Nat :=
-  (List.range 4).foldr (fun index total => total * 256 + (data.get! (start + index)).toNat) 0
-
-def lengthBytes (size : Nat) : ByteArray :=
-  ByteArray.mk ((Array.range 4).map fun index => (size >>> (8 * index)).toUInt8)
-
 def readFrames (data : ByteArray) : Result (List ByteArray) := Id.run do
   let mut frames := #[]
   let mut position := 0
@@ -184,7 +184,7 @@ def readFrames (data : ByteArray) : Result (List ByteArray) := Id.run do
     if position + 4 > data.size then
       return .error "truncated frame"
     let start := position + 4
-    let stop := start + readLength data position
+    let stop := start + bytes_to_uint64 (data.extract position start)
     if stop > data.size then
       return .error "truncated frame"
     frames := frames.push (data.extract start stop)
@@ -192,7 +192,7 @@ def readFrames (data : ByteArray) : Result (List ByteArray) := Id.run do
   return .ok frames.toList
 
 def writeFrames (frames : List ByteArray) : ByteArray :=
-  frames.foldl (fun data frame => data ++ lengthBytes frame.size ++ frame) ByteArray.empty
+  frames.foldl (fun data frame => data ++ uint_to_bytes 4 frame.size ++ frame) ByteArray.empty
 
 def reply (status : UInt8) (payload : ByteArray) : ByteArray :=
   ByteArray.mk #[status] ++ payload
@@ -640,7 +640,9 @@ def _compile(module: str, library: Path, workspace: tuple[Path, str], source: Pa
 
 class Lean(Foreign):
     name = "lean"
-    builtins = frozenset({"hash", "hash_tree_root", "require"})
+    builtins = frozenset(
+        {"bytes_to_uint64", "hash_tree_root", "require", "sha256", "uint_to_bytes"}
+    )
 
     def __init__(self) -> None:
         self.compiling: dict[str, Future[None]] = {}
