@@ -1919,7 +1919,8 @@ def process_slot
 def process_epoch
     (state : BeaconState)
     : Result BeaconState := do
-  let mut state <- process_justification_and_finalization state
+  let mut state := state
+  state <- process_justification_and_finalization state
   state <- process_rewards_and_penalties state
   state <- process_registry_updates state
   state <- process_slashings state
@@ -1928,7 +1929,8 @@ def process_epoch
   state <- process_slashings_reset state
   state <- process_randao_mixes_reset state
   state <- process_historical_roots_update state
-  process_participation_record_updates state
+  state <- process_participation_record_updates state
+  return state
 ```
 
 #### Helpers
@@ -2394,10 +2396,12 @@ def process_block
     (state : BeaconState)
     (block : BeaconBlock)
     : Result BeaconState := do
-  let mut state <- process_block_header state block
+  let mut state := state
+  state <- process_block_header state block
   state <- process_randao state block.body
   state <- process_eth1_data state block.body
-  process_operations state block.body
+  state <- process_operations state block.body
+  return state
 ```
 
 #### Block header
@@ -2464,11 +2468,13 @@ def process_operations
     : Result BeaconState := do
   require (body.deposits.size
     == min MAX_DEPOSITS (state.eth1_data.deposit_count - state.eth1_deposit_index))
-  let state <- body.proposer_slashings.foldlM process_proposer_slashing state
-  let state <- body.attester_slashings.foldlM process_attester_slashing state
-  let state <- body.attestations.foldlM process_attestation state
-  let state <- body.deposits.foldlM process_deposit state
-  body.voluntary_exits.foldlM process_voluntary_exit state
+  let mut state := state
+  state <- body.proposer_slashings.foldlM process_proposer_slashing state
+  state <- body.attester_slashings.foldlM process_attester_slashing state
+  state <- body.attestations.foldlM process_attestation state
+  state <- body.deposits.foldlM process_deposit state
+  state <- body.voluntary_exits.foldlM process_voluntary_exit state
+  return state
 ```
 
 ##### Proposer slashings
