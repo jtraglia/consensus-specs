@@ -1,11 +1,14 @@
 import ast
+import dataclasses
 import importlib
 import re
 import sys
 import textwrap
-from collections.abc import Callable, Iterator, Mapping
+import typing
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from functools import cache
 from pathlib import Path
+from types import NoneType, UnionType
 
 import ssz
 
@@ -15,6 +18,7 @@ from compiler.languages.base import (
     Environment,
     hex_text,
     plain,
+    Record,
     Signature,
     SszType,
     Target,
@@ -144,8 +148,20 @@ def _ssz_type(cls: type) -> tuple[SszType, tuple[type, ...]] | None:
 
 
 def _python_type(kind: Type) -> str:
-    if kind.element is not None:
-        return f"Sequence[{_python_type(kind.element)}]"
+    arguments = [_python_type(argument) for argument in kind.arguments]
+    match kind.name:
+        case "sequence":
+            return f"Sequence[{arguments[0]}]"
+        case "set":
+            return f"set[{arguments[0]}]"
+        case "option":
+            return f"{arguments[0]} | None"
+        case "tuple":
+            return f"tuple[{', '.join(arguments)}]"
+        case "map":
+            return f"dict[{', '.join(arguments)}]"
+        case "object":
+            return "SSZObject"
     return kind.name
 
 
@@ -293,7 +309,11 @@ class Python(Target):
         edits: tuple[str | None, ...],
         location: str,
     ) -> str:
-        typed = ", ".join(f"{name}: {_python_type(kind)}" for name, kind in signature.parameters)
+        defaults = dict(signature.defaults)
+        typed = ", ".join(
+            f"{name}: {_python_type(kind)}" + (f" = {defaults[name]}" if name in defaults else "")
+            for name, kind in signature.parameters
+        )
         arguments = ", ".join(
             f"({name}, {_python_type(kind)})" for name, kind in signature.parameters
         )
@@ -311,7 +331,7 @@ class Python(Target):
             f'        "{definition.lang}",',
             f'        "{location}",',
             f'        "{definition.name}",',
-            "        config,",
+            "        globals(),",
             f"        [{arguments}],",
             f"        [{', '.join(types)}],",
             "    )",
@@ -344,6 +364,39 @@ class Python(Target):
                 types[cls.__name__] = described[0]
             return cls.__name__
 
+        records: dict[str, Record] = {}
+
+        def convert(annotation: object) -> Type:
+            origin, arguments = typing.get_origin(annotation), typing.get_args(annotation)
+            if origin in (typing.Union, UnionType):
+                present = [argument for argument in arguments if argument is not NoneType]
+                if len(present) == 1 and len(arguments) == 2:
+                    return Type("option", (convert(present[0]),))
+            shapes = {set: "set", dict: "map", list: "sequence", Sequence: "sequence"}
+            if origin in shapes:
+                return Type(shapes[origin], tuple(convert(argument) for argument in arguments))
+            if origin is tuple and arguments[1:] == (Ellipsis,):
+                return Type("sequence", (convert(arguments[0]),))
+            if origin is tuple:
+                return Type("tuple", tuple(convert(argument) for argument in arguments))
+            if annotation in PLAIN_TYPES and annotation is not str:
+                return Type(PLAIN_TYPES[annotation])
+            if dataclasses.is_dataclass(annotation) and isinstance(annotation, type):
+                return Type(record(annotation))
+            if isinstance(annotation, type) and issubclass(annotation, ssz.SSZType):
+                if describe(annotation) is not None:
+                    return Type(annotation.__name__)
+            raise SpecError(f"`{annotation}` cannot cross into another language")
+
+        def record(cls: type) -> str:
+            if cls.__name__ not in records:
+                hints = typing.get_type_hints(cls)
+                fields = tuple(
+                    (field.name, convert(hints[field.name])) for field in dataclasses.fields(cls)
+                )
+                records[cls.__name__] = Record(fields, cls.__hash__ is not None)
+            return cls.__name__
+
         values: dict[str, tuple[str, object]] = {}
         configs: dict[str, str] = {}
         for name in sorted(names):
@@ -359,7 +412,19 @@ class Python(Target):
                     values[name] = (kind, plain(value))
             elif isinstance(value, type) and issubclass(value, ssz.SSZType):
                 describe(value)
-        return Environment(types, values, configs)
+            elif isinstance(value, type) and dataclasses.is_dataclass(value):
+                record(value)
+        for name, value in sorted(namespace.items()):
+            if (
+                isinstance(value, type)
+                and issubclass(value, ssz.SSZType)
+                and value.__name__ == name
+            ):
+                try:
+                    describe(value)
+                except SpecError:
+                    continue
+        return Environment(types, values, configs, records)
 
     def write(self, out: Path, spec: Spec) -> Path:
         directory = out / "specs" / spec.fork
@@ -367,9 +432,12 @@ class Python(Target):
         (directory / "__init__.py").write_text("from . import mainnet as spec  # noqa:F401\n")
         return super().write(out, spec)
 
-    def write_forks(self, out: Path, parents: dict[str, str | None]) -> None:
+    def write_forks(self, out: Path, parents: dict[str, str | None], built: list[str]) -> None:
         graph = "\n".join(f"    {name!r}: {parent!r}," for name, parent in parents.items())
-        (out / "specs" / "forks.py").write_text(f"PREVIOUS_FORK_OF = {{\n{graph}\n}}\n")
+        forks = "".join(f"    {name!r},\n" for name in built)
+        (out / "specs" / "forks.py").write_text(
+            f"PREVIOUS_FORK_OF = {{\n{graph}\n}}\n\nBUILT_FORKS = (\n{forks})\n"
+        )
 
     def load(self, out: Path, fork: str, preset: str) -> Mapping[str, object]:
         package = str(out.resolve() / "specs")

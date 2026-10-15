@@ -1,9 +1,8 @@
 from collections.abc import Sequence
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, TYPE_CHECKING
 
 from eth_utils import encode_hex
 
-from eth_consensus_specs.fulu.mainnet import DataColumnSidecar
 from eth_consensus_specs.test.context import expect_assertion_error
 from eth_consensus_specs.test.exceptions import BlockNotFoundException
 from eth_consensus_specs.test.helpers.attestations import (
@@ -14,6 +13,9 @@ from eth_consensus_specs.test.helpers.attestations import (
 from eth_consensus_specs.test.helpers.block import build_empty_block_for_next_slot
 from eth_consensus_specs.test.helpers.forks import is_post_fulu, is_post_gloas
 from eth_consensus_specs.test.helpers.state import next_epoch, state_transition_and_sign_block
+
+if TYPE_CHECKING:
+    from eth_consensus_specs.fulu.mainnet import DataColumnSidecar
 
 
 def check_head_against_root(spec, store, root):
@@ -27,7 +29,7 @@ class BlobData(NamedTuple):
 
     blobs: Sequence[Any] | None = None
     proofs: Sequence[bytes] | None = None
-    sidecars: Sequence[DataColumnSidecar] | None = None
+    sidecars: "Sequence[DataColumnSidecar] | None" = None
     kzg_commitments: Sequence[Any] | None = None
 
     def is_post_fulu(self):
@@ -285,14 +287,14 @@ def get_blobs_file_name(blobs=None, blobs_root=None):
         return f"blobs_{encode_hex(blobs_root)}"
 
 
-def get_sidecars_file_names(sidecars: Sequence[DataColumnSidecar]) -> Sequence[str]:
+def get_sidecars_file_names(sidecars: "Sequence[DataColumnSidecar]") -> Sequence[str]:
     """
     Returns the file names for sidecars.
     """
     return [get_sidecar_file_name(sidecar) for sidecar in sidecars]
 
 
-def get_sidecar_file_name(sidecar: DataColumnSidecar) -> str:
+def get_sidecar_file_name(sidecar: "DataColumnSidecar") -> str:
     """
     Returns the file name for a single sidecar.
     """

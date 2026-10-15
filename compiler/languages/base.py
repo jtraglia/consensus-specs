@@ -46,12 +46,13 @@ class Declaration(NamedTuple):
 
 class Type(NamedTuple):
     name: str
-    element: "Type | None" = None
+    arguments: tuple["Type", ...] = ()
 
 
 class Signature(NamedTuple):
     parameters: tuple[tuple[str, Type], ...]
     results: tuple[Type, ...]
+    defaults: tuple[tuple[str, str], ...] = ()
 
 
 class SszType(NamedTuple):
@@ -62,10 +63,16 @@ class SszType(NamedTuple):
     layout: tuple[bool, ...] = ()
 
 
+class Record(NamedTuple):
+    fields: tuple[tuple[str, Type], ...]
+    hashable: bool
+
+
 class Environment(NamedTuple):
     types: dict[str, SszType]
     values: dict[str, tuple[str, object]]
     configs: dict[str, str]
+    records: dict[str, Record]
 
 
 class Language(ABC):
@@ -147,7 +154,7 @@ class Target(Language):
     def environment(self, out: Path, spec: Spec, preset: str, names: set[str]) -> Environment: ...
 
     @abstractmethod
-    def write_forks(self, out: Path, parents: dict[str, str | None]) -> None: ...
+    def write_forks(self, out: Path, parents: dict[str, str | None], built: list[str]) -> None: ...
 
     @abstractmethod
     def load(self, out: Path, fork: str, preset: str) -> Mapping[str, object]: ...
@@ -271,15 +278,8 @@ class Target(Language):
             return emit(node.items[0])
 
         blocks = [(node.group, text(node)) for node in nodes]
-        used: set[str] = set()
-        for _, block in blocks:
-            used.update(*self.references(block))
         definitions = [item for item in spec.items.values() if isinstance(item, Definition)]
-        imports = [item for item in definitions if item.kind == Kind.IMPORT]
-        for item in imports:
-            if item.fork == spec.fork and item.name not in used:
-                raise SpecError(f"{item.path}: `{item.name}` is imported but not used")
-        statements = [item.source for item in imports]
+        statements = [item.source for item in definitions if item.kind == Kind.IMPORT]
         if any(item.lang != self.name for item in definitions):
             statements.extend(self.foreign_imports)
         return self.header(statements, spec, preset) + self.separator + self.join(blocks) + "\n"

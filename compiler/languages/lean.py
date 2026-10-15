@@ -18,9 +18,10 @@ TOOLCHAIN = "leanprover/lean4:v4.34.1"
 POOL = ThreadPoolExecutor()
 SSZ_REPOSITORY = "https://github.com/ethereum/ssz-specs.git"
 SSZ_REVISION = "d4a0d75f36b2f3c1602d58b1fb039c9f2a0e3ab9"
-DEFINITION = re.compile(r"def (\w+)\s")
+DEFINITION = re.compile(r"(?:partial )?def (\w+)\s")
 IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 RESULT = "Result "
+DEFAULTS = {"none": "None", "true": "True", "false": "False"}
 KEYWORDS = frozenset(
     {
         "abbrev",
@@ -91,6 +92,10 @@ subDir = "lean"
 
 PRELUDE = """\
 import Ssz
+import Std.Data.HashMap
+import Std.Data.HashSet
+
+set_option linter.unusedVariables false
 
 namespace Spec
 
@@ -108,6 +113,9 @@ class Merkleizable (value : Type) where
 def require (condition : Bool) : Result Unit :=
   if condition then .ok () else .error "assertion failed"
 
+def raise {value : Type} (kind : String) (message : String) : Result value :=
+  .error s!"{kind}: {message}"
+
 def sha256 (data : ByteArray) : ByteArray :=
   Ssz.Sha256.hash data
 
@@ -117,7 +125,8 @@ def bytes_to_uint64 (data : ByteArray) : Nat :=
 def uint_to_bytes (size : Nat) (value : Nat) : ByteArray :=
   ByteArray.mk ((Array.range size).map fun index => (value >>> (8 * index)).toUInt8)
 
-def hash_tree_root {value : Type} [Merkleizable value] (object : value) : Result ByteArray :=
+def hash_tree_root {value : Type} [merkleizable : Merkleizable value] (object : value) :
+    Result ByteArray :=
   match Ssz.hashTreeRoot (Merkleizable.desc value) (Merkleizable.toValue object) with
   | .ok root => .ok (ByteArray.mk root)
   | .error reason => .error reason.reason
@@ -196,6 +205,109 @@ def writeFrames (frames : List ByteArray) : ByteArray :=
 
 def reply (status : UInt8) (payload : ByteArray) : ByteArray :=
   ByteArray.mk #[status] ++ payload
+
+instance : Merkleizable Nat where
+  desc := .uint 8
+  toValue := ofUint
+
+def encodeAs {value : Type} (desc : Ssz.Desc) (write : value -> Ssz.Value) (object : value) :
+    Result ByteArray :=
+  encodeWith desc (write object)
+
+def decodeBytes (data : ByteArray) : Result ByteArray :=
+  .ok data
+
+def encodeBytes (data : ByteArray) : Result ByteArray :=
+  .ok data
+
+def decodeArray {value : Type} (decode : ByteArray -> Result value) (data : ByteArray) :
+    Result (Array value) := do
+  let frames <- readFrames data
+  return (<- frames.mapM decode).toArray
+
+def encodeArray {value : Type} (encode : value -> Result ByteArray) (values : Array value) :
+    Result ByteArray := do
+  return writeFrames (<- values.toList.mapM encode)
+
+def decodeSet {value : Type} [BEq value] [Hashable value] (decode : ByteArray -> Result value)
+    (data : ByteArray) : Result (Std.HashSet value) := do
+  return Std.HashSet.ofList (<- decodeArray decode data).toList
+
+def encodeSet {value : Type} [BEq value] [Hashable value] (encode : value -> Result ByteArray)
+    (values : Std.HashSet value) : Result ByteArray :=
+  encodeArray encode values.toArray
+
+def decodeOption {value : Type} (decode : ByteArray -> Result value) (data : ByteArray) :
+    Result (Option value) := do
+  match <- readFrames data with
+  | [] => return none
+  | [frame] => return some (<- decode frame)
+  | _ => .error "expected at most one value"
+
+def encodeOption {value : Type} (encode : value -> Result ByteArray) :
+    Option value -> Result ByteArray
+  | none => .ok (writeFrames [])
+  | some value => do return writeFrames [<- encode value]
+
+def decodePair {first second : Type} (decodeFirst : ByteArray -> Result first)
+    (decodeSecond : ByteArray -> Result second) (data : ByteArray) :
+    Result (Prod first second) := do
+  match <- readFrames data with
+  | [one, two] => return ((<- decodeFirst one), (<- decodeSecond two))
+  | _ => .error "expected two values"
+
+def encodePair {first second : Type} (encodeFirst : first -> Result ByteArray)
+    (encodeSecond : second -> Result ByteArray) (value : Prod first second) :
+    Result ByteArray := do
+  return writeFrames [<- encodeFirst value.1, <- encodeSecond value.2]
+
+def decodeMap {key value : Type} [BEq key] [Hashable key]
+    (decodeKey : ByteArray -> Result key) (decodeValue : ByteArray -> Result value)
+    (data : ByteArray) : Result (Std.HashMap key value) := do
+  return Std.HashMap.ofList (<- decodeArray (decodePair decodeKey decodeValue) data).toList
+
+def encodeMap {key value : Type} [BEq key] [Hashable key]
+    (encodeKey : key -> Result ByteArray) (encodeValue : value -> Result ByteArray)
+    (values : Std.HashMap key value) : Result ByteArray :=
+  encodeArray (encodePair encodeKey encodeValue) values.toArray
+
+@[extern "spec_host_call"]
+opaque hostCall (name : @& String) (data : @& ByteArray) : ByteArray
+
+def host (name : String) (frames : List ByteArray) : Result ByteArray := do
+  let answer := hostCall name (writeFrames frames)
+  let body := answer.extract 1 answer.size
+  match (answer[0]? : Option UInt8) with
+  | some 0 => return body
+  | some _ => .error ((String.fromUTF8? body).getD s!"`{name}` failed")
+  | none => .error s!"nothing answered `{name}`"
+
+def hostBool (name : String) (frames : List ByteArray) : Result Bool := do
+  return (<- host name frames) == ByteArray.mk #[1]
+
+namespace bls
+
+def Sign (privkey : Nat) (message : ByteArray) : Result ByteArray :=
+  host "bls.Sign" [uint_to_bytes 32 privkey, message]
+
+def Verify (pubkey : ByteArray) (message : ByteArray) (signature : ByteArray) : Result Bool :=
+  hostBool "bls.Verify" [pubkey, message, signature]
+
+def Aggregate (signatures : Array ByteArray) : Result ByteArray :=
+  host "bls.Aggregate" [writeFrames signatures.toList]
+
+def FastAggregateVerify (pubkeys : Array ByteArray) (message : ByteArray)
+    (signature : ByteArray) : Result Bool :=
+  hostBool "bls.FastAggregateVerify" [writeFrames pubkeys.toList, message, signature]
+
+def AggregateVerify (pubkeys : Array ByteArray) (messages : Array ByteArray)
+    (signature : ByteArray) : Result Bool :=
+  hostBool "bls.AggregateVerify" [writeFrames pubkeys.toList, writeFrames messages.toList, signature]
+
+def KeyValidate (pubkey : ByteArray) : Result Bool :=
+  hostBool "bls.KeyValidate" [pubkey]
+
+end bls
 """
 
 SHIM = """\
@@ -203,12 +315,15 @@ SHIM = """\
 
 #define SPEC_EXPORT __attribute__((visibility("default"), used))
 
+typedef const uint8_t *(*spec_host_fn)(const char *, const uint8_t *, size_t, size_t *);
+
 extern void lean_initialize_runtime_module(void);
 extern lean_object *initialize_Spec(uint8_t builtin);
 extern lean_object *spec_dispatch(lean_object *key, lean_object *args);
 extern lean_object *spec_config_names(lean_object *unit);
 
 static int initialized = 0;
+static spec_host_fn host = NULL;
 
 static void spec_init(void) {
     if (initialized) return;
@@ -246,6 +361,22 @@ SPEC_EXPORT const uint8_t *spec_data(void *reply) {
 }
 
 SPEC_EXPORT void spec_release(void *reply) { lean_dec((lean_object *)reply); }
+
+SPEC_EXPORT void spec_set_host(spec_host_fn function) { host = function; }
+
+lean_object *spec_host_call(b_lean_obj_arg name, b_lean_obj_arg data) {
+    size_t size = 0;
+    const uint8_t *answer = NULL;
+    if (host != NULL) {
+        answer = host(lean_string_cstr(name), lean_sarray_cptr(data), lean_sarray_size(data), &size);
+    }
+    lean_object *bytes = lean_alloc_sarray(1, size, size);
+    uint8_t *target = lean_sarray_cptr(bytes);
+    for (size_t index = 0; index < size; index++) {
+        target[index] = answer[index];
+    }
+    return bytes;
+}
 """
 
 
@@ -264,16 +395,16 @@ def _top(text: str) -> Iterator[int]:
             yield index
 
 
-def _groups(text: str) -> list[str]:
+def _groups(text: str, opening: str = "(", closing: str = ")") -> list[str]:
     groups = []
     depth = start = 0
     for index, character in enumerate(text):
-        if character == "(":
+        if character in "([{":
             depth += 1
             start = index + 1 if depth == 1 else start
-        elif character == ")":
+        elif character in ")]}":
             depth -= 1
-            if depth == 0:
+            if depth == 0 and text[start - 1] == opening and character == closing:
                 groups.append(text[start:index])
     return groups
 
@@ -301,14 +432,29 @@ def _words(text: str) -> list[str]:
     return words
 
 
-def _type(text: str, definition: Definition) -> Type:
+def _type(text: str, definition: Definition, variables: frozenset[str]) -> Type:
     match _words(text):
         case ["Bool"]:
             return Type("bool")
         case ["Nat"]:
             return Type("int")
+        case ["ByteArray"]:
+            return Type("bytes")
         case ["Array", element]:
-            return Type("sequence", _type(element, definition))
+            return Type("sequence", (_type(element, definition, variables),))
+        case ["Std.HashSet", element]:
+            return Type("set", (_type(element, definition, variables),))
+        case ["Option", element]:
+            return Type("option", (_type(element, definition, variables),))
+        case ["Std.HashMap", key, value]:
+            return Type(
+                "map",
+                (_type(key, definition, variables), _type(value, definition, variables)),
+            )
+        case ["Prod", _, _]:
+            return Type("tuple", _components(text, definition, variables))
+        case [name] if name in variables:
+            return Type("object")
         case [name] if IDENTIFIER.fullmatch(name):
             return Type(name)
     raise SpecError(
@@ -317,13 +463,14 @@ def _type(text: str, definition: Definition) -> Type:
     )
 
 
-def _results(text: str, definition: Definition) -> tuple[Type, ...]:
+def _components(text: str, definition: Definition, variables: frozenset[str]) -> tuple[Type, ...]:
     match _words(text):
-        case ["Unit"]:
-            return ()
         case ["Prod", first, rest]:
-            return (_type(first, definition), *_results(rest, definition))
-    return (_type(text, definition),)
+            return (
+                _type(first, definition, variables),
+                *_components(rest, definition, variables),
+            )
+    return (_type(text, definition, variables),)
 
 
 def _signature(definition: Definition) -> tuple[Signature, bool]:
@@ -335,15 +482,34 @@ def _signature(definition: Definition) -> tuple[Signature, bool]:
     colon = max((index for index in _top(header) if header[index] == ":"), default=None)
     if colon is None:
         raise SpecError(f"{definition.path}: `{definition.name}` declares no result type")
+    variables = frozenset(
+        name
+        for group in _groups(header[:colon], "{", "}")
+        if group.partition(":")[2].strip() == "Type"
+        for name in group.partition(":")[0].split()
+    )
     parameters = []
+    defaults = {}
     for group in _groups(header[:colon]):
         names, _, annotation = group.partition(":")
-        kind = _type(annotation, definition)
+        annotation, _, default = annotation.partition(":=")
+        kind = _type(annotation, definition, variables)
         parameters += [(name, kind) for name in names.split()]
+        if default:
+            literal = DEFAULTS.get(default.strip(), default.strip())
+            if not literal.isdigit() and literal not in DEFAULTS.values():
+                raise SpecError(
+                    f"{definition.path}: `{definition.name}` gives `{names.strip()}` "
+                    f"the default `{default.strip()}`, which another language cannot spell"
+                )
+            defaults |= dict.fromkeys(names.split(), literal)
     result = header[colon + 1 :].strip()
     fallible = result.startswith(RESULT)
-    results = _results(result.removeprefix(RESULT), definition)
-    return Signature(tuple(parameters), results), fallible
+    result = result.removeprefix(RESULT)
+    results = () if _words(result) == ["Unit"] else _components(result, definition, variables)
+    if any(kind.name == "object" for kind in results):
+        raise SpecError(f"{definition.path}: `{definition.name}` returns a value of any type")
+    return Signature(tuple(parameters), results, tuple(defaults.items())), fallible
 
 
 def _ordered(definitions: list[Definition]) -> list[Definition]:
@@ -450,7 +616,7 @@ def _structure(types: dict[str, SszType], name: str) -> list[str]:
         f"    {_writer(types, kind)} value.{_name(field)}" for field, kind in fields
     )
     return [
-        f"structure {name} where\n{declared}  deriving BEq",
+        f"structure {name} where\n{declared}  deriving BEq, Hashable",
         f"instance : Inhabited {name} where\n  default := {{\n{defaults}  }}",
         f"def {name}.desc : Ssz.Desc :=\n  {_desc(types[name])}",
         f"def {name}.toValue (value : {name}) : Ssz.Value :=\n  .seq [\n{writes}\n  ]",
@@ -459,12 +625,45 @@ def _structure(types: dict[str, SszType], name: str) -> list[str]:
     ]
 
 
+def _record(environment: Environment, name: str) -> list[str]:
+    record = environment.records[name]
+    declared = "".join(f"  {_name(field)} : {_lean_type(kind)}\n" for field, kind in record.fields)
+    derived = "Inhabited, BEq, Hashable" if record.hashable else "Inhabited"
+    reads = "".join(
+        f"    {_name(field)} := (<- {_codec(environment, kind)[0]} (<- fields[{index}]?))\n"
+        for index, (field, kind) in enumerate(record.fields)
+    )
+    writes = ",\n".join(
+        f"    (<- {_codec(environment, kind)[1]} value.{_name(field)})"
+        for field, kind in record.fields
+    )
+    return [
+        f"structure {name} where\n{declared}  deriving {derived}",
+        (
+            f"def {name}.decode (data : ByteArray) : Result {name} := do\n"
+            f"  let fields := (<- readFrames data).toArray\n  return {{\n{reads}  }}"
+        ),
+        (
+            f"def {name}.encode (value : {name}) : Result ByteArray := do\n"
+            f"  return writeFrames [\n{writes}\n  ]"
+        ),
+    ]
+
+
 def _declarations(types: dict[str, SszType], name: str) -> list[str]:
     kind = types[name]
     if kind.kind in CONTAINERS:
         return _structure(types, name)
     lean = f"Array {kind.element}" if kind.kind in SEQUENCES else SCALARS[kind.kind].lean
-    return [f"abbrev {name} := {lean}", f"def {name}.desc : Ssz.Desc :=\n  {_desc(kind)}"]
+    return [
+        f"abbrev {name} := {lean}",
+        f"def {name}.desc : Ssz.Desc :=\n  {_desc(kind)}",
+        (
+            f"def {name}.hash_tree_root (value : {name}) : Result ByteArray :=\n"
+            f"  Spec.hash_tree_root (merkleizable := {{ desc := {name}.desc, "
+            f"toValue := {_writer(types, name)} }}) value"
+        ),
+    ]
 
 
 def _constant(types: dict[str, SszType], name: str, kind: str, value: object) -> str:
@@ -494,27 +693,84 @@ def _configuration(types: dict[str, SszType], configs: dict[str, str]) -> list[s
     ]
 
 
-def _boundary(types: dict[str, SszType], kind: Type) -> tuple[str, str, str]:
-    if kind.element is not None:
-        desc, reader, writer = _boundary(types, kind.element)
-        return f"(.progressiveList {desc} none)", f"(asArray {reader})", f"(ofArray {writer})"
-    if kind.name == "bool":
-        return ".bool", "asBool", "ofBool"
-    if kind.name == "int":
-        return "(.uint 8)", "asUint", "ofUint"
+def _lean_type(kind: Type) -> str:
+    arguments = [_lean_type(argument) for argument in kind.arguments]
+    match kind.name:
+        case "bool":
+            return "Bool"
+        case "int":
+            return "Nat"
+        case "bytes":
+            return "ByteArray"
+        case "sequence":
+            return f"(Array {arguments[0]})"
+        case "set":
+            return f"(Std.HashSet {arguments[0]})"
+        case "map":
+            return f"(Std.HashMap {arguments[0]} {arguments[1]})"
+        case "option":
+            return f"(Option {arguments[0]})"
+        case "tuple":
+            *rest, last = arguments
+            for first in reversed(rest):
+                last = f"(Prod {first} {last})"
+            return last
+    return kind.name
+
+
+def _codec(environment: Environment, kind: Type) -> tuple[str, str]:
+    types = environment.types
+    match kind.name:
+        case "bool":
+            return "(decodeWith .bool asBool)", "(encodeAs .bool ofBool)"
+        case "int":
+            return "(decodeWith (.uint 32) asUint)", "(encodeAs (.uint 32) ofUint)"
+        case "bytes":
+            return "decodeBytes", "encodeBytes"
+        case "sequence" | "set" | "option":
+            decoder, encoder = _codec(environment, kind.arguments[0])
+            wrapper = {"sequence": "Array", "set": "Set", "option": "Option"}[kind.name]
+            return f"(decode{wrapper} {decoder})", f"(encode{wrapper} {encoder})"
+        case "map":
+            (key_decoder, key_encoder), (value_decoder, value_encoder) = [
+                _codec(environment, argument) for argument in kind.arguments
+            ]
+            return (
+                f"(decodeMap {key_decoder} {value_decoder})",
+                f"(encodeMap {key_encoder} {value_encoder})",
+            )
+        case "tuple":
+            *rest, last = [_codec(environment, argument) for argument in kind.arguments]
+            decoder, encoder = last
+            for first_decoder, first_encoder in reversed(rest):
+                decoder = f"(decodePair {first_decoder} {decoder})"
+                encoder = f"(encodePair {first_encoder} {encoder})"
+            return decoder, encoder
+        case "object":
+            raise SpecError("only a parameter can hold a value of any type")
+    if kind.name in environment.records:
+        return f"{kind.name}.decode", f"{kind.name}.encode"
     if kind.name not in types:
         raise SpecError(f"`{kind.name}` has no SSZ shape")
-    return f"{kind.name}.desc", _reader(types, kind.name), _writer(types, kind.name)
+    desc = f"{kind.name}.desc"
+    reader, writer = _reader(types, kind.name), _writer(types, kind.name)
+    return f"(decodeWith {desc} {reader})", f"(encodeAs {desc} {writer})"
 
 
-def _arm(types: dict[str, SszType], definition: Definition) -> str:
+def _arm(environment: Environment, definition: Definition) -> str:
     signature, fallible = _signature(definition)
     names = [name for name, _ in signature.parameters]
     lines = [f'  | "{definition.name}", [{", ".join(names)}] => do']
+    objects = []
     for name, kind in signature.parameters:
-        desc, reader, _ = _boundary(types, kind)
-        lines.append(f"    let {name} <- decodeWith {desc} {reader} {name}")
+        if kind.name == "object":
+            objects.append(name)
+        else:
+            lines.append(f"    let {name} <- {_codec(environment, kind)[0]} {name}")
     call = " ".join([definition.name, *names])
+    for name in objects:
+        call = f"withObject {name} fun {name} => {call if fallible else f'pure ({call})'}"
+        fallible = True
     if not signature.results:
         lines += [f"    {call}" if fallible else f"    let _ := {call}", "    return []"]
         return "\n".join(lines)
@@ -523,18 +779,44 @@ def _arm(types: dict[str, SszType], definition: Definition) -> str:
     parts = []
     for index, kind in enumerate(signature.results):
         part = "result" + ".2" * index + (".1" if count > 1 and index < count - 1 else "")
-        desc, _, writer = _boundary(types, kind)
-        parts.append(f"(<- encodeWith {desc} ({writer} {part}))")
+        parts.append(f"(<- {_codec(environment, kind)[1]} {part})")
     lines.append(f"    return [{', '.join(parts)}]")
     return "\n".join(lines)
 
 
-def _dispatch(types: dict[str, SszType], definitions: list[Definition], configs: list[str]) -> str:
+def _with_object(types: dict[str, SszType]) -> str:
+    arms = "".join(
+        f'  | some "{name}" =>\n'
+        f"    @call {name} {{ desc := {name}.desc, toValue := {_writer(types, name)} }}\n"
+        f"      (<- decodeWith {name}.desc {_reader(types, name)} object)\n"
+        for name in types
+    )
+    return (
+        "def withObject {result : Type} (data : ByteArray)\n"
+        "    (call : {value : Type} -> [Merkleizable value] -> value -> Result result) :\n"
+        "    Result result := do\n"
+        "  let [name, object] <- readFrames data\n"
+        '    | .error "expected a type name and an object"\n'
+        "  match String.fromUTF8? name with\n"
+        f"{arms}"
+        '  | _ => .error "the object has a type this specification does not know"'
+    )
+
+
+def _dispatch(environment: Environment, definitions: list[Definition]) -> str:
+    types = environment.types
+    configs = list(environment.configs)
     functions = _listing([json.dumps(definition.name) for definition in definitions], "  ")
     settings = "_config : Config <- decodeWith Config.desc Config.ofValue settings"
-    arms = "\n".join(_arm(types, definition) for definition in definitions)
+    arms = "\n".join(_arm(environment, definition) for definition in definitions)
+    generic = any(
+        kind.name == "object"
+        for definition in definitions
+        for _, kind in _signature(definition)[0].parameters
+    )
     return "\n\n".join(
         [
+            *([_with_object(types)] if generic else []),
             f"def functions : List String :=\n  {functions}",
             (
                 "def call (key : String) (frames : List ByteArray) : Result (List ByteArray) := do\n"
@@ -572,10 +854,11 @@ def _module(definitions: list[Definition], environment: Environment) -> str:
     sections = [
         PRELUDE.strip(),
         *(text for name in types for text in _declarations(types, name)),
+        *(text for name in environment.records for text in _record(environment, name)),
         *(_constant(types, name, *value) for name, value in environment.values.items()),
         *(_configuration(types, environment.configs) if configs else []),
         f"section\nvariable [Config]\n\n{sources}\n\nend" if configs else sources,
-        _dispatch(types, ordered, configs),
+        _dispatch(environment, ordered),
         "end Spec",
     ]
     return "\n\n".join(sections) + "\n"
@@ -641,7 +924,7 @@ def _compile(module: str, library: Path, workspace: tuple[Path, str], source: Pa
 class Lean(Foreign):
     name = "lean"
     builtins = frozenset(
-        {"bytes_to_uint64", "hash_tree_root", "require", "sha256", "uint_to_bytes"}
+        {"bytes_to_uint64", "hash_tree_root", "raise", "require", "sha256", "uint_to_bytes"}
     )
 
     def __init__(self) -> None:

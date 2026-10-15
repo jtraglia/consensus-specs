@@ -262,10 +262,13 @@ The function [`is_active_validator`](./beacon-chain.md#is_active_validator) can
 be used to check if a validator is active during a given epoch. Usage is as
 follows:
 
-```python
-def check_if_validator_active(state: BeaconState, validator_index: ValidatorIndex) -> bool:
-    validator = state.validators[validator_index]
-    return is_active_validator(validator, get_current_epoch(state))
+```lean
+def check_if_validator_active
+    (state : BeaconState)
+    (validator_index : ValidatorIndex)
+    : Result Bool := do
+  let validator <- state.validators[validator_index]?
+  return is_active_validator validator (get_current_epoch state)
 ```
 
 Once a validator is activated, the validator is assigned
@@ -281,29 +284,22 @@ A validator can get committee assignments for a given epoch using the following
 helper via `get_committee_assignment(state, epoch, validator_index)` where
 `epoch <= next_epoch`.
 
-```python
-def get_committee_assignment(
-    state: BeaconState, epoch: Epoch, validator_index: ValidatorIndex
-) -> tuple[Sequence[ValidatorIndex], CommitteeIndex, Slot] | None:
-    """
-    Return the committee assignment in the ``epoch`` for ``validator_index``.
-    ``assignment`` returned is a tuple of the following form:
-        * ``assignment[0]`` is the list of validators in the committee
-        * ``assignment[1]`` is the index to which the committee is assigned
-        * ``assignment[2]`` is the slot at which the committee is assigned
-    Return None if no assignment.
-    """
-    next_epoch = get_current_epoch(state) + 1
-    assert epoch <= next_epoch
-
-    start_slot = compute_start_slot_at_epoch(epoch)
-    committee_count_per_slot = get_committee_count_per_slot(state, epoch)
-    for slot in range(start_slot, start_slot + SLOTS_PER_EPOCH):
-        for index in range(committee_count_per_slot):
-            committee = get_beacon_committee(state, Slot(slot), CommitteeIndex(index))
-            if validator_index in committee:
-                return committee, CommitteeIndex(index), Slot(slot)
-    return None
+```lean
+def get_committee_assignment
+    (state : BeaconState)
+    (epoch : Epoch)
+    (validator_index : ValidatorIndex)
+    : Result (Option (Prod (Array ValidatorIndex) (Prod CommitteeIndex Slot))) := do
+  let next_epoch := get_current_epoch state + 1
+  require (epoch <= next_epoch)
+  let start_slot := compute_start_slot_at_epoch epoch
+  let committee_count_per_slot := get_committee_count_per_slot state epoch
+  for slot in [start_slot:start_slot + SLOTS_PER_EPOCH] do
+    for index in [0:committee_count_per_slot] do
+      let committee <- get_beacon_committee state slot index
+      if committee.contains validator_index then
+        return some (committee, index, slot)
+  return none
 ```
 
 A validator can use the following function to see if they are supposed to
@@ -311,9 +307,12 @@ propose during a slot. This function can only be run with a `state` of the slot
 in question. Proposer selection is only stable within the context of the current
 epoch.
 
-```python
-def is_proposer(state: BeaconState, validator_index: ValidatorIndex) -> bool:
-    return get_beacon_proposer_index(state) == validator_index
+```lean
+def is_proposer
+    (state : BeaconState)
+    (validator_index : ValidatorIndex)
+    : Result Bool := do
+  return (<- get_beacon_proposer_index state) == validator_index
 ```
 
 *Note*: To see if a validator is assigned to propose during the slot, the beacon
@@ -431,11 +430,16 @@ Set `block.parent_root = hash_tree_root(parent)`.
 Set `block.body.randao_reveal = epoch_signature` where `epoch_signature` is
 obtained from:
 
-```python
-def get_epoch_signature(state: BeaconState, block: BeaconBlock, privkey: int) -> BLSSignature:
-    domain = get_domain(state, DOMAIN_RANDAO, compute_epoch_at_slot(block.slot))
-    signing_root = compute_signing_root(compute_epoch_at_slot(block.slot), domain)
-    return bls.Sign(privkey, signing_root)
+```lean
+def get_epoch_signature
+    (state : BeaconState)
+    (block : BeaconBlock)
+    (privkey : Nat)
+    : Result BLSSignature := do
+  let epoch := compute_epoch_at_slot block.slot
+  let domain <- get_domain state DOMAIN_RANDAO (some epoch)
+  let signing_root <- compute_signing_root epoch domain
+  bls.Sign privkey signing_root
 ```
 
 ##### Eth1 Data
@@ -460,65 +464,58 @@ the Eth1 data for a given Eth1 block.
 An honest block proposer sets
 `block.body.eth1_data = get_eth1_vote(state, eth1_chain)` where:
 
-```python
-def voting_period_start_time(state: BeaconState) -> Uint64:
-    eth1_voting_period_start_slot = state.slot - state.slot % (
-        Uint64(EPOCHS_PER_ETH1_VOTING_PERIOD) * SLOTS_PER_EPOCH
-    )
-    return compute_time_at_slot(state.genesis_time, eth1_voting_period_start_slot)
+```lean
+def voting_period_start_time
+    (state : BeaconState)
+    : Uint64 :=
+  let eth1_voting_period_start_slot :=
+    state.slot - state.slot % (EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH)
+  compute_time_at_slot state.genesis_time eth1_voting_period_start_slot
 ```
 
-```python
-def is_candidate_block(block: Eth1Block, period_start: Uint64) -> bool:
-    return (
-        block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= period_start
-        and block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * 2 >= period_start
-    )
+```lean
+def is_candidate_block
+    (block : Eth1Block)
+    (period_start : Uint64)
+    : Bool :=
+  block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= period_start
+    && block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * 2 >= period_start
 ```
 
-```python
-def get_eth1_vote(state: BeaconState, eth1_chain: Sequence[Eth1Block]) -> Eth1Data:
-    period_start = voting_period_start_time(state)
-    # `eth1_chain` abstractly represents all blocks in the eth1 chain sorted by ascending block height
-    votes_to_consider = [
-        get_eth1_data(block)
-        for block in eth1_chain
-        if (
-            is_candidate_block(block, period_start)
-            # Ensure cannot move back to earlier deposit contract states
-            and get_eth1_data(block).deposit_count >= state.eth1_data.deposit_count
-        )
-    ]
-
-    # Valid votes already cast during this period
-    valid_votes = [vote for vote in state.eth1_data_votes if vote in votes_to_consider]
-
-    # Default vote on latest eth1 block data in the period range unless eth1 chain is not live
-    # Non-substantive casting for linter
-    state_eth1_data: Eth1Data = state.eth1_data
-    default_vote = (
-        votes_to_consider[len(votes_to_consider) - 1] if any(votes_to_consider) else state_eth1_data
-    )
-
-    return max(
-        valid_votes,
-        # Tiebreak by smallest distance
-        key=lambda v: (
-            valid_votes.count(v),
-            -valid_votes.index(v),
-        ),
-        default=default_vote,
-    )
+```lean
+def get_eth1_vote
+    (state : BeaconState)
+    (eth1_chain : Array Eth1Block)
+    : Result Eth1Data := do
+  let period_start := voting_period_start_time state
+  let mut votes_to_consider := #[]
+  for block in eth1_chain do
+    let eth1_data <- get_eth1_data block
+    if is_candidate_block block period_start
+        && eth1_data.deposit_count >= state.eth1_data.deposit_count then
+      votes_to_consider := votes_to_consider.push eth1_data
+  let valid_votes := state.eth1_data_votes.filter fun vote =>
+    votes_to_consider.contains vote
+  let default_vote := votes_to_consider.back?.getD state.eth1_data
+  let mut vote := default_vote
+  let mut vote_count := 0
+  for valid_vote in valid_votes do
+    if valid_votes.count valid_vote > vote_count then
+      vote := valid_vote
+      vote_count := valid_votes.count valid_vote
+  return vote
 ```
 
 <!-- eth_consensus_specs: build
-```python
-def get_eth1_data(block: Eth1Block) -> Eth1Data:
-    return Eth1Data(
-        deposit_root=block.deposit_root,
-        deposit_count=block.deposit_count,
-        block_hash=Hash32(hash_tree_root(block)),
-    )
+```lean
+def get_eth1_data
+    (block : Eth1Block)
+    : Result Eth1Data := do
+  return {
+    deposit_root := block.deposit_root
+    deposit_count := block.deposit_count
+    block_hash := (<- hash_tree_root block)
+  }
 ```
 -->
 
@@ -593,12 +590,17 @@ transition function on an unsigned `block` containing a stub for the
 (working on a copy of the state) that does _not_ validate signatures or state
 root for this purpose:
 
-```python
-def compute_new_state_root(state: BeaconState, block: BeaconBlock) -> Root:
-    temp_state: BeaconState = state.copy()
-    signed_block = SignedBeaconBlock(message=block, signature=BLSSignature())
-    state_transition(temp_state, signed_block, validate_result=False)
-    return hash_tree_root(temp_state)
+```lean
+def compute_new_state_root
+    (state : BeaconState)
+    (block : BeaconBlock)
+    : Result Root := do
+  let signed_block : SignedBeaconBlock := {
+    message := block
+    signature := zeroBytes 96
+  }
+  let temp_state <- state_transition state signed_block (validate_result := false)
+  hash_tree_root temp_state
 ```
 
 ##### Signature
@@ -606,11 +608,16 @@ def compute_new_state_root(state: BeaconState, block: BeaconBlock) -> Root:
 `signed_block = SignedBeaconBlock(message=block, signature=block_signature)`,
 where `block_signature` is obtained from:
 
-```python
-def get_block_signature(state: BeaconState, block: BeaconBlock, privkey: int) -> BLSSignature:
-    domain = get_domain(state, DOMAIN_BEACON_PROPOSER, compute_epoch_at_slot(block.slot))
-    signing_root = compute_signing_root(block, domain)
-    return bls.Sign(privkey, signing_root)
+```lean
+def get_block_signature
+    (state : BeaconState)
+    (block : BeaconBlock)
+    (privkey : Nat)
+    : Result BLSSignature := do
+  let epoch := compute_epoch_at_slot block.slot
+  let domain <- get_domain state DOMAIN_BEACON_PROPOSER (some epoch)
+  let signing_root <- compute_signing_root block domain
+  bls.Sign privkey signing_root
 ```
 
 ### Attesting
@@ -690,13 +697,16 @@ of length equal to 1, containing `validator_index`.
 Set `attestation.signature = attestation_signature` where
 `attestation_signature` is obtained from:
 
-```python
-def get_attestation_signature(
-    state: BeaconState, attestation_data: AttestationData, privkey: int
-) -> BLSSignature:
-    domain = get_domain(state, DOMAIN_BEACON_ATTESTER, attestation_data.target.epoch)
-    signing_root = compute_signing_root(attestation_data, domain)
-    return bls.Sign(privkey, signing_root)
+```lean
+def get_attestation_signature
+    (state : BeaconState)
+    (attestation_data : AttestationData)
+    (privkey : Nat)
+    : Result BLSSignature := do
+  let epoch := attestation_data.target.epoch
+  let domain <- get_domain state DOMAIN_BEACON_ATTESTER (some epoch)
+  let signing_root <- compute_signing_root attestation_data domain
+  bls.Sign privkey signing_root
 ```
 
 #### Broadcast attestation
@@ -711,18 +721,15 @@ The `subnet_id` for the `attestation` is calculated with:
 - Let
   `subnet_id = compute_subnet_for_attestation(committees_per_slot, attestation.data.slot, attestation.data.index)`.
 
-```python
-def compute_subnet_for_attestation(
-    committees_per_slot: Uint64, slot: Slot, committee_index: CommitteeIndex
-) -> SubnetID:
-    """
-    Compute the correct subnet for an attestation for Phase 0.
-    Note, this mimics expected future behavior where attestations will be mapped to their shard subnet.
-    """
-    slots_since_epoch_start = Uint64(slot % SLOTS_PER_EPOCH)
-    committees_since_epoch_start = committees_per_slot * slots_since_epoch_start
-
-    return SubnetID((committees_since_epoch_start + committee_index) % ATTESTATION_SUBNET_COUNT)
+```lean
+def compute_subnet_for_attestation
+    (committees_per_slot : Uint64)
+    (slot : Slot)
+    (committee_index : CommitteeIndex)
+    : SubnetID :=
+  let slots_since_epoch_start := slot % SLOTS_PER_EPOCH
+  let committees_since_epoch_start := committees_per_slot * slots_since_epoch_start
+  (committees_since_epoch_start + committee_index) % ATTESTATION_SUBNET_COUNT
 ```
 
 ### Attestation aggregation
@@ -735,20 +742,28 @@ Some validators are selected to locally aggregate attestations with a similar
 A validator is selected to aggregate based upon the return value of
 `is_aggregator()`.
 
-```python
-def get_slot_signature(state: BeaconState, slot: Slot, privkey: int) -> BLSSignature:
-    domain = get_domain(state, DOMAIN_SELECTION_PROOF, compute_epoch_at_slot(slot))
-    signing_root = compute_signing_root(slot, domain)
-    return bls.Sign(privkey, signing_root)
+```lean
+def get_slot_signature
+    (state : BeaconState)
+    (slot : Slot)
+    (privkey : Nat)
+    : Result BLSSignature := do
+  let epoch := compute_epoch_at_slot slot
+  let domain <- get_domain state DOMAIN_SELECTION_PROOF (some epoch)
+  let signing_root <- compute_signing_root slot domain
+  bls.Sign privkey signing_root
 ```
 
-```python
-def is_aggregator(
-    state: BeaconState, slot: Slot, index: CommitteeIndex, slot_signature: BLSSignature
-) -> bool:
-    committee = get_beacon_committee(state, slot, index)
-    modulo = max(1, len(committee) // TARGET_AGGREGATORS_PER_COMMITTEE)
-    return bytes_to_uint64(sha256(slot_signature)[0:8]) % modulo == 0
+```lean
+def is_aggregator
+    (state : BeaconState)
+    (slot : Slot)
+    (index : CommitteeIndex)
+    (slot_signature : BLSSignature)
+    : Result Bool := do
+  let committee <- get_beacon_committee state slot index
+  let modulo := max 1 (committee.size / TARGET_AGGREGATORS_PER_COMMITTEE)
+  return bytes_to_uint64 ((sha256 slot_signature).extract 0 8) % modulo == 0
 ```
 
 #### Construct aggregate
@@ -778,10 +793,12 @@ Let `aggregate_attestation.aggregation_bits` be an `AggregationBits` of length
 Set `aggregate_attestation.signature = aggregate_signature` where
 `aggregate_signature` is obtained from:
 
-```python
-def get_aggregate_signature(attestations: Sequence[Attestation]) -> BLSSignature:
-    signatures = [attestation.signature for attestation in attestations]
-    return bls.Aggregate(signatures)
+```lean
+def get_aggregate_signature
+    (attestations : Array Attestation)
+    : Result BLSSignature :=
+  let signatures := attestations.map fun attestation => attestation.signature
+  bls.Aggregate signatures
 ```
 
 #### Broadcast aggregate
@@ -802,31 +819,35 @@ First,
 `aggregate_and_proof = get_aggregate_and_proof(state, validator_index, aggregate_attestation, privkey)`
 is constructed.
 
-```python
-def get_aggregate_and_proof(
-    state: BeaconState, aggregator_index: ValidatorIndex, aggregate: Attestation, privkey: int
-) -> AggregateAndProof:
-    return AggregateAndProof(
-        aggregator_index=aggregator_index,
-        aggregate=aggregate,
-        selection_proof=get_slot_signature(state, aggregate.data.slot, privkey),
-    )
+```lean
+def get_aggregate_and_proof
+    (state : BeaconState)
+    (aggregator_index : ValidatorIndex)
+    (aggregate : Attestation)
+    (privkey : Nat)
+    : Result AggregateAndProof := do
+  return {
+    aggregator_index
+    aggregate
+    selection_proof := (<- get_slot_signature state aggregate.data.slot privkey)
+  }
 ```
 
 Then
 `signed_aggregate_and_proof = SignedAggregateAndProof(message=aggregate_and_proof, signature=signature)`
 is constructed and broadcast. Where `signature` is obtained from:
 
-```python
-def get_aggregate_and_proof_signature(
-    state: BeaconState, aggregate_and_proof: AggregateAndProof, privkey: int
-) -> BLSSignature:
-    aggregate = aggregate_and_proof.aggregate
-    domain = get_domain(
-        state, DOMAIN_AGGREGATE_AND_PROOF, compute_epoch_at_slot(aggregate.data.slot)
-    )
-    signing_root = compute_signing_root(aggregate_and_proof, domain)
-    return bls.Sign(privkey, signing_root)
+```lean
+def get_aggregate_and_proof_signature
+    (state : BeaconState)
+    (aggregate_and_proof : AggregateAndProof)
+    (privkey : Nat)
+    : Result BLSSignature := do
+  let aggregate := aggregate_and_proof.aggregate
+  let epoch := compute_epoch_at_slot aggregate.data.slot
+  let domain <- get_domain state DOMAIN_AGGREGATE_AND_PROOF (some epoch)
+  let signing_root <- compute_signing_root aggregate_and_proof domain
+  bls.Sign privkey signing_root
 ```
 
 ## How to avoid slashing

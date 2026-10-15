@@ -125,99 +125,99 @@ fast confirmation variables. Confirmed block will be advanced at any future
 epoch boundary when the starting conditions are met, before that the finalized
 block will be returned as the confirmed one.
 
-```python
-def get_fast_confirmation_store(store: Store) -> FastConfirmationStore:
-    return FastConfirmationStore(
-        store=store,
-        confirmed_root=store.finalized_checkpoint.root,
-        previous_epoch_observed_justified_checkpoint=store.finalized_checkpoint,
-        current_epoch_observed_justified_checkpoint=store.finalized_checkpoint,
-        previous_epoch_greatest_unrealized_checkpoint=store.finalized_checkpoint,
-        previous_slot_head=store.finalized_checkpoint.root,
-        current_slot_head=store.finalized_checkpoint.root,
-    )
+```lean
+def get_fast_confirmation_store
+    (store : Store)
+    : FastConfirmationStore :=
+  {
+    store
+    confirmed_root := store.finalized_checkpoint.root
+    previous_epoch_observed_justified_checkpoint := store.finalized_checkpoint
+    current_epoch_observed_justified_checkpoint := store.finalized_checkpoint
+    previous_epoch_greatest_unrealized_checkpoint := store.finalized_checkpoint
+    previous_slot_head := store.finalized_checkpoint.root
+    current_slot_head := store.finalized_checkpoint.root
+  }
 ```
 
 #### Misc helper functions
 
 ##### `get_node_for_root`
 
-```python
-def get_node_for_root(block_root: Root) -> ForkChoiceNode:
-    return ForkChoiceNode(root=block_root)
+```lean
+def get_node_for_root
+    (block_root : Root)
+    : ForkChoiceNode :=
+  { root := block_root }
 ```
 
 ##### `get_block_slot`
 
-```python
-def get_block_slot(store: Store, block_root: Root) -> Slot:
-    """
-    Return a slot of the block.
-    """
-    return store.blocks[block_root].slot
+```lean
+def get_block_slot
+    (store : Store)
+    (block_root : Root)
+    : Result Slot := do
+  return (<- store.blocks.get? block_root).slot
 ```
 
 ##### `get_block_epoch`
 
-```python
-def get_block_epoch(store: Store, block_root: Root) -> Epoch:
-    """
-    Return an epoch of the block.
-    """
-    return compute_epoch_at_slot(store.blocks[block_root].slot)
+```lean
+def get_block_epoch
+    (store : Store)
+    (block_root : Root)
+    : Result Epoch := do
+  return compute_epoch_at_slot (<- store.blocks.get? block_root).slot
 ```
 
 ##### `get_checkpoint_for_block`
 
-```python
-def get_checkpoint_for_block(store: Store, block_root: Root, epoch: Epoch) -> Checkpoint:
-    """
-    Return a checkpoint in the chain of the block at the ``epoch``.
-    """
-    return Checkpoint(epoch=epoch, root=get_checkpoint_block(store, block_root, epoch))
+```lean
+def get_checkpoint_for_block
+    (store : Store)
+    (block_root : Root)
+    (epoch : Epoch)
+    : Result Checkpoint := do
+  return { epoch, root := (<- get_checkpoint_block store block_root epoch) }
 ```
 
 ##### `get_current_target`
 
-```python
-def get_current_target(store: Store) -> Checkpoint:
-    """
-    Return current epoch target.
-    """
-    head = get_head(store).root
-    current_epoch = get_current_store_epoch(store)
-    return get_checkpoint_for_block(store, head, current_epoch)
+```lean
+def get_current_target
+    (store : Store)
+    : Result Checkpoint := do
+  let head := (<- get_head store).root
+  let current_epoch := get_current_store_epoch store
+  get_checkpoint_for_block store head current_epoch
 ```
 
 ##### `is_start_slot_at_epoch`
 
-```python
-def is_start_slot_at_epoch(slot: Slot) -> bool:
-    """
-    Return ``True`` if ``slot`` is the start slot of an epoch.
-    """
-    return compute_slots_since_epoch_start(slot) == 0
+```lean
+def is_start_slot_at_epoch
+    (slot : Slot)
+    : Bool :=
+  compute_slots_since_epoch_start slot == 0
 ```
 
 ##### `get_ancestor_roots`
 
-```python
-def get_ancestor_roots(store: Store, block_root: Root, terminal_root: Root) -> Sequence[Root]:
-    """
-    Return a list of ancestors of ``block_root`` inclusive until ``terminal_root`` exclusive.
-    """
-    root = block_root
-    ancestor_roots: list[Root] = []
-    while store.blocks[root].slot > store.blocks[terminal_root].slot:
-        ancestor_roots.insert(0, root)
-        root = store.blocks[root].parent_root
-
-        # Return when terminal_root is reached
-        if root == terminal_root:
-            return ancestor_roots
-
-    # Return empty list if terminal_root is not in the chain of block_root
-    return []
+```lean
+def get_ancestor_roots
+    (store : Store)
+    (block_root : Root)
+    (terminal_root : Root)
+    : Result (Array Root) := do
+  let mut root := block_root
+  let mut ancestor_roots := #[]
+  while (<- store.blocks.get? root).slot > (<- store.blocks.get? terminal_root).slot do
+    ancestor_roots := #[root] ++ ancestor_roots
+    root := (<- store.blocks.get? root).parent_root
+    if root == terminal_root then
+      return ancestor_roots
+  return #[]
 ```
 
 #### State helpers
@@ -233,35 +233,34 @@ semantics MUST be preserved.
 *Note*: This function returns the committee for a specific slot. It MUST support
 committees of epochs starting from `current_epoch - 2`.
 
-```python
-def get_slot_committee(store: Store, slot: Slot) -> set[ValidatorIndex]:
-    """
-    Return participants of all committees in ``slot``.
-    """
-    head = get_head(store).root
-    shuffling_source = store.block_states[head]
-    committees_count = get_committee_count_per_slot(shuffling_source, compute_epoch_at_slot(slot))
-    participants: set[ValidatorIndex] = set()
-    for i in range(committees_count):
-        participants.update(get_beacon_committee(shuffling_source, slot, CommitteeIndex(i)))
-    return participants
+```lean
+def get_slot_committee
+    (store : Store)
+    (slot : Slot)
+    : Result (Std.HashSet ValidatorIndex) := do
+  let head := (<- get_head store).root
+  let shuffling_source <- store.block_states.get? head
+  let committees_count :=
+    get_committee_count_per_slot shuffling_source (compute_epoch_at_slot slot)
+  let mut participants : Std.HashSet ValidatorIndex := {}
+  for i in [0:committees_count] do
+    let committee <- get_beacon_committee shuffling_source slot i
+    participants := participants.insertMany committee
+  return participants
 ```
 
 ##### `get_pulled_up_head_state`
 
-```python
-def get_pulled_up_head_state(store: Store) -> BeaconState:
-    """
-    Return the state of the head pulled up to the current epoch if needed.
-    """
-    head = get_head(store).root
-    head_state = store.block_states[head]
-    if get_current_epoch(head_state) < get_current_store_epoch(store):
-        pulled_up_state = head_state.copy()
-        process_slots(pulled_up_state, compute_start_slot_at_epoch(get_current_store_epoch(store)))
-        return pulled_up_state
-    else:
-        return head_state
+```lean
+def get_pulled_up_head_state
+    (store : Store)
+    : Result BeaconState := do
+  let head := (<- get_head store).root
+  let head_state <- store.block_states.get? head
+  if get_current_epoch head_state < get_current_store_epoch store then
+    process_slots head_state (compute_start_slot_at_epoch (get_current_store_epoch store))
+  else
+    return head_state
 ```
 
 ##### `get_previous_balance_source`
@@ -271,18 +270,24 @@ Implementations MAY switch to the current epoch balance source after they run
 reconfirmation and before the logic to confirm new blocks is called. In this
 case implementations will need to keep only a single balance source around.
 
-```python
-def get_previous_balance_source(fcr_store: FastConfirmationStore) -> BeaconState:
-    store = fcr_store.store
-    return store.checkpoint_states[fcr_store.previous_epoch_observed_justified_checkpoint]
+```lean
+def get_previous_balance_source
+    (fcr_store : FastConfirmationStore)
+    : Result BeaconState := do
+  let store := fcr_store.store
+  let checkpoint := fcr_store.previous_epoch_observed_justified_checkpoint
+  return (<- store.checkpoint_states.get? checkpoint)
 ```
 
 ##### `get_current_balance_source`
 
-```python
-def get_current_balance_source(fcr_store: FastConfirmationStore) -> BeaconState:
-    store = fcr_store.store
-    return store.checkpoint_states[fcr_store.current_epoch_observed_justified_checkpoint]
+```lean
+def get_current_balance_source
+    (fcr_store : FastConfirmationStore)
+    : Result BeaconState := do
+  let store := fcr_store.store
+  let checkpoint := fcr_store.current_epoch_observed_justified_checkpoint
+  return (<- store.checkpoint_states.get? checkpoint)
 ```
 
 #### LMD-GHOST helpers
@@ -310,60 +315,42 @@ Due to the algorithm logic, maximum distance between `balance_source` and
 `MAX_SEED_LOOKAHEAD`. Therefore, participants of the committees from that span
 of slots are consistent with the `balance_source` validator set.
 
-```python
-def get_node_support_between_slots(
-    store: Store,
-    balance_source: BeaconState,
-    node: ForkChoiceNode,
-    start_slot: Slot,
-    end_slot: Slot,
-) -> Gwei:
-    """
-    Return support of the node by validators assigned to slots
-    between ``start_slot`` and ``end_slot`` (inclusive of both).
-    """
-    participants: set[ValidatorIndex] = set()
-    for slot in range(start_slot, end_slot + 1):
-        participants.update(get_slot_committee(store, Slot(slot)))
-
-    # Keep validators that were active at the balance_source epoch to be consistent
-    # with get_total_active_balance() computation, also filter out slashed validators
-    unslashed_and_active_indices = [
-        index
-        for index in participants
-        if (
-            not balance_source.validators[index].slashed
-            and is_active_validator(
-                balance_source.validators[index], get_current_epoch(balance_source)
-            )
-        )
-    ]
-
-    return Gwei(
-        sum(
-            balance_source.validators[index].effective_balance
-            for index in unslashed_and_active_indices
-            # Check that validator has voted in the support of the node
-            # and has not been slashed
-            if (
-                index in store.latest_messages
-                and get_supported_node(store, store.latest_messages[index]) == node
-                and index not in store.equivocating_indices
-            )
-        )
-    )
+```lean
+def get_node_support_between_slots
+    (store : Store)
+    (balance_source : BeaconState)
+    (node : ForkChoiceNode)
+    (start_slot : Slot)
+    (end_slot : Slot)
+    : Result Gwei := do
+  let mut participants : Std.HashSet ValidatorIndex := {}
+  for slot in [start_slot:end_slot + 1] do
+    participants := participants.union (<- get_slot_committee store slot)
+  let mut unslashed_and_active_indices := #[]
+  for index in participants do
+    let validator <- balance_source.validators[index]?
+    if !validator.slashed
+        && is_active_validator validator (get_current_epoch balance_source) then
+      unslashed_and_active_indices := unslashed_and_active_indices.push index
+  let mut support := 0
+  for index in unslashed_and_active_indices do
+    if let some latest_message := store.latest_messages.get? index then
+      if get_supported_node store latest_message == node
+          && !store.equivocating_indices.contains index then
+        support := support + (<- balance_source.validators[index]?).effective_balance
+  return support
 ```
 
 ##### `is_full_validator_set_covered`
 
-```python
-def is_full_validator_set_covered(start_slot: Slot, end_slot: Slot) -> bool:
-    """
-    Return ``True`` if the range between ``start_slot`` and ``end_slot`` (inclusive of both) includes an entire epoch.
-    """
-    start_full_epoch = compute_epoch_at_slot(start_slot + SLOTS_PER_EPOCH - 1)
-    end_full_epoch = compute_epoch_at_slot(end_slot + 1)
-    return start_full_epoch < end_full_epoch
+```lean
+def is_full_validator_set_covered
+    (start_slot : Slot)
+    (end_slot : Slot)
+    : Bool :=
+  let start_full_epoch := compute_epoch_at_slot (start_slot + SLOTS_PER_EPOCH - 1)
+  let end_full_epoch := compute_epoch_at_slot (end_slot + 1)
+  start_full_epoch < end_full_epoch
 ```
 
 ##### `adjust_committee_weight_estimate_to_ensure_safety`
@@ -375,63 +362,42 @@ than SLOTS_PER_EPOCH. See
 https://gist.github.com/saltiniroberto/9ee53d29c33878d79417abb2b4468c20 for an
 explanation of why this is required.
 
-```python
-def adjust_committee_weight_estimate_to_ensure_safety(estimate: Gwei) -> Gwei:
-    """
-    Return adjusted ``estimate`` of the weight of a committee for a sequence of slots
-    spanning an epoch boundary that does not cover any full epoch.
-    """
-    ceil = (estimate + 999) // 1000
-    return ceil * (1000 + COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR)
+```lean
+def adjust_committee_weight_estimate_to_ensure_safety
+    (estimate : Gwei)
+    : Gwei :=
+  let ceil := (estimate + 999) / 1000
+  ceil * (1000 + COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR)
 ```
 
 ##### `estimate_committee_weight_between_slots`
 
-```python
-def estimate_committee_weight_between_slots(
-    total_active_balance: Gwei, start_slot: Slot, end_slot: Slot
-) -> Gwei:
-    """
-    Return estimate of the total weight of committees
-    between ``start_slot`` and ``end_slot`` (inclusive of both).
-    """
-
-    # Sanity check
-    if start_slot > end_slot:
-        return Gwei(0)
-
-    # If an entire epoch is covered by the range, return the total active balance
-    if is_full_validator_set_covered(start_slot, end_slot):
-        return total_active_balance
-
-    start_epoch = compute_epoch_at_slot(start_slot)
-    end_epoch = compute_epoch_at_slot(end_slot)
-    committee_weight = total_active_balance // Uint64(SLOTS_PER_EPOCH)
-    if start_epoch == end_epoch:
-        return committee_weight * Uint64(end_slot - start_slot + 1)
-    else:
-        # First, calculate the number of committees in the end epoch
-        num_slots_in_end_epoch = Uint64(compute_slots_since_epoch_start(end_slot) + 1)
-        # Next, calculate the number of slots remaining in the end epoch
-        remaining_slots_in_end_epoch = Uint64(SLOTS_PER_EPOCH) - num_slots_in_end_epoch
-        # Then, calculate the number of slots in the start epoch
-        num_slots_in_start_epoch = Uint64(
-            SLOTS_PER_EPOCH - compute_slots_since_epoch_start(start_slot)
-        )
-
-        start_epoch_weight = committee_weight * num_slots_in_start_epoch
-        end_epoch_weight = committee_weight * num_slots_in_end_epoch
-
-        # A range that spans an epoch boundary, but does not span any full epoch
-        # needs pro-rata calculation, see https://gist.github.com/saltiniroberto/9ee53d29c33878d79417abb2b4468c20
-        # start_epoch_weight_pro_rated = start_epoch_weight * (1 - num_slots_in_end_epoch / SLOTS_PER_EPOCH)
-        start_epoch_weight_pro_rated = (
-            start_epoch_weight // Uint64(SLOTS_PER_EPOCH) * remaining_slots_in_end_epoch
-        )
-
-        return adjust_committee_weight_estimate_to_ensure_safety(
-            start_epoch_weight_pro_rated + end_epoch_weight
-        )
+```lean
+def estimate_committee_weight_between_slots
+    (total_active_balance : Gwei)
+    (start_slot : Slot)
+    (end_slot : Slot)
+    : Gwei := Id.run do
+  if start_slot > end_slot then
+    return 0
+  if is_full_validator_set_covered start_slot end_slot then
+    return total_active_balance
+  let start_epoch := compute_epoch_at_slot start_slot
+  let end_epoch := compute_epoch_at_slot end_slot
+  let committee_weight := total_active_balance / SLOTS_PER_EPOCH
+  if start_epoch == end_epoch then
+    return committee_weight * (end_slot - start_slot + 1)
+  else
+    let num_slots_in_end_epoch := compute_slots_since_epoch_start end_slot + 1
+    let remaining_slots_in_end_epoch := SLOTS_PER_EPOCH - num_slots_in_end_epoch
+    let num_slots_in_start_epoch :=
+      SLOTS_PER_EPOCH - compute_slots_since_epoch_start start_slot
+    let start_epoch_weight := committee_weight * num_slots_in_start_epoch
+    let end_epoch_weight := committee_weight * num_slots_in_end_epoch
+    let start_epoch_weight_pro_rated :=
+      start_epoch_weight / SLOTS_PER_EPOCH * remaining_slots_in_end_epoch
+    return adjust_committee_weight_estimate_to_ensure_safety
+      (start_epoch_weight_pro_rated + end_epoch_weight)
 ```
 
 ##### `get_equivocation_score`
@@ -447,35 +413,27 @@ Due to the algorithm logic, maximum distance between `balance_source` and
 `MAX_SEED_LOOKAHEAD`. Therefore, participants of the committees from that span
 of slots are consistent with the `balance_source` validator set.
 
-```python
-def get_equivocation_score(
-    store: Store,
-    balance_source: BeaconState,
-    start_slot: Slot,
-    end_slot: Slot,
-) -> Gwei:
-    """
-    Return total weight of equivocating participants of all committees
-    in the slots between ``start_slot`` and ``end_slot`` (inclusive of both).
-    """
-    committee_indices: set[ValidatorIndex] = set()
-    for slot in range(start_slot, end_slot + 1):
-        committee_indices.update(get_slot_committee(store, Slot(slot)))
-
-    # Keep equivocating validators that were active at the balance_source epoch to be consistent
-    # with get_total_active_balance() computation
-    active_equivocating_indices = [
-        index
-        for index in committee_indices.intersection(store.equivocating_indices)
-        if is_active_validator(balance_source.validators[index], get_current_epoch(balance_source))
-    ]
-
-    return Gwei(
-        sum(
-            balance_source.validators[index].effective_balance
-            for index in active_equivocating_indices
-        )
-    )
+```lean
+def get_equivocation_score
+    (store : Store)
+    (balance_source : BeaconState)
+    (start_slot : Slot)
+    (end_slot : Slot)
+    : Result Gwei := do
+  let mut committee_indices : Std.HashSet ValidatorIndex := {}
+  for slot in [start_slot:end_slot + 1] do
+    committee_indices := committee_indices.union (<- get_slot_committee store slot)
+  let equivocating_indices := committee_indices.filter fun index =>
+    store.equivocating_indices.contains index
+  let mut active_equivocating_indices := #[]
+  for index in equivocating_indices do
+    let validator <- balance_source.validators[index]?
+    if is_active_validator validator (get_current_epoch balance_source) then
+      active_equivocating_indices := active_equivocating_indices.push index
+  let mut score := 0
+  for index in active_equivocating_indices do
+    score := score + (<- balance_source.validators[index]?).effective_balance
+  return score
 ```
 
 ##### `compute_adversarial_weight`
@@ -485,46 +443,41 @@ in the committees of the span of slots assuming
 `CONFIRMATION_BYZANTINE_THRESHOLD` and discounting already equivocated
 validators.
 
-```python
-def compute_adversarial_weight(
-    store: Store,
-    balance_source: BeaconState,
-    start_slot: Slot,
-    end_slot: Slot,
-) -> Gwei:
-    """
-    Return maximum possible adversarial weight in the committees of the slots
-    between ``start_slot`` and ``end_slot`` (inclusive of both).
-    """
-    total_active_balance = get_total_active_balance(balance_source)
-    maximum_weight = estimate_committee_weight_between_slots(
-        total_active_balance, start_slot, end_slot
-    )
-    max_adversarial_weight = maximum_weight // 100 * CONFIRMATION_BYZANTINE_THRESHOLD
-
-    # Discount total weight of equivocating validators
-    equivocation_score = get_equivocation_score(store, balance_source, start_slot, end_slot)
-    if max_adversarial_weight > equivocation_score:
-        return max_adversarial_weight - equivocation_score
-    else:
-        return Gwei(0)
+```lean
+def compute_adversarial_weight
+    (store : Store)
+    (balance_source : BeaconState)
+    (start_slot : Slot)
+    (end_slot : Slot)
+    : Result Gwei := do
+  let total_active_balance <- get_total_active_balance balance_source
+  let maximum_weight :=
+    estimate_committee_weight_between_slots total_active_balance start_slot end_slot
+  let max_adversarial_weight := maximum_weight / 100 * CONFIRMATION_BYZANTINE_THRESHOLD
+  let equivocation_score <-
+    get_equivocation_score store balance_source start_slot end_slot
+  if max_adversarial_weight > equivocation_score then
+    return max_adversarial_weight - equivocation_score
+  else
+    return 0
 ```
 
 ##### `get_adversarial_weight`
 
-```python
-def get_adversarial_weight(store: Store, balance_source: BeaconState, block_root: Root) -> Gwei:
-    """
-    Return maximum adversarial weight that can support the block.
-    """
-    current_slot = get_current_slot(store)
-    block = store.blocks[block_root]
-    if get_block_epoch(store, block_root) > get_block_epoch(store, block.parent_root):
-        # Use the first epoch slot as the start slot when crossing epoch boundary
-        start_slot = compute_start_slot_at_epoch(get_block_epoch(store, block_root))
-        return compute_adversarial_weight(store, balance_source, start_slot, current_slot - 1)
-    else:
-        return compute_adversarial_weight(store, balance_source, block.slot, current_slot - 1)
+```lean
+def get_adversarial_weight
+    (store : Store)
+    (balance_source : BeaconState)
+    (block_root : Root)
+    : Result Gwei := do
+  let current_slot := get_current_slot store
+  let block <- store.blocks.get? block_root
+  let block_epoch <- get_block_epoch store block_root
+  if block_epoch > (<- get_block_epoch store block.parent_root) then
+    let start_slot := compute_start_slot_at_epoch block_epoch
+    compute_adversarial_weight store balance_source start_slot (current_slot - 1)
+  else
+    compute_adversarial_weight store balance_source block.slot (current_slot - 1)
 ```
 
 ##### `compute_empty_slot_support_discount`
@@ -534,74 +487,60 @@ for empty slots belonging to `current_epoch - 2`. It can only happen in
 reconfirmation, in all other cases the earliest possible epoch is
 `current_epoch - 1`.
 
-```python
-def compute_empty_slot_support_discount(
-    store: Store, balance_source: BeaconState, block_root: Root
-) -> Gwei:
-    """
-    Return weight that can be discounted during the safety threshold computation
-    if there are empty slots preceding the block.
-    """
-    block = store.blocks[block_root]
-    parent_block = store.blocks[block.parent_root]
-    # No empty slot
-    if parent_block.slot + 1 == block.slot:
-        return Gwei(0)
-
-    # Discount votes supporting the parent block if they are from the committees of empty slots
-    parent_node = get_ancestor(store, get_node_for_root(block_root), parent_block.slot)
-    parent_support_in_empty_slots = get_node_support_between_slots(
-        store,
-        balance_source,
-        parent_node,
-        parent_block.slot + 1,
-        block.slot - 1,
-    )
-    # Adversarial weight is not discounted
-    adversarial_weight = compute_adversarial_weight(
-        store, balance_source, parent_block.slot + 1, block.slot - 1
-    )
-    if parent_support_in_empty_slots > adversarial_weight:
-        return parent_support_in_empty_slots - adversarial_weight
-    else:
-        return Gwei(0)
+```lean
+def compute_empty_slot_support_discount
+    (store : Store)
+    (balance_source : BeaconState)
+    (block_root : Root)
+    : Result Gwei := do
+  let block <- store.blocks.get? block_root
+  let parent_block <- store.blocks.get? block.parent_root
+  if parent_block.slot + 1 == block.slot then
+    return 0
+  let parent_node <- get_ancestor store (get_node_for_root block_root) parent_block.slot
+  let parent_support_in_empty_slots <- get_node_support_between_slots
+    store balance_source parent_node (parent_block.slot + 1) (block.slot - 1)
+  let adversarial_weight <- compute_adversarial_weight
+    store balance_source (parent_block.slot + 1) (block.slot - 1)
+  if parent_support_in_empty_slots > adversarial_weight then
+    return parent_support_in_empty_slots - adversarial_weight
+  else
+    return 0
 ```
 
 ##### `get_support_discount`
 
-```python
-def get_support_discount(store: Store, balance_source: BeaconState, block_root: Root) -> Gwei:
-    """
-    Return weight that can be discounted during the safety threshold computation for the block.
-    """
-    return compute_empty_slot_support_discount(store, balance_source, block_root)
+```lean
+def get_support_discount
+    (store : Store)
+    (balance_source : BeaconState)
+    (block_root : Root)
+    : Result Gwei :=
+  compute_empty_slot_support_discount store balance_source block_root
 ```
 
 ##### `compute_safety_threshold`
 
-```python
-def compute_safety_threshold(store: Store, block_root: Root, balance_source: BeaconState) -> Gwei:
-    """
-    Compute the LMD-GHOST safety threshold for ``block_root``.
-    """
-    current_slot = get_current_slot(store)
-    block = store.blocks[block_root]
-    parent_block = store.blocks[block.parent_root]
-
-    total_active_balance = get_total_active_balance(balance_source)
-    proposer_score = compute_proposer_score(balance_source)
-    maximum_support = estimate_committee_weight_between_slots(
-        total_active_balance, parent_block.slot + 1, current_slot - 1
-    )
-    support_discount = get_support_discount(store, balance_source, block_root)
-    adversarial_weight = get_adversarial_weight(store, balance_source, block_root)
-
-    # Return (maximum_support + proposer_score - support_discount) // 2 + adversarial_weight
-    # with an underflow guard
-    if support_discount < maximum_support + proposer_score + 2 * adversarial_weight:
-        return (maximum_support + proposer_score + 2 * adversarial_weight - support_discount) // 2
-    else:
-        return Gwei(0)
+```lean
+def compute_safety_threshold
+    (store : Store)
+    (block_root : Root)
+    (balance_source : BeaconState)
+    : Result Gwei := do
+  let current_slot := get_current_slot store
+  let block <- store.blocks.get? block_root
+  let parent_block <- store.blocks.get? block.parent_root
+  let total_active_balance <- get_total_active_balance balance_source
+  let proposer_score <- compute_proposer_score balance_source
+  let maximum_support := estimate_committee_weight_between_slots
+    total_active_balance (parent_block.slot + 1) (current_slot - 1)
+  let support_discount <- get_support_discount store balance_source block_root
+  let adversarial_weight <- get_adversarial_weight store balance_source block_root
+  if support_discount < maximum_support + proposer_score + 2 * adversarial_weight then
+    let weight := maximum_support + proposer_score + 2 * adversarial_weight
+    return (weight - support_discount) / 2
+  else
+    return 0
 ```
 
 ##### `is_one_confirmed`
@@ -626,14 +565,15 @@ This function **MUST** return `False` if `block_root` status is **not** `VALID`
 according to the [Optimistic sync](../bellatrix/optimistic-sync.md)
 specification.
 
-```python
-def is_one_confirmed(store: Store, balance_source: BeaconState, block_root: Root) -> bool:
-    """
-    Return ``True`` if and only if the block is LMD-GHOST safe.
-    """
-    support = get_attestation_score(store, get_node_for_root(block_root), balance_source)
-    safety_threshold = compute_safety_threshold(store, block_root, balance_source)
-    return support > safety_threshold
+```lean
+def is_one_confirmed
+    (store : Store)
+    (balance_source : BeaconState)
+    (block_root : Root)
+    : Result Bool := do
+  let support <- get_attestation_score store (get_node_for_root block_root) balance_source
+  let safety_threshold <- compute_safety_threshold store block_root balance_source
+  return support > safety_threshold
 ```
 
 ##### `is_confirmed_chain_safe`
@@ -650,45 +590,32 @@ beginning of the previous slot. If such check was not run, GST start would have
 to be assumed from the time of the first run of the algorithm which could have
 been many epochs ago.
 
-```python
-def is_confirmed_chain_safe(fcr_store: FastConfirmationStore, confirmed_root: Root) -> bool:
-    """
-    Return ``True`` if and only if all blocks of the confirmed chain
-    starting from current_epoch_observed_justified_checkpoint are LMD-GHOST safe.
-    """
-    store = fcr_store.store
-    # Check if the confirmed_root has current_epoch_observed_justified_checkpoint in its chain
-    if fcr_store.current_epoch_observed_justified_checkpoint != get_checkpoint_for_block(
-        store, confirmed_root, fcr_store.current_epoch_observed_justified_checkpoint.epoch
-    ):
-        return False
-
-    current_epoch = get_current_store_epoch(store)
-    if fcr_store.current_epoch_observed_justified_checkpoint.epoch + 1 >= current_epoch:
-        # Exclude the justified checkpoint block if it is from the previous epoch
-        # as then this block will always be canonical in this case.
-        start_root_exclusive = fcr_store.current_epoch_observed_justified_checkpoint.root
-    else:
-        # Limit reconfirmation to the first block of the previous epoch
-        # as if it is successful, reconfirmation of the ancestors is implied.
-        ancestor_at_previous_epoch_start = get_ancestor(
-            store,
-            get_node_for_root(confirmed_root),
-            compute_start_slot_at_epoch(current_epoch - 1),
-        ).root
-        if get_block_epoch(store, ancestor_at_previous_epoch_start) + 1 == current_epoch:
-            # The parent of the first block of the previous epoch
-            start_root_exclusive = store.blocks[ancestor_at_previous_epoch_start].parent_root
-        else:
-            # The last block of the epoch before the previous one
-            start_root_exclusive = ancestor_at_previous_epoch_start
-
-    # Run is_one_confirmed for each block in the confirmed chain with the previous epoch balance source
-    chain_roots = get_ancestor_roots(store, confirmed_root, start_root_exclusive)
-    return all(
-        is_one_confirmed(store, get_previous_balance_source(fcr_store), root)
-        for root in chain_roots
-    )
+```lean
+def is_confirmed_chain_safe
+    (fcr_store : FastConfirmationStore)
+    (confirmed_root : Root)
+    : Result Bool := do
+  let store := fcr_store.store
+  let checkpoint := fcr_store.current_epoch_observed_justified_checkpoint
+  if checkpoint
+      != (<- get_checkpoint_for_block store confirmed_root checkpoint.epoch) then
+    return false
+  let current_epoch := get_current_store_epoch store
+  let start_root_exclusive <-
+    if checkpoint.epoch + 1 >= current_epoch then
+      pure checkpoint.root
+    else do
+      let node := get_node_for_root confirmed_root
+      let slot := compute_start_slot_at_epoch (current_epoch - 1)
+      let ancestor_at_previous_epoch_start := (<- get_ancestor store node slot).root
+      let ancestor_epoch <- get_block_epoch store ancestor_at_previous_epoch_start
+      if ancestor_epoch + 1 == current_epoch then
+        pure (<- store.blocks.get? ancestor_at_previous_epoch_start).parent_root
+      else
+        pure ancestor_at_previous_epoch_start
+  let chain_roots <- get_ancestor_roots store confirmed_root start_root_exclusive
+  chain_roots.allM fun root => do
+    is_one_confirmed store (<- get_previous_balance_source fcr_store) root
 ```
 
 #### FFG helpers
@@ -699,34 +626,23 @@ def is_confirmed_chain_safe(fcr_store: FastConfirmationStore, confirmed_root: Ro
 current epoch target. Due to the way the computation happens, it MUST be used no
 later than the end of the current epoch.
 
-```python
-def get_current_target_score(store: Store) -> Gwei:
-    """
-    Return the estimate of FFG support of the current epoch target by using LMD-GHOST votes.
-    """
-    target = get_current_target(store)
-    state = get_pulled_up_head_state(store)
-    unslashed_and_active_indices = [
-        index
-        for index in get_active_validator_indices(state, get_current_epoch(state))
-        if not state.validators[index].slashed
-    ]
-    return Gwei(
-        sum(
-            state.validators[index].effective_balance
-            for index in unslashed_and_active_indices
-            if (
-                index in store.latest_messages
-                and index not in store.equivocating_indices
-                and target
-                == get_checkpoint_for_block(
-                    store,
-                    store.latest_messages[index].root,
-                    get_latest_message_epoch(store.latest_messages[index]),
-                )
-            )
-        )
-    )
+```lean
+def get_current_target_score
+    (store : Store)
+    : Result Gwei := do
+  let target <- get_current_target store
+  let state <- get_pulled_up_head_state store
+  let unslashed_and_active_indices <-
+    (get_active_validator_indices state (get_current_epoch state)).filterM fun index => do
+      return !(<- state.validators[index]?).slashed
+  let mut score := 0
+  for index in unslashed_and_active_indices do
+    if let some latest_message := store.latest_messages.get? index then
+      if !store.equivocating_indices.contains index then
+        let epoch := get_latest_message_epoch latest_message
+        if target == (<- get_checkpoint_for_block store latest_message.root epoch) then
+          score := score + (<- state.validators[index]?).effective_balance
+  return score
 ```
 
 ##### `compute_honest_ffg_support_for_current_target`
@@ -735,39 +651,25 @@ def get_current_target_score(store: Store) -> Gwei:
 assuming `CONFIRMATION_BYZANTINE_THRESHOLD` and network synchrony, and taking
 into account votes supporting the target that have been received thus far.
 
-```python
-def compute_honest_ffg_support_for_current_target(store: Store) -> Gwei:
-    """
-    Compute honest FFG support of the current epoch target.
-    """
-    current_slot = get_current_slot(store)
-    current_epoch = compute_epoch_at_slot(current_slot)
-    balance_source = get_pulled_up_head_state(store)
-    total_active_balance = get_total_active_balance(balance_source)
-
-    # Compute FFG support for the target
-    ffg_support_for_checkpoint = get_current_target_score(store)
-
-    # Compute the total FFG weight up to, but excluding, the current slot
-    ffg_weight_till_now = estimate_committee_weight_between_slots(
-        total_active_balance, compute_start_slot_at_epoch(current_epoch), current_slot - 1
-    )
-
-    # Compute remaining honest FFG weight
-    remaining_ffg_weight = total_active_balance - ffg_weight_till_now
-    remaining_honest_ffg_weight = (
-        remaining_ffg_weight // 100 * (100 - CONFIRMATION_BYZANTINE_THRESHOLD)
-    )
-
-    # Compute potential adversarial weight
-    adversarial_weight = compute_adversarial_weight(
-        store, balance_source, compute_start_slot_at_epoch(current_epoch), current_slot - 1
-    )
-
-    # Compute min honest FFG support
-    min_honest_ffg_support = saturating_sub(ffg_support_for_checkpoint, adversarial_weight)
-
-    return min_honest_ffg_support + remaining_honest_ffg_weight
+```lean
+def compute_honest_ffg_support_for_current_target
+    (store : Store)
+    : Result Gwei := do
+  let current_slot := get_current_slot store
+  let current_epoch := compute_epoch_at_slot current_slot
+  let balance_source <- get_pulled_up_head_state store
+  let total_active_balance <- get_total_active_balance balance_source
+  let ffg_support_for_checkpoint <- get_current_target_score store
+  let ffg_weight_till_now := estimate_committee_weight_between_slots
+    total_active_balance (compute_start_slot_at_epoch current_epoch) (current_slot - 1)
+  let remaining_ffg_weight := total_active_balance - ffg_weight_till_now
+  let remaining_honest_ffg_weight :=
+    remaining_ffg_weight / 100 * (100 - CONFIRMATION_BYZANTINE_THRESHOLD)
+  let adversarial_weight <- compute_adversarial_weight
+    store balance_source (compute_start_slot_at_epoch current_epoch) (current_slot - 1)
+  let min_honest_ffg_support :=
+    saturating_sub ffg_support_for_checkpoint adversarial_weight
+  return min_honest_ffg_support + remaining_honest_ffg_weight
 ```
 
 ##### `will_no_conflicting_checkpoint_be_justified`
@@ -775,20 +677,16 @@ def compute_honest_ffg_support_for_current_target(store: Store) -> Gwei:
 *Note*: This function assumes that all honest validators will be voting in
 support of the current epoch target starting from the current moment in time.
 
-```python
-def will_no_conflicting_checkpoint_be_justified(store: Store) -> bool:
-    """
-    Return ``True`` if and only if no checkpoint conflicting with the current target can ever be justified.
-    """
-
-    # If the target is unrealized justified then no conflicting checkpoint can be justified
-    if get_current_target(store) == store.unrealized_justified_checkpoint:
-        return True
-
-    state = get_pulled_up_head_state(store)
-    total_active_balance = get_total_active_balance(state)
-    honest_ffg_support = compute_honest_ffg_support_for_current_target(store)
-    return 3 * honest_ffg_support > 1 * total_active_balance
+```lean
+def will_no_conflicting_checkpoint_be_justified
+    (store : Store)
+    : Result Bool := do
+  if (<- get_current_target store) == store.unrealized_justified_checkpoint then
+    return true
+  let state <- get_pulled_up_head_state store
+  let total_active_balance <- get_total_active_balance state
+  let honest_ffg_support <- compute_honest_ffg_support_for_current_target store
+  return 3 * honest_ffg_support > 1 * total_active_balance
 ```
 
 ##### `will_current_target_be_justified`
@@ -796,42 +694,42 @@ def will_no_conflicting_checkpoint_be_justified(store: Store) -> bool:
 *Note*: This function assumes that all honest validators will be voting in
 support of the current epoch target starting from the current moment in time.
 
-```python
-def will_current_target_be_justified(store: Store) -> bool:
-    """
-    Return ``True`` if and only if the current target will eventually be justified.
-    """
-    state = get_pulled_up_head_state(store)
-    total_active_balance = get_total_active_balance(state)
-    honest_ffg_support = compute_honest_ffg_support_for_current_target(store)
-    return 3 * honest_ffg_support >= 2 * total_active_balance
+```lean
+def will_current_target_be_justified
+    (store : Store)
+    : Result Bool := do
+  let state <- get_pulled_up_head_state store
+  let total_active_balance <- get_total_active_balance state
+  let honest_ffg_support <- compute_honest_ffg_support_for_current_target store
+  return 3 * honest_ffg_support >= 2 * total_active_balance
 ```
 
 #### `update_fast_confirmation_variables`
 
 *Note*: This function updates variables used by the fast confirmation rule.
 
-```python
-def update_fast_confirmation_variables(fcr_store: FastConfirmationStore) -> None:
-    # Update prev and curr slot head
-    store = fcr_store.store
-    fcr_store.previous_slot_head = fcr_store.current_slot_head
-    fcr_store.current_slot_head = get_head(store).root
-
-    # Update greatest unrealized justified checkpoint at the last slot of an epoch
-    if is_start_slot_at_epoch(get_current_slot(store) + 1):
-        fcr_store.previous_epoch_greatest_unrealized_checkpoint = (
-            store.unrealized_justified_checkpoint
-        )
-
-    # Update observed justified checkpoints at the start of an epoch
-    if is_start_slot_at_epoch(get_current_slot(store)):
-        fcr_store.previous_epoch_observed_justified_checkpoint = (
-            fcr_store.current_epoch_observed_justified_checkpoint
-        )
-        fcr_store.current_epoch_observed_justified_checkpoint = (
-            fcr_store.previous_epoch_greatest_unrealized_checkpoint
-        )
+```lean
+def update_fast_confirmation_variables
+    (fcr_store : FastConfirmationStore)
+    : Result FastConfirmationStore := do
+  let store := fcr_store.store
+  let mut fcr_store := { fcr_store with
+    previous_slot_head := fcr_store.current_slot_head
+    current_slot_head := (<- get_head store).root
+  }
+  if is_start_slot_at_epoch (get_current_slot store + 1) then
+    fcr_store := { fcr_store with
+      previous_epoch_greatest_unrealized_checkpoint :=
+        store.unrealized_justified_checkpoint
+    }
+  if is_start_slot_at_epoch (get_current_slot store) then
+    fcr_store := { fcr_store with
+      previous_epoch_observed_justified_checkpoint :=
+        fcr_store.current_epoch_observed_justified_checkpoint
+      current_epoch_observed_justified_checkpoint :=
+        fcr_store.previous_epoch_greatest_unrealized_checkpoint
+    }
+  return fcr_store
 ```
 
 #### `find_latest_confirmed_descendant`
@@ -853,100 +751,69 @@ in the view of all honest validators starting from the current moment in time.
 This function works correctly only if the `latest_confirmed_root` belongs to the
 canonical chain and is either from the previous or from the current epoch.
 
-```python
-def find_latest_confirmed_descendant(
-    fcr_store: FastConfirmationStore, latest_confirmed_root: Root
-) -> Root:
-    """
-    Return the most recent confirmed block in the suffix of the canonical chain
-    starting from ``latest_confirmed_root``.
-    """
-    store = fcr_store.store
-    head = get_head(store).root
-    current_epoch = get_current_store_epoch(store)
-    confirmed_root = latest_confirmed_root
-
-    if (
-        get_block_epoch(store, confirmed_root) + 1 == current_epoch
-        and get_voting_source(store, fcr_store.previous_slot_head).epoch + 2 >= current_epoch
-        and (
-            is_start_slot_at_epoch(get_current_slot(store))
-            or (
-                will_no_conflicting_checkpoint_be_justified(store)
-                and (
-                    store.unrealized_justifications[fcr_store.previous_slot_head].epoch + 1
-                    >= current_epoch
-                    or store.unrealized_justifications[head].epoch + 1 >= current_epoch
-                )
-            )
-        )
-    ):
-        # Get suffix of the canonical chain
-        canonical_roots = get_ancestor_roots(store, head, confirmed_root)
-
-        # Starting with the child of the latest_confirmed_root
-        # move towards the head in attempt to advance the confirmed block
-        # and stop when the first unconfirmed descendant is encountered
-        for block_root in canonical_roots:
-            block_epoch = get_block_epoch(store, block_root)
-
-            # If the current epoch is reached, exit the loop
-            # as this code is meant to confirm blocks from the previous epoch
-            if block_epoch == current_epoch:
-                break
-
-            # The algorithm can only rely on the previous head
-            # if it is a descendant of the block that is attempted to be confirmed
-            if not is_ancestor(
-                store,
-                get_node_for_root(fcr_store.previous_slot_head),
-                get_node_for_root(block_root),
-            ):
-                break
-
-            if not is_one_confirmed(store, get_current_balance_source(fcr_store), block_root):
-                break
-
-            confirmed_root = block_root
-
-    if (
-        is_start_slot_at_epoch(get_current_slot(store))
-        or store.unrealized_justifications[head].epoch + 1 >= current_epoch
-    ):
-        # Get suffix of the canonical chain
-        canonical_roots = get_ancestor_roots(store, head, confirmed_root)
-
-        tentative_confirmed_root = confirmed_root
-
-        for block_root in canonical_roots:
-            block_epoch = get_block_epoch(store, block_root)
-            tentative_confirmed_epoch = get_block_epoch(store, tentative_confirmed_root)
-
-            # The following condition can only be true the first time
-            # the algorithm advances to a block from the current epoch
-            if block_epoch > tentative_confirmed_epoch:
-                # To confirm blocks from the current epoch ensure that
-                # current epoch target will be justified
-                if not will_current_target_be_justified(store):
-                    break
-
-            if not is_one_confirmed(store, get_current_balance_source(fcr_store), block_root):
-                break
-
-            tentative_confirmed_root = block_root
-
-        # The tentative_confirmed_root can only be confirmed
-        # if it is for sure not going to be reorged out in either the current or next epoch.
-        if get_block_epoch(store, tentative_confirmed_root) == current_epoch or (
-            get_voting_source(store, tentative_confirmed_root).epoch + 2 >= current_epoch
-            and (
-                is_start_slot_at_epoch(get_current_slot(store))
-                or will_no_conflicting_checkpoint_be_justified(store)
-            )
-        ):
-            confirmed_root = tentative_confirmed_root
-
-    return confirmed_root
+```lean
+def find_latest_confirmed_descendant
+    (fcr_store : FastConfirmationStore)
+    (latest_confirmed_root : Root)
+    : Result Root := do
+  let store := fcr_store.store
+  let head := (<- get_head store).root
+  let current_epoch := get_current_store_epoch store
+  let mut confirmed_root := latest_confirmed_root
+  let is_epoch_start : Result Bool :=
+    pure (is_start_slot_at_epoch (get_current_slot store))
+  let is_confirmed_from_previous_epoch : Result Bool := do
+    return (<- get_block_epoch store confirmed_root) + 1 == current_epoch
+  let is_previous_head_source_recent : Result Bool := do
+    let voting_source <- get_voting_source store fcr_store.previous_slot_head
+    return voting_source.epoch + 2 >= current_epoch
+  let is_previous_head_justified_recently : Result Bool := do
+    let checkpoint <- store.unrealized_justifications.get? fcr_store.previous_slot_head
+    return checkpoint.epoch + 1 >= current_epoch
+  let is_head_justified_recently : Result Bool := do
+    return (<- store.unrealized_justifications.get? head).epoch + 1 >= current_epoch
+  if (<- is_confirmed_from_previous_epoch
+      <&&> is_previous_head_source_recent
+      <&&> (is_epoch_start
+        <||> (will_no_conflicting_checkpoint_be_justified store
+          <&&> (is_previous_head_justified_recently
+            <||> is_head_justified_recently)))) then
+    let canonical_roots <- get_ancestor_roots store head confirmed_root
+    for block_root in canonical_roots do
+      let block_epoch <- get_block_epoch store block_root
+      if block_epoch == current_epoch then
+        break
+      let previous_head := get_node_for_root fcr_store.previous_slot_head
+      if !(<- is_ancestor store previous_head (get_node_for_root block_root)) then
+        break
+      let balance_source <- get_current_balance_source fcr_store
+      if !(<- is_one_confirmed store balance_source block_root) then
+        break
+      confirmed_root := block_root
+  if (<- is_epoch_start <||> is_head_justified_recently) then
+    let canonical_roots <- get_ancestor_roots store head confirmed_root
+    let mut tentative_confirmed_root := confirmed_root
+    for block_root in canonical_roots do
+      let block_epoch <- get_block_epoch store block_root
+      let tentative_confirmed_epoch <- get_block_epoch store tentative_confirmed_root
+      if block_epoch > tentative_confirmed_epoch then
+        if !(<- will_current_target_be_justified store) then
+          break
+      let balance_source <- get_current_balance_source fcr_store
+      if !(<- is_one_confirmed store balance_source block_root) then
+        break
+      tentative_confirmed_root := block_root
+    let is_tentative_from_current_epoch : Result Bool := do
+      return (<- get_block_epoch store tentative_confirmed_root) == current_epoch
+    let is_tentative_source_recent : Result Bool := do
+      let voting_source <- get_voting_source store tentative_confirmed_root
+      return voting_source.epoch + 2 >= current_epoch
+    if (<- is_tentative_from_current_epoch
+        <||> (is_tentative_source_recent
+          <&&> (is_epoch_start
+            <||> will_no_conflicting_checkpoint_be_justified store))) then
+      confirmed_root := tentative_confirmed_root
+  return confirmed_root
 ```
 
 #### `get_latest_confirmed`
@@ -974,61 +841,46 @@ actions:
 5. Attempt to advance the `fcr_store.confirmed_root` by calling
    `find_latest_confirmed_descendant`.
 
-```python
-def get_latest_confirmed(fcr_store: FastConfirmationStore) -> Root:
-    """
-    Return the most recent confirmed block by executing the FCR algorithm.
-    """
-    store = fcr_store.store
-    confirmed_root = fcr_store.confirmed_root
-    current_epoch = get_current_store_epoch(store)
-
-    # Revert to finalized block if either of the following is true:
-    # 1) the latest confirmed block's epoch is older than the previous epoch,
-    # 2) the latest confirmed block does not belong to the canonical chain,
-    # 3) the confirmed chain starting from the current epoch observed justified checkpoint
-    #    cannot be re-confirmed at the start of the current epoch.
-    head = get_head(store).root
-    if (
-        get_block_epoch(store, confirmed_root) + 1 < current_epoch
-        or not is_ancestor(store, get_node_for_root(head), get_node_for_root(confirmed_root))
-        or (
-            is_start_slot_at_epoch(get_current_slot(store))
-            and not is_confirmed_chain_safe(fcr_store, confirmed_root)
-        )
-    ):
-        confirmed_root = store.finalized_checkpoint.root
-
-    # Restart the confirmation chain if each of the following conditions are true:
-    # 1) it is the start of the current epoch,
-    # 2) epoch of fcr_store.current_epoch_observed_justified_checkpoint.root equals to the previous epoch,
-    # 3) fcr_store.current_epoch_observed_justified_checkpoint equals to unrealized justification of the head,
-    # 4) confirmed block is older than the block of fcr_store.current_epoch_observed_justified_checkpoint.
-    is_epoch_start = is_start_slot_at_epoch(get_current_slot(store))
-    observed_justified_block_slot = get_block_slot(
-        store, fcr_store.current_epoch_observed_justified_checkpoint.root
-    )
-    is_observed_justified_block_epoch_ok = (
-        compute_epoch_at_slot(observed_justified_block_slot) + 1 == current_epoch
-    )
-    is_head_unrealized_justified_ok = (
-        fcr_store.current_epoch_observed_justified_checkpoint
-        == store.unrealized_justifications[head]
-    )
-    is_confirmed_block_stale = get_block_slot(store, confirmed_root) < observed_justified_block_slot
-    if (
-        is_epoch_start
-        and is_observed_justified_block_epoch_ok
-        and is_head_unrealized_justified_ok
-        and is_confirmed_block_stale
-    ):
-        confirmed_root = fcr_store.current_epoch_observed_justified_checkpoint.root
-
-    # Attempt to further advance the latest confirmed block
-    if get_block_epoch(store, confirmed_root) + 1 >= current_epoch:
-        return find_latest_confirmed_descendant(fcr_store, confirmed_root)
-    else:
-        return confirmed_root
+```lean
+def get_latest_confirmed
+    (fcr_store : FastConfirmationStore)
+    : Result Root := do
+  let store := fcr_store.store
+  let mut confirmed_root := fcr_store.confirmed_root
+  let current_epoch := get_current_store_epoch store
+  let head := (<- get_head store).root
+  let is_epoch_start : Result Bool :=
+    pure (is_start_slot_at_epoch (get_current_slot store))
+  let is_confirmed_too_old : Result Bool := do
+    return (<- get_block_epoch store confirmed_root) + 1 < current_epoch
+  let is_confirmed_not_canonical : Result Bool := do
+    let confirmed_node := get_node_for_root confirmed_root
+    return !(<- is_ancestor store (get_node_for_root head) confirmed_node)
+  let is_confirmed_chain_unsafe : Result Bool := do
+    return !(<- is_confirmed_chain_safe fcr_store confirmed_root)
+  if (<- is_confirmed_too_old
+      <||> is_confirmed_not_canonical
+      <||> (is_epoch_start <&&> is_confirmed_chain_unsafe)) then
+    confirmed_root := store.finalized_checkpoint.root
+  let is_epoch_start := is_start_slot_at_epoch (get_current_slot store)
+  let observed_justified_block_slot <-
+    get_block_slot store fcr_store.current_epoch_observed_justified_checkpoint.root
+  let is_observed_justified_block_epoch_ok :=
+    compute_epoch_at_slot observed_justified_block_slot + 1 == current_epoch
+  let is_head_unrealized_justified_ok :=
+    fcr_store.current_epoch_observed_justified_checkpoint
+      == (<- store.unrealized_justifications.get? head)
+  let is_confirmed_block_stale :=
+    (<- get_block_slot store confirmed_root) < observed_justified_block_slot
+  if is_epoch_start
+      && is_observed_justified_block_epoch_ok
+      && is_head_unrealized_justified_ok
+      && is_confirmed_block_stale then
+    confirmed_root := fcr_store.current_epoch_observed_justified_checkpoint.root
+  if (<- get_block_epoch store confirmed_root) + 1 >= current_epoch then
+    find_latest_confirmed_descendant fcr_store confirmed_root
+  else
+    return confirmed_root
 ```
 
 #### `get_restart_resilient_confirmed_root`
@@ -1040,43 +892,39 @@ maintained for at least three epochs since the node went offline. If used,
 synced and `on_fast_confirmation` has been called. The body of
 `get_root_confirmed_before_restart` is implementation dependent.
 
-```python
-def block_should_be_finalized(store: Store, block_root: Root) -> bool:
-    block_slot = get_block_slot(store, block_root)
-    next_checkpoint_epoch = compute_epoch_at_slot(block_slot + SLOTS_PER_EPOCH - 1)
-    earliest_finality_slot = compute_start_slot_at_epoch(next_checkpoint_epoch + 2)
-    return earliest_finality_slot <= get_current_slot(store)
+```lean
+def block_should_be_finalized
+    (store : Store)
+    (block_root : Root)
+    : Result Bool := do
+  let block_slot <- get_block_slot store block_root
+  let next_checkpoint_epoch := compute_epoch_at_slot (block_slot + SLOTS_PER_EPOCH - 1)
+  let earliest_finality_slot := compute_start_slot_at_epoch (next_checkpoint_epoch + 2)
+  return earliest_finality_slot <= get_current_slot store
 ```
 
-```python
-def get_restart_resilient_confirmed_root(fcr_store: FastConfirmationStore) -> Root:
-    store = fcr_store.store
-    root_before_restart = get_root_confirmed_before_restart()
-    root_before_restart_slot = get_block_slot(store, root_before_restart)
-
-    # Recently confirmed block has advanced beyond the block that was confirmed
-    # before the node restart
-    if root_before_restart_slot <= get_block_slot(store, fcr_store.confirmed_root):
-        return fcr_store.confirmed_root
-
-    # If the block is old enough it either has been finalized already or
-    # finality has been delayed which makes block confirmed before restart
-    # unreliable
-    if block_should_be_finalized(store, root_before_restart):
-        return fcr_store.confirmed_root
-
-    # If a block confirmed before the restart is not canonical,
-    # return the recently confirmed block
-    if not is_ancestor(store, get_head(store), get_node_for_root(root_before_restart)):
-        return fcr_store.confirmed_root
-
-    return root_before_restart
+```lean
+def get_restart_resilient_confirmed_root
+    (fcr_store : FastConfirmationStore)
+    : Result Root := do
+  let store := fcr_store.store
+  let root_before_restart := get_root_confirmed_before_restart
+  let root_before_restart_slot <- get_block_slot store root_before_restart
+  if root_before_restart_slot <= (<- get_block_slot store fcr_store.confirmed_root) then
+    return fcr_store.confirmed_root
+  if (<- block_should_be_finalized store root_before_restart) then
+    return fcr_store.confirmed_root
+  let head <- get_head store
+  if !(<- is_ancestor store head (get_node_for_root root_before_restart)) then
+    return fcr_store.confirmed_root
+  return root_before_restart
 ```
 
 <!-- eth_consensus_specs: build
-```python
-def get_root_confirmed_before_restart() -> Root:
-    return Root()
+```lean
+def get_root_confirmed_before_restart
+    : Root :=
+  zeroBytes 32
 ```
 -->
 
@@ -1110,8 +958,10 @@ per slot.
 Implementations MAY call `get_latest_confirmed` at any point in time throughout
 a slot.
 
-```python
-def on_fast_confirmation(fcr_store: FastConfirmationStore) -> None:
-    update_fast_confirmation_variables(fcr_store)
-    fcr_store.confirmed_root = get_latest_confirmed(fcr_store)
+```lean
+def on_fast_confirmation
+    (fcr_store : FastConfirmationStore)
+    : Result FastConfirmationStore := do
+  let fcr_store <- update_fast_confirmation_variables fcr_store
+  return { fcr_store with confirmed_root := (<- get_latest_confirmed fcr_store) }
 ```

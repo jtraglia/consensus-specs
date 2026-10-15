@@ -11,6 +11,7 @@ from .parse import parse_document
 from .values import check_same, write_json, write_yaml
 
 REPO = Path(__file__).resolve().parent.parent
+ENABLED = frozenset({"phase0"})
 
 
 def build(out: Path, selected: list[str], verbose: bool) -> None:
@@ -18,7 +19,7 @@ def build(out: Path, selected: list[str], verbose: bool) -> None:
     if unknown := set(selected) - set(forks):
         raise SpecError(f"unknown forks: {sorted(unknown)}, available: {list(forks)}")
     wanted = set(forks) if not selected else {a for f in selected for a in lineage(forks, f)}
-    targets = [name for name in forks if name in wanted]
+    targets = [name for name in forks if name in wanted & ENABLED]
     documents = {
         name: [parse_document(path, name) for path in forks[name].documents] for name in targets
     }
@@ -35,7 +36,7 @@ def build(out: Path, selected: list[str], verbose: bool) -> None:
         if verbose:
             print(f"built {name}")
     PYTHON.wait()
-    PYTHON.write_forks(out, {name: fork.parent for name, fork in forks.items()})
+    PYTHON.write_forks(out, {name: fork.parent for name, fork in forks.items()}, targets)
 
     if not selected:
         values = {

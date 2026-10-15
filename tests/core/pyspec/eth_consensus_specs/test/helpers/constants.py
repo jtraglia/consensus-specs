@@ -1,4 +1,4 @@
-from eth_consensus_specs.forks import PREVIOUS_FORK_OF as GENERATED_PREVIOUS_FORK_OF
+from eth_consensus_specs.forks import BUILT_FORKS, PREVIOUS_FORK_OF as GENERATED_PREVIOUS_FORK_OF
 
 from .typing import PresetBaseName, SpecForkName
 
@@ -30,24 +30,30 @@ EIP8321 = SpecForkName("eip8321")
 # The forks that are deployed on Mainnet
 MAINNET_FORKS = (PHASE0, ALTAIR, BELLATRIX, CAPELLA, DENEB, ELECTRA, FULU)
 LATEST_FORK = MAINNET_FORKS[-1]
-# The forks that pytest can run with.
+# The forks that pytest can run with, which are those the compiler built.
 # Note: when adding a new fork here, all tests from previous forks with decorator `with_X_and_later`
 #       will run on the new fork. To skip this behaviour, add the fork to `ALLOWED_TEST_RUNNER_FORKS`
-ALL_PHASES = (
-    # Formal forks
-    *MAINNET_FORKS,
-    GLOAS,
-    HEZE,
-    # Experimental patches
-    EIP8025,
-    EIP8148,
-    EIP8205,
-    EIP8321,
+ALL_PHASES = tuple(
+    fork
+    for fork in (
+        # Formal forks
+        *MAINNET_FORKS,
+        GLOAS,
+        HEZE,
+        # Experimental patches
+        EIP8025,
+        EIP8148,
+        EIP8205,
+        EIP8321,
+    )
+    if fork in BUILT_FORKS
 )
 # The forks that have light client specs
-LIGHT_CLIENT_TESTING_FORKS = [item for item in MAINNET_FORKS if item != PHASE0] + [GLOAS]
+LIGHT_CLIENT_TESTING_FORKS = [
+    item for item in (*MAINNET_FORKS, GLOAS) if item != PHASE0 and item in ALL_PHASES
+]
 # The forks that output to the test vectors.
-TESTGEN_FORKS = (*MAINNET_FORKS, GLOAS, HEZE)
+TESTGEN_FORKS = tuple(fork for fork in (*MAINNET_FORKS, GLOAS, HEZE) if fork in ALL_PHASES)
 # Forks allowed in the test runner `--fork` flag, to fail fast in case of typos
 ALLOWED_TEST_RUNNER_FORKS = ALL_PHASES
 

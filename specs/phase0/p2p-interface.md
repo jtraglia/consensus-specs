@@ -332,127 +332,102 @@ class Seen:
 
 #### `compute_fork_version`
 
-```python
-def compute_fork_version(epoch: Epoch) -> Version:  # noqa: ARG001
-    """
-    Return the fork version at the given ``epoch``.
-    """
-    return GENESIS_FORK_VERSION
+```lean
+def compute_fork_version
+    (epoch : Epoch)
+    : Version :=
+  GENESIS_FORK_VERSION
 ```
 
 #### `compute_fork_digest`
 
-```python
-def compute_fork_digest(
-    genesis_validators_root: Root,
-    epoch: Epoch,
-) -> ForkDigest:
-    """
-    Return the 4-byte fork digest for the ``genesis_validators_root`` at a given ``epoch``.
-
-    This is a digest primarily used for domain separation on the p2p layer.
-    4-bytes suffices for practical separation of forks/chains.
-    """
-    fork_version = compute_fork_version(epoch)
-    base_digest = compute_fork_data_root(fork_version, genesis_validators_root)
-    return ForkDigest(base_digest[:4])
+```lean
+def compute_fork_digest
+    (genesis_validators_root : Root)
+    (epoch : Epoch)
+    : Result ForkDigest := do
+  let fork_version := compute_fork_version epoch
+  let base_digest <- compute_fork_data_root fork_version genesis_validators_root
+  return base_digest.extract 0 4
 ```
 
 #### `is_future_slot`
 
-```python
-def is_future_slot(
-    store: Store,
-    slot: Slot,
-    current_time_ms: Uint64,
-) -> bool:
-    """
-    Check if the given slot is in the future
-    (with MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
-    """
-    slot_time_ms = compute_time_at_slot_ms(store.genesis_time_ms, slot)
-    return current_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY < slot_time_ms
+```lean
+def is_future_slot
+    (store : Store)
+    (slot : Slot)
+    (current_time_ms : Uint64)
+    : Bool :=
+  let slot_time_ms := compute_time_at_slot_ms store.genesis_time_ms slot
+  current_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY < slot_time_ms
 ```
 
 #### `is_future_epoch`
 
-```python
-def is_future_epoch(
-    store: Store,
-    epoch: Epoch,
-    current_time_ms: Uint64,
-) -> bool:
-    """
-    Check if the given epoch is in the future
-    (with MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
-    """
-    current_time_with_disparity_ms = current_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY
-    current_slot = compute_slot_at_time_ms(store.genesis_time_ms, current_time_with_disparity_ms)
-    return compute_epoch_at_slot(current_slot) < epoch
+```lean
+def is_future_epoch
+    (store : Store)
+    (epoch : Epoch)
+    (current_time_ms : Uint64)
+    : Bool :=
+  let current_time_with_disparity_ms := current_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY
+  let current_slot :=
+    compute_slot_at_time_ms store.genesis_time_ms current_time_with_disparity_ms
+  compute_epoch_at_slot current_slot < epoch
 ```
 
 #### `is_within_slot_range`
 
-```python
-def is_within_slot_range(
-    store: Store,
-    slot: Slot,
-    slot_range: Uint64,
-    current_time_ms: Uint64,
-) -> bool:
-    """
-    Check if the current time is within the inclusive slot range ``[slot, slot + slot_range]``
-    (with MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance on both ends).
-    """
-    start_time_ms = compute_time_at_slot_ms(store.genesis_time_ms, slot)
-    if current_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY < start_time_ms:
-        return False
-    end_time_ms = compute_time_at_slot_ms(store.genesis_time_ms, slot + slot_range + 1)
-    if end_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY < current_time_ms:
-        return False
-    return True
+```lean
+def is_within_slot_range
+    (store : Store)
+    (slot : Slot)
+    (slot_range : Uint64)
+    (current_time_ms : Uint64)
+    : Bool := Id.run do
+  let start_time_ms := compute_time_at_slot_ms store.genesis_time_ms slot
+  if current_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY < start_time_ms then
+    return false
+  let end_time_ms := compute_time_at_slot_ms store.genesis_time_ms (slot + slot_range + 1)
+  if end_time_ms + MAXIMUM_GOSSIP_CLOCK_DISPARITY < current_time_ms then
+    return false
+  return true
 ```
 
 #### `compute_attestation_subnet_prefix_bits`
 
-```python
-def compute_attestation_subnet_prefix_bits() -> Uint64:
-    """
-    Return the number of NodeId bits to use when mapping to a subscribed subnet.
-    """
-    return ceillog2(ATTESTATION_SUBNET_COUNT) + ATTESTATION_SUBNET_EXTRA_BITS
+```lean
+def compute_attestation_subnet_prefix_bits
+    : Result Uint64 := do
+  return (<- ceillog2 ATTESTATION_SUBNET_COUNT) + ATTESTATION_SUBNET_EXTRA_BITS
 ```
 
 #### `compute_min_epochs_for_block_requests`
 
-```python
-def compute_min_epochs_for_block_requests() -> Epoch:
-    """
-    Return the minimum epoch range over which a node must serve blocks.
-    """
-    return MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT // 2
+```lean
+def compute_min_epochs_for_block_requests
+    : Epoch :=
+  MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT / 2
 ```
 
 #### `is_non_strict_superset`
 
-```python
-def is_non_strict_superset(
-    seen_bits_set: set[tuple[bool, ...]],
-    new_bits: tuple[bool, ...],
-) -> bool:
-    """
-    Return True if any prior bitset in ``seen_bits_set`` is a non-strict
-    superset of ``new_bits`` (every bit set in new is also set in that prior).
-    """
-    for prior_bits in seen_bits_set:
-        is_superset = True
-        for prior_bit, new_bit in zip(prior_bits, new_bits, strict=True):
-            if new_bit and not prior_bit:
-                is_superset = False
-                break
-        if is_superset:
-            return True
-    return False
+```lean
+def is_non_strict_superset
+    (seen_bits_set : Std.HashSet (Array Bool))
+    (new_bits : Array Bool)
+    : Result Bool := do
+  for prior_bits in seen_bits_set do
+    require (prior_bits.size == new_bits.size)
+    let mut is_superset := true
+    for (prior_bit, new_bit) in prior_bits.zip new_bits do
+      if new_bit && !prior_bit then
+        is_superset := false
+        break
+    if is_superset then
+      return true
+  return false
 ```
 
 ### MetaData
@@ -485,19 +460,19 @@ can carry according to the following functions:
 
 #### `max_compressed_len`
 
-```python
-def max_compressed_len(n: Uint64) -> Uint64:
-    # Worst-case compressed length for a given payload of size n when using snappy:
-    # https://github.com/google/snappy/blob/32ded457c0b1fe78ceb8397632c416568d6714a0/snappy.cc#L218C1-L218C47
-    return 32 + n + n // 6
+```lean
+def max_compressed_len
+    (n : Uint64)
+    : Uint64 :=
+  32 + n + n / 6
 ```
 
 #### `max_message_size`
 
-```python
-def max_message_size() -> Uint64:
-    # Allow 1024 bytes for framing and encoding overhead but at least 1MiB in case MAX_PAYLOAD_SIZE is small.
-    return max(max_compressed_len(MAX_PAYLOAD_SIZE) + 1024, Uint64(1024 * 1024))
+```lean
+def max_message_size
+    : Uint64 :=
+  max (max_compressed_len MAX_PAYLOAD_SIZE + 1024) (1024 * 1024)
 ```
 
 ### The gossip domain: gossipsub
@@ -639,78 +614,48 @@ frequency validator messages (`voluntary_exit`, `proposer_slashing`, and
 The `beacon_block` topic is used solely for propagating new signed beacon blocks
 to all nodes on the networks. Signed blocks are sent in their entirety.
 
-```python
-def validate_beacon_block_gossip(
-    seen: Seen,
-    store: Store,
-    signed_beacon_block: SignedBeaconBlock,
-    current_time_ms: Uint64,
-) -> None:
-    """
-    Validate a SignedBeaconBlock for gossip propagation.
-    Raises GossipIgnore or GossipReject on validation failure.
-    """
-    block = signed_beacon_block.message
-
-    # [IGNORE] The block is the first block with valid signature received for the slot and proposer
-    proposer_slot_key = (block.slot, block.proposer_index)
-    if proposer_slot_key in seen.proposer_slots:
-        raise GossipIgnore("block is not the first valid block for this slot and proposer")
-
-    # [IGNORE] The block is not from a future slot
-    # (MAY be queued for processing at the appropriate slot)
-    if is_future_slot(store, block.slot, current_time_ms):
-        raise GossipIgnore("block is from a future slot")
-
-    # [IGNORE] The block is from a slot greater than the latest finalized slot
-    # (MAY choose to validate and store such blocks for additional purposes
-    # -- e.g. slashing detection, archive nodes, etc)
-    finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
-    if block.slot <= finalized_slot:
-        raise GossipIgnore("block is not from a slot greater than the latest finalized slot")
-
-    # [IGNORE] The block's parent has been seen (via gossip or non-gossip sources)
-    # (MAY be queued until parent is retrieved)
-    if block.parent_root not in store.blocks:
-        raise GossipIgnore("block's parent has not been seen")
-
-    # [REJECT] The block's parent passes validation
-    if block.parent_root not in store.block_states:
-        raise GossipReject("block's parent is invalid")
-
-    state = store.block_states[get_head(store).root]
-
-    # [REJECT] The proposer index is a valid validator index
-    if block.proposer_index >= len(state.validators):
-        raise GossipReject("proposer index out of range")
-
-    # [REJECT] The proposer signature is valid
-    proposer = state.validators[block.proposer_index]
-    domain = get_domain(state, DOMAIN_BEACON_PROPOSER, compute_epoch_at_slot(block.slot))
-    signing_root = compute_signing_root(block, domain)
-    if not bls.Verify(proposer.pubkey, signing_root, signed_beacon_block.signature):
-        raise GossipReject("invalid proposer signature")
-
-    # [REJECT] The block is from a higher slot than its parent
-    if block.slot <= store.blocks[block.parent_root].slot:
-        raise GossipReject("block is not from a higher slot than its parent")
-
-    # [REJECT] The current finalized checkpoint is an ancestor of the block
-    finalized_epoch = store.finalized_checkpoint.epoch
-    finalized_checkpoint_block = get_checkpoint_block(store, block.parent_root, finalized_epoch)
-    if finalized_checkpoint_block != store.finalized_checkpoint.root:
-        raise GossipReject("finalized checkpoint is not an ancestor of block")
-
-    # [REJECT] The block is proposed by the expected proposer for the slot
-    # (if shuffling is not available, IGNORE instead and MAY be queued for later)
-    parent_state = store.block_states[block.parent_root].copy()
-    process_slots(parent_state, block.slot)
-    expected_proposer = get_beacon_proposer_index(parent_state)
-    if block.proposer_index != expected_proposer:
-        raise GossipReject("block proposer_index does not match expected proposer")
-
-    # Mark this block as seen
-    seen.proposer_slots.add(proposer_slot_key)
+```lean
+def validate_beacon_block_gossip
+    (seen : Seen)
+    (store : Store)
+    (signed_beacon_block : SignedBeaconBlock)
+    (current_time_ms : Uint64)
+    : Result Seen := do
+  let block := signed_beacon_block.message
+  let proposer_slot_key := (block.slot, block.proposer_index)
+  if seen.proposer_slots.contains proposer_slot_key then
+    raise "GossipIgnore" "block is not the first valid block for this slot and proposer"
+  if is_future_slot store block.slot current_time_ms then
+    raise "GossipIgnore" "block is from a future slot"
+  let finalized_slot := compute_start_slot_at_epoch store.finalized_checkpoint.epoch
+  if block.slot <= finalized_slot then
+    raise "GossipIgnore" "block is not from a slot greater than the latest finalized slot"
+  if !store.blocks.contains block.parent_root then
+    raise "GossipIgnore" "block's parent has not been seen"
+  if !store.block_states.contains block.parent_root then
+    raise "GossipReject" "block's parent is invalid"
+  let state <- store.block_states.get? (<- get_head store).root
+  if block.proposer_index >= state.validators.size then
+    raise "GossipReject" "proposer index out of range"
+  let proposer <- state.validators[block.proposer_index]?
+  let epoch := compute_epoch_at_slot block.slot
+  let domain <- get_domain state DOMAIN_BEACON_PROPOSER (some epoch)
+  let signing_root <- compute_signing_root block domain
+  if !(<- bls.Verify proposer.pubkey signing_root signed_beacon_block.signature) then
+    raise "GossipReject" "invalid proposer signature"
+  if block.slot <= (<- store.blocks.get? block.parent_root).slot then
+    raise "GossipReject" "block is not from a higher slot than its parent"
+  let finalized_epoch := store.finalized_checkpoint.epoch
+  let finalized_checkpoint_block <-
+    get_checkpoint_block store block.parent_root finalized_epoch
+  if finalized_checkpoint_block != store.finalized_checkpoint.root then
+    raise "GossipReject" "finalized checkpoint is not an ancestor of block"
+  let parent_state <- store.block_states.get? block.parent_root
+  let parent_state <- process_slots parent_state block.slot
+  let expected_proposer <- get_beacon_proposer_index parent_state
+  if block.proposer_index != expected_proposer then
+    raise "GossipReject" "block proposer_index does not match expected proposer"
+  return { seen with proposer_slots := seen.proposer_slots.insert proposer_slot_key }
 ```
 
 ###### `beacon_aggregate_and_proof`
@@ -719,115 +664,79 @@ The `beacon_aggregate_and_proof` topic is used to propagate aggregated
 attestations (as `SignedAggregateAndProof`s) to subscribing nodes (typically
 validators) to be included in future blocks.
 
-```python
-def validate_beacon_aggregate_and_proof_gossip(
-    seen: Seen,
-    store: Store,
-    signed_aggregate_and_proof: SignedAggregateAndProof,
-    current_time_ms: Uint64,
-) -> None:
-    """
-    Validate a SignedAggregateAndProof for gossip propagation.
-    Raises GossipIgnore or GossipReject on validation failure.
-    """
-    aggregate_and_proof = signed_aggregate_and_proof.message
-    aggregate = aggregate_and_proof.aggregate
-    index = aggregate.data.index
-    aggregation_bits = aggregate.aggregation_bits
-
-    # [IGNORE] A valid aggregate with a superset of aggregation bits has not already been seen
-    aggregate_data_root = hash_tree_root(aggregate.data)
-    aggregate_bits = tuple(bool(bit) for bit in aggregation_bits)
-    seen_bits = seen.aggregate_data_roots.get(aggregate_data_root, set())
-    if is_non_strict_superset(seen_bits, aggregate_bits):
-        raise GossipIgnore("already seen aggregate for this data")
-
-    # [IGNORE] This is the first valid aggregate for this epoch and aggregator
-    aggregator_index = aggregate_and_proof.aggregator_index
-    target_epoch = aggregate.data.target.epoch
-    aggregator_epoch_key = (target_epoch, aggregator_index)
-    if aggregator_epoch_key in seen.aggregator_epochs:
-        raise GossipIgnore("already seen aggregate for this epoch and aggregator")
-
-    # [IGNORE] The block being voted for has been seen (via gossip or non-gossip sources)
-    # (MAY be queued until block is retrieved)
-    block_root = aggregate.data.beacon_block_root
-    if block_root not in store.blocks:
-        raise GossipIgnore("block being voted for has not been seen")
-
-    # [REJECT] The block being voted for passes validation
-    if block_root not in store.block_states:
-        raise GossipReject("block being voted for failed validation")
-
-    state = store.block_states[get_head(store).root]
-
-    # [REJECT] The committee index is within the expected range
-    committee_count = get_committee_count_per_slot(state, aggregate.data.target.epoch)
-    if index >= committee_count:
-        raise GossipReject("committee index out of range")
-
-    # [IGNORE] The aggregate attestation's slot is within the propagation range
-    # (MAY be queued for processing at the appropriate slot)
-    if not is_within_slot_range(
-        store, aggregate.data.slot, ATTESTATION_PROPAGATION_SLOT_RANGE, current_time_ms
-    ):
-        raise GossipIgnore("attestation slot not within propagation range")
-
-    # [REJECT] The aggregate attestation's epoch matches its target
-    if aggregate.data.target.epoch != compute_epoch_at_slot(aggregate.data.slot):
-        raise GossipReject("attestation epoch does not match target epoch")
-
-    # [REJECT] The number of aggregation bits matches the committee size
-    committee = get_beacon_committee(state, aggregate.data.slot, index)
-    if len(aggregation_bits) != len(committee):
-        raise GossipReject("aggregation bits length does not match committee size")
-
-    # [REJECT] The aggregate attestation has participants
-    attesting_indices = get_attesting_indices(state, aggregate)
-    if len(attesting_indices) < 1:
-        raise GossipReject("aggregate has no participants")
-
-    # [REJECT] The selection proof selects the validator as an aggregator
-    if not is_aggregator(state, aggregate.data.slot, index, aggregate_and_proof.selection_proof):
-        raise GossipReject("validator is not selected as aggregator")
-
-    # [REJECT] The aggregator is a member of the committee
-    if aggregator_index not in committee:
-        raise GossipReject("aggregator is not a member of the committee")
-
-    # [REJECT] The selection proof signature is valid
-    aggregator = state.validators[aggregator_index]
-    domain = get_domain(state, DOMAIN_SELECTION_PROOF, target_epoch)
-    signing_root = compute_signing_root(aggregate.data.slot, domain)
-    if not bls.Verify(aggregator.pubkey, signing_root, aggregate_and_proof.selection_proof):
-        raise GossipReject("invalid selection proof signature")
-
-    # [REJECT] The aggregator signature is valid
-    domain = get_domain(state, DOMAIN_AGGREGATE_AND_PROOF, target_epoch)
-    signing_root = compute_signing_root(aggregate_and_proof, domain)
-    if not bls.Verify(aggregator.pubkey, signing_root, signed_aggregate_and_proof.signature):
-        raise GossipReject("invalid aggregator signature")
-
-    # [REJECT] The aggregate signature is valid
-    if not is_valid_indexed_attestation(state, get_indexed_attestation(state, aggregate)):
-        raise GossipReject("invalid aggregate signature")
-
-    # [REJECT] The target block is an ancestor of the LMD vote block
-    checkpoint_block = get_checkpoint_block(store, block_root, aggregate.data.target.epoch)
-    if checkpoint_block != aggregate.data.target.root:
-        raise GossipReject("target block is not an ancestor of LMD vote block")
-
-    # [IGNORE] The finalized checkpoint is an ancestor of the block
-    finalized_epoch = store.finalized_checkpoint.epoch
-    finalized_checkpoint_block = get_checkpoint_block(store, block_root, finalized_epoch)
-    if finalized_checkpoint_block != store.finalized_checkpoint.root:
-        raise GossipIgnore("finalized checkpoint is not an ancestor of block")
-
-    # Mark this aggregate as seen
-    seen.aggregator_epochs.add(aggregator_epoch_key)
-    if aggregate_data_root not in seen.aggregate_data_roots:
-        seen.aggregate_data_roots[aggregate_data_root] = set()
-    seen.aggregate_data_roots[aggregate_data_root].add(aggregate_bits)
+```lean
+def validate_beacon_aggregate_and_proof_gossip
+    (seen : Seen)
+    (store : Store)
+    (signed_aggregate_and_proof : SignedAggregateAndProof)
+    (current_time_ms : Uint64)
+    : Result Seen := do
+  let aggregate_and_proof := signed_aggregate_and_proof.message
+  let aggregate := aggregate_and_proof.aggregate
+  let index := aggregate.data.index
+  let aggregation_bits := aggregate.aggregation_bits
+  let aggregate_data_root <- hash_tree_root aggregate.data
+  let aggregate_bits := aggregation_bits
+  let seen_bits := seen.aggregate_data_roots.getD aggregate_data_root {}
+  if (<- is_non_strict_superset seen_bits aggregate_bits) then
+    raise "GossipIgnore" "already seen aggregate for this data"
+  let aggregator_index := aggregate_and_proof.aggregator_index
+  let target_epoch := aggregate.data.target.epoch
+  let aggregator_epoch_key := (target_epoch, aggregator_index)
+  if seen.aggregator_epochs.contains aggregator_epoch_key then
+    raise "GossipIgnore" "already seen aggregate for this epoch and aggregator"
+  let block_root := aggregate.data.beacon_block_root
+  if !store.blocks.contains block_root then
+    raise "GossipIgnore" "block being voted for has not been seen"
+  if !store.block_states.contains block_root then
+    raise "GossipReject" "block being voted for failed validation"
+  let state <- store.block_states.get? (<- get_head store).root
+  let committee_count := get_committee_count_per_slot state aggregate.data.target.epoch
+  if index >= committee_count then
+    raise "GossipReject" "committee index out of range"
+  if !is_within_slot_range
+      store aggregate.data.slot ATTESTATION_PROPAGATION_SLOT_RANGE current_time_ms then
+    raise "GossipIgnore" "attestation slot not within propagation range"
+  if aggregate.data.target.epoch != compute_epoch_at_slot aggregate.data.slot then
+    raise "GossipReject" "attestation epoch does not match target epoch"
+  let committee <- get_beacon_committee state aggregate.data.slot index
+  if aggregation_bits.size != committee.size then
+    raise "GossipReject" "aggregation bits length does not match committee size"
+  let attesting_indices <- get_attesting_indices state aggregate
+  if attesting_indices.size < 1 then
+    raise "GossipReject" "aggregate has no participants"
+  let selection_proof := aggregate_and_proof.selection_proof
+  if !(<- is_aggregator state aggregate.data.slot index selection_proof) then
+    raise "GossipReject" "validator is not selected as aggregator"
+  if !committee.contains aggregator_index then
+    raise "GossipReject" "aggregator is not a member of the committee"
+  let aggregator <- state.validators[aggregator_index]?
+  let domain <- get_domain state DOMAIN_SELECTION_PROOF (some target_epoch)
+  let signing_root <- compute_signing_root aggregate.data.slot domain
+  if !(<- bls.Verify aggregator.pubkey signing_root selection_proof) then
+    raise "GossipReject" "invalid selection proof signature"
+  let domain <- get_domain state DOMAIN_AGGREGATE_AND_PROOF (some target_epoch)
+  let signing_root <- compute_signing_root aggregate_and_proof domain
+  let signature := signed_aggregate_and_proof.signature
+  if !(<- bls.Verify aggregator.pubkey signing_root signature) then
+    raise "GossipReject" "invalid aggregator signature"
+  let indexed_attestation <- get_indexed_attestation state aggregate
+  if !(<- is_valid_indexed_attestation state indexed_attestation) then
+    raise "GossipReject" "invalid aggregate signature"
+  let checkpoint_block <-
+    get_checkpoint_block store block_root aggregate.data.target.epoch
+  if checkpoint_block != aggregate.data.target.root then
+    raise "GossipReject" "target block is not an ancestor of LMD vote block"
+  let finalized_epoch := store.finalized_checkpoint.epoch
+  let finalized_checkpoint_block <- get_checkpoint_block store block_root finalized_epoch
+  if finalized_checkpoint_block != store.finalized_checkpoint.root then
+    raise "GossipIgnore" "finalized checkpoint is not an ancestor of block"
+  let seen_bits := seen.aggregate_data_roots.getD aggregate_data_root {}
+  let seen_bits := seen_bits.insert aggregate_bits
+  return { seen with
+    aggregator_epochs := seen.aggregator_epochs.insert aggregator_epoch_key
+    aggregate_data_roots := seen.aggregate_data_roots.insert aggregate_data_root seen_bits
+  }
 ```
 
 ###### `voluntary_exit`
@@ -836,57 +745,37 @@ The `voluntary_exit` topic is used solely for propagating signed voluntary
 validator exits to proposers on the network. Signed voluntary exits are sent in
 their entirety.
 
-```python
-def validate_voluntary_exit_gossip(
-    seen: Seen,
-    store: Store,
-    signed_voluntary_exit: SignedVoluntaryExit,
-    current_time_ms: Uint64,
-) -> None:
-    """
-    Validate a SignedVoluntaryExit for gossip propagation.
-    Raises GossipIgnore or GossipReject on validation failure.
-    """
-    voluntary_exit = signed_voluntary_exit.message
-    validator_index = voluntary_exit.validator_index
-
-    # [IGNORE] The voluntary exit is the first valid voluntary exit received for the validator
-    if validator_index in seen.voluntary_exit_indices:
-        raise GossipIgnore("already seen voluntary exit for this validator")
-
-    # [IGNORE] The voluntary exit epoch is not in the future
-    if is_future_epoch(store, voluntary_exit.epoch, current_time_ms):
-        raise GossipIgnore("voluntary exit epoch is in the future")
-
-    state = store.block_states[get_head(store).root]
-
-    # [REJECT] The validator index is valid
-    if validator_index >= len(state.validators):
-        raise GossipReject("validator index out of range")
-
-    validator = state.validators[validator_index]
-    current_epoch = get_current_epoch(state)
-
-    # [IGNORE] The validator has not already initiated exit
-    if validator.exit_epoch != FAR_FUTURE_EPOCH:
-        raise GossipIgnore("validator has already initiated exit")
-
-    # [REJECT] The validator is active
-    if not is_active_validator(validator, current_epoch):
-        raise GossipReject("validator is not active")
-
-    # [REJECT] The validator has been active long enough
-    if current_epoch < validator.activation_epoch + SHARD_COMMITTEE_PERIOD:
-        raise GossipReject("validator has not been active long enough")
-
-    # [REJECT] The signature is valid
-    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, voluntary_exit.epoch)
-    signing_root = compute_signing_root(voluntary_exit, domain)
-    if not bls.Verify(validator.pubkey, signing_root, signed_voluntary_exit.signature):
-        raise GossipReject("invalid voluntary exit signature")
-
-    # Mark this voluntary exit as seen
-    seen.voluntary_exit_indices.add(validator_index)
+```lean
+def validate_voluntary_exit_gossip
+    (seen : Seen)
+    (store : Store)
+    (signed_voluntary_exit : SignedVoluntaryExit)
+    (current_time_ms : Uint64)
+    : Result Seen := do
+  let voluntary_exit := signed_voluntary_exit.message
+  let validator_index := voluntary_exit.validator_index
+  if seen.voluntary_exit_indices.contains validator_index then
+    raise "GossipIgnore" "already seen voluntary exit for this validator"
+  if is_future_epoch store voluntary_exit.epoch current_time_ms then
+    raise "GossipIgnore" "voluntary exit epoch is in the future"
+  let state <- store.block_states.get? (<- get_head store).root
+  if validator_index >= state.validators.size then
+    raise "GossipReject" "validator index out of range"
+  let validator <- state.validators[validator_index]?
+  let current_epoch := get_current_epoch state
+  if validator.exit_epoch != FAR_FUTURE_EPOCH then
+    raise "GossipIgnore" "validator has already initiated exit"
+  if !is_active_validator validator current_epoch then
+    raise "GossipReject" "validator is not active"
+  if current_epoch < validator.activation_epoch + SHARD_COMMITTEE_PERIOD then
+    raise "GossipReject" "validator has not been active long enough"
+  let domain <- get_domain state DOMAIN_VOLUNTARY_EXIT (some voluntary_exit.epoch)
+  let signing_root <- compute_signing_root voluntary_exit domain
+  if !(<- bls.Verify validator.pubkey signing_root signed_voluntary_exit.signature) then
+    raise "GossipReject" "invalid voluntary exit signature"
+  return { seen with
+    voluntary_exit_indices := seen.voluntary_exit_indices.insert validator_index
+  }
 ```
 
 ###### `proposer_slashing`
@@ -894,58 +783,39 @@ def validate_voluntary_exit_gossip(
 The `proposer_slashing` topic is used solely for propagating proposer slashings
 to proposers on the network. Proposer slashings are sent in their entirety.
 
-```python
-def validate_proposer_slashing_gossip(
-    seen: Seen,
-    store: Store,
-    proposer_slashing: ProposerSlashing,
-) -> None:
-    """
-    Validate a ProposerSlashing for gossip propagation.
-    Raises GossipIgnore or GossipReject on validation failure.
-    """
-    header_1 = proposer_slashing.signed_header_1.message
-    header_2 = proposer_slashing.signed_header_2.message
-    proposer_index = header_1.proposer_index
-
-    # [IGNORE] The proposer slashing is the first valid proposer slashing received for this proposer
-    if proposer_index in seen.proposer_slashing_indices:
-        raise GossipIgnore("already seen proposer slashing for this proposer")
-
-    # [REJECT] The header slots match
-    if header_1.slot != header_2.slot:
-        raise GossipReject("header slots do not match")
-
-    # [REJECT] The header proposer indices match
-    if header_1.proposer_index != header_2.proposer_index:
-        raise GossipReject("header proposer indices do not match")
-
-    # [REJECT] The headers are different
-    if header_1 == header_2:
-        raise GossipReject("headers are not different")
-
-    state = store.block_states[get_head(store).root]
-
-    # [REJECT] The proposer index is a valid validator index
-    if proposer_index >= len(state.validators):
-        raise GossipReject("proposer index out of range")
-
-    # [REJECT] The proposer is slashable
-    proposer = state.validators[proposer_index]
-    if not is_slashable_validator(proposer, get_current_epoch(state)):
-        raise GossipReject("proposer is not slashable")
-
-    # [REJECT] The signatures are valid
-    for signed_header in (proposer_slashing.signed_header_1, proposer_slashing.signed_header_2):
-        domain = get_domain(
-            state, DOMAIN_BEACON_PROPOSER, compute_epoch_at_slot(signed_header.message.slot)
-        )
-        signing_root = compute_signing_root(signed_header.message, domain)
-        if not bls.Verify(proposer.pubkey, signing_root, signed_header.signature):
-            raise GossipReject("invalid proposer slashing signature")
-
-    # Mark this proposer slashing as seen
-    seen.proposer_slashing_indices.add(proposer_index)
+```lean
+def validate_proposer_slashing_gossip
+    (seen : Seen)
+    (store : Store)
+    (proposer_slashing : ProposerSlashing)
+    : Result Seen := do
+  let header_1 := proposer_slashing.signed_header_1.message
+  let header_2 := proposer_slashing.signed_header_2.message
+  let proposer_index := header_1.proposer_index
+  if seen.proposer_slashing_indices.contains proposer_index then
+    raise "GossipIgnore" "already seen proposer slashing for this proposer"
+  if header_1.slot != header_2.slot then
+    raise "GossipReject" "header slots do not match"
+  if header_1.proposer_index != header_2.proposer_index then
+    raise "GossipReject" "header proposer indices do not match"
+  if header_1 == header_2 then
+    raise "GossipReject" "headers are not different"
+  let state <- store.block_states.get? (<- get_head store).root
+  if proposer_index >= state.validators.size then
+    raise "GossipReject" "proposer index out of range"
+  let proposer <- state.validators[proposer_index]?
+  if !is_slashable_validator proposer (get_current_epoch state) then
+    raise "GossipReject" "proposer is not slashable"
+  for signed_header in
+      #[proposer_slashing.signed_header_1, proposer_slashing.signed_header_2] do
+    let epoch := compute_epoch_at_slot signed_header.message.slot
+    let domain <- get_domain state DOMAIN_BEACON_PROPOSER (some epoch)
+    let signing_root <- compute_signing_root signed_header.message domain
+    if !(<- bls.Verify proposer.pubkey signing_root signed_header.signature) then
+      raise "GossipReject" "invalid proposer slashing signature"
+  return { seen with
+    proposer_slashing_indices := seen.proposer_slashing_indices.insert proposer_index
+  }
 ```
 
 ###### `attester_slashing`
@@ -953,62 +823,44 @@ def validate_proposer_slashing_gossip(
 The `attester_slashing` topic is used solely for propagating attester slashings
 to proposers on the network. Attester slashings are sent in their entirety.
 
-```python
-def validate_attester_slashing_gossip(
-    seen: Seen,
-    store: Store,
-    attester_slashing: AttesterSlashing,
-) -> None:
-    """
-    Validate an AttesterSlashing for gossip propagation.
-    Raises GossipIgnore or GossipReject on validation failure.
-    """
-    attestation_1 = attester_slashing.attestation_1
-    attestation_2 = attester_slashing.attestation_2
-
-    attesting_indices_1 = set(attestation_1.attesting_indices)
-    attesting_indices_2 = set(attestation_2.attesting_indices)
-    slashable_indices = attesting_indices_1.intersection(attesting_indices_2)
-
-    # [IGNORE] At least one index in the intersection has not yet been seen
-    new_indices = slashable_indices.difference(seen.attester_slashing_indices)
-    if len(new_indices) == 0:
-        raise GossipIgnore("all attester slashing indices already seen")
-
-    # [REJECT] The attestation data is slashable (double vote or surround vote)
-    if not is_slashable_attestation_data(attestation_1.data, attestation_2.data):
-        raise GossipReject("attestation data is not slashable")
-
-    state = store.block_states[get_head(store).root]
-
-    # [REJECT] All validator indices in the first indexed attestation are valid
-    if any(index >= len(state.validators) for index in attestation_1.attesting_indices):
-        raise GossipReject("validator index out of range in indexed attestation 1")
-
-    # [REJECT] The first indexed attestation has valid properties
-    if not is_valid_indexed_attestation(state, attestation_1):
-        raise GossipReject("invalid indexed attestation 1")
-
-    # [REJECT] All validator indices in the second indexed attestation are valid
-    if any(index >= len(state.validators) for index in attestation_2.attesting_indices):
-        raise GossipReject("validator index out of range in indexed attestation 2")
-
-    # [REJECT] The second indexed attestation has valid properties
-    if not is_valid_indexed_attestation(state, attestation_2):
-        raise GossipReject("invalid indexed attestation 2")
-
-    # [REJECT] At least one validator in the intersection is slashable
-    slashable_any = False
-    current_epoch = get_current_epoch(state)
-    for index in slashable_indices:
-        if is_slashable_validator(state.validators[index], current_epoch):
-            slashable_any = True
-            break
-    if not slashable_any:
-        raise GossipReject("no slashable validators in intersection")
-
-    # Mark these indices as seen
-    seen.attester_slashing_indices.update(slashable_indices)
+```lean
+def validate_attester_slashing_gossip
+    (seen : Seen)
+    (store : Store)
+    (attester_slashing : AttesterSlashing)
+    : Result Seen := do
+  let attestation_1 := attester_slashing.attestation_1
+  let attestation_2 := attester_slashing.attestation_2
+  let attesting_indices_1 := Std.HashSet.ofList attestation_1.attesting_indices.toList
+  let attesting_indices_2 := Std.HashSet.ofList attestation_2.attesting_indices.toList
+  let slashable_indices := attesting_indices_1.filter fun index =>
+    attesting_indices_2.contains index
+  let new_indices := slashable_indices.filter fun index =>
+    !seen.attester_slashing_indices.contains index
+  if new_indices.size == 0 then
+    raise "GossipIgnore" "all attester slashing indices already seen"
+  if !is_slashable_attestation_data attestation_1.data attestation_2.data then
+    raise "GossipReject" "attestation data is not slashable"
+  let state <- store.block_states.get? (<- get_head store).root
+  if attestation_1.attesting_indices.any fun index => index >= state.validators.size then
+    raise "GossipReject" "validator index out of range in indexed attestation 1"
+  if !(<- is_valid_indexed_attestation state attestation_1) then
+    raise "GossipReject" "invalid indexed attestation 1"
+  if attestation_2.attesting_indices.any fun index => index >= state.validators.size then
+    raise "GossipReject" "validator index out of range in indexed attestation 2"
+  if !(<- is_valid_indexed_attestation state attestation_2) then
+    raise "GossipReject" "invalid indexed attestation 2"
+  let mut slashable_any := false
+  let current_epoch := get_current_epoch state
+  for index in slashable_indices do
+    if is_slashable_validator (<- state.validators[index]?) current_epoch then
+      slashable_any := true
+      break
+  if !slashable_any then
+    raise "GossipReject" "no slashable validators in intersection"
+  return { seen with
+    attester_slashing_indices := seen.attester_slashing_indices.union slashable_indices
+  }
 ```
 
 ##### Attestation subnets
@@ -1023,93 +875,61 @@ attestations to the subnet `subnet_id` (typically beacon and persistent
 committees) to be aggregated before being gossiped to
 `beacon_aggregate_and_proof`.
 
-```python
-def validate_beacon_attestation_gossip(
-    seen: Seen,
-    store: Store,
-    attestation: Attestation,
-    current_time_ms: Uint64,
-    subnet_id: SubnetID,
-) -> None:
-    """
-    Validate an Attestation for gossip propagation on a subnet.
-    Raises GossipIgnore or GossipReject on validation failure.
-    """
-    data = attestation.data
-    committee_index = data.index
-    target_epoch = data.target.epoch
-    aggregation_bits = attestation.aggregation_bits
-
-    # [IGNORE] The block being voted for has been seen (via gossip or non-gossip sources)
-    # (MAY be queued until block is retrieved)
-    block_root = data.beacon_block_root
-    if block_root not in store.blocks:
-        raise GossipIgnore("block being voted for has not been seen")
-
-    # [REJECT] The block being voted for passes validation
-    if block_root not in store.block_states:
-        raise GossipReject("block being voted for failed validation")
-
-    state = store.block_states[get_head(store).root]
-
-    # [REJECT] The committee index is within the expected range
-    committees_per_slot = get_committee_count_per_slot(state, target_epoch)
-    if committee_index >= committees_per_slot:
-        raise GossipReject("committee index out of range")
-
-    # [REJECT] The attestation is for the correct subnet
-    expected_subnet = compute_subnet_for_attestation(
-        committees_per_slot, data.slot, committee_index
-    )
-    if expected_subnet != subnet_id:
-        raise GossipReject("attestation is for wrong subnet")
-
-    # [IGNORE] The attestation slot is within the propagation range
-    # (MAY be queued for processing at the appropriate slot)
-    if not is_within_slot_range(
-        store, data.slot, ATTESTATION_PROPAGATION_SLOT_RANGE, current_time_ms
-    ):
-        raise GossipIgnore("attestation slot not within propagation range")
-
-    # [REJECT] The attestation's epoch matches its target
-    if target_epoch != compute_epoch_at_slot(data.slot):
-        raise GossipReject("attestation epoch does not match target epoch")
-
-    # [REJECT] The attestation is unaggregated (exactly one bit set)
-    num_bits_set = get_set_bit_count(aggregation_bits)
-    if num_bits_set != 1:
-        raise GossipReject("attestation is not unaggregated")
-
-    # [REJECT] The number of aggregation bits matches the committee size
-    committee = get_beacon_committee(state, data.slot, committee_index)
-    if len(aggregation_bits) != len(committee):
-        raise GossipReject("aggregation bits length does not match committee size")
-
-    # [IGNORE] No other valid attestation seen for this target epoch and validator
-    set_bit_indices = [index for index, bit in enumerate(aggregation_bits) if bit]
-    participant_index = committee[set_bit_indices[0]]
-    attestation_epoch_key = (target_epoch, participant_index)
-    if attestation_epoch_key in seen.attestation_validator_epochs:
-        raise GossipIgnore("already seen attestation for this epoch and validator")
-
-    # [REJECT] The attestation signature is valid
-    indexed_attestation = get_indexed_attestation(state, attestation)
-    if not is_valid_indexed_attestation(state, indexed_attestation):
-        raise GossipReject("invalid attestation signature")
-
-    # [REJECT] The attestation's target block is an ancestor of the LMD vote block
-    target_checkpoint_block = get_checkpoint_block(store, block_root, target_epoch)
-    if target_checkpoint_block != data.target.root:
-        raise GossipReject("target block is not an ancestor of LMD vote block")
-
-    # [IGNORE] The current finalized_checkpoint is an ancestor of the block
-    finalized_epoch = store.finalized_checkpoint.epoch
-    finalized_checkpoint_block = get_checkpoint_block(store, block_root, finalized_epoch)
-    if finalized_checkpoint_block != store.finalized_checkpoint.root:
-        raise GossipIgnore("finalized checkpoint is not an ancestor of block")
-
-    # Mark this attestation as seen
-    seen.attestation_validator_epochs.add(attestation_epoch_key)
+```lean
+def validate_beacon_attestation_gossip
+    (seen : Seen)
+    (store : Store)
+    (attestation : Attestation)
+    (current_time_ms : Uint64)
+    (subnet_id : SubnetID)
+    : Result Seen := do
+  let data := attestation.data
+  let committee_index := data.index
+  let target_epoch := data.target.epoch
+  let aggregation_bits := attestation.aggregation_bits
+  let block_root := data.beacon_block_root
+  if !store.blocks.contains block_root then
+    raise "GossipIgnore" "block being voted for has not been seen"
+  if !store.block_states.contains block_root then
+    raise "GossipReject" "block being voted for failed validation"
+  let state <- store.block_states.get? (<- get_head store).root
+  let committees_per_slot := get_committee_count_per_slot state target_epoch
+  if committee_index >= committees_per_slot then
+    raise "GossipReject" "committee index out of range"
+  let expected_subnet :=
+    compute_subnet_for_attestation committees_per_slot data.slot committee_index
+  if expected_subnet != subnet_id then
+    raise "GossipReject" "attestation is for wrong subnet"
+  if !is_within_slot_range
+      store data.slot ATTESTATION_PROPAGATION_SLOT_RANGE current_time_ms then
+    raise "GossipIgnore" "attestation slot not within propagation range"
+  if target_epoch != compute_epoch_at_slot data.slot then
+    raise "GossipReject" "attestation epoch does not match target epoch"
+  let num_bits_set := get_set_bit_count aggregation_bits
+  if num_bits_set != 1 then
+    raise "GossipReject" "attestation is not unaggregated"
+  let committee <- get_beacon_committee state data.slot committee_index
+  if aggregation_bits.size != committee.size then
+    raise "GossipReject" "aggregation bits length does not match committee size"
+  let set_bit_indices := (aggregation_bits.zipIdx.filter fun (bit, _) => bit).map Prod.snd
+  let participant_index <- committee[<- set_bit_indices[0]?]?
+  let attestation_epoch_key := (target_epoch, participant_index)
+  if seen.attestation_validator_epochs.contains attestation_epoch_key then
+    raise "GossipIgnore" "already seen attestation for this epoch and validator"
+  let indexed_attestation <- get_indexed_attestation state attestation
+  if !(<- is_valid_indexed_attestation state indexed_attestation) then
+    raise "GossipReject" "invalid attestation signature"
+  let target_checkpoint_block <- get_checkpoint_block store block_root target_epoch
+  if target_checkpoint_block != data.target.root then
+    raise "GossipReject" "target block is not an ancestor of LMD vote block"
+  let finalized_epoch := store.finalized_checkpoint.epoch
+  let finalized_checkpoint_block <- get_checkpoint_block store block_root finalized_epoch
+  if finalized_checkpoint_block != store.finalized_checkpoint.root then
+    raise "GossipIgnore" "finalized checkpoint is not an ancestor of block"
+  return { seen with
+    attestation_validator_epochs :=
+      seen.attestation_validator_epochs.insert attestation_epoch_key
+  }
 ```
 
 ##### Attestations and Aggregation
@@ -1832,25 +1652,29 @@ should:
 - Select these subnets based on their node-id as specified by the following
   `compute_subscribed_subnets(node_id, epoch)` function.
 
-```python
-def compute_subscribed_subnet(node_id: NodeID, epoch: Epoch, index: int) -> SubnetID:
-    prefix_bits = int(compute_attestation_subnet_prefix_bits())
-    node_id_prefix = node_id >> int(NODE_ID_BITS - prefix_bits)
-    node_offset = Uint64(node_id % Uint256(EPOCHS_PER_SUBNET_SUBSCRIPTION))
-    permutation_seed = sha256(
-        uint_to_bytes(Uint64((epoch + node_offset) // EPOCHS_PER_SUBNET_SUBSCRIPTION))
-    )
-    permutated_prefix = compute_shuffled_index(
-        Uint64(node_id_prefix),
-        Uint64(1 << prefix_bits),
-        permutation_seed,
-    )
-    return SubnetID((permutated_prefix + index) % ATTESTATION_SUBNET_COUNT)
+```lean
+def compute_subscribed_subnet
+    (node_id : NodeID)
+    (epoch : Epoch)
+    (index : Nat)
+    : Result SubnetID := do
+  let prefix_bits <- compute_attestation_subnet_prefix_bits
+  let node_id_prefix := node_id >>> (NODE_ID_BITS - prefix_bits)
+  let node_offset := node_id % EPOCHS_PER_SUBNET_SUBSCRIPTION
+  let permutation_seed :=
+    sha256 (uint_to_bytes 8 ((epoch + node_offset) / EPOCHS_PER_SUBNET_SUBSCRIPTION))
+  let permutated_prefix <-
+    compute_shuffled_index node_id_prefix (1 <<< prefix_bits) permutation_seed
+  return (permutated_prefix + index) % ATTESTATION_SUBNET_COUNT
 ```
 
-```python
-def compute_subscribed_subnets(node_id: NodeID, epoch: Epoch) -> Sequence[SubnetID]:
-    return [compute_subscribed_subnet(node_id, epoch, index) for index in range(SUBNETS_PER_NODE)]
+```lean
+def compute_subscribed_subnets
+    (node_id : NodeID)
+    (epoch : Epoch)
+    : Result (Array SubnetID) :=
+  (Array.range SUBNETS_PER_NODE).mapM fun index =>
+    compute_subscribed_subnet node_id epoch index
 ```
 
 *Note*: When preparing for an upgrade, a node must select and subscribe to

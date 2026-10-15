@@ -217,387 +217,390 @@ test vectors and better encapsulation. Full implementations store blocks as part
 of their database and will often use full blocks when dealing with production
 fork choice.
 
-```python
-def get_forkchoice_store(anchor_state: BeaconState, anchor_block: BeaconBlock) -> Store:
-    assert anchor_block.state_root == hash_tree_root(anchor_state)
-    anchor_root = hash_tree_root(anchor_block)
-    anchor_epoch = get_current_epoch(anchor_state)
-    justified_checkpoint = Checkpoint(epoch=anchor_epoch, root=anchor_root)
-    finalized_checkpoint = Checkpoint(epoch=anchor_epoch, root=anchor_root)
-    genesis_time_ms = seconds_to_milliseconds(anchor_state.genesis_time)
-    return Store(
-        time_ms=compute_time_at_slot_ms(genesis_time_ms, anchor_state.slot),
-        genesis_time_ms=genesis_time_ms,
-        justified_checkpoint=justified_checkpoint,
-        finalized_checkpoint=finalized_checkpoint,
-        unrealized_justified_checkpoint=justified_checkpoint,
-        unrealized_finalized_checkpoint=finalized_checkpoint,
-        proposer_boost_root=Root(),
-        equivocating_indices=set(),
-        blocks={anchor_root: anchor_block.copy()},
-        block_states={anchor_root: anchor_state.copy()},
-        block_timeliness={},
-        checkpoint_states={justified_checkpoint: anchor_state.copy()},
-        latest_messages={},
-        unrealized_justifications={anchor_root: justified_checkpoint},
-    )
+```lean
+def get_forkchoice_store
+    (anchor_state : BeaconState)
+    (anchor_block : BeaconBlock)
+    : Result Store := do
+  require (anchor_block.state_root == (<- hash_tree_root anchor_state))
+  let anchor_root <- hash_tree_root anchor_block
+  let anchor_epoch := get_current_epoch anchor_state
+  let justified_checkpoint : Checkpoint := { epoch := anchor_epoch, root := anchor_root }
+  let finalized_checkpoint : Checkpoint := { epoch := anchor_epoch, root := anchor_root }
+  let genesis_time_ms := seconds_to_milliseconds anchor_state.genesis_time
+  return {
+    time_ms := compute_time_at_slot_ms genesis_time_ms anchor_state.slot
+    genesis_time_ms
+    justified_checkpoint
+    finalized_checkpoint
+    unrealized_justified_checkpoint := justified_checkpoint
+    unrealized_finalized_checkpoint := finalized_checkpoint
+    proposer_boost_root := zeroBytes 32
+    equivocating_indices := {}
+    blocks := Std.HashMap.ofList [(anchor_root, anchor_block)]
+    block_states := Std.HashMap.ofList [(anchor_root, anchor_state)]
+    block_timeliness := {}
+    checkpoint_states := Std.HashMap.ofList [(justified_checkpoint, anchor_state)]
+    latest_messages := {}
+    unrealized_justifications := Std.HashMap.ofList [(anchor_root, justified_checkpoint)]
+  }
 ```
 
 #### `get_time_into_slot_ms`
 
-```python
-def get_time_into_slot_ms(store: Store) -> Uint64:
-    return store.time_ms - compute_time_at_slot_ms(store.genesis_time_ms, get_current_slot(store))
+```lean
+def get_time_into_slot_ms
+    (store : Store)
+    : Uint64 :=
+  store.time_ms - compute_time_at_slot_ms store.genesis_time_ms (get_current_slot store)
 ```
 
 #### `get_slots_since_genesis`
 
-```python
-def get_slots_since_genesis(store: Store) -> Slot:
-    return compute_slot_at_time_ms(store.genesis_time_ms, store.time_ms)
+```lean
+def get_slots_since_genesis
+    (store : Store)
+    : Slot :=
+  compute_slot_at_time_ms store.genesis_time_ms store.time_ms
 ```
 
 #### `get_current_slot`
 
-```python
-def get_current_slot(store: Store) -> Slot:
-    return get_slots_since_genesis(store)
+```lean
+def get_current_slot
+    (store : Store)
+    : Slot :=
+  get_slots_since_genesis store
 ```
 
 #### `get_current_store_epoch`
 
-```python
-def get_current_store_epoch(store: Store) -> Epoch:
-    return compute_epoch_at_slot(get_current_slot(store))
+```lean
+def get_current_store_epoch
+    (store : Store)
+    : Epoch :=
+  compute_epoch_at_slot (get_current_slot store)
 ```
 
 #### `compute_slots_since_epoch_start`
 
-```python
-def compute_slots_since_epoch_start(slot: Slot) -> Slot:
-    return slot - compute_start_slot_at_epoch(compute_epoch_at_slot(slot))
+```lean
+def compute_slots_since_epoch_start
+    (slot : Slot)
+    : Slot :=
+  slot - compute_start_slot_at_epoch (compute_epoch_at_slot slot)
 ```
 
 #### `get_ancestor`
 
-```python
-def get_ancestor(store: Store, node: ForkChoiceNode, slot: Slot) -> ForkChoiceNode:
-    block = store.blocks[node.root]
-    if block.slot > slot:
-        parent = ForkChoiceNode(root=block.parent_root)
-        return get_ancestor(store, parent, slot)
+```lean
+partial def get_ancestor
+    (store : Store)
+    (node : ForkChoiceNode)
+    (slot : Slot)
+    : Result ForkChoiceNode := do
+  let block <- store.blocks.get? node.root
+  if block.slot > slot then
+    let parent : ForkChoiceNode := { root := block.parent_root }
+    get_ancestor store parent slot
+  else
     return node
 ```
 
 #### `is_ancestor`
 
-```python
-def is_ancestor(store: Store, node: ForkChoiceNode, ancestor: ForkChoiceNode) -> bool:
-    return get_ancestor(store, node, store.blocks[ancestor.root].slot) == ancestor
+```lean
+def is_ancestor
+    (store : Store)
+    (node : ForkChoiceNode)
+    (ancestor : ForkChoiceNode)
+    : Result Bool := do
+  let ancestor_block <- store.blocks.get? ancestor.root
+  return (<- get_ancestor store node ancestor_block.slot) == ancestor
 ```
 
 #### `calculate_committee_fraction`
 
-```python
-def calculate_committee_fraction(state: BeaconState, committee_percent: Uint64) -> Gwei:
-    unslashed_and_active_indices: set[ValidatorIndex] = set()
-    for index in get_active_validator_indices(state, get_current_epoch(state)):
-        if not state.validators[index].slashed:
-            unslashed_and_active_indices.add(index)
-    total_balance = get_total_balance(state, unslashed_and_active_indices)
-    committee_weight = total_balance // Uint64(SLOTS_PER_EPOCH)
-    return (committee_weight * committee_percent) // 100
+```lean
+def calculate_committee_fraction
+    (state : BeaconState)
+    (committee_percent : Uint64)
+    : Result Gwei := do
+  let mut unslashed_and_active_indices : Std.HashSet ValidatorIndex := {}
+  for index in get_active_validator_indices state (get_current_epoch state) do
+    if !(<- state.validators[index]?).slashed then
+      unslashed_and_active_indices := unslashed_and_active_indices.insert index
+  let total_balance <- get_total_balance state unslashed_and_active_indices
+  let committee_weight := total_balance / SLOTS_PER_EPOCH
+  return committee_weight * committee_percent / 100
 ```
 
 #### `get_checkpoint_block`
 
-```python
-def get_checkpoint_block(store: Store, root: Root, epoch: Epoch) -> Root:
-    """
-    Compute the checkpoint block for epoch ``epoch`` in the chain of block ``root``
-    """
-    epoch_first_slot = compute_start_slot_at_epoch(epoch)
-    node = ForkChoiceNode(root=root)
-    return get_ancestor(store, node, epoch_first_slot).root
+```lean
+def get_checkpoint_block
+    (store : Store)
+    (root : Root)
+    (epoch : Epoch)
+    : Result Root := do
+  let epoch_first_slot := compute_start_slot_at_epoch epoch
+  let node : ForkChoiceNode := { root }
+  return (<- get_ancestor store node epoch_first_slot).root
 ```
 
 #### `get_supported_node`
 
-```python
-def get_supported_node(
-    store: Store,  # noqa: ARG001
-    message: LatestMessage,
-) -> ForkChoiceNode:
-    """
-    Return a node supported by the ``message``.
-    """
-    return ForkChoiceNode(root=message.root)
+```lean
+def get_supported_node
+    (store : Store)
+    (message : LatestMessage)
+    : ForkChoiceNode :=
+  { root := message.root }
 ```
 
 #### `get_attestation_score`
 
-```python
-def get_attestation_score(store: Store, node: ForkChoiceNode, state: BeaconState) -> Gwei:
-    unslashed_and_active_indices = [
-        index
-        for index in get_active_validator_indices(state, get_current_epoch(state))
-        if not state.validators[index].slashed
-    ]
-    return Gwei(
-        sum(
-            state.validators[index].effective_balance
-            for index in unslashed_and_active_indices
-            if (
-                index in store.latest_messages
-                and index not in store.equivocating_indices
-                and is_ancestor(
-                    store, get_supported_node(store, store.latest_messages[index]), node
-                )
-            )
-        )
-    )
+```lean
+def get_attestation_score
+    (store : Store)
+    (node : ForkChoiceNode)
+    (state : BeaconState)
+    : Result Gwei := do
+  let unslashed_and_active_indices <-
+    (get_active_validator_indices state (get_current_epoch state)).filterM fun index => do
+      return !(<- state.validators[index]?).slashed
+  let mut score := 0
+  for index in unslashed_and_active_indices do
+    if let some message := store.latest_messages.get? index then
+      if !store.equivocating_indices.contains index then
+        if (<- is_ancestor store (get_supported_node store message) node) then
+          score := score + (<- state.validators[index]?).effective_balance
+  return score
 ```
 
 #### `compute_proposer_score`
 
-```python
-def compute_proposer_score(state: BeaconState) -> Gwei:
-    return calculate_committee_fraction(state, PROPOSER_SCORE_BOOST)
+```lean
+def compute_proposer_score
+    (state : BeaconState)
+    : Result Gwei :=
+  calculate_committee_fraction state PROPOSER_SCORE_BOOST
 ```
 
 #### `get_proposer_score`
 
-```python
-def get_proposer_score(store: Store) -> Gwei:
-    justified_checkpoint_state = store.checkpoint_states[store.justified_checkpoint]
-    return compute_proposer_score(justified_checkpoint_state)
+```lean
+def get_proposer_score
+    (store : Store)
+    : Result Gwei := do
+  let justified_checkpoint_state <-
+    store.checkpoint_states.get? store.justified_checkpoint
+  compute_proposer_score justified_checkpoint_state
 ```
 
 #### `get_weight`
 
-```python
-def get_weight(store: Store, node: ForkChoiceNode) -> Gwei:
-    state = store.checkpoint_states[store.justified_checkpoint]
-    attestation_score = get_attestation_score(store, node, state)
-    if store.proposer_boost_root == Root():
-        # Return only attestation score if ``proposer_boost_root`` is not set
-        return attestation_score
-
-    # Calculate proposer score if ``proposer_boost_root`` is set
-    proposer_score = Gwei(0)
-    proposer_boost_node = ForkChoiceNode(root=store.proposer_boost_root)
-    # Boost is applied if ``node`` is an ancestor of ``proposer_boost_node``
-    if is_ancestor(store, proposer_boost_node, node):
-        proposer_score = get_proposer_score(store)
-
-    return attestation_score + proposer_score
+```lean
+def get_weight
+    (store : Store)
+    (node : ForkChoiceNode)
+    : Result Gwei := do
+  let state <- store.checkpoint_states.get? store.justified_checkpoint
+  let attestation_score <- get_attestation_score store node state
+  if store.proposer_boost_root == zeroBytes 32 then
+    return attestation_score
+  let mut proposer_score := 0
+  let proposer_boost_node : ForkChoiceNode := { root := store.proposer_boost_root }
+  if (<- is_ancestor store proposer_boost_node node) then
+    proposer_score <- get_proposer_score store
+  return attestation_score + proposer_score
 ```
 
 #### `get_voting_source`
 
-```python
-def get_voting_source(store: Store, block_root: Root) -> Checkpoint:
-    """
-    Compute the voting source checkpoint in event that block with root ``block_root`` is the head block
-    """
-    block = store.blocks[block_root]
-    current_epoch = get_current_store_epoch(store)
-    block_epoch = compute_epoch_at_slot(block.slot)
-    if current_epoch > block_epoch:
-        # The block is from a prior epoch, the voting source will be pulled-up
-        return store.unrealized_justifications[block_root]
-    else:
-        # The block is not from a prior epoch, therefore the voting source is not pulled up
-        head_state = store.block_states[block_root]
-        return head_state.current_justified_checkpoint
+```lean
+def get_voting_source
+    (store : Store)
+    (block_root : Root)
+    : Result Checkpoint := do
+  let block <- store.blocks.get? block_root
+  let current_epoch := get_current_store_epoch store
+  let block_epoch := compute_epoch_at_slot block.slot
+  if current_epoch > block_epoch then
+    return (<- store.unrealized_justifications.get? block_root)
+  else
+    let head_state <- store.block_states.get? block_root
+    return head_state.current_justified_checkpoint
 ```
 
 #### `get_node_children`
 
-```python
-def get_node_children(store: Store, node: ForkChoiceNode) -> Sequence[ForkChoiceNode]:
-    return [
-        ForkChoiceNode(root=root)
-        for root in store.blocks
-        if store.blocks[root].parent_root == node.root
-    ]
+```lean
+def get_node_children
+    (store : Store)
+    (node : ForkChoiceNode)
+    : Array ForkChoiceNode :=
+  let children := store.blocks.toArray.filter fun (_, block) =>
+    block.parent_root == node.root
+  children.map fun (root, _) => ({ root } : ForkChoiceNode)
 ```
 
 #### `filter_node_tree`
 
-```python
-def filter_node_tree(store: Store, node: ForkChoiceNode) -> Sequence[ForkChoiceNode]:
-    children = get_node_children(store, node)
-
-    # If any children branches contain expected finalized/justified checkpoints,
-    # include this node and those descendants in the filtered node tree.
-    if any(children):
-        viable_nodes: list[ForkChoiceNode] = []
-        for child in children:
-            viable_nodes.extend(filter_node_tree(store, child))
-        if any(viable_nodes):
-            return viable_nodes + [node]
-        return []
-
-    current_epoch = get_current_store_epoch(store)
-    voting_source = get_voting_source(store, node.root)
-
-    # The voting source should be either at the same height as the store's justified checkpoint or
-    # not more than two epochs ago
-    correct_justified = (
-        store.justified_checkpoint.epoch == GENESIS_EPOCH
-        or voting_source.epoch == store.justified_checkpoint.epoch
-        or voting_source.epoch + 2 >= current_epoch
-    )
-
-    finalized_checkpoint_block = get_checkpoint_block(
-        store,
-        node.root,
-        store.finalized_checkpoint.epoch,
-    )
-
-    correct_finalized = (
-        store.finalized_checkpoint.epoch == GENESIS_EPOCH
-        or store.finalized_checkpoint.root == finalized_checkpoint_block
-    )
-
-    # If expected finalized/justified, add to viable node tree and signal viability to parent.
-    if correct_justified and correct_finalized:
-        return [node]
-
-    # Otherwise, branch not viable
-    return []
+```lean
+partial def filter_node_tree
+    (store : Store)
+    (node : ForkChoiceNode)
+    : Result (Array ForkChoiceNode) := do
+  let children := get_node_children store node
+  if children.size > 0 then
+    let mut viable_nodes := #[]
+    for child in children do
+      viable_nodes := viable_nodes ++ (<- filter_node_tree store child)
+    if viable_nodes.size > 0 then
+      return viable_nodes.push node
+    return #[]
+  let current_epoch := get_current_store_epoch store
+  let voting_source <- get_voting_source store node.root
+  let correct_justified := store.justified_checkpoint.epoch == GENESIS_EPOCH
+    || voting_source.epoch == store.justified_checkpoint.epoch
+    || voting_source.epoch + 2 >= current_epoch
+  let finalized_checkpoint_block <-
+    get_checkpoint_block store node.root store.finalized_checkpoint.epoch
+  let correct_finalized := store.finalized_checkpoint.epoch == GENESIS_EPOCH
+    || store.finalized_checkpoint.root == finalized_checkpoint_block
+  if correct_justified && correct_finalized then
+    return #[node]
+  return #[]
 ```
 
 #### `get_filtered_node_tree`
 
-```python
-def get_filtered_node_tree(store: Store) -> Sequence[ForkChoiceNode]:
-    """
-    Retrieve a filtered node tree from ``store``, only returning branches
-    whose leaf state's justified/finalized info agrees with that in ``store``.
-    """
-    base = ForkChoiceNode(root=store.justified_checkpoint.root)
-    return filter_node_tree(store, base)
+```lean
+def get_filtered_node_tree
+    (store : Store)
+    : Result (Array ForkChoiceNode) :=
+  let base : ForkChoiceNode := { root := store.justified_checkpoint.root }
+  filter_node_tree store base
 ```
 
 #### `get_head`
 
-```python
-def get_head(store: Store) -> ForkChoiceNode:
-    # Get filtered node tree that only includes viable branches
-    nodes = get_filtered_node_tree(store)
-    # Execute the LMD-GHOST fork choice
-    head = ForkChoiceNode(root=store.justified_checkpoint.root)
-    while True:
-        children = [child for child in get_node_children(store, head) if child in nodes]
-        if len(children) == 0:
-            return head
-        # Sort by latest attesting balance with ties broken lexicographically
-        # Ties broken by favoring block with lexicographically higher root
-        head = max(children, key=lambda child: (get_weight(store, child), child.root))
+```lean
+def get_head
+    (store : Store)
+    : Result ForkChoiceNode := do
+  let nodes <- get_filtered_node_tree store
+  let mut head : ForkChoiceNode := { root := store.justified_checkpoint.root }
+  while true do
+    let children := (get_node_children store head).filter fun child =>
+      nodes.contains child
+    if children.size == 0 then
+      return head
+    let mut best <- children[0]?
+    let mut best_weight <- get_weight store best
+    for child in children do
+      let weight <- get_weight store child
+      if weight > best_weight
+          || (weight == best_weight && child.root.toList > best.root.toList) then
+        best := child
+        best_weight := weight
+    head := best
+  unreachable!
 ```
 
 #### `update_checkpoints`
 
-```python
-def update_checkpoints(
-    store: Store, justified_checkpoint: Checkpoint, finalized_checkpoint: Checkpoint
-) -> None:
-    """
-    Update checkpoints in store if necessary
-    """
-    # Update justified checkpoint
-    if justified_checkpoint.epoch > store.justified_checkpoint.epoch:
-        store.justified_checkpoint = justified_checkpoint
-
-    # Update finalized checkpoint
-    if finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
-        store.finalized_checkpoint = finalized_checkpoint
+```lean
+def update_checkpoints
+    (store : Store)
+    (justified_checkpoint : Checkpoint)
+    (finalized_checkpoint : Checkpoint)
+    : Store := Id.run do
+  let mut store := store
+  if justified_checkpoint.epoch > store.justified_checkpoint.epoch then
+    store := { store with justified_checkpoint }
+  if finalized_checkpoint.epoch > store.finalized_checkpoint.epoch then
+    store := { store with finalized_checkpoint }
+  return store
 ```
 
 #### `update_unrealized_checkpoints`
 
-```python
-def update_unrealized_checkpoints(
-    store: Store,
-    unrealized_justified_checkpoint: Checkpoint,
-    unrealized_finalized_checkpoint: Checkpoint,
-) -> None:
-    """
-    Update unrealized checkpoints in store if necessary
-    """
-    # Update unrealized justified checkpoint
-    if unrealized_justified_checkpoint.epoch > store.unrealized_justified_checkpoint.epoch:
-        store.unrealized_justified_checkpoint = unrealized_justified_checkpoint
-
-    # Update unrealized finalized checkpoint
-    if unrealized_finalized_checkpoint.epoch > store.unrealized_finalized_checkpoint.epoch:
-        store.unrealized_finalized_checkpoint = unrealized_finalized_checkpoint
+```lean
+def update_unrealized_checkpoints
+    (store : Store)
+    (unrealized_justified_checkpoint : Checkpoint)
+    (unrealized_finalized_checkpoint : Checkpoint)
+    : Store := Id.run do
+  let mut store := store
+  if unrealized_justified_checkpoint.epoch
+      > store.unrealized_justified_checkpoint.epoch then
+    store := { store with unrealized_justified_checkpoint }
+  if unrealized_finalized_checkpoint.epoch
+      > store.unrealized_finalized_checkpoint.epoch then
+    store := { store with unrealized_finalized_checkpoint }
+  return store
 ```
 
 #### `get_latest_message_epoch`
 
-```python
-def get_latest_message_epoch(latest_message: LatestMessage) -> Epoch:
-    """
-    Return epoch of the ``latest_message``.
-    """
-    return latest_message.epoch
+```lean
+def get_latest_message_epoch
+    (latest_message : LatestMessage)
+    : Epoch :=
+  latest_message.epoch
 ```
 
 #### `seconds_to_milliseconds`
 
-```python
-def seconds_to_milliseconds(seconds: Uint64) -> Uint64:
-    """
-    Convert seconds to milliseconds with overflow protection.
-    Returns ``UINT64_MAX`` if the result would overflow.
-    """
-    if seconds > UINT64_MAX // 1000:
-        return UINT64_MAX
-    return seconds * 1000
+```lean
+def seconds_to_milliseconds
+    (seconds : Uint64)
+    : Uint64 :=
+  if seconds > UINT64_MAX / 1000 then UINT64_MAX else seconds * 1000
 ```
 
 #### `milliseconds_to_seconds`
 
-```python
-def milliseconds_to_seconds(milliseconds: Uint64) -> Uint64:
-    """
-    Convert milliseconds to seconds, discarding any remainder.
-    """
-    return milliseconds // 1000
+```lean
+def milliseconds_to_seconds
+    (milliseconds : Uint64)
+    : Uint64 :=
+  milliseconds / 1000
 ```
 
 #### `get_slot_component_duration_ms`
 
-```python
-def get_slot_component_duration_ms(basis_points: Uint64) -> Uint64:
-    """
-    Calculate the duration of a slot component in milliseconds.
-    """
-    return basis_points * SLOT_DURATION_MS // BASIS_POINTS
+```lean
+def get_slot_component_duration_ms
+    (basis_points : Uint64)
+    : Uint64 :=
+  basis_points * SLOT_DURATION_MS / BASIS_POINTS
 ```
 
 #### `get_attestation_due_ms`
 
-```python
-def get_attestation_due_ms() -> Uint64:
-    return get_slot_component_duration_ms(ATTESTATION_DUE_BPS)
+```lean
+def get_attestation_due_ms
+    : Uint64 :=
+  get_slot_component_duration_ms ATTESTATION_DUE_BPS
 ```
 
 #### `get_proposer_reorg_cutoff_ms`
 
-```python
-def get_proposer_reorg_cutoff_ms() -> Uint64:
-    return get_slot_component_duration_ms(PROPOSER_REORG_CUTOFF_BPS)
+```lean
+def get_proposer_reorg_cutoff_ms
+    : Uint64 :=
+  get_slot_component_duration_ms PROPOSER_REORG_CUTOFF_BPS
 ```
 
 #### `get_aggregate_due_ms`
 
-```python
-def get_aggregate_due_ms() -> Uint64:
-    return get_slot_component_duration_ms(AGGREGATE_DUE_BPS)
+```lean
+def get_aggregate_due_ms
+    : Uint64 :=
+  get_slot_component_duration_ms AGGREGATE_DUE_BPS
 ```
 
 #### Proposer head and reorg helpers
@@ -606,40 +609,54 @@ _Implementing these helpers is optional_.
 
 ##### `is_head_late`
 
-```python
-def is_head_late(store: Store, head_root: Root) -> bool:
-    return not store.block_timeliness[head_root]
+```lean
+def is_head_late
+    (store : Store)
+    (head_root : Root)
+    : Result Bool := do
+  return !(<- store.block_timeliness.get? head_root)
 ```
 
 ##### `is_shuffling_stable`
 
-```python
-def is_shuffling_stable(slot: Slot) -> bool:
-    return slot % SLOTS_PER_EPOCH != 0
+```lean
+def is_shuffling_stable
+    (slot : Slot)
+    : Bool :=
+  slot % SLOTS_PER_EPOCH != 0
 ```
 
 ##### `is_ffg_competitive`
 
-```python
-def is_ffg_competitive(store: Store, head_root: Root, parent_root: Root) -> bool:
-    return (
-        store.unrealized_justifications[head_root] == store.unrealized_justifications[parent_root]
-    )
+```lean
+def is_ffg_competitive
+    (store : Store)
+    (head_root : Root)
+    (parent_root : Root)
+    : Result Bool := do
+  return (<- store.unrealized_justifications.get? head_root)
+    == (<- store.unrealized_justifications.get? parent_root)
 ```
 
 ##### `is_finalization_ok`
 
-```python
-def is_finalization_ok(store: Store, slot: Slot) -> bool:
-    epochs_since_finalization = compute_epoch_at_slot(slot) - store.finalized_checkpoint.epoch
-    return epochs_since_finalization <= REORG_MAX_EPOCHS_SINCE_FINALIZATION
+```lean
+def is_finalization_ok
+    (store : Store)
+    (slot : Slot)
+    : Bool :=
+  let epochs_since_finalization :=
+    compute_epoch_at_slot slot - store.finalized_checkpoint.epoch
+  epochs_since_finalization <= REORG_MAX_EPOCHS_SINCE_FINALIZATION
 ```
 
 ##### `is_proposing_on_time`
 
-```python
-def is_proposing_on_time(store: Store) -> bool:
-    return get_time_into_slot_ms(store) <= get_proposer_reorg_cutoff_ms()
+```lean
+def is_proposing_on_time
+    (store : Store)
+    : Bool :=
+  get_time_into_slot_ms store <= get_proposer_reorg_cutoff_ms
 ```
 
 ##### `is_head_weak`
@@ -650,114 +667,98 @@ weight and the output of `is_head_weak` are monotonic: more attestations can
 only increase the weight and change the output from `True` to `False`, not
 vice-versa.
 
-```python
-def is_head_weak(store: Store, head_root: Root) -> bool:
-    # Calculate weight threshold for weak head
-    justified_state = store.checkpoint_states[store.justified_checkpoint]
-    reorg_threshold = calculate_committee_fraction(justified_state, REORG_HEAD_WEIGHT_THRESHOLD)
-
-    # Compute head weight including equivocations
-    head_state = store.block_states[head_root]
-    head_block = store.blocks[head_root]
-    epoch = compute_epoch_at_slot(head_block.slot)
-    head_node = ForkChoiceNode(root=head_root)
-    head_weight = get_attestation_score(store, head_node, justified_state)
-    for index in range(get_committee_count_per_slot(head_state, epoch)):
-        committee = get_beacon_committee(head_state, head_block.slot, CommitteeIndex(index))
-        head_weight += Gwei(
-            sum(
-                justified_state.validators[index].effective_balance
-                for index in committee
-                if index in store.equivocating_indices
-            )
-        )
-
-    return head_weight < reorg_threshold
+```lean
+def is_head_weak
+    (store : Store)
+    (head_root : Root)
+    : Result Bool := do
+  let justified_state <- store.checkpoint_states.get? store.justified_checkpoint
+  let reorg_threshold <-
+    calculate_committee_fraction justified_state REORG_HEAD_WEIGHT_THRESHOLD
+  let head_state <- store.block_states.get? head_root
+  let head_block <- store.blocks.get? head_root
+  let epoch := compute_epoch_at_slot head_block.slot
+  let head_node : ForkChoiceNode := { root := head_root }
+  let mut head_weight <- get_attestation_score store head_node justified_state
+  for index in [0:get_committee_count_per_slot head_state epoch] do
+    let committee <- get_beacon_committee head_state head_block.slot index
+    for validator_index in committee do
+      if store.equivocating_indices.contains validator_index then
+        let validator <- justified_state.validators[validator_index]?
+        head_weight := head_weight + validator.effective_balance
+  return head_weight < reorg_threshold
 ```
 
 ##### `is_parent_strong`
 
-```python
-def is_parent_strong(store: Store, root: Root) -> bool:
-    justified_state = store.checkpoint_states[store.justified_checkpoint]
-    parent_threshold = calculate_committee_fraction(justified_state, REORG_PARENT_WEIGHT_THRESHOLD)
-    parent_root = store.blocks[root].parent_root
-    parent_node = ForkChoiceNode(root=parent_root)
-    parent_weight = get_attestation_score(store, parent_node, justified_state)
-    return parent_weight > parent_threshold
+```lean
+def is_parent_strong
+    (store : Store)
+    (root : Root)
+    : Result Bool := do
+  let justified_state <- store.checkpoint_states.get? store.justified_checkpoint
+  let parent_threshold <-
+    calculate_committee_fraction justified_state REORG_PARENT_WEIGHT_THRESHOLD
+  let parent_root := (<- store.blocks.get? root).parent_root
+  let parent_node : ForkChoiceNode := { root := parent_root }
+  let parent_weight <- get_attestation_score store parent_node justified_state
+  return parent_weight > parent_threshold
 ```
 
 ##### `is_proposer_equivocation`
 
-```python
-def is_proposer_equivocation(store: Store, root: Root) -> bool:
-    block = store.blocks[root]
-    proposer_index = block.proposer_index
-    slot = block.slot
-    # roots from the same slot and proposer
-    matching_roots = [
-        root
-        for root, block in store.blocks.items()
-        if (block.proposer_index == proposer_index and block.slot == slot)
-    ]
-    return len(matching_roots) > 1
+```lean
+def is_proposer_equivocation
+    (store : Store)
+    (root : Root)
+    : Result Bool := do
+  let block <- store.blocks.get? root
+  let proposer_index := block.proposer_index
+  let slot := block.slot
+  let matching_roots := (store.blocks.toArray.filter fun (_, block) =>
+    block.proposer_index == proposer_index && block.slot == slot).map Prod.fst
+  return matching_roots.size > 1
 ```
 
 ##### `get_proposer_head`
 
-```python
-def get_proposer_head(store: Store, head_node: ForkChoiceNode, slot: Slot) -> ForkChoiceNode:
-    head_block = store.blocks[head_node.root]
-    parent_root = head_block.parent_root
-    parent_block = store.blocks[parent_root]
-    parent_node = ForkChoiceNode(root=parent_root)
-
-    # Only re-org the head block if it arrived later than the attestation deadline.
-    head_late = is_head_late(store, head_node.root)
-
-    # Do not re-org on an epoch boundary where the proposer shuffling could change.
-    shuffling_stable = is_shuffling_stable(slot)
-
-    # Ensure that the FFG information of the new head will be competitive with the current head.
-    ffg_competitive = is_ffg_competitive(store, head_node.root, parent_root)
-
-    # Do not re-org if the chain is not finalizing with acceptable frequency.
-    finalization_ok = is_finalization_ok(store, slot)
-
-    # Only re-org if we are proposing on-time.
-    proposing_on_time = is_proposing_on_time(store)
-
-    # Only re-org a single slot at most.
-    parent_slot_ok = parent_block.slot + 1 == head_block.slot
-    current_time_ok = head_block.slot + 1 == slot
-    single_slot_reorg = parent_slot_ok and current_time_ok
-
-    # Check that the head has few enough votes to be overpowered by our proposer boost.
-    assert store.proposer_boost_root != head_node.root  # ensure boost has worn off
-    head_weak = is_head_weak(store, head_node.root)
-
-    # Check that the missing votes are assigned to the parent and not being hoarded.
-    parent_strong = is_parent_strong(store, head_node.root)
-
-    # Re-org more aggressively if there is a proposer equivocation in the previous slot.
-    proposer_equivocation = is_proposer_equivocation(store, head_node.root)
-
-    if all([
-        head_late,
-        shuffling_stable,
-        ffg_competitive,
-        finalization_ok,
-        proposing_on_time,
-        single_slot_reorg,
-        head_weak,
-        parent_strong,
-    ]):
-        # We can re-org the current head by building upon its parent node.
-        return parent_node
-    elif all([head_weak, current_time_ok, proposer_equivocation]):
-        return parent_node
-    else:
-        return head_node
+```lean
+def get_proposer_head
+    (store : Store)
+    (head_node : ForkChoiceNode)
+    (slot : Slot)
+    : Result ForkChoiceNode := do
+  let head_block <- store.blocks.get? head_node.root
+  let parent_root := head_block.parent_root
+  let parent_block <- store.blocks.get? parent_root
+  let parent_node : ForkChoiceNode := { root := parent_root }
+  let head_late <- is_head_late store head_node.root
+  let shuffling_stable := is_shuffling_stable slot
+  let ffg_competitive <- is_ffg_competitive store head_node.root parent_root
+  let finalization_ok := is_finalization_ok store slot
+  let proposing_on_time := is_proposing_on_time store
+  let parent_slot_ok := parent_block.slot + 1 == head_block.slot
+  let current_time_ok := head_block.slot + 1 == slot
+  let single_slot_reorg := parent_slot_ok && current_time_ok
+  require (store.proposer_boost_root != head_node.root)
+  let head_weak <- is_head_weak store head_node.root
+  let parent_strong <- is_parent_strong store head_node.root
+  let proposer_equivocation <- is_proposer_equivocation store head_node.root
+  if #[
+    head_late,
+    shuffling_stable,
+    ffg_competitive,
+    finalization_ok,
+    proposing_on_time,
+    single_slot_reorg,
+    head_weak,
+    parent_strong
+  ].all id then
+    return parent_node
+  else if #[head_weak, current_time_ok, proposer_equivocation].all id then
+    return parent_node
+  else
+    return head_node
 ```
 
 *Note*: The ordering of conditions is a suggestion only. Implementations are
@@ -768,268 +769,261 @@ by returning early if any of the early conditions are `False`.
 
 ##### `compute_pulled_up_tip`
 
-```python
-def compute_pulled_up_tip(store: Store, block_root: Root) -> None:
-    state = store.block_states[block_root].copy()
-    # Pull up the post-state of the block to the next epoch boundary
-    process_justification_and_finalization(state)
-
-    store.unrealized_justifications[block_root] = state.current_justified_checkpoint
-    update_unrealized_checkpoints(
-        store, state.current_justified_checkpoint, state.finalized_checkpoint
-    )
-
-    # If the block is from a prior epoch, apply the realized values
-    block_epoch = compute_epoch_at_slot(store.blocks[block_root].slot)
-    current_epoch = get_current_store_epoch(store)
-    if block_epoch < current_epoch:
-        update_checkpoints(store, state.current_justified_checkpoint, state.finalized_checkpoint)
+```lean
+def compute_pulled_up_tip
+    (store : Store)
+    (block_root : Root)
+    : Result Store := do
+  let state <- store.block_states.get? block_root
+  let state <- process_justification_and_finalization state
+  let mut store := { store with
+    unrealized_justifications :=
+      store.unrealized_justifications.insert block_root state.current_justified_checkpoint
+  }
+  store := update_unrealized_checkpoints
+    store state.current_justified_checkpoint state.finalized_checkpoint
+  let block_epoch := compute_epoch_at_slot (<- store.blocks.get? block_root).slot
+  let current_epoch := get_current_store_epoch store
+  if block_epoch < current_epoch then
+    store := update_checkpoints
+      store state.current_justified_checkpoint state.finalized_checkpoint
+  return store
 ```
 
 #### `on_tick` helpers
 
 ##### `on_tick_per_slot`
 
-```python
-def on_tick_per_slot(store: Store, time_ms: Uint64) -> None:
-    previous_slot = get_current_slot(store)
-
-    # Update store time
-    store.time_ms = time_ms
-
-    current_slot = get_current_slot(store)
-
-    # If this is a new slot, reset store.proposer_boost_root
-    if current_slot > previous_slot:
-        store.proposer_boost_root = Root()
-
-    # If a new epoch, pull-up justification and finalization from previous epoch
-    if current_slot > previous_slot and compute_slots_since_epoch_start(current_slot) == 0:
-        update_checkpoints(
-            store, store.unrealized_justified_checkpoint, store.unrealized_finalized_checkpoint
-        )
+```lean
+def on_tick_per_slot
+    (store : Store)
+    (time_ms : Uint64)
+    : Store := Id.run do
+  let previous_slot := get_current_slot store
+  let mut store := { store with time_ms }
+  let current_slot := get_current_slot store
+  if current_slot > previous_slot then
+    store := { store with proposer_boost_root := zeroBytes 32 }
+  if current_slot > previous_slot
+      && compute_slots_since_epoch_start current_slot == 0 then
+    store := update_checkpoints
+      store store.unrealized_justified_checkpoint store.unrealized_finalized_checkpoint
+  return store
 ```
 
 #### `on_attestation` helpers
 
 ##### `validate_target_epoch_against_current_time`
 
-```python
-def validate_target_epoch_against_current_time(store: Store, attestation: Attestation) -> None:
-    target = attestation.data.target
-
-    # Attestations must be from the current or previous epoch
-    current_epoch = get_current_store_epoch(store)
-    previous_epoch = saturating_sub(current_epoch, 1)
-    # If attestation target is from a future epoch, delay consideration until the epoch arrives
-    assert target.epoch in [current_epoch, previous_epoch]
+```lean
+def validate_target_epoch_against_current_time
+    (store : Store)
+    (attestation : Attestation)
+    : Result Unit := do
+  let target := attestation.data.target
+  let current_epoch := get_current_store_epoch store
+  let previous_epoch := saturating_sub current_epoch 1
+  require (#[current_epoch, previous_epoch].contains target.epoch)
 ```
 
 ##### `validate_on_attestation`
 
-```python
-def validate_on_attestation(store: Store, attestation: Attestation, is_from_block: bool) -> None:
-    target = attestation.data.target
-
-    # If the given attestation is not from a beacon block message, we have to check the target epoch scope.
-    if not is_from_block:
-        validate_target_epoch_against_current_time(store, attestation)
-
-    # Check that the epoch number and slot number are matching
-    assert target.epoch == compute_epoch_at_slot(attestation.data.slot)
-
-    # Attestation target must be for a known block. If target block is unknown, delay consideration until block is found
-    assert target.root in store.blocks
-
-    # Attestations must be for a known block. If block is unknown, delay consideration until the block is found
-    assert attestation.data.beacon_block_root in store.blocks
-    # Attestations must not be for blocks in the future. If not, the attestation should not be considered
-    assert store.blocks[attestation.data.beacon_block_root].slot <= attestation.data.slot
-
-    # LMD vote must be consistent with FFG vote target
-    assert target.root == get_checkpoint_block(
-        store, attestation.data.beacon_block_root, target.epoch
-    )
-
-    # Attestations can only affect the fork choice of subsequent slots.
-    # Delay consideration in the fork choice until their slot is in the past.
-    assert get_current_slot(store) >= attestation.data.slot + 1
+```lean
+def validate_on_attestation
+    (store : Store)
+    (attestation : Attestation)
+    (is_from_block : Bool)
+    : Result Unit := do
+  let target := attestation.data.target
+  if !is_from_block then
+    validate_target_epoch_against_current_time store attestation
+  require (target.epoch == compute_epoch_at_slot attestation.data.slot)
+  require (store.blocks.contains target.root)
+  require (store.blocks.contains attestation.data.beacon_block_root)
+  let block <- store.blocks.get? attestation.data.beacon_block_root
+  require (block.slot <= attestation.data.slot)
+  let checkpoint_block <-
+    get_checkpoint_block store attestation.data.beacon_block_root target.epoch
+  require (target.root == checkpoint_block)
+  require (get_current_slot store >= attestation.data.slot + 1)
 ```
 
 ##### `store_target_checkpoint_state`
 
-```python
-def store_target_checkpoint_state(store: Store, target: Checkpoint) -> None:
-    # Store target checkpoint state if not yet seen
-    if target not in store.checkpoint_states:
-        base_state = store.block_states[target.root].copy()
-        if base_state.slot < compute_start_slot_at_epoch(target.epoch):
-            process_slots(base_state, compute_start_slot_at_epoch(target.epoch))
-        store.checkpoint_states[target] = base_state
+```lean
+def store_target_checkpoint_state
+    (store : Store)
+    (target : Checkpoint)
+    : Result Store := do
+  if !store.checkpoint_states.contains target then
+    let mut base_state <- store.block_states.get? target.root
+    if base_state.slot < compute_start_slot_at_epoch target.epoch then
+      base_state <- process_slots base_state (compute_start_slot_at_epoch target.epoch)
+    let checkpoint_states := store.checkpoint_states.insert target base_state
+    return { store with checkpoint_states }
+  return store
 ```
 
 ##### `update_latest_messages`
 
-```python
-def update_latest_messages(
-    store: Store, attesting_indices: Sequence[ValidatorIndex], attestation: Attestation
-) -> None:
-    target = attestation.data.target
-    beacon_block_root = attestation.data.beacon_block_root
-    non_equivocating_attesting_indices = [
-        index for index in attesting_indices if index not in store.equivocating_indices
-    ]
-    for i in non_equivocating_attesting_indices:
-        if i not in store.latest_messages or target.epoch > store.latest_messages[i].epoch:
-            store.latest_messages[i] = LatestMessage(epoch=target.epoch, root=beacon_block_root)
+```lean
+def update_latest_messages
+    (store : Store)
+    (attesting_indices : Array ValidatorIndex)
+    (attestation : Attestation)
+    : Store := Id.run do
+  let target := attestation.data.target
+  let beacon_block_root := attestation.data.beacon_block_root
+  let non_equivocating_attesting_indices := attesting_indices.filter fun index =>
+    !store.equivocating_indices.contains index
+  let mut store := store
+  for i in non_equivocating_attesting_indices do
+    let is_newer : Bool := match store.latest_messages.get? i with
+      | some latest_message => target.epoch > latest_message.epoch
+      | none => true
+    if is_newer then
+      let latest_message : LatestMessage := {
+        epoch := target.epoch
+        root := beacon_block_root
+      }
+      let latest_messages := store.latest_messages.insert i latest_message
+      store := { store with latest_messages }
+  return store
 ```
 
 #### `on_block` helpers
 
 ##### `record_block_timeliness`
 
-```python
-def record_block_timeliness(store: Store, root: Root) -> None:
-    block = store.blocks[root]
-    time_into_slot_ms = get_time_into_slot_ms(store)
-    attestation_threshold_ms = get_attestation_due_ms()
-    is_before_attesting_interval = time_into_slot_ms < attestation_threshold_ms
-    is_timely = get_current_slot(store) == block.slot and is_before_attesting_interval
-    store.block_timeliness[root] = is_timely
+```lean
+def record_block_timeliness
+    (store : Store)
+    (root : Root)
+    : Result Store := do
+  let block <- store.blocks.get? root
+  let time_into_slot_ms := get_time_into_slot_ms store
+  let attestation_threshold_ms := get_attestation_due_ms
+  let is_before_attesting_interval := time_into_slot_ms < attestation_threshold_ms
+  let is_timely := get_current_slot store == block.slot && is_before_attesting_interval
+  return { store with block_timeliness := store.block_timeliness.insert root is_timely }
 ```
 
 ##### `compute_shuffling_lookahead_start_slot`
 
-```python
-def compute_shuffling_lookahead_start_slot(epoch: Epoch) -> Slot:
-    lookahead_epoch = saturating_sub(epoch, MIN_SEED_LOOKAHEAD)
-    return compute_start_slot_at_epoch(lookahead_epoch)
+```lean
+def compute_shuffling_lookahead_start_slot
+    (epoch : Epoch)
+    : Slot :=
+  let lookahead_epoch := saturating_sub epoch MIN_SEED_LOOKAHEAD
+  compute_start_slot_at_epoch lookahead_epoch
 ```
 
 ##### `compute_shuffling_dependent_slot`
 
-```python
-def compute_shuffling_dependent_slot(epoch: Epoch) -> Slot:
-    lookahead_start_slot = compute_shuffling_lookahead_start_slot(epoch)
-    return saturating_sub(lookahead_start_slot, 1)
+```lean
+def compute_shuffling_dependent_slot
+    (epoch : Epoch)
+    : Slot :=
+  let lookahead_start_slot := compute_shuffling_lookahead_start_slot epoch
+  saturating_sub lookahead_start_slot 1
 ```
 
 ##### `get_shuffling_dependent_root`
 
-```python
-def get_shuffling_dependent_root(store: Store, root: Root, epoch: Epoch) -> Root:
-    node = ForkChoiceNode(root=root)
-    dependent_slot = compute_shuffling_dependent_slot(epoch)
-    return get_ancestor(store, node, dependent_slot).root
+```lean
+def get_shuffling_dependent_root
+    (store : Store)
+    (root : Root)
+    (epoch : Epoch)
+    : Result Root := do
+  let node : ForkChoiceNode := { root }
+  let dependent_slot := compute_shuffling_dependent_slot epoch
+  return (<- get_ancestor store node dependent_slot).root
 ```
 
 ##### `update_proposer_boost_root`
 
-```python
-def update_proposer_boost_root(store: Store, head: Root, root: Root) -> None:
-    is_first_block = store.proposer_boost_root == Root()
-    is_timely = store.block_timeliness[root]
-    epoch = get_current_store_epoch(store)
-    head_dependent_root = get_shuffling_dependent_root(store, head, epoch)
-    block_dependent_root = get_shuffling_dependent_root(store, root, epoch)
-    is_same_dependent_root = head_dependent_root == block_dependent_root
-
-    # Add proposer score boost if the block is timely, not conflicting with an
-    # existing block, with the same dependent root as the canonical chain head.
-    if is_timely and is_first_block and is_same_dependent_root:
-        store.proposer_boost_root = root
+```lean
+def update_proposer_boost_root
+    (store : Store)
+    (head : Root)
+    (root : Root)
+    : Result Store := do
+  let is_first_block := store.proposer_boost_root == zeroBytes 32
+  let is_timely <- store.block_timeliness.get? root
+  let epoch := get_current_store_epoch store
+  let head_dependent_root <- get_shuffling_dependent_root store head epoch
+  let block_dependent_root <- get_shuffling_dependent_root store root epoch
+  let is_same_dependent_root := head_dependent_root == block_dependent_root
+  if is_timely && is_first_block && is_same_dependent_root then
+    return { store with proposer_boost_root := root }
+  return store
 ```
 
 ### Handlers
 
 #### `on_tick`
 
-```python
-def on_tick(store: Store, time_ms: Uint64) -> None:
-    # If the ``store.time_ms`` falls behind, while loop catches up slot by slot
-    # to ensure that every previous slot is processed with ``on_tick_per_slot``
-    tick_slot = compute_slot_at_time_ms(store.genesis_time_ms, time_ms)
-    while get_current_slot(store) < tick_slot:
-        next_slot = get_current_slot(store) + 1
-        next_slot_time_ms = compute_time_at_slot_ms(store.genesis_time_ms, next_slot)
-        on_tick_per_slot(store, next_slot_time_ms)
-    on_tick_per_slot(store, time_ms)
+```lean
+def on_tick
+    (store : Store)
+    (time_ms : Uint64)
+    : Store := Id.run do
+  let tick_slot := compute_slot_at_time_ms store.genesis_time_ms time_ms
+  let mut store := store
+  while get_current_slot store < tick_slot do
+    let next_slot := get_current_slot store + 1
+    let next_slot_time_ms := compute_time_at_slot_ms store.genesis_time_ms next_slot
+    store := on_tick_per_slot store next_slot_time_ms
+  return on_tick_per_slot store time_ms
 ```
 
 #### `on_block`
 
-```python
-def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
-    """
-    Run ``on_block`` upon receiving a new block.
-    """
-    block = signed_block.message
-    block_root = hash_tree_root(block)
-
-    # Return early if the block is already known
-    if block_root in store.blocks:
-        return
-
-    # Parent block must be known
-    assert block.parent_root in store.block_states
-    # Make a copy of the state to avoid mutability issues
-    pre_state = store.block_states[block.parent_root].copy()
-    # Blocks cannot be in the future. If they are, their consideration must be delayed until they are in the past.
-    assert get_current_slot(store) >= block.slot
-
-    # Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
-    finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
-    assert block.slot > finalized_slot
-    # Check block is a descendant of the finalized block at the checkpoint finalized slot
-    finalized_checkpoint_block = get_checkpoint_block(
-        store,
-        block.parent_root,
-        store.finalized_checkpoint.epoch,
-    )
-    assert store.finalized_checkpoint.root == finalized_checkpoint_block
-
-    # Check the block is valid and compute the post-state
-    state = pre_state.copy()
-    state_transition(state, signed_block, validate_result=True)
-
-    # Compute head before applying the block
-    head = get_head(store)
-    # Add new block to the store
-    store.blocks[block_root] = block
-    # Add new state for this block to the store
-    store.block_states[block_root] = state
-
-    record_block_timeliness(store, block_root)
-    update_proposer_boost_root(store, head.root, block_root)
-
-    # Update checkpoints in store if necessary
-    update_checkpoints(store, state.current_justified_checkpoint, state.finalized_checkpoint)
-
-    # Eagerly compute unrealized justification and finality
-    compute_pulled_up_tip(store, block_root)
+```lean
+def on_block
+    (store : Store)
+    (signed_block : SignedBeaconBlock)
+    : Result Store := do
+  let block := signed_block.message
+  let block_root <- hash_tree_root block
+  if store.blocks.contains block_root then
+    return store
+  require (store.block_states.contains block.parent_root)
+  let pre_state <- store.block_states.get? block.parent_root
+  require (get_current_slot store >= block.slot)
+  let finalized_slot := compute_start_slot_at_epoch store.finalized_checkpoint.epoch
+  require (block.slot > finalized_slot)
+  let finalized_checkpoint_block <-
+    get_checkpoint_block store block.parent_root store.finalized_checkpoint.epoch
+  require (store.finalized_checkpoint.root == finalized_checkpoint_block)
+  let state <- state_transition pre_state signed_block (validate_result := true)
+  let head <- get_head store
+  let mut store := { store with
+    blocks := store.blocks.insert block_root block
+    block_states := store.block_states.insert block_root state
+  }
+  store <- record_block_timeliness store block_root
+  store <- update_proposer_boost_root store head.root block_root
+  store := update_checkpoints
+    store state.current_justified_checkpoint state.finalized_checkpoint
+  compute_pulled_up_tip store block_root
 ```
 
 #### `on_attestation`
 
-```python
-def on_attestation(store: Store, attestation: Attestation, is_from_block: bool = False) -> None:
-    """
-    Run ``on_attestation`` upon receiving a new attestation from either within a block or directly on the wire.
-
-    An ``attestation`` that is asserted as invalid may be valid at a later time,
-    consider scheduling it for later processing in such case.
-    """
-    validate_on_attestation(store, attestation, is_from_block)
-
-    store_target_checkpoint_state(store, attestation.data.target)
-
-    # Get state at the `target` to fully validate attestation
-    target_state = store.checkpoint_states[attestation.data.target]
-    indexed_attestation = get_indexed_attestation(target_state, attestation)
-    assert is_valid_indexed_attestation(target_state, indexed_attestation)
-
-    # Update latest messages for attesting indices
-    update_latest_messages(store, indexed_attestation.attesting_indices, attestation)
+```lean
+def on_attestation
+    (store : Store)
+    (attestation : Attestation)
+    (is_from_block : Bool := false)
+    : Result Store := do
+  validate_on_attestation store attestation is_from_block
+  let store <- store_target_checkpoint_state store attestation.data.target
+  let target_state <- store.checkpoint_states.get? attestation.data.target
+  let indexed_attestation <- get_indexed_attestation target_state attestation
+  require (<- is_valid_indexed_attestation target_state indexed_attestation)
+  return update_latest_messages store indexed_attestation.attesting_indices attestation
 ```
 
 #### `on_attester_slashing`
@@ -1038,20 +1032,22 @@ def on_attestation(store: Store, attestation: Attestation, is_from_block: bool =
 maintain the equivocation set of `AttesterSlashing`s from at least the latest
 finalized checkpoint.
 
-```python
-def on_attester_slashing(store: Store, attester_slashing: AttesterSlashing) -> None:
-    """
-    Run ``on_attester_slashing`` immediately upon receiving a new attester slashing
-    from either within a block or directly on the wire.
-    """
-    attestation_1 = attester_slashing.attestation_1
-    attestation_2 = attester_slashing.attestation_2
-    assert is_slashable_attestation_data(attestation_1.data, attestation_2.data)
-    state = store.block_states[store.justified_checkpoint.root]
-    assert is_valid_indexed_attestation(state, attestation_1)
-    assert is_valid_indexed_attestation(state, attestation_2)
-
-    indices = set(attestation_1.attesting_indices).intersection(attestation_2.attesting_indices)
-    for index in indices:
-        store.equivocating_indices.add(index)
+```lean
+def on_attester_slashing
+    (store : Store)
+    (attester_slashing : AttesterSlashing)
+    : Result Store := do
+  let attestation_1 := attester_slashing.attestation_1
+  let attestation_2 := attester_slashing.attestation_2
+  require (is_slashable_attestation_data attestation_1.data attestation_2.data)
+  let state <- store.block_states.get? store.justified_checkpoint.root
+  require (<- is_valid_indexed_attestation state attestation_1)
+  require (<- is_valid_indexed_attestation state attestation_2)
+  let indices := (Std.HashSet.ofList attestation_1.attesting_indices.toList).filter
+    fun index => attestation_2.attesting_indices.contains index
+  let mut store := store
+  for index in indices do
+    let equivocating_indices := store.equivocating_indices.insert index
+    store := { store with equivocating_indices }
+  return store
 ```
