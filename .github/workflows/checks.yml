@@ -23,6 +23,8 @@ jobs:
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: true
+      - name: Set up Lean
+        uses: ./.github/actions/setup-lean
       - name: Run linter for pyspec
         run: |
           make lint
@@ -113,6 +115,8 @@ jobs:
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: true
+      - name: Set up Lean
+        uses: ./.github/actions/setup-lean
       - name: Run pyspec tests for ${{ matrix.fork }}
         run: make test preset=minimal fork=${{ matrix.fork }}
       - name: Prepare test results for upload
@@ -139,6 +143,8 @@ jobs:
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: true
+      - name: Set up Lean
+        uses: ./.github/actions/setup-lean
       # Group slicing is round robin, so a 1/40 slice of the tiny config still
       # samples every fork and every test type for about a dozen groups.
       - name: Generate a sample of compliance tests

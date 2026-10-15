@@ -1,0 +1,14 @@
+name: Set up Lean
+description: >-
+  Install elan, which fetches the Lean toolchain the compiler pins the first
+  time the specifications are built.
+
+runs:
+  using: composite
+  steps:
+    - name: Install elan
+      shell: bash
+      run: |
+        curl -sSfL "https://github.com/leanprover/elan/releases/download/v4.2.4/elan-$(uname -m)-unknown-linux-gnu.tar.gz" | tar -xzC "$RUNNER_TEMP"
+        "$RUNNER_TEMP/elan-init" -y --default-toolchain none
+        echo "$HOME/.elan/bin" >> "$GITHUB_PATH"

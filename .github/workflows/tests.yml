@@ -158,6 +158,9 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Set up Lean
+        uses: ./.github/actions/setup-lean
+
       - name: Generate tests
         run: make test preset=${{ matrix.preset }} fork=${{ matrix.fork }} reftests=true coverage=${{ matrix.preset != 'general' && 'true' || 'false' }}
 
