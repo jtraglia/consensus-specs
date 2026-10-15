@@ -43,6 +43,11 @@ heze:
     - any-glob-to-any-file:
       - 'specs/heze/**'
 
+eip7716:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'specs/_features/eip7716/**'
+
 eip8025:
   - changed-files:
     - any-glob-to-any-file:

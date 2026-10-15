@@ -362,9 +362,10 @@ class Python(Target):
         return Environment(types, values, configs)
 
     def write(self, out: Path, spec: Spec) -> Path:
-        directory = super().write(out, spec)
+        directory = out / "specs" / spec.fork
+        directory.mkdir(parents=True, exist_ok=True)
         (directory / "__init__.py").write_text("from . import mainnet as spec  # noqa:F401\n")
-        return directory
+        return super().write(out, spec)
 
     def write_forks(self, out: Path, parents: dict[str, str | None]) -> None:
         graph = "\n".join(f"    {name!r}: {parent!r}," for name, parent in parents.items())
