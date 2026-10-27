@@ -60,6 +60,8 @@
     - [Modified `record_block_timeliness`](#modified-record_block_timeliness)
     - [Modified `get_shuffling_dependent_root`](#modified-get_shuffling_dependent_root)
     - [Modified `update_proposer_boost_root`](#modified-update_proposer_boost_root)
+  - [`on_attester_slashing` helpers](#on_attester_slashing-helpers)
+    - [Modified `is_valid_slashing_attestation`](#modified-is_valid_slashing_attestation)
 - [Handlers](#handlers)
   - [Modified `on_block`](#modified-on_block)
   - [New `on_execution_payload_envelope`](#new-on_execution_payload_envelope)
@@ -1029,6 +1031,39 @@ def update_proposer_boost_root(store: Store, head: Root, root: Root) -> None:
     # existing block, with the same dependent root as the canonical chain head.
     if is_timely and is_first_block and is_same_dependent_root:
         store.proposer_boost_root = root
+```
+
+### `on_attester_slashing` helpers
+
+#### Modified `is_valid_slashing_attestation`
+
+```python
+def is_valid_slashing_attestation(
+    store: Store, state: BeaconState, indexed_attestation: IndexedAttestation
+) -> bool:
+    """
+    Check ``indexed_attestation`` as ``is_valid_indexed_attestation`` does, with
+    the fork version of the target epoch, bounded by the current epoch.
+    """
+    indices = indexed_attestation.attesting_indices
+    if len(indices) == 0:
+        return False
+    # [New in Gloas:EIP7688]
+    if len(indices) > MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT:
+        return False
+    # Verify indices are sorted and unique
+    if list(indices) != sorted(set(indices)):
+        return False
+    # Verify aggregate signature
+    pubkeys = [state.validators[index].pubkey for index in indices]
+    epoch = min(indexed_attestation.data.target.epoch, get_current_store_epoch(store))
+    domain = compute_domain(
+        DOMAIN_BEACON_ATTESTER,
+        compute_fork_version(epoch),
+        state.genesis_validators_root,
+    )
+    signing_root = compute_signing_root(indexed_attestation.data, domain)
+    return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
 ```
 
 ## Handlers

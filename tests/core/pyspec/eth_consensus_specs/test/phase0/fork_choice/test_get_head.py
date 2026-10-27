@@ -2,6 +2,7 @@ import random
 
 from eth_consensus_specs.test.context import (
     spec_state_test,
+    spec_state_test_with_matching_config,
     with_all_phases_from_to,
     with_altair_and_later,
     with_presets,
@@ -408,7 +409,7 @@ def test_proposer_boost_excludes_slashed_validators(spec, state):
 
 
 @with_altair_and_later
-@spec_state_test
+@spec_state_test_with_matching_config
 def test_discard_equivocations_on_attester_slashing(spec, state):
     test_steps = []
     genesis_state = state.copy()

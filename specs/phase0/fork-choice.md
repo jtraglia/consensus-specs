@@ -65,6 +65,8 @@
       - [`compute_shuffling_dependent_slot`](#compute_shuffling_dependent_slot)
       - [`get_shuffling_dependent_root`](#get_shuffling_dependent_root)
       - [`update_proposer_boost_root`](#update_proposer_boost_root)
+    - [`on_attester_slashing` helpers](#on_attester_slashing-helpers)
+      - [`is_valid_slashing_attestation`](#is_valid_slashing_attestation)
   - [Handlers](#handlers)
     - [`on_tick`](#on_tick)
     - [`on_block`](#on_block)
@@ -938,6 +940,41 @@ def update_proposer_boost_root(store: Store, head: Root, root: Root) -> None:
         store.proposer_boost_root = root
 ```
 
+#### `on_attester_slashing` helpers
+
+##### `is_valid_slashing_attestation`
+
+*Note*: The justified checkpoint state may still be from before the current
+fork, in which case `get_domain` would not know the current fork version. The
+fork version is therefore taken from the fork schedule instead, as a state at
+the current epoch would have it.
+
+```python
+def is_valid_slashing_attestation(
+    store: Store, state: BeaconState, indexed_attestation: IndexedAttestation
+) -> bool:
+    """
+    Check ``indexed_attestation`` as ``is_valid_indexed_attestation`` does, with
+    the fork version of the target epoch, bounded by the current epoch.
+    """
+    indices = indexed_attestation.attesting_indices
+    if len(indices) == 0:
+        return False
+    # Verify indices are sorted and unique
+    if list(indices) != sorted(set(indices)):
+        return False
+    # Verify aggregate signature
+    pubkeys = [state.validators[index].pubkey for index in indices]
+    epoch = min(indexed_attestation.data.target.epoch, get_current_store_epoch(store))
+    domain = compute_domain(
+        DOMAIN_BEACON_ATTESTER,
+        compute_fork_version(epoch),
+        state.genesis_validators_root,
+    )
+    signing_root = compute_signing_root(indexed_attestation.data, domain)
+    return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
+```
+
 ### Handlers
 
 #### `on_tick`
@@ -1046,8 +1083,8 @@ def on_attester_slashing(store: Store, attester_slashing: AttesterSlashing) -> N
     attestation_2 = attester_slashing.attestation_2
     assert is_slashable_attestation_data(attestation_1.data, attestation_2.data)
     state = store.block_states[store.justified_checkpoint.root]
-    assert is_valid_indexed_attestation(state, attestation_1)
-    assert is_valid_indexed_attestation(state, attestation_2)
+    assert is_valid_slashing_attestation(store, state, attestation_1)
+    assert is_valid_slashing_attestation(store, state, attestation_2)
 
     indices = set(attestation_1.attesting_indices).intersection(attestation_2.attesting_indices)
     for index in indices:
