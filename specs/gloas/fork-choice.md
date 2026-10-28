@@ -1046,22 +1046,25 @@ def is_valid_slashing_attestation(
     the fork version of the target epoch, bounded by the current epoch.
     """
     indices = indexed_attestation.attesting_indices
+
     if len(indices) == 0:
         return False
     # [New in Gloas:EIP7688]
     if len(indices) > MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT:
         return False
-    # Verify indices are sorted and unique
     if list(indices) != sorted(set(indices)):
         return False
-    # Verify aggregate signature
-    pubkeys = [state.validators[index].pubkey for index in indices]
-    epoch = min(indexed_attestation.data.target.epoch, get_current_store_epoch(store))
+
+    epoch = min(
+        indexed_attestation.data.target.epoch,
+        get_current_store_epoch(store),
+    )
     domain = compute_domain(
         DOMAIN_BEACON_ATTESTER,
         compute_fork_version(epoch),
         state.genesis_validators_root,
     )
+    pubkeys = [state.validators[index].pubkey for index in indices]
     signing_root = compute_signing_root(indexed_attestation.data, domain)
     return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
 ```
