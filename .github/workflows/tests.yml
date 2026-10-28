@@ -60,6 +60,10 @@ on:
   schedule:
     - cron: "0 0 * * *"
 
+env:
+  SSZ_BACKEND: native
+  SSZ_REQUIRE_NATIVE: "1"
+
 jobs:
   config:
     runs-on: ubuntu-latest

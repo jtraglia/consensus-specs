@@ -9,6 +9,10 @@ on:
     branches:
       - master
 
+env:
+  SSZ_BACKEND: native
+  SSZ_REQUIRE_NATIVE: "1"
+
 jobs:
   lint:
     runs-on: ubuntu-latest
