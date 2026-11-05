@@ -5,7 +5,11 @@ from eth_consensus_specs.test.helpers.epoch_processing import (
     run_epoch_processing_with,
 )
 from eth_consensus_specs.test.helpers.forks import is_post_altair
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import (
+    get_current_epoch_participation,
+    get_previous_epoch_participation,
+    get_validators,
+)
 from eth_consensus_specs.test.helpers.state import next_epoch_via_block, next_slot, transition_to
 from eth_consensus_specs.test.helpers.voluntary_exits import get_unslashed_exited_validators
 
@@ -33,9 +37,9 @@ def add_mock_attestations(
                 f"cannot include attestations in epoch ${epoch} from epoch ${current_epoch}"
             )
     elif current_epoch == epoch:
-        epoch_participation = state.current_epoch_participation
+        epoch_participation = get_current_epoch_participation(spec, state)
     elif previous_epoch == epoch:
-        epoch_participation = state.previous_epoch_participation
+        epoch_participation = get_previous_epoch_participation(spec, state)
     else:
         raise Exception(
             f"cannot include attestations in epoch ${epoch} from epoch ${current_epoch}"

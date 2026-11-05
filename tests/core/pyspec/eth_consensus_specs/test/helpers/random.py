@@ -6,7 +6,12 @@ from eth_consensus_specs.test.helpers.forks import (
     is_post_altair,
     is_post_electra,
 )
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import (
+    get_current_epoch_participation,
+    get_previous_epoch_participation,
+    get_validators,
+    set_current_epoch_participation,
+)
 from eth_consensus_specs.test.helpers.state import next_epoch
 from eth_consensus_specs.test.helpers.withdrawals import (
     set_compounding_withdrawal_credential_with_balance,
@@ -138,9 +143,9 @@ def randomize_epoch_participation(spec, state, epoch, rng):
             pending_attestation.inclusion_delay = rng.randint(1, spec.SLOTS_PER_EPOCH)
     else:
         if epoch == spec.get_current_epoch(state):
-            epoch_participation = state.current_epoch_participation
+            epoch_participation = get_current_epoch_participation(spec, state)
         else:
-            epoch_participation = state.previous_epoch_participation
+            epoch_participation = get_previous_epoch_participation(spec, state)
         for index in range(len(state.validators)):
             # ~1/3 have bad head or bad target or not timely enough
             is_timely_correct_head = rng.randint(0, 2) != 0
@@ -176,8 +181,12 @@ def randomize_previous_epoch_participation(spec, state, rng=None):
     if not is_post_altair(spec):
         state.current_epoch_attestations = spec.PendingAttestations()
     else:
-        state.current_epoch_participation = spec.EpochParticipation(
-            data=[spec.ParticipationFlags(0b0000_0000) for _ in range(len(state.validators))]
+        set_current_epoch_participation(
+            spec,
+            state,
+            spec.EpochParticipation(
+                data=[spec.ParticipationFlags(0b0000_0000) for _ in range(len(state.validators))]
+            ),
         )
 
 

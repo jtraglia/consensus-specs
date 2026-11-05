@@ -55,7 +55,12 @@ from eth_consensus_specs.test.helpers.proposer_slashings import (
     get_valid_proposer_slashing,
     get_valid_proposer_slashings,
 )
-from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
+from eth_consensus_specs.test.helpers.registry import (
+    get_balances,
+    get_current_epoch_participation,
+    get_previous_epoch_participation,
+    get_validators,
+)
 from eth_consensus_specs.test.helpers.state import (
     get_balance,
     next_epoch,
@@ -1022,7 +1027,7 @@ def test_attestation(spec, state):
         pre_current_attestations_root = spec.hash_tree_root(state.current_epoch_attestations)
     else:
         pre_current_epoch_participation_root = spec.hash_tree_root(
-            state.current_epoch_participation
+            get_current_epoch_participation(spec, state)
         )
 
     epoch_block = build_empty_block(spec, state, state.slot + spec.SLOTS_PER_EPOCH)
@@ -1038,9 +1043,11 @@ def test_attestation(spec, state):
         )
     else:
         for index in range(len(state.validators)):
-            assert state.current_epoch_participation[index] == spec.ParticipationFlags(0b0000_0000)
+            assert get_current_epoch_participation(spec, state)[index] == spec.ParticipationFlags(
+                0b0000_0000
+            )
         assert (
-            spec.hash_tree_root(state.previous_epoch_participation)
+            spec.hash_tree_root(get_previous_epoch_participation(spec, state))
             == pre_current_epoch_participation_root
         )
 
@@ -1074,7 +1081,7 @@ def test_duplicate_attestation_same_block(spec, state):
         pre_current_attestations_root = spec.hash_tree_root(state.current_epoch_attestations)
     else:
         pre_current_epoch_participation_root = spec.hash_tree_root(
-            state.current_epoch_participation
+            get_current_epoch_participation(spec, state)
         )
 
     epoch_block = build_empty_block(spec, state, state.slot + spec.SLOTS_PER_EPOCH)
@@ -1090,9 +1097,11 @@ def test_duplicate_attestation_same_block(spec, state):
         )
     else:
         for index in range(len(state.validators)):
-            assert state.current_epoch_participation[index] == spec.ParticipationFlags(0b0000_0000)
+            assert get_current_epoch_participation(spec, state)[index] == spec.ParticipationFlags(
+                0b0000_0000
+            )
         assert (
-            spec.hash_tree_root(state.previous_epoch_participation)
+            spec.hash_tree_root(get_previous_epoch_participation(spec, state))
             == pre_current_epoch_participation_root
         )
 

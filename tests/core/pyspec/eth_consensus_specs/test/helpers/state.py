@@ -9,7 +9,12 @@ from eth_consensus_specs.test.helpers.block import (
     transition_unsigned_block,
 )
 from eth_consensus_specs.test.helpers.forks import is_post_altair
-from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
+from eth_consensus_specs.test.helpers.registry import (
+    get_balances,
+    get_current_epoch_participation,
+    get_previous_epoch_participation,
+    get_validators,
+)
 from eth_consensus_specs.test.helpers.voluntary_exits import get_unslashed_exited_validators
 from eth_consensus_specs.utils.ssz.bytes import Bytes32
 
@@ -121,9 +126,9 @@ def _set_full_participation(spec, state, current=True, previous=True):
 
     for index in range(len(state.validators)):
         if current:
-            state.current_epoch_participation[index] = full_flags.copy()
+            get_current_epoch_participation(spec, state)[index] = full_flags.copy()
         if previous:
-            state.previous_epoch_participation[index] = full_flags.copy()
+            get_previous_epoch_participation(spec, state)[index] = full_flags.copy()
 
 
 def set_full_participation(spec, state, rng=None):
@@ -139,9 +144,9 @@ def _set_empty_participation(spec, state, current=True, previous=True):
 
     for index in range(len(state.validators)):
         if current:
-            state.current_epoch_participation[index] = spec.ParticipationFlags(0)
+            get_current_epoch_participation(spec, state)[index] = spec.ParticipationFlags(0)
         if previous:
-            state.previous_epoch_participation[index] = spec.ParticipationFlags(0)
+            get_previous_epoch_participation(spec, state)[index] = spec.ParticipationFlags(0)
 
 
 def set_empty_participation(spec, state, rng=None):

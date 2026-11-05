@@ -157,7 +157,7 @@ def create_genesis_state(spec, validator_balances, activation_threshold, builder
         if validator.effective_balance >= activation_threshold:
             validator.activation_eligibility_epoch = spec.GENESIS_EPOCH
             validator.activation_epoch = spec.GENESIS_EPOCH
-        if is_post_altair(spec):
+        if is_post_altair(spec) and not is_post_pq(spec):
             state.previous_epoch_participation.append(spec.ParticipationFlags(0b0000_0000))
             state.current_epoch_participation.append(spec.ParticipationFlags(0b0000_0000))
             state.inactivity_scores.append(spec.Uint64(0))

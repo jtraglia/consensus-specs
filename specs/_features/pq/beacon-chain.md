@@ -192,11 +192,10 @@ the validators and builders that registered, and pays out the others.
 [the fork document](./fork.md) for details.
 
 Each record keeps the index it had before the fork, so the registries work like
-maps from index to record. A validator's participation flags and inactivity
-score share its position in `state.pq_validators`, which
-`get_validator_position` finds. `state.next_validator_index` is the index after
-the highest one at the fork, so that the index of a validator that did not
-register is never reused.
+maps from index to record. A validator's record also holds its participation
+flags and inactivity score. `state.next_validator_index` is the index after the
+highest one at the fork, so that the index of a validator that did not register
+is never reused.
 
 Execution layer requests still name validators and builders by BLS public key,
 which the state no longer holds. Deposit, withdrawal, builder deposit, and
@@ -416,7 +415,7 @@ class BeaconBlockBody(ProgressiveContainer):
 
 ```python
 class BeaconState(ProgressiveContainer):
-    ACTIVE_FIELDS = active_fields(width=52, gaps=(11, 12, 22, 23, 38, 46, 47))
+    ACTIVE_FIELDS = active_fields(width=52, gaps=(11, 12, 15, 16, 21, 22, 23, 38, 46, 47))
 
     genesis_time: Uint64
     genesis_validators_root: Root
@@ -435,13 +434,16 @@ class BeaconState(ProgressiveContainer):
     # Removed `balances`
     randao_mixes: RandaoMixes
     slashings: Slashings
-    previous_epoch_participation: EpochParticipation
-    current_epoch_participation: EpochParticipation
+    # [Modified in PQ]
+    # Removed `previous_epoch_participation`
+    # [Modified in PQ]
+    # Removed `current_epoch_participation`
     justification_bits: JustificationBits
     previous_justified_checkpoint: Checkpoint
     current_justified_checkpoint: Checkpoint
     finalized_checkpoint: Checkpoint
-    inactivity_scores: InactivityScores
+    # [Modified in PQ]
+    # Removed `inactivity_scores`
     # [Modified in PQ]
     # Removed `current_sync_committee`
     # [Modified in PQ]
@@ -612,6 +614,9 @@ class PQValidator(Container):
     index: ValidatorIndex
     balance: Gwei
     effective_balance: Gwei
+    previous_epoch_participation: ParticipationFlags
+    current_epoch_participation: ParticipationFlags
+    inactivity_score: Uint64
     activation_eligibility_epoch: Epoch
     activation_epoch: Epoch
     exit_epoch: Epoch
@@ -1089,7 +1094,6 @@ def get_builder(state: BeaconState, builder_index: BuilderIndex) -> PQBuilder:
 def get_validator_position(state: BeaconState, index: ValidatorIndex) -> Uint64:
     """
     Return the position in ``state.pq_validators`` of the validator at ``index``.
-    Its participation flags and inactivity score share that position.
     """
     validator_indices = [validator.index for validator in state.pq_validators]
     assert index in validator_indices
@@ -1278,14 +1282,14 @@ def get_inactivity_penalty_deltas(state: BeaconState) -> tuple[Sequence[Gwei], S
     for index in get_eligible_validator_indices(state):
         if index not in matching_target_indices:
             # [New in PQ]
-            position = get_validator_position(state, index)
-            penalty_numerator = (
-                # [Modified in PQ]
-                get_validator(state, index).effective_balance * state.inactivity_scores[position]
-            )
+            validator = get_validator(state, index)
+            # [Modified in PQ]
+            penalty_numerator = validator.effective_balance * validator.inactivity_score
             penalty_denominator = INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_BELLATRIX
             # [Modified in PQ]
-            penalties[position] += penalty_numerator // penalty_denominator
+            penalties[get_validator_position(state, index)] += (
+                penalty_numerator // penalty_denominator
+            )
     return rewards, penalties
 ```
 
@@ -1317,19 +1321,20 @@ def get_unslashed_participating_indices(
     Return the set of validator indices that are both active and unslashed for the given ``flag_index`` and ``epoch``.
     """
     assert epoch in (get_previous_epoch(state), get_current_epoch(state))
-    if epoch == get_current_epoch(state):
-        epoch_participation = state.current_epoch_participation
-    else:
-        epoch_participation = state.previous_epoch_participation
     # [Modified in PQ]
-    participating_indices = [
-        validator.index
-        for position, validator in enumerate(state.pq_validators)
-        if is_active_validator(validator, epoch)
-        and has_flag(epoch_participation[position], flag_index)
-        and not validator.slashed
-    ]
-    return set(participating_indices)
+    participating_indices: set[ValidatorIndex] = set()
+    for validator in state.pq_validators:
+        if epoch == get_current_epoch(state):
+            participation_flags = validator.current_epoch_participation
+        else:
+            participation_flags = validator.previous_epoch_participation
+        if (
+            is_active_validator(validator, epoch)
+            and has_flag(participation_flags, flag_index)
+            and not validator.slashed
+        ):
+            participating_indices.add(validator.index)
+    return participating_indices
 ```
 
 ### Beacon state mutators
@@ -1505,20 +1510,20 @@ def process_inactivity_updates(state: BeaconState) -> None:
 
     for index in get_eligible_validator_indices(state):
         # [New in PQ]
-        position = get_validator_position(state, index)
+        validator = get_validator(state, index)
         # [Modified in PQ]
         # Increase the inactivity score of inactive validators
         if index in get_unslashed_participating_indices(
             state, TIMELY_TARGET_FLAG_INDEX, get_previous_epoch(state)
         ):
-            state.inactivity_scores[position] = saturating_sub(state.inactivity_scores[position], 1)
+            validator.inactivity_score = saturating_sub(validator.inactivity_score, 1)
         else:
-            state.inactivity_scores[position] += INACTIVITY_SCORE_BIAS
+            validator.inactivity_score += INACTIVITY_SCORE_BIAS
         # [Modified in PQ]
         # Decrease the inactivity score of all eligible validators during a leak-free epoch
         if not is_in_inactivity_leak(state):
-            state.inactivity_scores[position] = saturating_sub(
-                state.inactivity_scores[position], INACTIVITY_SCORE_RECOVERY_RATE
+            validator.inactivity_score = saturating_sub(
+                validator.inactivity_score, INACTIVITY_SCORE_RECOVERY_RATE
             )
 ```
 
@@ -1526,11 +1531,10 @@ def process_inactivity_updates(state: BeaconState) -> None:
 
 ```python
 def process_participation_flag_updates(state: BeaconState) -> None:
-    state.previous_epoch_participation = state.current_epoch_participation
-    state.current_epoch_participation = EpochParticipation(
-        # [Modified in PQ]
-        data=[ParticipationFlags(0b0000_0000) for _ in range(len(state.pq_validators))]
-    )
+    # [Modified in PQ]
+    for validator in state.pq_validators:
+        validator.previous_epoch_participation = validator.current_epoch_participation
+        validator.current_epoch_participation = ParticipationFlags(0b0000_0000)
 ```
 
 #### Modified `process_pending_consolidations`
@@ -1988,30 +1992,39 @@ def process_attestation(
 
     if data.target.epoch == get_current_epoch(state):
         current_epoch_target = True
-        epoch_participation = state.current_epoch_participation
         payment = state.builder_pending_payments[SLOTS_PER_EPOCH + data.slot % SLOTS_PER_EPOCH]
     else:
         current_epoch_target = False
-        epoch_participation = state.previous_epoch_participation
         payment = state.builder_pending_payments[data.slot % SLOTS_PER_EPOCH]
 
     proposer_reward_numerator = 0
     for index in get_attesting_indices(state, attestation):
         # [New in PQ]
-        position = get_validator_position(state, index)
+        validator = get_validator(state, index)
+        # [New in PQ]
+        if current_epoch_target:
+            participation_flags = validator.current_epoch_participation
+        else:
+            participation_flags = validator.previous_epoch_participation
         # [Modified in PQ]
-        had_no_participation = epoch_participation[position] == 0b0000_0000
+        had_no_participation = participation_flags == 0b0000_0000
         will_set_new_flag = False
 
         for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
             # [Modified in PQ]
             if flag_index in participation_flag_indices and not has_flag(
-                epoch_participation[position], flag_index
+                participation_flags, flag_index
             ):
                 # [Modified in PQ]
-                epoch_participation[position] = add_flag(epoch_participation[position], flag_index)
+                participation_flags = add_flag(participation_flags, flag_index)
                 proposer_reward_numerator += get_base_reward(state, index) * weight
                 will_set_new_flag = True
+
+        # [New in PQ]
+        if current_epoch_target:
+            validator.current_epoch_participation = participation_flags
+        else:
+            validator.previous_epoch_participation = participation_flags
 
         if (
             will_set_new_flag
@@ -2020,7 +2033,7 @@ def process_attestation(
             and payment.withdrawal.amount > 0
         ):
             # [Modified in PQ]
-            payment.weight += get_validator(state, index).effective_balance
+            payment.weight += validator.effective_balance
 
     # Reward proposer
     proposer_reward_denominator = (

@@ -15,7 +15,11 @@ from eth_consensus_specs.test.helpers.random import (
     set_some_new_deposits,
     slash_random_validators,
 )
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import (
+    get_inactivity_scores,
+    get_previous_epoch_participation,
+    get_validators,
+)
 from eth_consensus_specs.test.helpers.state import (
     next_epoch,
 )
@@ -75,9 +79,9 @@ def has_enough_for_leak_penalty(spec, state, index):
     """
 
     if is_post_altair(spec):
-        return get_validators(spec, state)[index].effective_balance * state.inactivity_scores[
-            index
-        ] > spec.config.INACTIVITY_SCORE_BIAS * get_inactivity_penalty_quotient(spec)
+        return get_validators(spec, state)[index].effective_balance * get_inactivity_scores(
+            spec, state
+        )[index] > spec.config.INACTIVITY_SCORE_BIAS * get_inactivity_penalty_quotient(spec)
     else:
         return (
             get_validators(spec, state)[index].effective_balance
@@ -318,7 +322,7 @@ def run_get_inactivity_penalty_deltas(spec, state):
             # copied from spec:
             penalty_numerator = (
                 get_validators(spec, state)[index].effective_balance
-                * state.inactivity_scores[index]
+                * get_inactivity_scores(spec, state)[index]
             )
             penalty_denominator = (
                 spec.config.INACTIVITY_SCORE_BIAS * get_inactivity_penalty_quotient(spec)
@@ -391,7 +395,9 @@ def run_test_full_but_partial_participation(spec, state, rng=None):
     else:
         for index in range(len(state.validators)):
             if rng.choice([True, False]):
-                state.previous_epoch_participation[index] = spec.ParticipationFlags(0b0000_0000)
+                get_previous_epoch_participation(spec, state)[index] = spec.ParticipationFlags(
+                    0b0000_0000
+                )
 
     yield from run_deltas(spec, state)
 
@@ -407,7 +413,9 @@ def run_test_partial(spec, state, fraction_filled):
         )
     else:
         for index in range(int(len(state.validators) * fraction_filled)):
-            state.previous_epoch_participation[index] = spec.ParticipationFlags(0b0000_0000)
+            get_previous_epoch_participation(spec, state)[index] = spec.ParticipationFlags(
+                0b0000_0000
+            )
 
     yield from run_deltas(spec, state)
 
@@ -483,7 +491,7 @@ def run_test_some_very_low_effective_balances_that_did_not_attest(spec, state):
     else:
         index = 0
         get_validators(spec, state)[index].effective_balance = 1
-        state.previous_epoch_participation[index] = spec.ParticipationFlags(0b0000_0000)
+        get_previous_epoch_participation(spec, state)[index] = spec.ParticipationFlags(0b0000_0000)
 
     yield from run_deltas(spec, state)
 

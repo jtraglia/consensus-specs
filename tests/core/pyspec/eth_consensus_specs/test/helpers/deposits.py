@@ -18,7 +18,11 @@ from eth_consensus_specs.test.helpers.keys import (
     privkeys,
     pubkeys,
 )
-from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
+from eth_consensus_specs.test.helpers.registry import (
+    get_balances,
+    get_inactivity_scores,
+    get_validators,
+)
 from eth_consensus_specs.test.helpers.state import get_balance
 from eth_consensus_specs.utils import bls
 from eth_consensus_specs.utils.merkle_minimal import calc_merkle_tree_from_leaves, get_merkle_proof
@@ -48,7 +52,7 @@ def mock_deposit(spec, state, index):
     get_validators(spec, state)[index].activation_epoch = spec.FAR_FUTURE_EPOCH
     get_validators(spec, state)[index].effective_balance = spec.MAX_EFFECTIVE_BALANCE
     if is_post_altair(spec):
-        state.inactivity_scores[index] = 0
+        get_inactivity_scores(spec, state)[index] = 0
     assert not spec.is_active_validator(
         get_validators(spec, state)[index], spec.get_current_epoch(state)
     )

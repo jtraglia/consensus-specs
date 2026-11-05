@@ -40,7 +40,11 @@ from eth_consensus_specs.test.helpers.payload_attestation import get_random_payl
 from eth_consensus_specs.test.helpers.proposer_slashings import (
     get_valid_proposer_slashings,
 )
-from eth_consensus_specs.test.helpers.registry import get_builders, get_validators
+from eth_consensus_specs.test.helpers.registry import (
+    get_builders,
+    get_current_epoch_participation,
+    get_validators,
+)
 from eth_consensus_specs.test.helpers.state import (
     next_epoch,
     next_epoch_with_full_participation,
@@ -962,7 +966,7 @@ def test_attestations_after_missed_slot_use_applied_parent_payload_availability(
     assert matching_indices.isdisjoint(mismatching_indices)
     for validator_index in matching_indices | mismatching_indices:
         assert not spec.has_flag(
-            state.current_epoch_participation[validator_index],
+            get_current_epoch_participation(spec, state)[validator_index],
             spec.TIMELY_HEAD_FLAG_INDEX,
         )
 
@@ -984,12 +988,12 @@ def test_attestations_after_missed_slot_use_applied_parent_payload_availability(
 
     for validator_index in matching_indices:
         assert spec.has_flag(
-            state.current_epoch_participation[validator_index],
+            get_current_epoch_participation(spec, state)[validator_index],
             spec.TIMELY_HEAD_FLAG_INDEX,
         )
     for validator_index in mismatching_indices:
         assert not spec.has_flag(
-            state.current_epoch_participation[validator_index],
+            get_current_epoch_participation(spec, state)[validator_index],
             spec.TIMELY_HEAD_FLAG_INDEX,
         )
 

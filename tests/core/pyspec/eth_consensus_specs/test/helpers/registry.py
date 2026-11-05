@@ -1,4 +1,4 @@
-from eth_consensus_specs.test.helpers.forks import is_post_pq
+from eth_consensus_specs.test.helpers.forks import is_post_altair, is_post_pq
 from eth_consensus_specs.test.helpers.keys import get_vrf_data, xmss_builder_pubkeys, xmss_pubkeys
 
 
@@ -17,51 +17,100 @@ def get_builders(spec, state):
     return state.pq_builders if is_post_pq(spec) else state.builders
 
 
-class PQBalances:
+class PQValidatorFieldView:
     """
-    A list-like view of the balances that ``state.pq_validators`` holds, indexed
-    by validator index.
+    A list-like view of one field of the records in ``state.pq_validators``,
+    indexed by validator index, standing in for a per-validator list of the
+    state before PQ.
     """
 
-    def __init__(self, spec, state):
+    def __init__(self, spec, state, field):
         self.spec = spec
         self.state = state
+        self.field = field
 
     def __getitem__(self, index):
         if isinstance(index, slice):
             return list(self)[index]
-        return self.spec.get_validator(self.state, index).balance
+        return getattr(self.spec.get_validator(self.state, index), self.field)
 
-    def __setitem__(self, index, balance):
-        self.spec.get_validator(self.state, index).balance = balance
+    def __setitem__(self, index, value):
+        setattr(self.spec.get_validator(self.state, index), self.field, value)
 
     def __len__(self):
         return len(self.state.pq_validators)
 
     def __iter__(self):
-        return iter([validator.balance for validator in self.state.pq_validators])
+        return iter([getattr(validator, self.field) for validator in self.state.pq_validators])
+
+    def __eq__(self, other):
+        return list(self) == list(other)
+
+    __hash__ = None
 
     def copy(self):
         return list(self)
 
 
+def get_per_validator(spec, state, name, field):
+    """
+    The per-validator list ``name`` of the state, which moves into the ``field``
+    of the records of ``state.pq_validators`` from PQ onwards.
+    """
+    if is_post_pq(spec):
+        return PQValidatorFieldView(spec, state, field)
+    return getattr(state, name)
+
+
+def set_per_validator(spec, state, name, field, values):
+    """
+    Replace the per-validator list ``name`` of the state with ``values``.
+    """
+    if is_post_pq(spec):
+        for validator, value in zip(state.pq_validators, values, strict=True):
+            setattr(validator, field, value)
+    else:
+        setattr(state, name, values)
+
+
 def get_balances(spec, state):
-    """
-    The validator balances, which move into the records of
-    ``state.pq_validators`` from PQ onwards.
-    """
-    return PQBalances(spec, state) if is_post_pq(spec) else state.balances
+    return get_per_validator(spec, state, "balances", "balance")
 
 
 def set_balances(spec, state, balances):
-    """
-    Replace the validator balances with ``balances``.
-    """
-    if is_post_pq(spec):
-        for validator, balance in zip(state.pq_validators, balances, strict=True):
-            validator.balance = balance
-    else:
-        state.balances = spec.Balances(data=balances)
+    set_per_validator(spec, state, "balances", "balance", spec.Balances(data=balances))
+
+
+def get_previous_epoch_participation(spec, state):
+    return get_per_validator(
+        spec, state, "previous_epoch_participation", "previous_epoch_participation"
+    )
+
+
+def set_previous_epoch_participation(spec, state, flags):
+    set_per_validator(
+        spec, state, "previous_epoch_participation", "previous_epoch_participation", flags
+    )
+
+
+def get_current_epoch_participation(spec, state):
+    return get_per_validator(
+        spec, state, "current_epoch_participation", "current_epoch_participation"
+    )
+
+
+def set_current_epoch_participation(spec, state, flags):
+    set_per_validator(
+        spec, state, "current_epoch_participation", "current_epoch_participation", flags
+    )
+
+
+def get_inactivity_scores(spec, state):
+    return get_per_validator(spec, state, "inactivity_scores", "inactivity_score")
+
+
+def set_inactivity_scores(spec, state, scores):
+    set_per_validator(spec, state, "inactivity_scores", "inactivity_score", scores)
 
 
 def to_pq_validator(spec, validator, index, balance=None):
@@ -113,6 +162,10 @@ def append_validator(spec, state, validator, balance):
     else:
         state.validators.append(validator)
         state.balances.append(balance)
+        if is_post_altair(spec):
+            state.previous_epoch_participation.append(spec.ParticipationFlags(0b0000_0000))
+            state.current_epoch_participation.append(spec.ParticipationFlags(0b0000_0000))
+            state.inactivity_scores.append(0)
 
 
 def append_builder(spec, state, builder):

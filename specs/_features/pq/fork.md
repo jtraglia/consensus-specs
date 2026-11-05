@@ -26,8 +26,8 @@ builders their XMSS public key, through [PQReg](../pqreg/beacon-chain.md)
 registrations. At the fork, only the validators and builders that registered
 move to `state.pq_validators` and `state.pq_builders`, with their registered
 material. Each keeps its index, which its record stores. A validator's record
-also takes its balance, and its participation flags and inactivity score move
-with it. `state.validators`, `state.balances`, and `state.builders` are removed.
+also takes its balance, participation flags, and inactivity score.
+`state.validators`, `state.balances`, and `state.builders` are removed.
 
 The fork pays out the others through `state.pending_fork_withdrawals`, which
 withdrawals process before any other queue. A validator that did not register is
@@ -79,6 +79,9 @@ def compute_pq_validators(pre: pqreg.BeaconState) -> PQValidators:
                 index=index,
                 balance=pre.balances[index],
                 effective_balance=validator.effective_balance,
+                previous_epoch_participation=pre.previous_epoch_participation[index],
+                current_epoch_participation=pre.current_epoch_participation[index],
+                inactivity_score=pre.inactivity_scores[index],
                 activation_eligibility_epoch=validator.activation_eligibility_epoch,
                 activation_epoch=validator.activation_epoch,
                 exit_epoch=validator.exit_epoch,
@@ -239,21 +242,15 @@ def upgrade_to_pq(pre: pqreg.BeaconState) -> BeaconState:
         randao_mixes=pre.randao_mixes,
         slashings=pre.slashings,
         # [Modified in PQ]
-        previous_epoch_participation=EpochParticipation(
-            data=[pre.previous_epoch_participation[index] for index in validator_indices]
-        ),
+        # Removed `previous_epoch_participation`
         # [Modified in PQ]
-        current_epoch_participation=EpochParticipation(
-            data=[pre.current_epoch_participation[index] for index in validator_indices]
-        ),
+        # Removed `current_epoch_participation`
         justification_bits=pre.justification_bits,
         previous_justified_checkpoint=pre.previous_justified_checkpoint,
         current_justified_checkpoint=pre.current_justified_checkpoint,
         finalized_checkpoint=pre.finalized_checkpoint,
         # [Modified in PQ]
-        inactivity_scores=InactivityScores(
-            data=[pre.inactivity_scores[index] for index in validator_indices]
-        ),
+        # Removed `inactivity_scores`
         # [Modified in PQ]
         # Removed `current_sync_committee`
         # [Modified in PQ]
