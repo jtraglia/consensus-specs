@@ -8,7 +8,6 @@
 - [Types](#types)
   - [New `VRFProof`](#new-vrfproof)
   - [New `StarkProof`](#new-starkproof)
-  - [New `XMSSAggregateSignature`](#new-xmssaggregatesignature)
   - [New `XMSSPubkey`](#new-xmsspubkey)
   - [New `XMSSSignature`](#new-xmsssignature)
 - [Constants](#constants)
@@ -107,10 +106,8 @@ signs at most once, such as a voluntary exit, instead uses one of the first
 reuses a leaf. Each signature carries its leaf index, and verification checks it
 against the expected one.
 
-XMSS has no native aggregation. Aggregates are opaque `XMSSAggregateSignature`
-values, produced and checked by `xmss.Aggregate` and `xmss.AggregateVerify`. The
-reference implementation concatenates signatures as a stand-in for a succinct
-aggregation scheme.
+XMSS has no native aggregation. A STARK instead proves many XMSS signatures at
+once, as a `StarkProof`.
 
 XMSS signatures are not unique, so a proposer could grind a signature-based
 RANDAO reveal. Each validator instead registers the root of a Merkle tree of
@@ -140,8 +137,8 @@ aggregating them. The payload timeliness committee still broadcasts its votes,
 which fork choice uses as before.
 
 Attestations no longer carry a signature. A block instead carries one
-`stark_proof` of the aggregate signatures of all its attestations, which
-replaces verifying each attestation's aggregate in turn. An aggregate on the
+`stark_proof` of the signatures of all its attestations, which replaces
+verifying each attestation's aggregate signature in turn. An aggregate on the
 wire carries a `stark_proof` of its own in `AggregateAndProof`, and the proposer
 merges those into the block's `stark_proof`.
 
@@ -167,21 +164,10 @@ class VRFProof(Vector[Bytes32]):
 ```python
 class StarkProof(ByteList):
     """
-    A STARK proof of the aggregate signatures of a block's attestations.
+    A STARK proof of XMSS signatures, such as those of a block's attestations.
     """
 
     LIMIT = MAX_STARK_PROOF_SIZE
-```
-
-### New `XMSSAggregateSignature`
-
-```python
-class XMSSAggregateSignature(ByteList):
-    """
-    An aggregate of XMSS signatures over the same message at the same leaf.
-    """
-
-    LIMIT = MAX_XMSS_AGGREGATE_SIGNATURE_SIZE
 ```
 
 ### New `XMSSPubkey`
@@ -242,17 +228,13 @@ class XMSSSignature(ByteVector):
 
 ### XMSS
 
-| Name                                | Value                         |
-| ----------------------------------- | ----------------------------- |
-| `MAX_XMSS_AGGREGATE_SIGNATURE_SIZE` | `Uint64(2**20)` (= 1,048,576) |
-| `MAX_STARK_PROOF_SIZE`              | `Uint64(2**20)` (= 1,048,576) |
+| Name                   | Value                         |
+| ---------------------- | ----------------------------- |
+| `MAX_STARK_PROOF_SIZE` | `Uint64(2**20)` (= 1,048,576) |
 
-*Note*: `MAX_XMSS_AGGREGATE_SIGNATURE_SIZE` and `MAX_STARK_PROOF_SIZE` are
-placeholders for the proof sizes of a succinct aggregation scheme and a STARK.
+*Note*: `MAX_STARK_PROOF_SIZE` is a placeholder for the size of a STARK proof.
 The reference concatenation fits at most
-`MAX_XMSS_AGGREGATE_SIGNATURE_SIZE // XMSS_SIGNATURE_SIZE` signatures in an
-aggregate, and `MAX_STARK_PROOF_SIZE // XMSS_SIGNATURE_SIZE` signatures in a
-proof.
+`MAX_STARK_PROOF_SIZE // XMSS_SIGNATURE_SIZE` signatures in a proof.
 
 ### Max operations per block
 
@@ -404,7 +386,9 @@ class IndexedAttestation(ProgressiveContainer):
     attesting_indices: AttestingIndices
     data: AttestationData
     # [Modified in PQ]
-    signature: XMSSAggregateSignature
+    # Removed `signature`
+    # [New in PQ]
+    stark_proof: StarkProof
 ```
 
 #### `PayloadAttestationMessage`
@@ -518,44 +502,30 @@ defines the following functions:
 - `def Sign(privkey: Bytes32, leaf_index: Uint64, message: Bytes32) -> XMSSSignature`
 - `def Verify(pubkey: XMSSPubkey, leaf_index: Uint64, message: Bytes32, signature: XMSSSignature) -> bool`
 
-`Verify` returns `True` only if `signature` was produced at `leaf_index`. This
-upgrade adds the following functions for aggregation:
-
-- `def Aggregate(signatures: Sequence[XMSSSignature | XMSSAggregateSignature]) -> XMSSAggregateSignature`
-- `def AggregateVerify(pubkeys: Sequence[XMSSPubkey], leaf_index: Uint64, message: Bytes32, signature: XMSSAggregateSignature) -> bool`
-
-`Aggregate` combines signatures and aggregates over the same message at the same
-leaf. `AggregateVerify` returns `True` only if `signature` holds exactly one
-valid signature at `leaf_index` for each entry of `pubkeys`, in any order. A
-public key that appears more than once needs one signature per appearance. An
-empty aggregate is valid for an empty `pubkeys`.
+`Verify` returns `True` only if `signature` was produced at `leaf_index`.
 
 The above functions are accessed through the `xmss` module, e.g. `xmss.Verify`.
 
-*Note*: The reference implementation of `Aggregate` concatenates its inputs. It
-stands in for a succinct aggregation scheme, which would change the encoding of
-`XMSSAggregateSignature` but not how these functions are used.
-
 #### STARK proofs
 
-This upgrade adds the following functions to prove many aggregates at once:
+This upgrade adds the following functions to prove many XMSS signatures at once:
 
-- `def ProveAggregates(statements: Sequence[XMSSAggregateStatement], aggregates: Sequence[XMSSAggregateSignature]) -> StarkProof`
+- `def ProveAggregates(statements: Sequence[XMSSAggregateStatement], signatures: Sequence[Sequence[XMSSSignature]]) -> StarkProof`
 - `def MergeProofs(proofs: Sequence[StarkProof]) -> StarkProof`
 - `def VerifyAggregates(statements: Sequence[XMSSAggregateStatement], proof: StarkProof) -> bool`
 
-`VerifyAggregates` returns `True` only if `proof` proves, for each statement, an
-aggregate that
-`xmss.AggregateVerify(statement.pubkeys, statement.leaf_index, statement.message, aggregate)`
-accepts. `ProveAggregates` takes those aggregates in the order of the
-statements. `MergeProofs` turns proofs of lists of statements into one proof of
-their concatenation, in order.
+`VerifyAggregates` returns `True` only if `proof` proves, for each statement and
+each of its public keys, a signature that
+`xmss.Verify(pubkey, statement.leaf_index, statement.message, signature)`
+accepts. `ProveAggregates` takes those signatures for each statement in order,
+and within a statement in the order of its public keys. `MergeProofs` turns
+proofs of lists of statements into one proof of their concatenation, in order.
 
 The above functions are accessed through the `stark` module, e.g.
 `stark.VerifyAggregates`.
 
 *Note*: The reference implementations of `ProveAggregates` and `MergeProofs`
-concatenate their inputs, and `VerifyAggregates` checks each aggregate in turn.
+concatenate their inputs, and `VerifyAggregates` checks each signature in turn.
 They stand in for a recursive STARK, which would change the encoding of
 `StarkProof` but not how these functions are used.
 
@@ -617,12 +587,15 @@ def is_valid_vrf_proof(
 
 #### Modified `is_valid_indexed_attestation`
 
+*Note*: The `stark_proof` of an indexed attestation proves one statement, over
+the public keys of its attesting indices in order.
+
 ```python
 def is_valid_indexed_attestation(
     state: BeaconState, indexed_attestation: IndexedAttestation
 ) -> bool:
     """
-    Check if ``indexed_attestation`` is not empty, has sorted and unique indices and has a valid aggregate signature.
+    Check if ``indexed_attestation`` is not empty, has sorted and unique indices and has a valid stark proof.
     """
     # Verify indices are sorted and unique
     indices = indexed_attestation.attesting_indices
@@ -633,13 +606,13 @@ def is_valid_indexed_attestation(
     ):
         return False
     # [Modified in PQ]
-    # Verify aggregate signature
+    # Verify the proof of the attesters' signatures
     pubkeys = [state.validators[index].pubkey for index in indices]
     domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
     signing_root = compute_signing_root(indexed_attestation.data, domain)
-    # [Modified in PQ]
     leaf_index = compute_xmss_attestation_leaf_index(indexed_attestation.data.target.epoch)
-    return xmss.AggregateVerify(pubkeys, leaf_index, signing_root, indexed_attestation.signature)
+    statement = XMSSAggregateStatement(pubkeys=pubkeys, leaf_index=leaf_index, message=signing_root)
+    return stark.VerifyAggregates([statement], indexed_attestation.stark_proof)
 ```
 
 ### Beacon state accessors
@@ -651,11 +624,11 @@ def get_indexed_attestation(
     state: BeaconState,
     attestation: Attestation,
     # [New in PQ]
-    signature: XMSSAggregateSignature,
+    stark_proof: StarkProof,
 ) -> IndexedAttestation:
     """
-    Return the indexed attestation corresponding to ``attestation`` and its
-    aggregate ``signature``.
+    Return the indexed attestation corresponding to ``attestation`` and the
+    ``stark_proof`` of its attesters' signatures.
     """
     attesting_indices = get_attesting_indices(state, attestation)
 
@@ -663,7 +636,7 @@ def get_indexed_attestation(
         attesting_indices=AttestingIndices(data=sorted(attesting_indices)),
         data=attestation.data,
         # [Modified in PQ]
-        signature=signature,
+        stark_proof=stark_proof,
     )
 ```
 
@@ -679,7 +652,7 @@ def get_attestation_statements(
 ) -> Sequence[XMSSAggregateStatement]:
     """
     Return, for each committee of ``attestation`` in order, the statement that the
-    aggregate signature of its attesters in that committee proves.
+    signatures of its attesters in that committee prove.
     """
     domain = get_domain(state, DOMAIN_BEACON_ATTESTER, attestation.data.target.epoch)
     message = compute_signing_root(attestation.data, domain)

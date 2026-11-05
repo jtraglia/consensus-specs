@@ -114,6 +114,7 @@ from eth_consensus_specs.utils import stark, xmss
             "eth_aggregate_pubkeys",
             "eth_fast_aggregate_verify",
             "finalized_root_gindex_at_slot",
+            "get_aggregate_signature",
             "get_contribution_and_proof",
             "get_contribution_and_proof_signature",
             "get_contribution_due_ms",

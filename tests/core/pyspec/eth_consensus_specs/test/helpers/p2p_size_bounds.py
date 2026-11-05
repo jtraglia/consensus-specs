@@ -3,9 +3,11 @@ from eth_consensus_specs.test.helpers.signatures import get_unsigned_signature
 
 
 def build_max_size_aggregate_signature(spec):
-    if is_post_pq(spec):
-        return spec.XMSSAggregateSignature(data=b"\x00" * spec.MAX_XMSS_AGGREGATE_SIGNATURE_SIZE)
     return spec.BLSSignature()
+
+
+def build_max_size_stark_proof(spec):
+    return spec.StarkProof(data=b"\x00" * spec.MAX_STARK_PROOF_SIZE)
 
 
 def build_max_size_attestation(spec):
@@ -27,6 +29,12 @@ def build_max_size_indexed_attestation(spec):
         data=[spec.ValidatorIndex(0)]
         * (spec.MAX_VALIDATORS_PER_COMMITTEE * spec.MAX_COMMITTEES_PER_SLOT)
     )
+    if is_post_pq(spec):
+        return spec.IndexedAttestation(
+            attesting_indices=spec.AttestingIndices(data=attesting_indices),
+            data=spec.AttestationData(),
+            stark_proof=build_max_size_stark_proof(spec),
+        )
     return spec.IndexedAttestation(
         attesting_indices=spec.AttestingIndices(data=attesting_indices),
         data=spec.AttestationData(),

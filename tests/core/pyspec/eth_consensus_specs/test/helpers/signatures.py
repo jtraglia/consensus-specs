@@ -24,8 +24,6 @@ def sign(spec, privkey, signing_root, slot, leaf_name):
 
 
 def aggregate(spec, signatures):
-    if is_post_pq(spec):
-        return spec.XMSSAggregateSignature(data=xmss.Aggregate(signatures))
     return bls.Aggregate(signatures)
 
 
@@ -33,8 +31,6 @@ def get_empty_aggregate(spec):
     """
     The aggregate of no signatures.
     """
-    if is_post_pq(spec):
-        return spec.XMSSAggregateSignature()
     return spec.G2_POINT_AT_INFINITY
 
 

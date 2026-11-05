@@ -32,13 +32,12 @@
       - [Signature](#signature)
   - [Attesting](#attesting)
     - [Construct attestation](#construct-attestation)
-      - [Aggregate signature](#aggregate-signature)
+      - [Signature](#signature-1)
     - [Attestation subnet](#attestation-subnet)
       - [Modified `compute_subnet_for_attestation`](#modified-compute_subnet_for_attestation)
   - [Attestation aggregation](#attestation-aggregation)
     - [Aggregation selection](#aggregation-selection)
     - [Construct aggregate](#construct-aggregate)
-      - [Aggregate signature](#aggregate-signature-1)
       - [Aggregate stark](#aggregate-stark)
     - [Broadcast aggregate](#broadcast-aggregate)
   - [Sync committees](#sync-committees)
@@ -344,7 +343,7 @@ def get_block_signature(
 
 #### Construct attestation
 
-##### Aggregate signature
+##### Signature
 
 An attestation carries no signature. The validator broadcasts it as a
 `SingleAttestation`, whose `signature` is obtained from:
@@ -418,31 +417,19 @@ def is_aggregator(
 
 #### Construct aggregate
 
-##### Aggregate signature
-
-An attestation carries no signature, so the aggregator aggregates the signatures
-of the attestations it aggregates:
-
-```python
-def get_aggregate_signature(
-    # [Modified in PQ]
-    signatures: Sequence[XMSSSignature],
-) -> XMSSAggregateSignature:
-    # [Modified in PQ]
-    return XMSSAggregateSignature(data=xmss.Aggregate(signatures))
-```
-
 ##### Aggregate stark
 
-The aggregator proves that aggregate signature with a `stark_proof`, which it
-sends in place of the signature:
+An attestation carries no signature, so the aggregator proves the signatures of
+the attestations it aggregates with a `stark_proof`, in place of an aggregate
+signature. It passes the signatures of the attesters in the order of their
+committee:
 
 ```python
 def get_aggregate_stark(
-    state: BeaconState, aggregate: Attestation, aggregate_signature: XMSSAggregateSignature
+    state: BeaconState, aggregate: Attestation, signatures: Sequence[XMSSSignature]
 ) -> StarkProof:
     statements = get_attestation_statements(state, aggregate)
-    return StarkProof(data=stark.ProveAggregates(statements, [aggregate_signature]))
+    return StarkProof(data=stark.ProveAggregates(statements, [signatures]))
 ```
 
 #### Broadcast aggregate

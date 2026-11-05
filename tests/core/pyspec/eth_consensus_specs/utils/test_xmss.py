@@ -41,35 +41,6 @@ def test_verify_malformed_signature():
     assert not xmss.Verify(PUBKEY, LEAF_INDEX, MESSAGE, SIGNATURE[:-1])
 
 
-def test_aggregate_verify():
-    aggregate = xmss.Aggregate([SIGNATURE, SIGNATURE])
-    assert xmss.AggregateVerify([PUBKEY, PUBKEY], LEAF_INDEX, MESSAGE, aggregate)
-
-
-def test_aggregate_verify_of_aggregates():
-    aggregate = xmss.Aggregate([xmss.Aggregate([SIGNATURE]), xmss.Aggregate([SIGNATURE])])
-    assert xmss.AggregateVerify([PUBKEY, PUBKEY], LEAF_INDEX, MESSAGE, aggregate)
-
-
-def test_aggregate_verify_empty():
-    assert xmss.AggregateVerify([], LEAF_INDEX, MESSAGE, xmss.Aggregate([]))
-
-
-def test_aggregate_verify_missing_signature():
-    aggregate = xmss.Aggregate([SIGNATURE])
-    assert not xmss.AggregateVerify([PUBKEY, PUBKEY], LEAF_INDEX, MESSAGE, aggregate)
-
-
-def test_aggregate_verify_unmatched_pubkey():
-    aggregate = xmss.Aggregate([SIGNATURE, SIGNATURE])
-    assert not xmss.AggregateVerify([PUBKEY, OTHER_PUBKEY], LEAF_INDEX, MESSAGE, aggregate)
-
-
-def test_aggregate_verify_malformed():
-    aggregate = xmss.Aggregate([SIGNATURE]) + b"\x00"
-    assert not xmss.AggregateVerify([PUBKEY], LEAF_INDEX, MESSAGE, aggregate)
-
-
 def test_inactive_stubs():
     xmss.xmss_active = False
     assert xmss.Sign(1, LEAF_INDEX, MESSAGE) == xmss.STUB_SIGNATURE

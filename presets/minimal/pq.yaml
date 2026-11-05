@@ -3,8 +3,6 @@
 # XMSS
 # ---------------------------------------------------------------
 # 2**20 (= 1,048,576)
-MAX_XMSS_AGGREGATE_SIGNATURE_SIZE: 1048576
-# 2**20 (= 1,048,576)
 MAX_STARK_PROOF_SIZE: 1048576
 
 # Max operations per block

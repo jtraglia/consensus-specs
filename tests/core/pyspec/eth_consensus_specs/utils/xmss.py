@@ -57,19 +57,6 @@ def _sk_to_seed(SK):
     return bytes(SK)
 
 
-def _split_aggregate(signature):
-    """
-    Split a concatenated aggregate into its signatures, or ``None`` if malformed.
-    """
-    signature = bytes(signature)
-    if len(signature) % SIGNATURE_SIZE != 0:
-        return None
-    return [
-        signature[offset : offset + SIGNATURE_SIZE]
-        for offset in range(0, len(signature), SIGNATURE_SIZE)
-    ]
-
-
 def _verify(PK, leaf_index, message, signature):
     """
     Verify one signature, including the leaf index it carries.
@@ -120,38 +107,3 @@ def Sign(SK, leaf_index, message):
 @only_with_xmss(alt_return=True)
 def Verify(PK, leaf_index, message, signature):
     return _verify(PK, int(leaf_index), message, signature)
-
-
-@only_with_xmss(alt_return=STUB_SIGNATURE)
-def Aggregate(signatures):
-    """
-    Aggregate ``signatures`` by concatenation, a stand-in for succinct
-    aggregation. Aggregates may themselves be aggregated.
-    """
-    return b"".join(bytes(signature) for signature in signatures)
-
-
-@only_with_xmss(alt_return=True)
-def AggregateVerify(PKs, leaf_index, message, signature):
-    """
-    Check that ``signature`` holds exactly one valid signature over ``message``
-    at ``leaf_index`` for each of ``PKs``, in any order.
-    """
-    pubkeys = [bytes(pubkey) for pubkey in PKs]
-    signatures = _split_aggregate(signature)
-    if signatures is None or len(signatures) != len(pubkeys):
-        return False
-    unmatched = list(pubkeys)
-    for one_signature in signatures:
-        match = next(
-            (
-                pubkey
-                for pubkey in unmatched
-                if _verify(pubkey, int(leaf_index), message, one_signature)
-            ),
-            None,
-        )
-        if match is None:
-            return False
-        unmatched.remove(match)
-    return True

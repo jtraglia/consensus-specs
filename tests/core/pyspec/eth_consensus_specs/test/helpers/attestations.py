@@ -16,6 +16,7 @@ from eth_consensus_specs.test.helpers.state import (
     next_slot,
     state_transition_and_sign_block,
 )
+from eth_consensus_specs.utils import stark
 
 
 def get_attestation_subnet_count(spec):
@@ -64,34 +65,59 @@ def get_aggregate_and_proof(spec, state, aggregator_index, aggregate, privkey):
     """
     if is_post_pq(spec):
         selection_proof = get_selection_proof(spec, state, aggregator_index, aggregate.data.slot)
-        aggregate_signature = get_attestation_aggregate_signature(spec, state, aggregate)
-        stark_proof = spec.get_aggregate_stark(state, aggregate, aggregate_signature)
+        signatures = [
+            get_attestation_signature(spec, state, aggregate.data, privkeys[index])
+            for index in get_committee_attesters(spec, state, aggregate)
+        ]
+        stark_proof = spec.get_aggregate_stark(state, aggregate, signatures)
         return spec.get_aggregate_and_proof(
             aggregator_index, aggregate, selection_proof, stark_proof
         )
     return spec.get_aggregate_and_proof(state, aggregator_index, aggregate, privkey)
 
 
-def get_attestation_aggregate_signature(spec, state, attestation):
+def get_committee_attesters(spec, state, attestation):
     """
-    The aggregate signature of the participants of ``attestation``, which from
-    PQ onwards no longer carries it.
+    The attesters of ``attestation``, committee by committee and within each in
+    the order of the committee.
     """
-    participants = spec.get_attesting_indices(state, attestation)
-    return sign_aggregate_attestation(spec, state, attestation.data, participants)
+    attesters = []
+    committee_offset = 0
+    for committee_index in spec.get_committee_indices(attestation.committee_bits):
+        committee = spec.get_beacon_committee(state, attestation.data.slot, committee_index)
+        for i, validator_index in enumerate(committee):
+            if attestation.aggregation_bits[committee_offset + i]:
+                attesters.append(validator_index)
+        committee_offset += len(committee)
+    return attesters
+
+
+def prove_attestation_signatures(spec, state, attestation_data, participants, signatures):
+    """
+    The stark proof of ``signatures`` by ``participants`` over
+    ``attestation_data``, as one statement over their public keys in order.
+    """
+    domain = spec.get_domain(state, spec.DOMAIN_BEACON_ATTESTER, attestation_data.target.epoch)
+    statement = spec.XMSSAggregateStatement(
+        pubkeys=[state.validators[index].pubkey for index in participants],
+        leaf_index=spec.compute_xmss_attestation_leaf_index(attestation_data.target.epoch),
+        message=spec.compute_signing_root(attestation_data, domain),
+    )
+    return spec.StarkProof(data=stark.ProveAggregates([statement], [signatures]))
 
 
 def get_indexed_attestation(spec, state, attestation, signed=True):
     """
     The indexed attestation of ``attestation``. From PQ onwards it takes the
-    aggregate signature of the participants, or the empty aggregate if unsigned.
+    stark proof of the participants' signatures, or the empty proof if unsigned.
     """
     if is_post_pq(spec):
+        participants = sorted(spec.get_attesting_indices(state, attestation))
         if signed:
-            signature = get_attestation_aggregate_signature(spec, state, attestation)
+            stark_proof = sign_aggregate_attestation(spec, state, attestation.data, participants)
         else:
-            signature = spec.XMSSAggregateSignature()
-        return spec.get_indexed_attestation(state, attestation, signature)
+            stark_proof = spec.StarkProof()
+        return spec.get_indexed_attestation(state, attestation, stark_proof)
     return spec.get_indexed_attestation(state, attestation)
 
 
@@ -244,13 +270,19 @@ def sign_aggregate_attestation(spec, state, attestation_data, participants: list
                 privkey,
             )
         )
+    if is_post_pq(spec):
+        return prove_attestation_signatures(spec, state, attestation_data, participants, signatures)
     return aggregate(spec, signatures)
 
 
 def sign_indexed_attestation(spec, state, indexed_attestation):
     participants = indexed_attestation.attesting_indices
     data = indexed_attestation.data
-    indexed_attestation.signature = sign_aggregate_attestation(spec, state, data, participants)
+    proof = sign_aggregate_attestation(spec, state, data, participants)
+    if is_post_pq(spec):
+        indexed_attestation.stark_proof = proof
+    else:
+        indexed_attestation.signature = proof
 
 
 def sign_attestation(spec, state, attestation):
