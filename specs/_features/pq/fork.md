@@ -48,9 +48,8 @@ tops up, and the validator sweep withdraws it from a validator that did not
 register. A deposit for a new validator stays in `state.pending_deposits`, which
 is no longer processed, until a later upgrade refunds it.
 
-The fork recomputes the PTC window, which then leaves out the validators that
-did not register. The proposer lookahead is kept, and the slots it assigns to
-validators that did not register are missed.
+The proposer lookahead and the PTC window are kept, so the slots and votes they
+assign to validators that did not register are missed.
 
 ## Configs
 
@@ -276,9 +275,6 @@ def upgrade_to_pq(pre: pqreg.BeaconState) -> BeaconState:
         # [Modified in PQ]
         # Removed `builder_pq_registrations`
     )
-
-    # [New in PQ]
-    post.ptc_window = initialize_ptc_window(post)
 
     return post
 ```
