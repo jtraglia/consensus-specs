@@ -79,13 +79,13 @@ def compute_pq_validators(pre: pqreg.BeaconState) -> PQValidators:
                 index=index,
                 balance=pre.balances[index],
                 effective_balance=validator.effective_balance,
-                previous_epoch_participation=pre.previous_epoch_participation[index],
-                current_epoch_participation=pre.current_epoch_participation[index],
                 inactivity_score=pre.inactivity_scores[index],
                 activation_eligibility_epoch=validator.activation_eligibility_epoch,
                 activation_epoch=validator.activation_epoch,
                 exit_epoch=validator.exit_epoch,
                 withdrawable_epoch=validator.withdrawable_epoch,
+                previous_epoch_participation=pre.previous_epoch_participation[index],
+                current_epoch_participation=pre.current_epoch_participation[index],
                 slashed=validator.slashed,
             )
         )

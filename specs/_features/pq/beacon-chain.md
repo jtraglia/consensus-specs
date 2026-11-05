@@ -614,13 +614,13 @@ class PQValidator(Container):
     index: ValidatorIndex
     balance: Gwei
     effective_balance: Gwei
-    previous_epoch_participation: ParticipationFlags
-    current_epoch_participation: ParticipationFlags
     inactivity_score: Uint64
     activation_eligibility_epoch: Epoch
     activation_epoch: Epoch
     exit_epoch: Epoch
     withdrawable_epoch: Epoch
+    previous_epoch_participation: ParticipationFlags
+    current_epoch_participation: ParticipationFlags
     slashed: Boolean
 ```
 
