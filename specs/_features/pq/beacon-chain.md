@@ -208,12 +208,12 @@ class XMSSSignature(ByteVector):
 
 ### XMSS
 
-| Name                      | Value                             |
-| ------------------------- | --------------------------------- |
-| `XMSS_SIGNATURE_SIZE`     | `Uint64(2404)`                    |
-| `XMSS_RESERVED_LEAVES`    | `Uint64(2**15)` (= 32,768)        |
-| `XMSS_ATTESTATION_LEAVES` | `Uint64(2**31)` (= 2,147,483,648) |
-| `XMSS_LEAVES_PER_SLOT`    | `Uint64(2**3)` (= 8)              |
+| Name                      | Value                           |
+| ------------------------- | ------------------------------- |
+| `XMSS_SIGNATURE_SIZE`     | `Uint64(2404)`                  |
+| `XMSS_RESERVED_LEAVES`    | `Uint64(2**15)` (= 32,768)      |
+| `XMSS_ATTESTATION_LEAVES` | `Uint64(2**29)` (= 536,870,912) |
+| `XMSS_LEAVES_PER_SLOT`    | `Uint64(2**3)` (= 8)            |
 
 ### VRF
 
