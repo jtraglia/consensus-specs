@@ -22,9 +22,9 @@ XMSS key MUST NOT sign two different messages at the same leaf, because that
 exposes the leaf and lets others forge signatures at it.
 
 At the upgrade, each builder that registered an XMSS public key with a builder
-PQ registration request moves to `state.pq_builders`, keeping its index. A
-builder without a registration is removed and its balance is withdrawn at the
-upgrade, and there is no way yet to register an XMSS public key after it.
+PQ registration request takes it in place of its BLS public key. A builder
+without a registration has its balance withdrawn at the upgrade, and there is no
+way yet to register an XMSS public key after it.
 
 ## Builder activities
 

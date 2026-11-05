@@ -32,11 +32,11 @@ def test_fork_all_registered(spec, phases, state):
     post_state = yield from run_fork_test(phases[PQ], state)
 
     post_spec = phases[PQ]
-    for index, validator in enumerate(post_state.pq_validators):
+    for index, validator in enumerate(post_state.validators):
         assert validator.pubkey == xmss_pubkeys[index]
         assert validator.exit_epoch == post_spec.FAR_FUTURE_EPOCH
-    assert len(post_state.pq_builders) > 0
-    for index, builder in enumerate(post_state.pq_builders):
+    assert len(post_state.builders) > 0
+    for index, builder in enumerate(post_state.builders):
         assert builder.pubkey == xmss_builder_pubkeys[index]
         assert builder.withdrawable_epoch == post_spec.FAR_FUTURE_EPOCH
 
@@ -50,8 +50,8 @@ def test_fork_builders_not_registered(spec, phases, state):
     post_state = yield from run_fork_test(phases[PQ], state)
 
     post_spec = phases[PQ]
-    assert len(post_state.pq_builders) > 0
-    for builder in post_state.pq_builders:
+    assert len(post_state.builders) > 0
+    for builder in post_state.builders:
         assert builder.pubkey == post_spec.XMSSPubkey()
         assert builder.withdrawable_epoch != post_spec.FAR_FUTURE_EPOCH
 
@@ -67,10 +67,10 @@ def test_fork_builder_shares_validator_pubkey(spec, phases, state):
     post_state = yield from run_fork_test(phases[PQ], state)
 
     post_spec = phases[PQ]
-    assert post_state.pq_validators[0].pubkey == xmss_pubkeys[0]
-    assert post_state.pq_builders[0].pubkey == xmss_builder_pubkeys[0]
-    assert post_state.pq_validators[0].exit_epoch == post_spec.FAR_FUTURE_EPOCH
-    assert post_state.pq_builders[0].withdrawable_epoch == post_spec.FAR_FUTURE_EPOCH
+    assert post_state.validators[0].pubkey == xmss_pubkeys[0]
+    assert post_state.builders[0].pubkey == xmss_builder_pubkeys[0]
+    assert post_state.validators[0].exit_epoch == post_spec.FAR_FUTURE_EPOCH
+    assert post_state.builders[0].withdrawable_epoch == post_spec.FAR_FUTURE_EPOCH
 
 
 @with_phases(phases=[PQREG], other_phases=[PQ])
@@ -81,7 +81,7 @@ def test_fork_no_registrations(spec, phases, state):
     post_state = yield from run_fork_test(phases[PQ], state)
 
     post_spec = phases[PQ]
-    for validator in post_state.pq_validators:
+    for validator in post_state.validators:
         assert validator.pubkey == post_spec.XMSSPubkey()
         assert validator.exit_epoch != post_spec.FAR_FUTURE_EPOCH
 
@@ -96,7 +96,7 @@ def test_fork_partially_registered(spec, phases, state):
     post_state = yield from run_fork_test(phases[PQ], state)
 
     post_spec = phases[PQ]
-    for index, validator in enumerate(post_state.pq_validators):
+    for index, validator in enumerate(post_state.validators):
         is_registered = index in registered_indices
         assert (validator.exit_epoch == post_spec.FAR_FUTURE_EPOCH) == is_registered
 

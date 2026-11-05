@@ -556,6 +556,9 @@ def _insert_validator(spec, state, balance):
     append_validator(spec, state, validator, balance)
     if is_post_eip8148(spec):
         state.validator_sweep_thresholds.append(spec.Gwei(0))
+    state.previous_epoch_participation.append(spec.ParticipationFlags(0b0000_0000))
+    state.current_epoch_participation.append(spec.ParticipationFlags(0b0000_0000))
+    state.inactivity_scores.append(0)
 
     return validator_index
 

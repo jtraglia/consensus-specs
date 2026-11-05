@@ -14,68 +14,6 @@ from eth_consensus_specs.utils import stark, xmss
 """
 
     @classmethod
-    def sundry_functions(cls) -> str:
-        return """
-get_total_active_balance = cache_this(
-    lambda state: (state.pq_validators.hash_tree_root(), compute_epoch_at_slot(state.slot)),
-    _get_total_active_balance, lru_size=10)
-
-get_base_reward = cache_this(
-    lambda state, index, *args: (state.pq_validators.hash_tree_root(), state.slot, index, *args),
-    _get_base_reward, lru_size=2048)
-
-get_committee_count_per_slot = cache_this(
-    lambda state, epoch: (state.pq_validators.hash_tree_root(), epoch),
-    _get_committee_count_per_slot, lru_size=SLOTS_PER_EPOCH * 3)
-
-get_active_validator_indices = cache_this(
-    lambda state, epoch: (state.pq_validators.hash_tree_root(), epoch),
-    _get_active_validator_indices, lru_size=3)
-
-get_beacon_committee = cache_this(
-    lambda state, slot, index: (
-        state.pq_validators.hash_tree_root(), state.randao_mixes.hash_tree_root(), slot, index
-    ),
-    _get_beacon_committee, lru_size=SLOTS_PER_EPOCH * MAX_COMMITTEES_PER_SLOT * 3)
-
-get_attesting_indices = cache_this(
-    lambda state, attestation: (
-        state.randao_mixes.hash_tree_root(),
-        state.pq_validators.hash_tree_root(), attestation.hash_tree_root()
-    ),
-    _get_attesting_indices, lru_size=SLOTS_PER_EPOCH * MAX_COMMITTEES_PER_SLOT * 3)
-
-compute_balance_weighted_selection = cache_this(
-    lambda state, indices, seed, size, shuffle_indices: (
-        state.pq_validators.hash_tree_root(), tuple(indices), seed, size, shuffle_indices
-    ),
-    _compute_balance_weighted_selection, lru_size=SLOTS_PER_EPOCH * 6)
-
-
-def cache_positions(get_registry):
-    cache_dict = LRU(size=8)
-
-    def get_position(state, index):
-        registry = get_registry(state)
-        positions = cache_dict.get(id(registry))
-        position = None if positions is None else positions.get(index)
-        if position is None or position >= len(registry) or registry[position].index != index:
-            positions = {record.index: position for position, record in enumerate(registry)}
-            cache_dict[id(registry)] = positions
-            position = positions.get(index)
-        assert position is not None
-        return Uint64(position)
-    return get_position
-
-
-_get_validator_position = get_validator_position
-get_validator_position = cache_positions(lambda state: state.pq_validators)
-
-_get_builder_position = get_builder_position
-get_builder_position = cache_positions(lambda state: state.pq_builders)
-"""
-
-    @classmethod
     def deprecate_constants(cls) -> set[str]:
         return {
             "BUILDER_PQ_REGISTRATION_REQUEST_TYPE",

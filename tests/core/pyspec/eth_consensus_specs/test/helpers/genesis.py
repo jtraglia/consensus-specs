@@ -27,15 +27,20 @@ from eth_consensus_specs.test.helpers.fulu.state import (
 from eth_consensus_specs.test.helpers.gloas.state import (
     initialize_ptc_window,
 )
-from eth_consensus_specs.test.helpers.keys import builder_pubkeys, pubkeys
-from eth_consensus_specs.test.helpers.registry import to_pq_builder, to_pq_validator
+from eth_consensus_specs.test.helpers.keys import (
+    builder_pubkeys,
+    get_vrf_data,
+    pubkeys,
+    xmss_builder_pubkeys,
+    xmss_pubkeys,
+)
 
 GENESIS_ETH1_BLOCK_HASH = b"\xda" * 32
 
 
 def build_mock_builder(spec, i: int, balance: int):
     return spec.Builder(
-        pubkey=builder_pubkeys[i],
+        pubkey=xmss_builder_pubkeys[i] if is_post_pq(spec) else builder_pubkeys[i],
         execution_address=spec.ExecutionAddress(spec.sha256(builder_pubkeys[i])[12:]),
         balance=balance,
         deposit_epoch=0,
@@ -64,7 +69,7 @@ def build_mock_validator(spec, i: int, balance: int):
         max_effective_balance = spec.MAX_EFFECTIVE_BALANCE
 
     validator = spec.Validator(
-        pubkey=active_pubkey,
+        pubkey=xmss_pubkeys[i] if is_post_pq(spec) else active_pubkey,
         withdrawal_credentials=withdrawal_credentials,
         activation_eligibility_epoch=spec.FAR_FUTURE_EPOCH,
         activation_epoch=spec.FAR_FUTURE_EPOCH,
@@ -74,6 +79,8 @@ def build_mock_validator(spec, i: int, balance: int):
             balance - balance % spec.EFFECTIVE_BALANCE_INCREMENT, max_effective_balance
         ),
     )
+    if is_post_pq(spec):
+        validator.vrf_data = get_vrf_data(i)
 
     return validator
 
@@ -157,7 +164,7 @@ def create_genesis_state(spec, validator_balances, activation_threshold, builder
         if validator.effective_balance >= activation_threshold:
             validator.activation_eligibility_epoch = spec.GENESIS_EPOCH
             validator.activation_epoch = spec.GENESIS_EPOCH
-        if is_post_altair(spec) and not is_post_pq(spec):
+        if is_post_altair(spec):
             state.previous_epoch_participation.append(spec.ParticipationFlags(0b0000_0000))
             state.current_epoch_participation.append(spec.ParticipationFlags(0b0000_0000))
             state.inactivity_scores.append(spec.Uint64(0))
@@ -165,14 +172,8 @@ def create_genesis_state(spec, validator_balances, activation_threshold, builder
     # Set genesis validators root for domain separation and chain versioning
     state.genesis_validators_root = spec.hash_tree_root(validators)
 
-    if is_post_pq(spec):
-        state.pq_validators = spec.PQValidators(
-            data=[to_pq_validator(spec, v, i, balances[i]) for i, v in enumerate(validators)]
-        )
-        state.next_validator_index = len(validators)
-    else:
-        state.validators = validators
-        state.balances = balances
+    state.validators = validators
+    state.balances = balances
 
     if is_post_altair(spec) and not is_post_pq(spec):
         # Fill in sync committees
@@ -224,13 +225,9 @@ def create_genesis_state(spec, validator_balances, activation_threshold, builder
 
     if is_post_gloas(spec):
         builder_balance = 2 * spec.MIN_DEPOSIT_AMOUNT
-        builders = [build_mock_builder(spec, i, builder_balance) for i in range(builder_count)]
-        if is_post_pq(spec):
-            state.pq_builders = spec.PQBuilders(
-                data=[to_pq_builder(spec, b, i) for i, b in enumerate(builders)]
-            )
-        else:
-            state.builders = spec.Builders(data=builders)
+        state.builders = spec.Builders(
+            data=[build_mock_builder(spec, i, builder_balance) for i in range(builder_count)]
+        )
         state.execution_payload_availability = spec.ExecutionPayloadAvailability(
             data=[0b1 for _ in range(spec.SLOTS_PER_HISTORICAL_ROOT)]
         )

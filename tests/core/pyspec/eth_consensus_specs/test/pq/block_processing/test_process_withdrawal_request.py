@@ -24,7 +24,7 @@ def test_full_exit_request_ignored(spec, state):
 
     yield from run_withdrawal_request_processing(spec, state, withdrawal_request, success=False)
 
-    assert state.pq_validators[validator_index].exit_epoch == spec.FAR_FUTURE_EPOCH
+    assert state.validators[validator_index].exit_epoch == spec.FAR_FUTURE_EPOCH
 
 
 @with_phases([PQ])

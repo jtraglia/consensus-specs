@@ -98,9 +98,9 @@ def run_fork_test(post_spec, pre_state):
         int(registration.validator_index): registration.pq_data
         for registration in pre_state.validator_pq_registrations
     }
-    assert len(post_state.pq_validators) == len(pre_state.validators)
+    assert len(post_state.validators) == len(pre_state.validators)
     for index, (pre_validator, post_validator) in enumerate(
-        zip(pre_state.validators, post_state.pq_validators, strict=True)
+        zip(pre_state.validators, post_state.validators, strict=True)
     ):
         assert post_validator.withdrawal_credentials == pre_validator.withdrawal_credentials
         assert post_validator.effective_balance == pre_validator.effective_balance
@@ -125,8 +125,8 @@ def run_fork_test(post_spec, pre_state):
         registration.builder_pubkey: registration.pq_data
         for registration in pre_state.builder_pq_registrations
     }
-    assert len(post_state.pq_builders) == len(pre_state.builders)
-    for pre_builder, post_builder in zip(pre_state.builders, post_state.pq_builders, strict=True):
+    assert len(post_state.builders) == len(pre_state.builders)
+    for pre_builder, post_builder in zip(pre_state.builders, post_state.builders, strict=True):
         assert post_builder.execution_address == pre_builder.execution_address
         assert post_builder.balance == pre_builder.balance
         if pre_builder.pubkey in registered_builders:

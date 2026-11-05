@@ -10,11 +10,7 @@ from eth_consensus_specs.test.helpers.attestations import (
 )
 from eth_consensus_specs.test.helpers.block import apply_empty_block
 from eth_consensus_specs.test.helpers.constants import MINIMAL
-from eth_consensus_specs.test.helpers.registry import (
-    get_current_epoch_participation,
-    get_previous_epoch_participation,
-    get_validators,
-)
+from eth_consensus_specs.test.helpers.registry import get_validators
 from eth_consensus_specs.test.helpers.state import (
     next_slots,
     transition_to_slot_via_block,
@@ -406,7 +402,7 @@ def test_same_slot_attestation_ignores_payload_availability(spec, state):
 
     yield from run_attestation_processing(spec, state, attestation, valid=True)
 
-    final_participation = get_current_epoch_participation(spec, state)[validator_index]
+    final_participation = state.current_epoch_participation[validator_index]
     assert spec.has_flag(final_participation, spec.TIMELY_HEAD_FLAG_INDEX)
 
 
@@ -443,7 +439,7 @@ def test_matching_payload_gets_head_flag(spec, state):
     yield from run_attestation_processing(spec, state, attestation, valid=True)
 
     # Verify that head flag is set when is_matching_payload = True
-    final_participation = get_current_epoch_participation(spec, state)[validator_index]
+    final_participation = state.current_epoch_participation[validator_index]
     final_head_flag = spec.has_flag(final_participation, spec.TIMELY_HEAD_FLAG_INDEX)
 
     assert final_head_flag, "Should have head flag when data.index matches payload availability bit"
@@ -478,7 +474,7 @@ def test_mismatched_payload_no_head_flag(spec, state):
     yield from run_attestation_processing(spec, state, attestation, valid=True)
 
     # Check final participation flags
-    final_participation = get_current_epoch_participation(spec, state)[validator_index]
+    final_participation = state.current_epoch_participation[validator_index]
     final_head_flag = spec.has_flag(final_participation, spec.TIMELY_HEAD_FLAG_INDEX)
 
     assert not final_head_flag, "Should not get head flag when payload doesn't match"
@@ -518,7 +514,7 @@ def test_old_attested_block_gets_head_flag(spec, state):
 
     yield from run_attestation_processing(spec, state, attestation, valid=True)
 
-    final_participation = get_current_epoch_participation(spec, state)[validator_index]
+    final_participation = state.current_epoch_participation[validator_index]
     assert spec.has_flag(final_participation, spec.TIMELY_HEAD_FLAG_INDEX)
 
 
@@ -554,8 +550,8 @@ def test_builder_payment_weight_tracking_previous_epoch(spec, state):
         state.slot - attestation.data.slot,
         state.latest_block_header.slot,
     )
-    pre_prev_flags = get_previous_epoch_participation(spec, state)[attester]
-    pre_curr_flags = get_current_epoch_participation(spec, state)[attester]
+    pre_prev_flags = state.previous_epoch_participation[attester]
+    pre_curr_flags = state.current_epoch_participation[attester]
 
     yield from run_attestation_processing(spec, state, attestation, valid=True)
 
@@ -566,9 +562,9 @@ def test_builder_payment_weight_tracking_previous_epoch(spec, state):
 
     # Assert flags are set for the previous epoch, not current one
     for flag_index in expected_flag_indices:
-        assert spec.has_flag(get_previous_epoch_participation(spec, state)[attester], flag_index)
+        assert spec.has_flag(state.previous_epoch_participation[attester], flag_index)
         assert not spec.has_flag(pre_prev_flags, flag_index)
-    assert get_current_epoch_participation(spec, state)[attester] == pre_curr_flags
+    assert state.current_epoch_participation[attester] == pre_curr_flags
 
 
 @with_gloas_and_later

@@ -11,7 +11,6 @@ from eth_consensus_specs.test.helpers.block import (
 )
 from eth_consensus_specs.test.helpers.constants import ALTAIR, PQ
 from eth_consensus_specs.test.helpers.inactivity_scores import randomize_inactivity_scores
-from eth_consensus_specs.test.helpers.registry import get_inactivity_scores
 from eth_consensus_specs.test.helpers.rewards import leaking
 from eth_consensus_specs.test.helpers.state import (
     next_epoch,
@@ -98,9 +97,9 @@ def test_inactivity_scores_leaking(spec, state):
     assert spec.is_in_inactivity_leak(state)
 
     randomize_inactivity_scores(spec, state, rng=Random(5252))
-    assert len(set(get_inactivity_scores(spec, state))) > 1
+    assert len(set(state.inactivity_scores)) > 1
 
-    previous_inactivity_scores = get_inactivity_scores(spec, state).copy()
+    previous_inactivity_scores = state.inactivity_scores.copy()
 
     yield "pre", state
 
@@ -112,9 +111,7 @@ def test_inactivity_scores_leaking(spec, state):
     yield "post", state
 
     # No participation during a leak so all scores should increase
-    for pre, post in zip(
-        previous_inactivity_scores, get_inactivity_scores(spec, state), strict=False
-    ):
+    for pre, post in zip(previous_inactivity_scores, state.inactivity_scores, strict=False):
         assert post == pre + spec.config.INACTIVITY_SCORE_BIAS
 
 
@@ -123,12 +120,12 @@ def test_inactivity_scores_leaking(spec, state):
 @leaking()
 def test_inactivity_scores_full_participation_leaking(spec, state):
     randomize_inactivity_scores(spec, state, rng=Random(5252))
-    assert len(set(get_inactivity_scores(spec, state))) > 1
+    assert len(set(state.inactivity_scores)) > 1
 
     # Only set full participation for previous epoch to remain in leak
     set_full_participation_previous_epoch(spec, state)
 
-    previous_inactivity_scores = get_inactivity_scores(spec, state).copy()
+    previous_inactivity_scores = state.inactivity_scores.copy()
 
     yield "pre", state
 
@@ -142,7 +139,5 @@ def test_inactivity_scores_full_participation_leaking(spec, state):
     yield "post", state
 
     # Full participation during a leak so all scores should decrease by 1
-    for pre, post in zip(
-        previous_inactivity_scores, get_inactivity_scores(spec, state), strict=False
-    ):
+    for pre, post in zip(previous_inactivity_scores, state.inactivity_scores, strict=False):
         assert post == pre - 1

@@ -46,6 +46,9 @@ def run_test_activation_churn_limit(spec, state):
             effective_balance=balance,
         )
         append_validator(spec, state, validator, balance)
+        state.previous_epoch_participation.append(spec.ParticipationFlags(0b0000_0000))
+        state.current_epoch_participation.append(spec.ParticipationFlags(0b0000_0000))
+        state.inactivity_scores.append(0)
         get_validators(spec, state)[index].activation_epoch = spec.FAR_FUTURE_EPOCH
         if is_post_eip8148(spec):
             state.validator_sweep_thresholds.append(spec.Gwei(0))

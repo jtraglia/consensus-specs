@@ -11,7 +11,6 @@ from eth_consensus_specs.test.context import (
     with_custom_state,
 )
 from eth_consensus_specs.test.helpers.inactivity_scores import randomize_inactivity_scores
-from eth_consensus_specs.test.helpers.registry import get_inactivity_scores, set_inactivity_scores
 from eth_consensus_specs.test.helpers.rewards import leaking
 
 
@@ -34,12 +33,8 @@ def test_random_inactivity_scores_1(spec, state):
 def test_half_zero_half_random_inactivity_scores(spec, state):
     randomize_inactivity_scores(spec, state, rng=Random(10101))
     half_val_point = len(state.validators) // 2
-    set_inactivity_scores(
-        spec,
-        state,
-        spec.InactivityScores(
-            data=[0] * half_val_point + list(get_inactivity_scores(spec, state)[half_val_point:])
-        ),
+    state.inactivity_scores = spec.InactivityScores(
+        data=[0] * half_val_point + list(state.inactivity_scores[half_val_point:])
     )
 
     yield from rewards_helpers.run_test_full_random(spec, state, rng=Random(10101))
@@ -108,12 +103,8 @@ def test_random_inactivity_scores_leaking_1(spec, state):
 def test_half_zero_half_random_inactivity_scores_leaking(spec, state):
     randomize_inactivity_scores(spec, state, rng=Random(10101))
     half_val_point = len(state.validators) // 2
-    set_inactivity_scores(
-        spec,
-        state,
-        spec.InactivityScores(
-            data=[0] * half_val_point + list(get_inactivity_scores(spec, state)[half_val_point:])
-        ),
+    state.inactivity_scores = spec.InactivityScores(
+        data=[0] * half_val_point + list(state.inactivity_scores[half_val_point:])
     )
 
     yield from rewards_helpers.run_test_full_random(spec, state, rng=Random(10101))
