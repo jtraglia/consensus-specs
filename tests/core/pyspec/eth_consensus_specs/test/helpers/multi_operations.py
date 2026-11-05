@@ -21,7 +21,7 @@ from eth_consensus_specs.test.helpers.forks import (
 )
 from eth_consensus_specs.test.helpers.keys import privkeys, pubkeys
 from eth_consensus_specs.test.helpers.proposer_slashings import get_valid_proposer_slashing
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
@@ -372,7 +372,7 @@ def get_random_withdrawal_requests(spec, state, rng, num_withdrawals=None):
         address = rng.getrandbits(160).to_bytes(20, "big")
         validator_index = rng.choice(active_validator_indices)
         validator = state.validators[validator_index]
-        validator_balance = state.balances[validator_index]
+        validator_balance = get_balances(spec, state)[validator_index]
         withdrawal_requests.append(
             spec.WithdrawalRequest(
                 source_address=address,

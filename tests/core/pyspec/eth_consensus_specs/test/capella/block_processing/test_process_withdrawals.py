@@ -20,7 +20,7 @@ from eth_consensus_specs.test.helpers.forks import is_post_gloas
 from eth_consensus_specs.test.helpers.random import (
     randomize_state,
 )
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.state import (
     next_epoch,
     next_slot,
@@ -77,7 +77,7 @@ def test_success_one_partial_withdrawal(spec, state):
     assert len(fully_withdrawable_indices) == 0
     assert len(partial_withdrawals_indices) == 1
     for index in partial_withdrawals_indices:
-        assert state.balances[index] > spec.MAX_EFFECTIVE_BALANCE
+        assert get_balances(spec, state)[index] > spec.MAX_EFFECTIVE_BALANCE
 
     next_slot(spec, state)
     execution_payload = build_empty_execution_payload(spec, state)
@@ -545,7 +545,7 @@ def test_withdrawable_epoch_but_0_balance(spec, state):
     set_validator_fully_withdrawable(spec, state, 0, current_epoch)
 
     get_validators(spec, state)[0].effective_balance = 10000000000
-    state.balances[0] = 0
+    get_balances(spec, state)[0] = 0
 
     execution_payload = build_empty_execution_payload(spec, state)
 
@@ -561,7 +561,7 @@ def test_withdrawable_epoch_but_0_effective_balance_0_balance(spec, state):
     set_validator_fully_withdrawable(spec, state, 0, current_epoch)
 
     get_validators(spec, state)[0].effective_balance = 0
-    state.balances[0] = 0
+    get_balances(spec, state)[0] = 0
 
     execution_payload = build_empty_execution_payload(spec, state)
 
@@ -577,7 +577,7 @@ def test_withdrawable_epoch_but_0_effective_balance_nonzero_balance(spec, state)
     set_validator_fully_withdrawable(spec, state, 0, current_epoch)
 
     get_validators(spec, state)[0].effective_balance = 0
-    state.balances[0] = 100000000
+    get_balances(spec, state)[0] = 100000000
 
     execution_payload = build_empty_execution_payload(spec, state)
 
@@ -630,7 +630,7 @@ def run_random_full_withdrawals_test(spec, state, rng):
                 )
             # 12.5% not enough balance
             if rng.randint(0, 7) == 0:
-                state.balances[index] = 0
+                get_balances(spec, state)[index] = 0
             # 12.5% not close enough epoch
             if rng.randint(0, 7) == 0:
                 validator.withdrawable_epoch += 1

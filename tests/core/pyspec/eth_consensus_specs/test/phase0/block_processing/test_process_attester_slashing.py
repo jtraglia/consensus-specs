@@ -26,7 +26,7 @@ from eth_consensus_specs.test.helpers.proposer_slashings import (
     get_min_slashing_penalty_quotient,
     get_whistleblower_reward_quotient,
 )
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.state import (
     get_balance,
     next_epoch_via_block,
@@ -53,9 +53,9 @@ def run_attester_slashing_processing(spec, state, attester_slashing, valid=True)
     slashed_indices = get_indexed_attestation_participants(spec, attester_slashing.attestation_1)
 
     proposer_index = spec.get_beacon_proposer_index(state)
-    pre_proposer_balance = get_balance(state, proposer_index)
+    pre_proposer_balance = get_balance(spec, state, proposer_index)
     pre_slashing_balances = {
-        slashed_index: get_balance(state, slashed_index) for slashed_index in slashed_indices
+        slashed_index: get_balance(spec, state, slashed_index) for slashed_index in slashed_indices
     }
     pre_slashing_effectives = {
         slashed_index: get_validators(spec, state)[slashed_index].effective_balance
@@ -91,11 +91,14 @@ def run_attester_slashing_processing(spec, state, attester_slashing, valid=True)
             assert slashed_validator.withdrawable_epoch < spec.FAR_FUTURE_EPOCH
         if slashed_index != proposer_index:
             # NOTE: check proposer balances below
-            assert get_balance(state, slashed_index) < pre_slashing_balances[slashed_index]
+            assert get_balance(spec, state, slashed_index) < pre_slashing_balances[slashed_index]
 
     if proposer_index not in slashed_indices:
         # gained whistleblower reward
-        assert get_balance(state, proposer_index) == pre_proposer_balance + total_proposer_rewards
+        assert (
+            get_balance(spec, state, proposer_index)
+            == pre_proposer_balance + total_proposer_rewards
+        )
     else:
         # gained rewards for all slashings, which may include others. And only lost that of themselves.
         expected_balance = (
@@ -104,7 +107,7 @@ def run_attester_slashing_processing(spec, state, attester_slashing, valid=True)
             - pre_slashing_effectives[proposer_index] // get_min_slashing_penalty_quotient(spec)
         )
 
-        assert get_balance(state, proposer_index) == expected_balance
+        assert get_balance(spec, state, proposer_index) == expected_balance
 
     yield "post", state
 
@@ -216,9 +219,9 @@ def test_misc_balances(spec, state):
 def test_with_effective_balance_disparity(spec, state):
     # Jitter balances to be different from effective balances
     rng = Random(12345)
-    for i in range(len(state.balances)):
-        pre = int(state.balances[i])
-        state.balances[i] += rng.randrange(max(pre - 5000, 0), pre + 5000)
+    for i in range(len(get_balances(spec, state))):
+        pre = int(get_balances(spec, state)[i])
+        get_balances(spec, state)[i] += rng.randrange(max(pre - 5000, 0), pre + 5000)
 
     attester_slashing = get_valid_attester_slashing(spec, state, signed_1=True, signed_2=True)
 

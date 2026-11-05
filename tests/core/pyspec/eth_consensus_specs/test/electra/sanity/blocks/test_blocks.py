@@ -26,7 +26,7 @@ from eth_consensus_specs.test.helpers.deposits import (
 from eth_consensus_specs.test.helpers.execution_payload import (
     compute_el_block_hash_for_block,
 )
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
     transition_to,
@@ -584,7 +584,9 @@ def test_withdrawal_and_consolidation_effective_balance_updates(spec, state):
         == 64 * spec.EFFECTIVE_BALANCE_INCREMENT
     )
     # Validator B's balance should be less than its effective balance, hysteria
-    assert state.balances[b_index] < get_validators(spec, state)[b_index].effective_balance
+    assert (
+        get_balances(spec, state)[b_index] < get_validators(spec, state)[b_index].effective_balance
+    )
 
 
 @with_all_phases_from_to(ELECTRA, GLOAS)

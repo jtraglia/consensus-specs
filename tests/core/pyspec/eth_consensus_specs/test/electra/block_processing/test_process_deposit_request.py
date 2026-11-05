@@ -14,7 +14,7 @@ from eth_consensus_specs.test.helpers.deposit_requests import (
 from eth_consensus_specs.test.helpers.deposits import (
     prepare_deposit_request,
 )
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 
 
 @with_electra_and_later
@@ -96,7 +96,7 @@ def test_process_deposit_request_top_up_min_activation(spec, state):
     amount = spec.MIN_ACTIVATION_BALANCE // 4
     deposit_request = prepare_deposit_request(spec, validator_index, amount, signed=True)
 
-    state.balances[validator_index] = spec.MIN_ACTIVATION_BALANCE
+    get_balances(spec, state)[validator_index] = spec.MIN_ACTIVATION_BALANCE
     get_validators(spec, state)[validator_index].effective_balance = spec.MIN_ACTIVATION_BALANCE
 
     pre_state = state.copy()
@@ -113,7 +113,7 @@ def test_process_deposit_request_top_up_still_less_than_min_activation(spec, sta
 
     balance = 20 * spec.EFFECTIVE_BALANCE_INCREMENT
     assert balance < spec.MIN_ACTIVATION_BALANCE
-    state.balances[validator_index] = balance
+    get_balances(spec, state)[validator_index] = balance
     get_validators(spec, state)[validator_index].effective_balance = balance
 
     pre_state = state.copy()
@@ -132,7 +132,7 @@ def test_process_deposit_request_top_up_max_effective_balance_compounding(spec, 
         + b"\x59" * 20  # a 20-byte eth1 address
     )
 
-    state.balances[validator_index] = spec.MAX_EFFECTIVE_BALANCE
+    get_balances(spec, state)[validator_index] = spec.MAX_EFFECTIVE_BALANCE
     get_validators(spec, state)[validator_index].effective_balance = spec.MAX_EFFECTIVE_BALANCE
     get_validators(spec, state)[validator_index].withdrawal_credentials = withdrawal_credentials
 
@@ -168,7 +168,7 @@ def test_process_deposit_request_top_up_invalid_sig(spec, state):
     amount = spec.MIN_ACTIVATION_BALANCE // 4
     deposit_request = prepare_deposit_request(spec, validator_index, amount)
 
-    state.balances[validator_index] = spec.MIN_ACTIVATION_BALANCE
+    get_balances(spec, state)[validator_index] = spec.MIN_ACTIVATION_BALANCE
     get_validators(spec, state)[validator_index].effective_balance = spec.MIN_ACTIVATION_BALANCE
 
     pre_state = state.copy()

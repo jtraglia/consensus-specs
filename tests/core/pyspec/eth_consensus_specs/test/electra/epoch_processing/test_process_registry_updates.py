@@ -1,7 +1,7 @@
 from eth_consensus_specs.test.context import spec_state_test, with_electra_and_later
 from eth_consensus_specs.test.helpers.deposits import mock_deposit
 from eth_consensus_specs.test.helpers.epoch_processing import run_epoch_processing_with
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.state import next_epoch
 from eth_consensus_specs.test.helpers.withdrawals import (
     set_compounding_withdrawal_credential_with_balance,
@@ -14,7 +14,7 @@ def run_test_activation_queue_eligibility(spec, state, validator_index, balance)
     next_epoch(spec, state)
     next_epoch(spec, state)
 
-    state.balances[validator_index] = balance
+    get_balances(spec, state)[validator_index] = balance
     get_validators(spec, state)[validator_index].effective_balance = (
         balance - balance % spec.EFFECTIVE_BALANCE_INCREMENT
     )

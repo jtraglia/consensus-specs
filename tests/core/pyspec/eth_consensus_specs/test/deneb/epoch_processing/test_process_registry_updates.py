@@ -45,8 +45,7 @@ def run_test_activation_churn_limit(spec, state):
             withdrawable_epoch=spec.FAR_FUTURE_EPOCH,
             effective_balance=balance,
         )
-        append_validator(spec, state, validator)
-        state.balances.append(balance)
+        append_validator(spec, state, validator, balance)
         state.previous_epoch_participation.append(spec.ParticipationFlags(0b0000_0000))
         state.current_epoch_participation.append(spec.ParticipationFlags(0b0000_0000))
         state.inactivity_scores.append(0)

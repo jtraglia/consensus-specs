@@ -56,7 +56,7 @@ def compute_committee_weight_between_slots(
     current_epoch = get_current_epoch(balance_source)
     for index in participants:
         # [Modified in PQ]
-        if is_active_validator(balance_source.pq_validators[index], current_epoch):
+        if is_active_validator(get_validator(balance_source, index), current_epoch):
             active_participants.add(index)
 
     # Return total balance of the participants
@@ -87,14 +87,14 @@ def get_equivocation_score(
         for index in committee_indices.intersection(store.equivocating_indices)
         # [Modified in PQ]
         if is_active_validator(
-            balance_source.pq_validators[index], get_current_epoch(balance_source)
+            get_validator(balance_source, index), get_current_epoch(balance_source)
         )
     ]
 
     return Gwei(
         sum(
             # [Modified in PQ]
-            balance_source.pq_validators[index].effective_balance
+            get_validator(balance_source, index).effective_balance
             for index in active_equivocating_indices
         )
     )
@@ -125,10 +125,10 @@ def get_node_support_between_slots(
         for index in participants
         if (
             # [Modified in PQ]
-            not balance_source.pq_validators[index].slashed
+            not get_validator(balance_source, index).slashed
             and is_active_validator(
                 # [Modified in PQ]
-                balance_source.pq_validators[index],
+                get_validator(balance_source, index),
                 get_current_epoch(balance_source),
             )
         )
@@ -137,7 +137,7 @@ def get_node_support_between_slots(
     return Gwei(
         sum(
             # [Modified in PQ]
-            balance_source.pq_validators[index].effective_balance
+            get_validator(balance_source, index).effective_balance
             for index in unslashed_and_active_indices
             # Check that validator has voted in the support of the node
             # and has not been slashed
@@ -165,12 +165,12 @@ def get_current_target_score(store: Store) -> Gwei:
         index
         for index in get_active_validator_indices(state, get_current_epoch(state))
         # [Modified in PQ]
-        if not state.pq_validators[index].slashed
+        if not get_validator(state, index).slashed
     ]
     return Gwei(
         sum(
             # [Modified in PQ]
-            state.pq_validators[index].effective_balance
+            get_validator(state, index).effective_balance
             for index in unslashed_and_active_indices
             if (
                 index in store.latest_messages

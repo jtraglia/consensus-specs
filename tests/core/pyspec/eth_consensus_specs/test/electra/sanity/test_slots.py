@@ -5,7 +5,7 @@ from eth_consensus_specs.test.context import (
 )
 from eth_consensus_specs.test.helpers.constants import ELECTRA, PQ
 from eth_consensus_specs.test.helpers.deposits import prepare_pending_deposit
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.state import transition_to
 
 
@@ -44,7 +44,7 @@ def test_pending_deposit_extra_gwei(spec, state):
     yield from run_epoch_processing(spec, state, pending_deposits=spec.PendingDeposits.of(deposit))
 
     # Check deposit balance is applied correctly
-    assert state.balances[index] == deposit.amount
+    assert get_balances(spec, state)[index] == deposit.amount
     assert get_validators(spec, state)[index].effective_balance == spec.MIN_ACTIVATION_BALANCE
 
 
@@ -61,7 +61,7 @@ def test_multiple_pending_deposits_same_pubkey(spec, state):
     yield from run_epoch_processing(spec, state, pending_deposits=pending_deposits)
 
     # Check deposit balance is applied correctly
-    assert state.balances[index] == sum(d.amount for d in pending_deposits)
+    assert get_balances(spec, state)[index] == sum(d.amount for d in pending_deposits)
     assert get_validators(spec, state)[index].effective_balance == spec.MIN_ACTIVATION_BALANCE
 
 
@@ -86,7 +86,7 @@ def test_multiple_pending_deposits_same_pubkey_different_signature(spec, state):
     yield from run_epoch_processing(spec, state, pending_deposits=pending_deposits)
 
     # Check that both deposits are accepted
-    assert state.balances[index] == deposit0.amount + deposit1.amount
+    assert get_balances(spec, state)[index] == deposit0.amount + deposit1.amount
     assert get_validators(spec, state)[index].effective_balance == spec.MIN_ACTIVATION_BALANCE
 
 
@@ -107,8 +107,8 @@ def test_multiple_pending_deposits_same_pubkey_compounding(spec, state):
     yield from run_epoch_processing(spec, state, pending_deposits=pending_deposits)
 
     # Check deposit balance is applied correctly
-    assert state.balances[index] == sum(d.amount for d in pending_deposits)
-    assert get_validators(spec, state)[index].effective_balance == state.balances[index]
+    assert get_balances(spec, state)[index] == sum(d.amount for d in pending_deposits)
+    assert get_validators(spec, state)[index].effective_balance == get_balances(spec, state)[index]
 
 
 @with_all_phases_from_except(ELECTRA, [PQ])
@@ -130,7 +130,7 @@ def test_multiple_pending_deposits_same_pubkey_below_upward_threshold(spec, stat
     yield from run_epoch_processing(spec, state, pending_deposits=pending_deposits)
 
     # Check deposit balance is applied correctly
-    assert state.balances[index] == sum(d.amount for d in pending_deposits)
+    assert get_balances(spec, state)[index] == sum(d.amount for d in pending_deposits)
     assert get_validators(spec, state)[index].effective_balance == deposit_0.amount
 
 
@@ -157,7 +157,7 @@ def test_multiple_pending_deposits_same_pubkey_above_upward_threshold(spec, stat
     yield from run_epoch_processing(spec, state, pending_deposits)
 
     # Check deposit balance is applied correctly
-    balance = state.balances[index]
+    balance = get_balances(spec, state)[index]
     assert balance == sum(d.amount for d in pending_deposits)
     assert (
         get_validators(spec, state)[index].effective_balance
@@ -186,11 +186,11 @@ def test_pending_consolidation(spec, state):
         spec.PendingConsolidation(source_index=source_index, target_index=target_index)
     )
 
-    assert state.balances[source_index] == spec.MIN_ACTIVATION_BALANCE
+    assert get_balances(spec, state)[source_index] == spec.MIN_ACTIVATION_BALANCE
     assert (
         get_validators(spec, state)[source_index].effective_balance == spec.MIN_ACTIVATION_BALANCE
     )
-    assert state.balances[target_index] == spec.MIN_ACTIVATION_BALANCE
+    assert get_balances(spec, state)[target_index] == spec.MIN_ACTIVATION_BALANCE
     assert (
         get_validators(spec, state)[target_index].effective_balance == spec.MIN_ACTIVATION_BALANCE
     )
@@ -198,9 +198,9 @@ def test_pending_consolidation(spec, state):
     yield from run_epoch_processing(spec, state, pending_consolidations=pending_consolidations)
 
     # Check the consolidation is processed correctly
-    assert state.balances[source_index] == 0
+    assert get_balances(spec, state)[source_index] == 0
     assert get_validators(spec, state)[source_index].effective_balance == 0
-    assert state.balances[target_index] == spec.MIN_ACTIVATION_BALANCE * 2
+    assert get_balances(spec, state)[target_index] == spec.MIN_ACTIVATION_BALANCE * 2
     assert (
         get_validators(spec, state)[target_index].effective_balance
         == spec.MIN_ACTIVATION_BALANCE * 2

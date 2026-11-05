@@ -10,7 +10,7 @@ from eth_consensus_specs.test.context import (
 )
 from eth_consensus_specs.test.helpers.constants import ELECTRA, MINIMAL, PQ
 from eth_consensus_specs.test.helpers.forks import is_post_gloas
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.withdrawals import (
     set_compounding_withdrawal_credential,
     set_compounding_withdrawal_credential_with_balance,
@@ -106,7 +106,9 @@ def test_basic_consolidation_with_excess_target_balance(spec, state):
     state.consolidation_balance_to_consume = consolidation_churn_limit
 
     # Add excess balance
-    state.balances[target_index] = state.balances[target_index] + spec.EFFECTIVE_BALANCE_INCREMENT
+    get_balances(spec, state)[target_index] = (
+        get_balances(spec, state)[target_index] + spec.EFFECTIVE_BALANCE_INCREMENT
+    )
 
     yield from run_consolidation_processing(spec, state, consolidation)
 
@@ -577,7 +579,9 @@ def test_switch_to_compounding_with_excess(spec, state):
     source_address = b"\x22" * 20
     set_eth1_withdrawal_credential_with_balance(spec, state, source_index, address=source_address)
     # Add excess balance
-    state.balances[source_index] = state.balances[source_index] + spec.EFFECTIVE_BALANCE_INCREMENT
+    get_balances(spec, state)[source_index] = (
+        get_balances(spec, state)[source_index] + spec.EFFECTIVE_BALANCE_INCREMENT
+    )
     # Make consolidation from source to source
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
@@ -603,7 +607,9 @@ def test_switch_to_compounding_with_pending_consolidations_at_limit(spec, state)
     source_address = b"\x22" * 20
     set_eth1_withdrawal_credential_with_balance(spec, state, source_index, address=source_address)
     # Add excess balance
-    state.balances[source_index] = state.balances[source_index] + spec.EFFECTIVE_BALANCE_INCREMENT
+    get_balances(spec, state)[source_index] = (
+        get_balances(spec, state)[source_index] + spec.EFFECTIVE_BALANCE_INCREMENT
+    )
     # Make consolidation from source to source
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
@@ -1272,7 +1278,9 @@ def test_switch_to_compounding_source_compounding_withdrawal_credential(spec, st
         source_pubkey=state.validators[source_index].pubkey,
         target_pubkey=state.validators[source_index].pubkey,
     )
-    state.balances[source_index] = spec.MIN_ACTIVATION_BALANCE + spec.EFFECTIVE_BALANCE_INCREMENT
+    get_balances(spec, state)[source_index] = (
+        spec.MIN_ACTIVATION_BALANCE + spec.EFFECTIVE_BALANCE_INCREMENT
+    )
 
     # Check the return condition
     assert not spec.has_eth1_withdrawal_credential(get_validators(spec, state)[source_index])
@@ -1342,8 +1350,8 @@ def run_consolidation_processing(spec, state, consolidation, success=True):
         pre_exit_epoch_source = source_validator.exit_epoch
         pre_exit_epoch_target = target_validator.exit_epoch
         pre_pending_consolidations = state.pending_consolidations.copy()
-        pre_source_balance = state.balances[source_index]
-        pre_target_balance = state.balances[target_index]
+        pre_source_balance = get_balances(spec, state)[source_index]
+        pre_target_balance = get_balances(spec, state)[target_index]
     else:
         pre_state = state.copy()
 
@@ -1387,8 +1395,8 @@ def run_consolidation_processing(spec, state, consolidation, success=True):
             pre_pending_consolidations + [expected_new_pending_consolidation]
         )
         # Check no balance move happened
-        assert state.balances[source_index] == pre_source_balance
-        assert state.balances[target_index] == pre_target_balance
+        assert get_balances(spec, state)[source_index] == pre_source_balance
+        assert get_balances(spec, state)[target_index] == pre_target_balance
     else:
         assert pre_state == state
 
@@ -1408,7 +1416,7 @@ def run_switch_to_compounding_processing(spec, state, consolidation, success=Tru
         source_validator = get_validators(spec, state)[source_index]
         pre_pending_consolidations = state.pending_consolidations.copy()
         pre_withdrawal_credentials = source_validator.withdrawal_credentials
-        pre_balance = state.balances[source_index]
+        pre_balance = get_balances(spec, state)[source_index]
     else:
         pre_state = state.copy()
 
@@ -1438,7 +1446,7 @@ def run_switch_to_compounding_processing(spec, state, consolidation, success=Tru
             == post_withdrawal_credentials
         )
         # Check excess balance is queued
-        assert state.balances[source_index] == spec.MIN_ACTIVATION_BALANCE
+        assert get_balances(spec, state)[source_index] == spec.MIN_ACTIVATION_BALANCE
         if pre_balance > spec.MIN_ACTIVATION_BALANCE:
             assert len(state.pending_deposits) == 1
             pending_deposit = state.pending_deposits[0]

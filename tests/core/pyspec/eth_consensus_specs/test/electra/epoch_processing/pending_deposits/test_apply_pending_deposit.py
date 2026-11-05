@@ -10,7 +10,7 @@ from eth_consensus_specs.test.helpers.deposits import (
     run_pending_deposit_applying,
 )
 from eth_consensus_specs.test.helpers.forks import is_post_gloas
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.state import next_epoch_via_block
 from eth_consensus_specs.test.helpers.withdrawals import (
     set_parent_block_full,
@@ -270,12 +270,12 @@ def test_apply_pending_deposit_top_up__min_activation_balance(spec, state):
     amount = spec.MIN_ACTIVATION_BALANCE // 4
     pending_deposit = prepare_pending_deposit(spec, validator_index, amount, signed=True)
 
-    state.balances[validator_index] = spec.MIN_ACTIVATION_BALANCE
+    get_balances(spec, state)[validator_index] = spec.MIN_ACTIVATION_BALANCE
     get_validators(spec, state)[validator_index].effective_balance = spec.MIN_ACTIVATION_BALANCE
 
     yield from run_pending_deposit_applying(spec, state, pending_deposit, validator_index)
 
-    assert state.balances[validator_index] == spec.MIN_ACTIVATION_BALANCE + amount
+    assert get_balances(spec, state)[validator_index] == spec.MIN_ACTIVATION_BALANCE + amount
     assert (
         get_validators(spec, state)[validator_index].effective_balance
         == spec.MIN_ACTIVATION_BALANCE
@@ -294,13 +294,13 @@ def test_apply_pending_deposit_top_up__min_activation_balance_compounding(spec, 
     amount = spec.MIN_ACTIVATION_BALANCE // 4
     pending_deposit = prepare_pending_deposit(spec, validator_index, amount, signed=True)
 
-    state.balances[validator_index] = spec.MIN_ACTIVATION_BALANCE
+    get_balances(spec, state)[validator_index] = spec.MIN_ACTIVATION_BALANCE
     get_validators(spec, state)[validator_index].withdrawal_credentials = withdrawal_credentials
     get_validators(spec, state)[validator_index].effective_balance = spec.MIN_ACTIVATION_BALANCE
 
     yield from run_pending_deposit_applying(spec, state, pending_deposit, validator_index)
 
-    assert state.balances[validator_index] == spec.MIN_ACTIVATION_BALANCE + amount
+    assert get_balances(spec, state)[validator_index] == spec.MIN_ACTIVATION_BALANCE + amount
     assert (
         get_validators(spec, state)[validator_index].effective_balance
         == spec.MIN_ACTIVATION_BALANCE
@@ -319,7 +319,7 @@ def test_apply_pending_deposit_top_up__max_effective_balance_compounding(spec, s
     amount = spec.MAX_EFFECTIVE_BALANCE_ELECTRA // 4
     pending_deposit = prepare_pending_deposit(spec, validator_index, amount, signed=True)
 
-    state.balances[validator_index] = spec.MAX_EFFECTIVE_BALANCE_ELECTRA
+    get_balances(spec, state)[validator_index] = spec.MAX_EFFECTIVE_BALANCE_ELECTRA
     get_validators(spec, state)[validator_index].withdrawal_credentials = withdrawal_credentials
     get_validators(spec, state)[
         validator_index
@@ -327,7 +327,7 @@ def test_apply_pending_deposit_top_up__max_effective_balance_compounding(spec, s
 
     yield from run_pending_deposit_applying(spec, state, pending_deposit, validator_index)
 
-    assert state.balances[validator_index] == spec.MAX_EFFECTIVE_BALANCE_ELECTRA + amount
+    assert get_balances(spec, state)[validator_index] == spec.MAX_EFFECTIVE_BALANCE_ELECTRA + amount
     assert (
         get_validators(spec, state)[validator_index].effective_balance
         == spec.MAX_EFFECTIVE_BALANCE_ELECTRA
@@ -343,12 +343,12 @@ def test_apply_pending_deposit_top_up__less_effective_balance(spec, state):
 
     initial_balance = spec.MIN_ACTIVATION_BALANCE - 1000
     initial_effective_balance = spec.MIN_ACTIVATION_BALANCE - spec.EFFECTIVE_BALANCE_INCREMENT
-    state.balances[validator_index] = initial_balance
+    get_balances(spec, state)[validator_index] = initial_balance
     get_validators(spec, state)[validator_index].effective_balance = initial_effective_balance
 
     yield from run_pending_deposit_applying(spec, state, pending_deposit, validator_index)
 
-    assert state.balances[validator_index] == initial_balance + amount
+    assert get_balances(spec, state)[validator_index] == initial_balance + amount
     # unchanged effective balance
     assert (
         get_validators(spec, state)[validator_index].effective_balance == initial_effective_balance
@@ -564,14 +564,14 @@ def test_apply_pending_deposit_success_top_up_to_withdrawn_validator(spec, state
 
     # Fully withdraw validator
     set_validator_fully_withdrawable(spec, state, validator_index)
-    assert state.balances[validator_index] > 0
+    assert get_balances(spec, state)[validator_index] > 0
 
     # Make parent block full in Gloas so withdrawals are processed
     if is_post_gloas(spec):
         set_parent_block_full(spec, state)
 
     next_epoch_via_block(spec, state)
-    assert state.balances[validator_index] == 0
+    assert get_balances(spec, state)[validator_index] == 0
     assert get_validators(spec, state)[validator_index].effective_balance > 0
     next_epoch_via_block(spec, state)
     assert get_validators(spec, state)[validator_index].effective_balance == 0
@@ -582,11 +582,11 @@ def test_apply_pending_deposit_success_top_up_to_withdrawn_validator(spec, state
 
     yield from run_pending_deposit_applying(spec, state, pending_deposit, validator_index)
 
-    assert state.balances[validator_index] == amount
+    assert get_balances(spec, state)[validator_index] == amount
     assert get_validators(spec, state)[validator_index].effective_balance == 0
 
     validator = get_validators(spec, state)[validator_index]
-    balance = state.balances[validator_index]
+    balance = get_balances(spec, state)[validator_index]
     current_epoch = spec.get_current_epoch(state)
 
     assert spec.is_fully_withdrawable_validator(validator, balance, current_epoch)

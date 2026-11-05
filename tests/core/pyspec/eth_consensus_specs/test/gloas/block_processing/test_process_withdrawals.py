@@ -5,7 +5,7 @@ from eth_consensus_specs.test.context import (
     with_gloas_and_later,
 )
 from eth_consensus_specs.test.helpers.builders import add_builder_to_registry
-from eth_consensus_specs.test.helpers.registry import get_builders, get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_builders, get_validators
 from eth_consensus_specs.test.helpers.withdrawals import (
     assert_process_withdrawals,
     check_is_partially_withdrawable_validator,
@@ -404,7 +404,9 @@ def test_early_return_empty_parent_block(spec, state):
     validator_indices = [1, 2]
 
     withdrawal_amount = spec.Gwei(1_000_000_000)
-    state.balances[0] = max(state.balances[0], withdrawal_amount + spec.MIN_ACTIVATION_BALANCE)
+    get_balances(spec, state)[0] = max(
+        get_balances(spec, state)[0], withdrawal_amount + spec.MIN_ACTIVATION_BALANCE
+    )
     prepare_process_withdrawals(
         spec,
         state,
@@ -496,7 +498,7 @@ def test_builder_payments_exceed_limit_blocks_other_withdrawals(spec, state):
 
     # Cap validator balances to prevent sweep withdrawals
     capped_validator_balances = {
-        i: min(state.balances[i], spec.MAX_EFFECTIVE_BALANCE)
+        i: min(get_balances(spec, state)[i], spec.MAX_EFFECTIVE_BALANCE)
         for i in range(len(state.validators))
         if get_validators(spec, state)[i].withdrawal_credentials[0:1]
         == spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX
@@ -683,7 +685,7 @@ def test_builder_withdrawals_processed_order(spec, state):
         withdrawal_order=[builder_validator_index, pending_index, sweep_index],
         balances={
             sweep_index: 0,
-            pending_index: pre_state.balances[pending_index] - 1_000_000_000,
+            pending_index: get_balances(spec, pre_state)[pending_index] - 1_000_000_000,
         },
         builder_balance_deltas={builder_index: -int(withdrawal_amount)},
         builder_pending_delta=-1,
@@ -692,7 +694,7 @@ def test_builder_withdrawals_processed_order(spec, state):
         withdrawal_amounts_builders={builder_index: withdrawal_amount},
         withdrawal_amounts={
             pending_index: 1_000_000_000,  # default pending partial amount
-            sweep_index: pre_state.balances[sweep_index],  # full withdrawal
+            sweep_index: get_balances(spec, pre_state)[sweep_index],  # full withdrawal
         },
     )
 
@@ -1072,7 +1074,9 @@ def test_full_builder_payload_reserves_sweep_slot(spec, state):
     # Setup: Cap validator balances to prevent any sweep withdrawals
     for i, validator in enumerate(get_validators(spec, state)):
         if validator.withdrawal_credentials[0:1] == spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX:
-            state.balances[i] = min(state.balances[i], spec.MAX_EFFECTIVE_BALANCE)
+            get_balances(spec, state)[i] = min(
+                get_balances(spec, state)[i], spec.MAX_EFFECTIVE_BALANCE
+            )
 
     # Setup: Simulate parent being FULL so process_withdrawals runs (deferred
     # processing otherwise returns early when parent was EMPTY).

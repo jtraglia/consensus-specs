@@ -7,10 +7,10 @@
 - [Introduction](#introduction)
 - [Configs](#configs)
 - [Helpers](#helpers)
-  - [New `get_registered_validator_pq_data`](#new-get_registered_validator_pq_data)
-  - [New `get_registered_builder_pq_data`](#new-get_registered_builder_pq_data)
   - [New `compute_pq_validators`](#new-compute_pq_validators)
   - [New `compute_pq_builders`](#new-compute_pq_builders)
+  - [New `compute_fork_withdrawals`](#new-compute_fork_withdrawals)
+  - [New `compute_pq_execution_payload_bid`](#new-compute_pq_execution_payload_bid)
 - [Fork to PQ](#fork-to-pq)
   - [Fork trigger](#fork-trigger)
   - [Upgrading the state](#upgrading-the-state)
@@ -23,22 +23,31 @@ This document describes the process of the PQ upgrade.
 
 Before the fork, validators register their XMSS public key and VRF data, and
 builders their XMSS public key, through [PQReg](../pqreg/beacon-chain.md)
-registrations. At the fork, every validator is copied into `state.pq_validators`
-and every builder into `state.pq_builders`, at the same index, with its
-registered material. `state.validators` and `state.builders` are frozen from
-then on, and only pending deposits still find a validator by BLS public key in
-`state.validators`.
+registrations. At the fork, only the validators and builders that registered
+move to `state.pq_validators` and `state.pq_builders`, with their registered
+material. Each keeps its index, which its record stores. A validator's record
+also takes its balance, and its participation flags and inactivity score move
+with it. `state.validators`, `state.balances`, and `state.builders` are removed.
 
-A validator or builder without a registration gets the empty XMSS public key,
-which no signature verifies against, and has its exit initiated. PQReg ignores a
-registration whose XMSS public key is already registered by another validator,
-or by another builder, so no two validators and no two builders share an XMSS
-public key.
+The fork pays out the others through `state.pending_fork_withdrawals`, which
+withdrawals process before any other queue. A validator that did not register is
+withdrawn in full to its withdrawal address. A validator with `0x00` withdrawal
+credentials has no withdrawal address to register from, so its balance is
+burned. A builder that did not register first pays its settled builder payments
+to their fee recipients, and the rest of its balance is withdrawn to its
+execution address. Its unsettled payments are dropped.
 
-*Note*: A validator with `0x00` withdrawal credentials has no withdrawal address
-to register from, so it is exited. `BLSToExecutionChange` is disabled in PQ, so
-its balance stays locked until a later upgrade adds a quantum-safe way to change
-its credentials.
+Deposits name their validator by BLS public key, which the state no longer
+holds, so the fork refunds each pending deposit. A top-up is refunded to the
+withdrawal address of the validator it tops up, since a top-up need not set its
+own withdrawal credentials. A deposit for a new validator is refunded to the
+address in its withdrawal credentials. A deposit is burned if those credentials
+have no address.
+
+The fork also drops the pending partial withdrawals of validators that did not
+register, and the pending consolidations that involve one. It recomputes the PTC
+window from the new registry. The proposer lookahead is kept, so the slots it
+assigns to validators that did not register are missed.
 
 ## Configs
 
@@ -51,51 +60,30 @@ Warning: this configuration is not definitive.
 
 ## Helpers
 
-### New `get_registered_validator_pq_data`
-
-```python
-def get_registered_validator_pq_data(pre: pqreg.BeaconState) -> dict[ValidatorIndex, Bytes64]:
-    """
-    Return the PQ material registered for each validator index.
-    """
-    registered: dict[ValidatorIndex, Bytes64] = {}
-    for registration in pre.validator_pq_registrations:
-        registered[registration.validator_index] = registration.pq_data
-    return registered
-```
-
-### New `get_registered_builder_pq_data`
-
-```python
-def get_registered_builder_pq_data(pre: pqreg.BeaconState) -> dict[BLSPubkey, Bytes32]:
-    """
-    Return the PQ material registered for each builder public key.
-    """
-    registered: dict[BLSPubkey, Bytes32] = {}
-    for registration in pre.builder_pq_registrations:
-        registered[registration.builder_pubkey] = registration.pq_data
-    return registered
-```
-
 ### New `compute_pq_validators`
 
 ```python
 def compute_pq_validators(pre: pqreg.BeaconState) -> PQValidators:
-    registered = get_registered_validator_pq_data(pre)
+    registrations = sorted(
+        pre.validator_pq_registrations, key=lambda registration: registration.validator_index
+    )
     pq_validators = PQValidators()
-    for index, validator in enumerate(pre.validators):
-        pq_data = registered.get(ValidatorIndex(index), Bytes64())
+    for registration in registrations:
+        index = registration.validator_index
+        validator = pre.validators[index]
         pq_validators.append(
             PQValidator(
-                pubkey=XMSSPubkey(pq_data[:32]),
-                vrf_data=Root(pq_data[32:]),
+                pubkey=XMSSPubkey(registration.pq_data[:32]),
+                vrf_data=Root(registration.pq_data[32:]),
                 withdrawal_credentials=validator.withdrawal_credentials,
+                index=index,
+                balance=pre.balances[index],
                 effective_balance=validator.effective_balance,
-                slashed=validator.slashed,
                 activation_eligibility_epoch=validator.activation_eligibility_epoch,
                 activation_epoch=validator.activation_epoch,
                 exit_epoch=validator.exit_epoch,
                 withdrawable_epoch=validator.withdrawable_epoch,
+                slashed=validator.slashed,
             )
         )
     return pq_validators
@@ -105,12 +93,18 @@ def compute_pq_validators(pre: pqreg.BeaconState) -> PQValidators:
 
 ```python
 def compute_pq_builders(pre: pqreg.BeaconState) -> PQBuilders:
-    registered = get_registered_builder_pq_data(pre)
+    registered = {
+        registration.builder_pubkey: registration.pq_data
+        for registration in pre.builder_pq_registrations
+    }
     pq_builders = PQBuilders()
-    for builder in pre.builders:
+    for index, builder in enumerate(pre.builders):
+        if builder.pubkey not in registered:
+            continue
         pq_builders.append(
             PQBuilder(
-                pubkey=XMSSPubkey(registered.get(builder.pubkey, Bytes32())),
+                index=BuilderIndex(index),
+                pubkey=XMSSPubkey(registered[builder.pubkey]),
                 version=builder.version,
                 execution_address=builder.execution_address,
                 balance=builder.balance,
@@ -119,6 +113,81 @@ def compute_pq_builders(pre: pqreg.BeaconState) -> PQBuilders:
             )
         )
     return pq_builders
+```
+
+### New `compute_fork_withdrawals`
+
+```python
+def compute_fork_withdrawals(pre: pqreg.BeaconState) -> PendingForkWithdrawals:
+    validator_indices = [
+        registration.validator_index for registration in pre.validator_pq_registrations
+    ]
+    builder_pubkeys = [registration.builder_pubkey for registration in pre.builder_pq_registrations]
+    withdrawals = PendingForkWithdrawals()
+
+    # Withdraw validators that did not register, and burn those without an address
+    for index, validator in enumerate(pre.validators):
+        if ValidatorIndex(index) in validator_indices:
+            continue
+        balance = pre.balances[index]
+        if pqreg.has_execution_withdrawal_credential(validator) and balance > 0:
+            address = ExecutionAddress(validator.withdrawal_credentials[12:])
+            withdrawals.append(PendingForkWithdrawal(address=address, amount=balance))
+
+    # Pay the settled payments of builders that did not register
+    builder_balances: dict[BuilderIndex, Gwei] = {}
+    for index, builder in enumerate(pre.builders):
+        if builder.pubkey not in builder_pubkeys:
+            builder_balances[BuilderIndex(index)] = builder.balance
+    for withdrawal in pre.builder_pending_withdrawals:
+        if withdrawal.builder_index in builder_balances:
+            balance = builder_balances[withdrawal.builder_index]
+            amount = min(withdrawal.amount, balance)
+            builder_balances[withdrawal.builder_index] = balance - amount
+            if amount > 0:
+                withdrawals.append(
+                    PendingForkWithdrawal(address=withdrawal.fee_recipient, amount=amount)
+                )
+
+    # Withdraw the rest of their balances
+    for builder_index, balance in builder_balances.items():
+        if balance > 0:
+            address = pre.builders[builder_index].execution_address
+            withdrawals.append(PendingForkWithdrawal(address=address, amount=balance))
+
+    # Refund pending deposits, and burn those without an address
+    validator_pubkeys = [validator.pubkey for validator in pre.validators]
+    for deposit in pre.pending_deposits:
+        if deposit.pubkey in validator_pubkeys:
+            validator = pre.validators[validator_pubkeys.index(deposit.pubkey)]
+            withdrawal_credentials = validator.withdrawal_credentials
+        else:
+            withdrawal_credentials = deposit.withdrawal_credentials
+        prefix = withdrawal_credentials[:1]
+        if prefix in (ETH1_ADDRESS_WITHDRAWAL_PREFIX, COMPOUNDING_WITHDRAWAL_PREFIX):
+            address = ExecutionAddress(withdrawal_credentials[12:])
+            withdrawals.append(PendingForkWithdrawal(address=address, amount=deposit.amount))
+
+    return withdrawals
+```
+
+### New `compute_pq_execution_payload_bid`
+
+*Note*: When the parent's payload is older than the previous epoch,
+`apply_parent_execution_payload` charges the bid's value to its builder. A
+builder that did not register is no longer in the registry, so its bid is
+carried over with no value.
+
+```python
+def compute_pq_execution_payload_bid(pre: pqreg.BeaconState) -> ExecutionPayloadBid:
+    bid = pre.latest_execution_payload_bid.copy()
+    builder_pubkeys = [registration.builder_pubkey for registration in pre.builder_pq_registrations]
+    if (
+        bid.builder_index != BUILDER_INDEX_SELF_BUILD
+        and pre.builders[bid.builder_index].pubkey not in builder_pubkeys
+    ):
+        bid.value = Gwei(0)
+    return bid
 ```
 
 ## Fork to PQ
@@ -133,17 +202,18 @@ If `state.slot % SLOTS_PER_EPOCH == 0` and
 `compute_epoch_at_slot(state.slot) == PQ_FORK_EPOCH`, an irregular state change
 is made to upgrade to PQ.
 
-*Note*: Exits are initiated through the exit churn, so unregistered validators
-remain in the active set, unable to sign, until their exit epoch.
-
-*Note*: `latest_execution_payload_bid` is copied unchanged. Its
-`execution_requests_root` may commit to the pre-fork `ExecutionRequests` type,
-whose root differs from the PQ type even for identical content. The upgrade
-cannot recompute it because the state stores only the commitment.
+*Note*: `latest_execution_payload_bid` keeps its `execution_requests_root`,
+which may commit to the pre-fork `ExecutionRequests` type, whose root differs
+from the PQ type even for identical content. The upgrade cannot recompute it
+because the state stores only the commitment.
 
 ```python
 def upgrade_to_pq(pre: pqreg.BeaconState) -> BeaconState:
     epoch = pqreg.get_current_epoch(pre)
+    pq_validators = compute_pq_validators(pre)
+    validator_indices = [validator.index for validator in pq_validators]
+    pq_builders = compute_pq_builders(pre)
+    builder_indices = [builder.index for builder in pq_builders]
 
     post = BeaconState(
         genesis_time=pre.genesis_time,
@@ -162,17 +232,28 @@ def upgrade_to_pq(pre: pqreg.BeaconState) -> BeaconState:
         eth1_data=pre.eth1_data,
         eth1_data_votes=pre.eth1_data_votes,
         eth1_deposit_index=pre.eth1_deposit_index,
-        validators=pre.validators,
-        balances=pre.balances,
+        # [Modified in PQ]
+        # Removed `validators`
+        # [Modified in PQ]
+        # Removed `balances`
         randao_mixes=pre.randao_mixes,
         slashings=pre.slashings,
-        previous_epoch_participation=pre.previous_epoch_participation,
-        current_epoch_participation=pre.current_epoch_participation,
+        # [Modified in PQ]
+        previous_epoch_participation=EpochParticipation(
+            data=[pre.previous_epoch_participation[index] for index in validator_indices]
+        ),
+        # [Modified in PQ]
+        current_epoch_participation=EpochParticipation(
+            data=[pre.current_epoch_participation[index] for index in validator_indices]
+        ),
         justification_bits=pre.justification_bits,
         previous_justified_checkpoint=pre.previous_justified_checkpoint,
         current_justified_checkpoint=pre.current_justified_checkpoint,
         finalized_checkpoint=pre.finalized_checkpoint,
-        inactivity_scores=pre.inactivity_scores,
+        # [Modified in PQ]
+        inactivity_scores=InactivityScores(
+            data=[pre.inactivity_scores[index] for index in validator_indices]
+        ),
         # [Modified in PQ]
         # Removed `current_sync_committee`
         # [Modified in PQ]
@@ -187,16 +268,49 @@ def upgrade_to_pq(pre: pqreg.BeaconState) -> BeaconState:
         earliest_exit_epoch=pre.earliest_exit_epoch,
         consolidation_balance_to_consume=pre.consolidation_balance_to_consume,
         earliest_consolidation_epoch=pre.earliest_consolidation_epoch,
-        pending_deposits=pre.pending_deposits,
-        pending_partial_withdrawals=pre.pending_partial_withdrawals,
-        pending_consolidations=pre.pending_consolidations,
+        # [Modified in PQ]
+        pending_deposits=PendingDeposits(),
+        # [Modified in PQ]
+        pending_partial_withdrawals=PendingPartialWithdrawals(
+            data=[
+                withdrawal
+                for withdrawal in pre.pending_partial_withdrawals
+                if withdrawal.validator_index in validator_indices
+            ]
+        ),
+        # [Modified in PQ]
+        pending_consolidations=PendingConsolidations(
+            data=[
+                consolidation
+                for consolidation in pre.pending_consolidations
+                if consolidation.source_index in validator_indices
+                and consolidation.target_index in validator_indices
+            ]
+        ),
         proposer_lookahead=pre.proposer_lookahead,
-        builders=pre.builders,
+        # [Modified in PQ]
+        # Removed `builders`
         next_withdrawal_builder_index=pre.next_withdrawal_builder_index,
         execution_payload_availability=pre.execution_payload_availability,
-        builder_pending_payments=pre.builder_pending_payments,
-        builder_pending_withdrawals=pre.builder_pending_withdrawals,
-        latest_execution_payload_bid=pre.latest_execution_payload_bid,
+        # [Modified in PQ]
+        builder_pending_payments=BuilderPendingPayments(
+            data=[
+                payment
+                if payment.withdrawal.builder_index in builder_indices
+                else BuilderPendingPayment.empty()
+                for payment in pre.builder_pending_payments
+            ]
+        ),
+        # [Modified in PQ]
+        builder_pending_withdrawals=BuilderPendingWithdrawals(
+            data=[
+                withdrawal
+                for withdrawal in pre.builder_pending_withdrawals
+                if withdrawal.builder_index in builder_indices
+            ]
+        ),
+        # [Modified in PQ]
+        latest_execution_payload_bid=compute_pq_execution_payload_bid(pre),
         payload_expected_withdrawals=pre.payload_expected_withdrawals,
         ptc_window=pre.ptc_window,
         # [Modified in PQ]
@@ -204,21 +318,17 @@ def upgrade_to_pq(pre: pqreg.BeaconState) -> BeaconState:
         # [Modified in PQ]
         # Removed `builder_pq_registrations`
         # [New in PQ]
-        pq_validators=compute_pq_validators(pre),
+        pq_validators=pq_validators,
         # [New in PQ]
-        pq_builders=compute_pq_builders(pre),
+        pq_builders=pq_builders,
+        # [New in PQ]
+        next_validator_index=ValidatorIndex(len(pre.validators)),
+        # [New in PQ]
+        pending_fork_withdrawals=compute_fork_withdrawals(pre),
     )
 
     # [New in PQ]
-    for index, validator in enumerate(post.pq_validators):
-        if validator.pubkey == XMSSPubkey():
-            initiate_validator_exit(post, ValidatorIndex(index))
-
-    # [New in PQ]
-    for builder_index, builder in enumerate(post.pq_builders):
-        is_registered = builder.pubkey != XMSSPubkey()
-        if not is_registered and builder.withdrawable_epoch == FAR_FUTURE_EPOCH:
-            initiate_builder_exit(post, BuilderIndex(builder_index))
+    post.ptc_window = initialize_ptc_window(post)
 
     return post
 ```

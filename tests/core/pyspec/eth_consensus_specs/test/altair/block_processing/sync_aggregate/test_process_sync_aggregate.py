@@ -20,7 +20,7 @@ from eth_consensus_specs.test.helpers.constants import (
     MINIMAL,
     PQ,
 )
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.state import (
     next_epoch_via_block,
     state_transition_and_sign_block,
@@ -248,7 +248,7 @@ def _run_sync_committee_selected_twice(
     committee_bits[positions[1]] = participate_second_position
 
     # Set validator's balance
-    state.balances[validator_index] = pre_balance
+    get_balances(spec, state)[validator_index] = pre_balance
     get_validators(spec, state)[validator_index].effective_balance = min(
         pre_balance - pre_balance % spec.EFFECTIVE_BALANCE_INCREMENT,
         spec.MAX_EFFECTIVE_BALANCE,
@@ -280,7 +280,7 @@ def test_sync_committee_rewards_duplicate_committee_zero_balance_only_participat
     )
 
     # The validator gets reward first (balance > 0) and then gets the same amount of penalty (balance == 0)
-    assert state.balances[validator_index] == 0
+    assert get_balances(spec, state)[validator_index] == 0
 
 
 @with_all_phases_from_except(ALTAIR, [PQ])
@@ -301,7 +301,7 @@ def test_sync_committee_rewards_duplicate_committee_zero_balance_only_participat
     )
 
     # The validator gets penalty first (balance is still 0) and then gets reward (balance > 0)
-    assert state.balances[validator_index] > 0
+    assert get_balances(spec, state)[validator_index] > 0
 
 
 @with_all_phases_from_except(ALTAIR, [PQ])
@@ -318,7 +318,7 @@ def test_sync_committee_rewards_duplicate_committee_max_effective_balance_only_p
         participate_second_position=False,
     )
 
-    assert state.balances[validator_index] == spec.MAX_EFFECTIVE_BALANCE
+    assert get_balances(spec, state)[validator_index] == spec.MAX_EFFECTIVE_BALANCE
 
 
 @with_all_phases_from_except(ALTAIR, [PQ])
@@ -335,7 +335,7 @@ def test_sync_committee_rewards_duplicate_committee_max_effective_balance_only_p
         participate_second_position=True,
     )
 
-    assert state.balances[validator_index] == spec.MAX_EFFECTIVE_BALANCE
+    assert get_balances(spec, state)[validator_index] == spec.MAX_EFFECTIVE_BALANCE
 
 
 @with_all_phases_from_except(ALTAIR, [PQ])

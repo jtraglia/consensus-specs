@@ -9,7 +9,7 @@ from eth_consensus_specs.test.context import (
 from eth_consensus_specs.test.helpers.bls_to_execution_changes import get_signed_address_change
 from eth_consensus_specs.test.helpers.constants import CAPELLA, MAINNET, PQ
 from eth_consensus_specs.test.helpers.keys import pubkeys
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 
 
 def run_bls_to_execution_change_processing(spec, state, signed_address_change, valid=True):
@@ -70,7 +70,7 @@ def test_success_not_activated(spec, state):
     yield from run_bls_to_execution_change_processing(spec, state, signed_address_change)
 
     validator = get_validators(spec, state)[validator_index]
-    balance = state.balances[validator_index]
+    balance = get_balances(spec, state)[validator_index]
     assert not spec.is_fully_withdrawable_validator(
         validator, balance, spec.get_current_epoch(state)
     )
@@ -90,7 +90,7 @@ def test_success_in_activation_queue(spec, state):
     yield from run_bls_to_execution_change_processing(spec, state, signed_address_change)
 
     validator = get_validators(spec, state)[validator_index]
-    balance = state.balances[validator_index]
+    balance = get_balances(spec, state)[validator_index]
     assert not spec.is_fully_withdrawable_validator(
         validator, balance, spec.get_current_epoch(state)
     )
@@ -124,7 +124,7 @@ def test_success_exited(spec, state):
     yield from run_bls_to_execution_change_processing(spec, state, signed_address_change)
 
     validator = get_validators(spec, state)[validator_index]
-    balance = state.balances[validator_index]
+    balance = get_balances(spec, state)[validator_index]
     assert not spec.is_fully_withdrawable_validator(
         validator, balance, spec.get_current_epoch(state)
     )
@@ -144,7 +144,7 @@ def test_success_withdrawable(spec, state):
     yield from run_bls_to_execution_change_processing(spec, state, signed_address_change)
 
     validator = get_validators(spec, state)[validator_index]
-    balance = state.balances[validator_index]
+    balance = get_balances(spec, state)[validator_index]
     assert spec.is_fully_withdrawable_validator(validator, balance, spec.get_current_epoch(state))
 
 

@@ -55,7 +55,7 @@ from eth_consensus_specs.test.helpers.proposer_slashings import (
     get_valid_proposer_slashing,
     get_valid_proposer_slashings,
 )
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.state import (
     get_balance,
     next_epoch,
@@ -438,7 +438,7 @@ def test_empty_epoch_transition_not_finalizing(spec, state):
         )
 
     # copy for later balance lookups.
-    pre_balances = list(state.balances)
+    pre_balances = list(get_balances(spec, state))
     yield "pre", state
 
     spec.process_slots(state, state.slot + (spec.SLOTS_PER_EPOCH * 5))
@@ -451,7 +451,7 @@ def test_empty_epoch_transition_not_finalizing(spec, state):
     assert state.slot == block.slot
     assert state.finalized_checkpoint.epoch < spec.get_current_epoch(state) - 4
     for index in range(len(state.validators)):
-        assert state.balances[index] < pre_balances[index]
+        assert get_balances(spec, state)[index] < pre_balances[index]
 
 
 @with_all_phases
@@ -589,11 +589,11 @@ def check_attester_slashing_effect(spec, pre_state, state, slashed_indices):
         assert slashed_validator.exit_epoch < spec.FAR_FUTURE_EPOCH
         assert slashed_validator.withdrawable_epoch < spec.FAR_FUTURE_EPOCH
         # lost whistleblower reward
-        assert get_balance(state, slashed_index) < get_balance(pre_state, slashed_index)
+        assert get_balance(spec, state, slashed_index) < get_balance(spec, pre_state, slashed_index)
 
     proposer_index = spec.get_beacon_proposer_index(state)
     # gained whistleblower reward
-    assert get_balance(state, proposer_index) > get_balance(pre_state, proposer_index)
+    assert get_balance(spec, state, proposer_index) > get_balance(spec, pre_state, proposer_index)
 
 
 @with_all_phases
@@ -898,7 +898,7 @@ def test_invalid_only_increase_deposit_count(spec, state):
 @spec_state_test
 def test_deposit_in_block(spec, state):
     initial_registry_len = len(state.validators)
-    initial_balances_len = len(state.balances)
+    initial_balances_len = len(get_balances(spec, state))
 
     validator_index = len(state.validators)
     amount = spec.MAX_EFFECTIVE_BALANCE
@@ -916,10 +916,10 @@ def test_deposit_in_block(spec, state):
     if is_post_electra(spec):
         balance = state.pending_deposits[0].amount
     else:
-        balance = get_balance(state, validator_index)
+        balance = get_balance(spec, state, validator_index)
 
     assert len(state.validators) == initial_registry_len + 1
-    assert len(state.balances) == initial_balances_len + 1
+    assert len(get_balances(spec, state)) == initial_balances_len + 1
     assert balance == spec.MAX_EFFECTIVE_BALANCE
     assert state.validators[validator_index].pubkey == pubkeys[validator_index]
 
@@ -953,8 +953,8 @@ def test_deposit_top_up(spec, state):
     deposit = prepare_state_and_deposit(spec, state, validator_index, amount)
 
     initial_registry_len = len(state.validators)
-    initial_balances_len = len(state.balances)
-    validator_pre_balance = get_balance(state, validator_index)
+    initial_balances_len = len(get_balances(spec, state))
+    validator_pre_balance = get_balance(spec, state, validator_index)
 
     pre_state = state.copy()
     yield "pre", pre_state
@@ -968,7 +968,7 @@ def test_deposit_top_up(spec, state):
     yield "post", state
 
     assert len(state.validators) == initial_registry_len
-    assert len(state.balances) == initial_balances_len
+    assert len(get_balances(spec, state)) == initial_balances_len
 
     # Altair introduces sync committee (sm) reward and penalty
     sync_committee_reward = sync_committee_penalty = 0
@@ -985,7 +985,7 @@ def test_deposit_top_up(spec, state):
             )
         )
 
-    balance = get_balance(state, validator_index)
+    balance = get_balance(spec, state, validator_index)
     if is_post_electra(spec):
         balance += state.pending_deposits[0].amount
 

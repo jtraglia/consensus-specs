@@ -24,7 +24,7 @@ from eth_consensus_specs.test.helpers.epoch_processing import run_epoch_processi
 from eth_consensus_specs.test.helpers.forks import (
     is_post_altair,
 )
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.rewards import leaking
 from eth_consensus_specs.test.helpers.state import (
     next_epoch,
@@ -50,32 +50,39 @@ def validate_resulting_balances(spec, pre_state, post_state, attestations):
 
     for index in range(len(pre_state.validators)):
         if not spec.is_active_validator(get_validators(spec, pre_state)[index], current_epoch):
-            assert post_state.balances[index] == pre_state.balances[index]
+            assert get_balances(spec, post_state)[index] == get_balances(spec, pre_state)[index]
         elif not is_post_altair(spec):
             proposer_indices = [a.proposer_index for a in post_state.previous_epoch_attestations]
             if spec.is_in_inactivity_leak(post_state):
                 # Proposers can still make money during a leak before LIGHTCLIENT_PATCH
                 if index in proposer_indices and index in attesting_indices:
-                    assert post_state.balances[index] > pre_state.balances[index]
+                    assert (
+                        get_balances(spec, post_state)[index] > get_balances(spec, pre_state)[index]
+                    )
                 elif index in attesting_indices:
                     # If not proposer but participated optimally, should have exactly neutral balance
-                    assert post_state.balances[index] == pre_state.balances[index]
+                    assert (
+                        get_balances(spec, post_state)[index]
+                        == get_balances(spec, pre_state)[index]
+                    )
                 else:
-                    assert post_state.balances[index] < pre_state.balances[index]
+                    assert (
+                        get_balances(spec, post_state)[index] < get_balances(spec, pre_state)[index]
+                    )
             elif index in attesting_indices:
-                assert post_state.balances[index] > pre_state.balances[index]
+                assert get_balances(spec, post_state)[index] > get_balances(spec, pre_state)[index]
             else:
-                assert post_state.balances[index] < pre_state.balances[index]
+                assert get_balances(spec, post_state)[index] < get_balances(spec, pre_state)[index]
         elif spec.is_in_inactivity_leak(post_state):
             if index in attesting_indices:
                 # If not proposer but participated optimally, should have exactly neutral balance
-                assert post_state.balances[index] == pre_state.balances[index]
+                assert get_balances(spec, post_state)[index] == get_balances(spec, pre_state)[index]
             else:
-                assert post_state.balances[index] < pre_state.balances[index]
+                assert get_balances(spec, post_state)[index] < get_balances(spec, pre_state)[index]
         elif index in attesting_indices:
-            assert post_state.balances[index] > pre_state.balances[index]
+            assert get_balances(spec, post_state)[index] > get_balances(spec, pre_state)[index]
         else:
-            assert post_state.balances[index] < pre_state.balances[index]
+            assert get_balances(spec, post_state)[index] < get_balances(spec, pre_state)[index]
 
 
 @with_all_phases
@@ -88,7 +95,7 @@ def test_genesis_epoch_no_attestations_no_penalties(spec, state):
     yield from run_process_rewards_and_penalties(spec, state)
 
     for index in range(len(pre_state.validators)):
-        assert state.balances[index] == pre_state.balances[index]
+        assert get_balances(spec, state)[index] == get_balances(spec, pre_state)[index]
 
 
 @with_all_phases
@@ -114,7 +121,7 @@ def test_genesis_epoch_full_attestations_no_rewards(spec, state):
     yield from run_process_rewards_and_penalties(spec, state)
 
     for index in range(len(pre_state.validators)):
-        assert state.balances[index] == pre_state.balances[index]
+        assert get_balances(spec, state)[index] == get_balances(spec, pre_state)[index]
 
 
 @with_phases([PHASE0])
@@ -332,8 +339,8 @@ def test_duplicate_attestation(spec, state):
     yield from run_process_rewards_and_penalties(spec, dup_state)
 
     for index in participants:
-        assert state.balances[index] < single_state.balances[index]
-        assert single_state.balances[index] == dup_state.balances[index]
+        assert get_balances(spec, state)[index] < get_balances(spec, single_state)[index]
+        assert get_balances(spec, single_state)[index] == get_balances(spec, dup_state)[index]
 
 
 @with_phases([PHASE0])
@@ -374,8 +381,10 @@ def test_duplicate_participants_different_attestation_1(spec, state):
     yield from run_process_rewards_and_penalties(spec, dup_state)
 
     for index in participants:
-        assert state.balances[index] < single_correct_state.balances[index]
-        assert single_correct_state.balances[index] == dup_state.balances[index]
+        assert get_balances(spec, state)[index] < get_balances(spec, single_correct_state)[index]
+        assert (
+            get_balances(spec, single_correct_state)[index] == get_balances(spec, dup_state)[index]
+        )
 
 
 @with_phases([PHASE0])
@@ -416,9 +425,11 @@ def test_duplicate_participants_different_attestation_2(spec, state):
     yield from run_process_rewards_and_penalties(spec, dup_state)
 
     for index in participants:
-        assert state.balances[index] < single_correct_state.balances[index]
+        assert get_balances(spec, state)[index] < get_balances(spec, single_correct_state)[index]
         # Inclusion delay does not take into account correctness so equal reward
-        assert single_correct_state.balances[index] == dup_state.balances[index]
+        assert (
+            get_balances(spec, single_correct_state)[index] == get_balances(spec, dup_state)[index]
+        )
 
 
 @with_phases([PHASE0])
@@ -458,9 +469,11 @@ def test_duplicate_participants_different_attestation_3(spec, state):
     yield from run_process_rewards_and_penalties(spec, dup_state)
 
     for index in participants:
-        assert state.balances[index] < single_correct_state.balances[index]
+        assert get_balances(spec, state)[index] < get_balances(spec, single_correct_state)[index]
         # Inclusion delay does not take into account correctness so equal reward
-        assert single_correct_state.balances[index] == dup_state.balances[index]
+        assert (
+            get_balances(spec, single_correct_state)[index] == get_balances(spec, dup_state)[index]
+        )
 
 
 @with_all_phases

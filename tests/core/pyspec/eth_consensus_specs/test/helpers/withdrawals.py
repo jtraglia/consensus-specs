@@ -6,7 +6,7 @@ from eth_consensus_specs.test.helpers.forks import (
     is_post_fulu,
     is_post_gloas,
 )
-from eth_consensus_specs.test.helpers.registry import get_builders, get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_builders, get_validators
 
 
 def get_max_withdrawals(spec):
@@ -17,7 +17,7 @@ def check_is_partially_withdrawable_validator(spec, state, validator_index, bala
     """Call ``is_partially_withdrawable_validator`` with the correct arguments for the fork."""
     validator = get_validators(spec, state)[validator_index]
     if balance is None:
-        balance = state.balances[validator_index]
+        balance = get_balances(spec, state)[validator_index]
     if is_post_eip8148(spec):
         return spec.is_partially_withdrawable_validator(
             validator,
@@ -41,11 +41,11 @@ def set_validator_fully_withdrawable(spec, state, index, withdrawable_epoch=None
             spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX + validator.withdrawal_credentials[1:]
         )
 
-    if state.balances[index] == 0:
-        state.balances[index] = 10000000000
+    if get_balances(spec, state)[index] == 0:
+        get_balances(spec, state)[index] = 10000000000
 
     assert spec.is_fully_withdrawable_validator(
-        validator, state.balances[index], withdrawable_epoch
+        validator, get_balances(spec, state)[index], withdrawable_epoch
     )
 
 
@@ -68,14 +68,14 @@ def set_eth1_withdrawal_credential_with_balance(
     validator = get_validators(spec, state)[index]
     validator.withdrawal_credentials = spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX + b"\x00" * 11 + address
     validator.effective_balance = effective_balance
-    state.balances[index] = balance
+    get_balances(spec, state)[index] = balance
 
 
 def set_validator_partially_withdrawable(spec, state, index, excess_balance=1000000000):
     validator = get_validators(spec, state)[index]
     if is_post_electra(spec) and spec.has_compounding_withdrawal_credential(validator):
         validator.effective_balance = spec.MAX_EFFECTIVE_BALANCE_ELECTRA
-        state.balances[index] = validator.effective_balance + excess_balance
+        get_balances(spec, state)[index] = validator.effective_balance + excess_balance
     else:
         set_eth1_withdrawal_credential_with_balance(
             spec,
@@ -175,7 +175,7 @@ def set_compounding_withdrawal_credential_with_balance(
         )
 
     get_validators(spec, state)[index].effective_balance = effective_balance
-    state.balances[index] = balance
+    get_balances(spec, state)[index] = balance
 
 
 def prepare_pending_withdrawal(
@@ -307,7 +307,7 @@ def set_builder_withdrawal_credential_with_balance(
         )
 
     get_validators(spec, state)[index].effective_balance = effective_balance
-    state.balances[index] = balance
+    get_balances(spec, state)[index] = balance
 
 
 def set_parent_block_full(spec, state):
@@ -625,7 +625,7 @@ def prepare_process_withdrawals(
     # Apply validator balance overrides AFTER withdrawal setup (allows tests to set edge cases)
     if validator_balances is not None:
         for validator_index, balance in validator_balances.items():
-            state.balances[validator_index] = balance
+            get_balances(spec, state)[validator_index] = balance
 
     # Apply validator effective balance overrides AFTER withdrawal setup
     if validator_effective_balances is not None:
@@ -681,7 +681,7 @@ def assert_process_withdrawals(
     """
     # Early exit check (skip all invariant checks)
     if all_state_unchanged:
-        assert state.balances == pre_state.balances
+        assert get_balances(spec, state) == get_balances(spec, pre_state)
         assert state.next_withdrawal_index == pre_state.next_withdrawal_index
         assert state.next_withdrawal_validator_index == pre_state.next_withdrawal_validator_index
         assert len(state.builder_pending_withdrawals) == len(pre_state.builder_pending_withdrawals)
@@ -731,8 +731,8 @@ def assert_process_withdrawals(
 
     # Check validator balance decreases
     for validator_index, total_amount in validator_withdrawals.items():
-        pre_balance = pre_state.balances[validator_index]
-        post_balance = state.balances[validator_index]
+        pre_balance = get_balances(spec, pre_state)[validator_index]
+        post_balance = get_balances(spec, state)[validator_index]
         assert post_balance == pre_balance - total_amount, (
             f"Validator {validator_index} balance must decrease by withdrawal amount"
         )
@@ -786,16 +786,16 @@ def assert_process_withdrawals(
     # Balance verification - explicit values
     if balances is not None:
         for validator_idx, expected_balance in balances.items():
-            assert state.balances[validator_idx] == expected_balance, (
-                f"Validator {validator_idx}: expected balance {expected_balance}, got {state.balances[validator_idx]}"
+            assert get_balances(spec, state)[validator_idx] == expected_balance, (
+                f"Validator {validator_idx}: expected balance {expected_balance}, got {get_balances(spec, state)[validator_idx]}"
             )
 
     # Balance verification - deltas
     if balance_deltas is not None:
         for validator_idx, delta in balance_deltas.items():
-            expected = pre_state.balances[validator_idx] + delta
-            assert state.balances[validator_idx] == expected, (
-                f"Validator {validator_idx}: expected balance {expected}, got {state.balances[validator_idx]}"
+            expected = get_balances(spec, pre_state)[validator_idx] + delta
+            assert get_balances(spec, state)[validator_idx] == expected, (
+                f"Validator {validator_idx}: expected balance {expected}, got {get_balances(spec, state)[validator_idx]}"
             )
 
     # Builder balance verification - explicit values
@@ -985,9 +985,9 @@ def _verify_withdrawals_post_state_balances(
             if spec.is_builder_index(index):
                 continue
         if index in expected_withdrawals_validator_indices:
-            assert state.balances[index] == 0
+            assert get_balances(spec, state)[index] == 0
         else:
-            assert state.balances[index] > 0
+            assert get_balances(spec, state)[index] > 0
     for index in partial_withdrawals_indices:
         if is_post_electra(spec):
             max_effective_balance = spec.get_max_effective_balance(
@@ -997,9 +997,9 @@ def _verify_withdrawals_post_state_balances(
             max_effective_balance = spec.MAX_EFFECTIVE_BALANCE
 
         if index in expected_withdrawals_validator_indices:
-            assert state.balances[index] == max_effective_balance
+            assert get_balances(spec, state)[index] == max_effective_balance
         else:
-            assert state.balances[index] > max_effective_balance
+            assert get_balances(spec, state)[index] > max_effective_balance
 
 
 def _verify_withdrawals_requests(execution_payload, pending_withdrawal_requests):

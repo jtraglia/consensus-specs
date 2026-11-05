@@ -6,7 +6,7 @@ from eth_consensus_specs.test.helpers.epoch_processing import (
     run_epoch_processing_to,
     run_epoch_processing_with,
 )
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.state import (
     next_epoch_with_full_participation,
 )
@@ -39,8 +39,8 @@ def test_basic_pending_consolidation(spec, state):
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
 
     # Pending consolidation was successfully processed
-    assert state.balances[target_index] == 2 * spec.MIN_ACTIVATION_BALANCE
-    assert state.balances[source_index] == 0
+    assert get_balances(spec, state)[target_index] == 2 * spec.MIN_ACTIVATION_BALANCE
+    assert get_balances(spec, state)[source_index] == 0
     assert len(state.pending_consolidations) == 0
 
 
@@ -61,14 +61,14 @@ def test_consolidation_not_yet_withdrawable_validator(spec, state):
     spec.initiate_validator_exit(state, source_index)
 
     pre_pending_consolidations = state.pending_consolidations.copy()
-    pre_balances = state.balances.copy()
+    pre_balances = get_balances(spec, state).copy()
 
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
 
     # Pending consolidation is not processed
     # Balances are unchanged
-    assert state.balances[source_index] == pre_balances[0]
-    assert state.balances[target_index] == pre_balances[1]
+    assert get_balances(spec, state)[source_index] == pre_balances[0]
+    assert get_balances(spec, state)[target_index] == pre_balances[1]
     # Pending consolidation is still in the queue
     assert state.pending_consolidations == pre_pending_consolidations
 
@@ -102,11 +102,11 @@ def test_skip_consolidation_when_source_slashed(spec, state):
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
 
     # first pending consolidation should not be processed
-    assert state.balances[target0_index] == spec.MIN_ACTIVATION_BALANCE
-    assert state.balances[source0_index] == spec.MIN_ACTIVATION_BALANCE
+    assert get_balances(spec, state)[target0_index] == spec.MIN_ACTIVATION_BALANCE
+    assert get_balances(spec, state)[source0_index] == spec.MIN_ACTIVATION_BALANCE
     # second pending consolidation should be processed: first one is skipped and doesn't block the queue
-    assert state.balances[target1_index] == 2 * spec.MIN_ACTIVATION_BALANCE
-    assert state.balances[source1_index] == 0
+    assert get_balances(spec, state)[target1_index] == 2 * spec.MIN_ACTIVATION_BALANCE
+    assert get_balances(spec, state)[source1_index] == 0
 
 
 @with_electra_and_later
@@ -137,17 +137,17 @@ def test_all_consolidation_cases_together(spec, state):
     # Initiate exit of third source validator
     spec.initiate_validator_exit(state, 2)
 
-    pre_balances = state.balances.copy()
+    pre_balances = get_balances(spec, state).copy()
     pre_pending_consolidations = state.pending_consolidations.copy()
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
 
     # First consolidation is successfully processed
-    assert state.balances[target_index[0]] == 2 * spec.MIN_ACTIVATION_BALANCE
-    assert state.balances[source_index[0]] == 0
+    assert get_balances(spec, state)[target_index[0]] == 2 * spec.MIN_ACTIVATION_BALANCE
+    assert get_balances(spec, state)[source_index[0]] == 0
     # All other consolidations are not processed
     for i in [1, 2, 3]:
-        assert state.balances[source_index[i]] == pre_balances[source_index[i]]
-        assert state.balances[target_index[i]] == pre_balances[target_index[i]]
+        assert get_balances(spec, state)[source_index[i]] == pre_balances[source_index[i]]
+        assert get_balances(spec, state)[target_index[i]] == pre_balances[target_index[i]]
     # First consolidation is processed, second is skipped, last two are left in the queue
     state.pending_consolidations = spec.PendingConsolidations(data=pre_pending_consolidations[2:])
 
@@ -185,13 +185,13 @@ def test_pending_consolidation_future_epoch(spec, state):
 
     # Pending consolidation was successfully processed
     expected_source_balance = (
-        state_before_consolidation.balances[source_index] - spec.MIN_ACTIVATION_BALANCE
+        get_balances(spec, state_before_consolidation)[source_index] - spec.MIN_ACTIVATION_BALANCE
     )
     expected_target_balance = (
-        state_before_consolidation.balances[target_index] + spec.MIN_ACTIVATION_BALANCE
+        get_balances(spec, state_before_consolidation)[target_index] + spec.MIN_ACTIVATION_BALANCE
     )
-    assert state.balances[source_index] == expected_source_balance
-    assert state.balances[target_index] == expected_target_balance
+    assert get_balances(spec, state)[source_index] == expected_source_balance
+    assert get_balances(spec, state)[target_index] == expected_target_balance
     assert len(state.pending_consolidations) == 0
 
 
@@ -232,13 +232,13 @@ def test_pending_consolidation_compounding_creds(spec, state):
 
     # Pending consolidation was successfully processed
     expected_target_balance = (
-        spec.MIN_ACTIVATION_BALANCE + state_before_consolidation.balances[target_index]
+        spec.MIN_ACTIVATION_BALANCE + get_balances(spec, state_before_consolidation)[target_index]
     )
-    assert state.balances[target_index] == expected_target_balance
+    assert get_balances(spec, state)[target_index] == expected_target_balance
     # All source balance is active and moved to the target,
     # because the source validator has compounding credentials
-    assert state.balances[source_index] == (
-        state_before_consolidation.balances[source_index] - spec.MIN_ACTIVATION_BALANCE
+    assert get_balances(spec, state)[source_index] == (
+        get_balances(spec, state_before_consolidation)[source_index] - spec.MIN_ACTIVATION_BALANCE
     )
     assert len(state.pending_consolidations) == 0
 
@@ -292,11 +292,11 @@ def test_pending_consolidation_with_pending_deposit(spec, state):
 
     # Pending consolidation was successfully processed
     expected_target_balance = (
-        spec.MIN_ACTIVATION_BALANCE + state_before_consolidation.balances[target_index]
+        spec.MIN_ACTIVATION_BALANCE + get_balances(spec, state_before_consolidation)[target_index]
     )
-    assert state.balances[target_index] == expected_target_balance
-    assert state.balances[source_index] == (
-        state_before_consolidation.balances[source_index] - spec.MIN_ACTIVATION_BALANCE
+    assert get_balances(spec, state)[target_index] == expected_target_balance
+    assert get_balances(spec, state)[source_index] == (
+        get_balances(spec, state_before_consolidation)[source_index] - spec.MIN_ACTIVATION_BALANCE
     )
     assert len(state.pending_consolidations) == 0
 
@@ -325,19 +325,19 @@ def test_pending_consolidation_source_balance_less_than_max_effective(spec, stat
         get_validators(spec, state)[source_index].effective_balance
         - spec.EFFECTIVE_BALANCE_INCREMENT // 8
     )
-    state.balances[source_index] = pre_balance_source
+    get_balances(spec, state)[source_index] = pre_balance_source
 
-    pre_balance_target = state.balances[target_index]
+    pre_balance_target = get_balances(spec, state)[target_index]
 
-    assert state.balances[source_index] < spec.get_max_effective_balance(
+    assert get_balances(spec, state)[source_index] < spec.get_max_effective_balance(
         get_validators(spec, state)[source_index]
     )
 
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
 
     # Pending consolidation was successfully processed
-    assert state.balances[target_index] == pre_balance_target + pre_balance_source
-    assert state.balances[source_index] == 0
+    assert get_balances(spec, state)[target_index] == pre_balance_target + pre_balance_source
+    assert get_balances(spec, state)[source_index] == 0
     assert len(state.pending_consolidations) == 0
 
 
@@ -361,20 +361,22 @@ def test_pending_consolidation_source_balance_greater_than_max_effective(spec, s
     pre_balance_source = (
         get_validators(spec, state)[source_index].effective_balance + excess_source_balance
     )
-    state.balances[source_index] = pre_balance_source
+    get_balances(spec, state)[source_index] = pre_balance_source
 
-    pre_balance_target = state.balances[target_index]
+    pre_balance_target = get_balances(spec, state)[target_index]
 
     source_max_effective_balance = spec.get_max_effective_balance(
         get_validators(spec, state)[source_index]
     )
-    assert state.balances[source_index] > source_max_effective_balance
+    assert get_balances(spec, state)[source_index] > source_max_effective_balance
 
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
 
     # Pending consolidation was successfully processed
-    assert state.balances[target_index] == pre_balance_target + source_max_effective_balance
-    assert state.balances[source_index] == excess_source_balance
+    assert (
+        get_balances(spec, state)[target_index] == pre_balance_target + source_max_effective_balance
+    )
+    assert get_balances(spec, state)[source_index] == excess_source_balance
     assert len(state.pending_consolidations) == 0
 
 
@@ -398,19 +400,19 @@ def test_pending_consolidation_source_balance_less_than_max_effective_compoundin
         get_validators(spec, state)[source_index].effective_balance
         - spec.EFFECTIVE_BALANCE_INCREMENT // 8
     )
-    state.balances[source_index] = pre_balance_source
+    get_balances(spec, state)[source_index] = pre_balance_source
 
-    pre_balance_target = state.balances[target_index]
+    pre_balance_target = get_balances(spec, state)[target_index]
 
-    assert state.balances[source_index] < spec.get_max_effective_balance(
+    assert get_balances(spec, state)[source_index] < spec.get_max_effective_balance(
         get_validators(spec, state)[source_index]
     )
 
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
 
     # Pending consolidation was successfully processed
-    assert state.balances[target_index] == pre_balance_target + pre_balance_source
-    assert state.balances[source_index] == 0
+    assert get_balances(spec, state)[target_index] == pre_balance_target + pre_balance_source
+    assert get_balances(spec, state)[source_index] == 0
     assert len(state.pending_consolidations) == 0
 
 
@@ -434,20 +436,22 @@ def test_pending_consolidation_source_balance_greater_than_max_effective_compoun
     pre_balance_source = (
         get_validators(spec, state)[source_index].effective_balance + excess_source_balance
     )
-    state.balances[source_index] = pre_balance_source
+    get_balances(spec, state)[source_index] = pre_balance_source
 
-    pre_balance_target = state.balances[target_index]
+    pre_balance_target = get_balances(spec, state)[target_index]
 
     source_max_effective_balance = spec.get_max_effective_balance(
         get_validators(spec, state)[source_index]
     )
-    assert state.balances[source_index] > source_max_effective_balance
+    assert get_balances(spec, state)[source_index] > source_max_effective_balance
 
     yield from run_epoch_processing_with(spec, state, "process_pending_consolidations")
 
     # Pending consolidation was successfully processed
-    assert state.balances[target_index] == pre_balance_target + source_max_effective_balance
-    assert state.balances[source_index] == excess_source_balance
+    assert (
+        get_balances(spec, state)[target_index] == pre_balance_target + source_max_effective_balance
+    )
+    assert get_balances(spec, state)[source_index] == excess_source_balance
     assert len(state.pending_consolidations) == 0
 
 
@@ -497,13 +501,13 @@ def prepare_consolidation_and_state(
         source.effective_balance = max_eb
 
     if balance_to_eb == "<":
-        state.balances[source_index] = (
+        get_balances(spec, state)[source_index] = (
             source.effective_balance - spec.EFFECTIVE_BALANCE_INCREMENT // 2
         )
     elif balance_to_eb == "=":
-        state.balances[source_index] = source.effective_balance
+        get_balances(spec, state)[source_index] = source.effective_balance
     else:
-        state.balances[source_index] = (
+        get_balances(spec, state)[source_index] = (
             source.effective_balance + spec.EFFECTIVE_BALANCE_INCREMENT // 2
         )
 
@@ -534,13 +538,15 @@ def run_balance_computation_test(spec, state, instance_tuples):
         target_index = source_index + 1
         consolidated_balance = min(
             get_validators(spec, pre_state)[source_index].effective_balance,
-            pre_state.balances[source_index],
+            get_balances(spec, pre_state)[source_index],
         )
         assert (
-            state.balances[source_index] == pre_state.balances[source_index] - consolidated_balance
+            get_balances(spec, state)[source_index]
+            == get_balances(spec, pre_state)[source_index] - consolidated_balance
         )
         assert (
-            state.balances[target_index] == pre_state.balances[target_index] + consolidated_balance
+            get_balances(spec, state)[target_index]
+            == get_balances(spec, pre_state)[target_index] + consolidated_balance
         )
 
 

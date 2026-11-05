@@ -8,6 +8,7 @@ from eth_consensus_specs.test.helpers.block import (
 )
 from eth_consensus_specs.test.helpers.block_processing import run_block_processing_to
 from eth_consensus_specs.test.helpers.keys import privkeys
+from eth_consensus_specs.test.helpers.registry import get_balances
 from eth_consensus_specs.test.helpers.signatures import aggregate, get_empty_aggregate, sign
 
 
@@ -122,8 +123,10 @@ def validate_sync_committee_rewards(
                 committee_bits,
             )
 
-        balance = pre_state.balances[index] + reward
-        assert post_state.balances[index] == (0 if balance < penalty else balance - penalty)
+        balance = get_balances(spec, pre_state)[index] + reward
+        assert get_balances(spec, post_state)[index] == (
+            0 if balance < penalty else balance - penalty
+        )
 
 
 def run_sync_committee_processing(
@@ -145,7 +148,7 @@ def run_sync_committee_processing(
         call(state, block)
         yield "post", state
     if expect_exception:
-        assert pre_state.balances == state.balances
+        assert get_balances(spec, pre_state) == get_balances(spec, state)
     else:
         committee_indices = compute_committee_indices(state, state.current_sync_committee)
         committee_bits = block.body.sync_aggregate.sync_committee_bits

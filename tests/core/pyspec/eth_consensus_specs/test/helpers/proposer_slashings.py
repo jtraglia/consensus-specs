@@ -9,7 +9,7 @@ from eth_consensus_specs.test.helpers.forks import (
     is_post_pq,
 )
 from eth_consensus_specs.test.helpers.keys import pubkey_to_privkey
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.state import get_balance, next_epoch
 from eth_consensus_specs.test.helpers.sync_committee import (
     compute_committee_indices,
@@ -128,21 +128,21 @@ def check_proposer_slashing_effect(
 
     if proposer_index != slashed_index:
         assert (
-            get_balance(state, slashed_index)
-            == get_balance(pre_state, slashed_index)
+            get_balance(spec, state, slashed_index)
+            == get_balance(spec, pre_state, slashed_index)
             - slash_penalty
             + sc_reward_for_slashed
             - sc_penalty_for_slashed
         )
-        assert get_balance(state, proposer_index) >= (
-            get_balance(pre_state, proposer_index)
+        assert get_balance(spec, state, proposer_index) >= (
+            get_balance(spec, pre_state, proposer_index)
             + whistleblower_reward
             + sc_reward_for_proposer
             - sc_penalty_for_proposer
         )
     else:
-        assert get_balance(state, slashed_index) >= (
-            get_balance(pre_state, slashed_index)
+        assert get_balance(spec, state, slashed_index) >= (
+            get_balance(spec, pre_state, slashed_index)
             - slash_penalty
             + whistleblower_reward
             + sc_reward_for_slashed
@@ -367,7 +367,7 @@ def prepare_process_proposer_slashing(
         )
 
     if proposer_balance is not None:
-        state.balances[effective_proposer_1] = proposer_balance
+        get_balances(spec, state)[effective_proposer_1] = proposer_balance
 
     if proposer_effective_balance is not None:
         get_validators(spec, state)[

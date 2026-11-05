@@ -21,10 +21,10 @@ is the 32-byte seed from which its XMSS key is derived. As for validators, an
 XMSS key MUST NOT sign two different messages at the same leaf, because that
 exposes the leaf and lets others forge signatures at it.
 
-At the upgrade, each builder moves to `state.pq_builders` at the same index,
-with the XMSS public key it registered with a builder PQ registration request. A
-builder without a registration is exited at the upgrade, and there is no way yet
-to register an XMSS public key after it.
+At the upgrade, each builder that registered an XMSS public key with a builder
+PQ registration request moves to `state.pq_builders`, keeping its index. A
+builder without a registration is removed and its balance is withdrawn at the
+upgrade, and there is no way yet to register an XMSS public key after it.
 
 ## Builder activities
 

@@ -147,16 +147,13 @@ def create_genesis_state(spec, validator_balances, activation_threshold, builder
 
     # We "hack" in the initial validators,
     #  as it is much faster than creating and processing genesis deposits for every single test case.
-    state.balances = spec.Balances(data=validator_balances)
-
-    state.validators = spec.Validators(
-        data=[
-            build_mock_validator(spec, i, state.balances[i]) for i in range(len(validator_balances))
-        ]
+    balances = spec.Balances(data=validator_balances)
+    validators = spec.Validators(
+        data=[build_mock_validator(spec, i, balances[i]) for i in range(len(validator_balances))]
     )
 
     # Process genesis activations
-    for validator in state.validators:
+    for validator in validators:
         if validator.effective_balance >= activation_threshold:
             validator.activation_eligibility_epoch = spec.GENESIS_EPOCH
             validator.activation_epoch = spec.GENESIS_EPOCH
@@ -166,12 +163,16 @@ def create_genesis_state(spec, validator_balances, activation_threshold, builder
             state.inactivity_scores.append(spec.Uint64(0))
 
     # Set genesis validators root for domain separation and chain versioning
-    state.genesis_validators_root = spec.hash_tree_root(state.validators)
+    state.genesis_validators_root = spec.hash_tree_root(validators)
 
     if is_post_pq(spec):
         state.pq_validators = spec.PQValidators(
-            data=[to_pq_validator(spec, v, i) for i, v in enumerate(state.validators)]
+            data=[to_pq_validator(spec, v, i, balances[i]) for i, v in enumerate(validators)]
         )
+        state.next_validator_index = len(validators)
+    else:
+        state.validators = validators
+        state.balances = balances
 
     if is_post_altair(spec) and not is_post_pq(spec):
         # Fill in sync committees
@@ -223,13 +224,13 @@ def create_genesis_state(spec, validator_balances, activation_threshold, builder
 
     if is_post_gloas(spec):
         builder_balance = 2 * spec.MIN_DEPOSIT_AMOUNT
-        state.builders = spec.Builders(
-            data=[build_mock_builder(spec, i, builder_balance) for i in range(builder_count)]
-        )
+        builders = [build_mock_builder(spec, i, builder_balance) for i in range(builder_count)]
         if is_post_pq(spec):
             state.pq_builders = spec.PQBuilders(
-                data=[to_pq_builder(spec, b, i) for i, b in enumerate(state.builders)]
+                data=[to_pq_builder(spec, b, i) for i, b in enumerate(builders)]
             )
+        else:
+            state.builders = spec.Builders(data=builders)
         state.execution_payload_availability = spec.ExecutionPayloadAvailability(
             data=[0b1 for _ in range(spec.SLOTS_PER_HISTORICAL_ROOT)]
         )

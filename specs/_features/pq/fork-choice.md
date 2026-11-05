@@ -165,7 +165,7 @@ def on_payload_attestation_message(
     domain = get_domain(state, DOMAIN_PTC_ATTESTER, compute_epoch_at_slot(data.slot))
     signing_root = compute_signing_root(data, domain)
     leaf_index = compute_xmss_leaf_index(data.slot, LEAF_OFFSET_PTC_ATTESTER)
-    pubkey = state.pq_validators[ptc_message.validator_index].pubkey
+    pubkey = get_validator(state, ptc_message.validator_index).pubkey
     assert xmss.Verify(pubkey, leaf_index, signing_root, ptc_message.signature)
 
     # Update the votes for the block
@@ -185,7 +185,7 @@ def calculate_committee_fraction(state: BeaconState, committee_percent: Uint64) 
     unslashed_and_active_indices: set[ValidatorIndex] = set()
     for index in get_active_validator_indices(state, get_current_epoch(state)):
         # [Modified in PQ]
-        if not state.pq_validators[index].slashed:
+        if not get_validator(state, index).slashed:
             unslashed_and_active_indices.add(index)
     total_balance = get_total_balance(state, unslashed_and_active_indices)
     committee_weight = total_balance // Uint64(SLOTS_PER_EPOCH)
@@ -200,12 +200,12 @@ def get_attestation_score(store: Store, node: ForkChoiceNode, state: BeaconState
         index
         for index in get_active_validator_indices(state, get_current_epoch(state))
         # [Modified in PQ]
-        if not state.pq_validators[index].slashed
+        if not get_validator(state, index).slashed
     ]
     return Gwei(
         sum(
             # [Modified in PQ]
-            state.pq_validators[index].effective_balance
+            get_validator(state, index).effective_balance
             for index in unslashed_and_active_indices
             if (
                 index in store.latest_messages
@@ -237,7 +237,7 @@ def is_head_weak(store: Store, head_root: Root) -> bool:
         head_weight += Gwei(
             sum(
                 # [Modified in PQ]
-                justified_state.pq_validators[index].effective_balance
+                get_validator(justified_state, index).effective_balance
                 for index in committee
                 if index in store.equivocating_indices
             )

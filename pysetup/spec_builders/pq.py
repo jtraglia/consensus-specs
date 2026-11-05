@@ -50,6 +50,29 @@ compute_balance_weighted_selection = cache_this(
         state.pq_validators.hash_tree_root(), tuple(indices), seed, size, shuffle_indices
     ),
     _compute_balance_weighted_selection, lru_size=SLOTS_PER_EPOCH * 6)
+
+
+def cache_positions(get_registry):
+    cache_dict = LRU(size=8)
+
+    def get_position(state, index):
+        registry = get_registry(state)
+        positions = cache_dict.get(id(registry))
+        position = None if positions is None else positions.get(index)
+        if position is None or position >= len(registry) or registry[position].index != index:
+            positions = {record.index: position for position, record in enumerate(registry)}
+            cache_dict[id(registry)] = positions
+            position = positions.get(index)
+        assert position is not None
+        return Uint64(position)
+    return get_position
+
+
+_get_validator_position = get_validator_position
+get_validator_position = cache_positions(lambda state: state.pq_validators)
+
+_get_builder_position = get_builder_position
+get_builder_position = cache_positions(lambda state: state.pq_builders)
 """
 
     @classmethod
@@ -139,6 +162,7 @@ compute_balance_weighted_selection = cache_this(
             "add_builder_to_registry",
             "add_validator_to_registry",
             "apply_light_client_update",
+            "apply_pending_deposit",
             "block_to_light_client_header",
             "compute_consolidation_epoch_and_update_churn",
             "compute_subnets_for_sync_committee",
@@ -191,6 +215,7 @@ compute_balance_weighted_selection = cache_this(
             "process_light_client_store_force_update",
             "process_light_client_update",
             "process_payload_attestation",
+            "process_pending_deposits",
             "process_sync_aggregate",
             "process_sync_committee_contributions",
             "process_sync_committee_updates",

@@ -59,10 +59,10 @@ Validators sign with leanXMSS instead of BLS. Every message is signed at the
 leaf that `compute_xmss_leaf_index` assigns to its slot and type, except an
 attestation, which is signed at the leaf that
 `compute_xmss_attestation_leaf_index` assigns to its target epoch. At the
-upgrade, each validator moves to `state.pq_validators` at the same index, with
-the XMSS public key it registered with EIP-8483. A validator without a
-registration is exited at the upgrade. See [the fork document](./fork.md) for
-details.
+upgrade, each validator that registered an XMSS public key with EIP-8483 moves
+to `state.pq_validators`, keeping its index. A validator without a registration
+is removed and its balance is withdrawn at the upgrade, or burned if it has
+`0x00` withdrawal credentials. See [the fork document](./fork.md) for details.
 
 ## Constants
 
@@ -129,15 +129,15 @@ The XMSS public key is registered with EIP-8483 before the upgrade, as the first
 32 bytes of the registration's `pq_data`. The remaining 32 bytes are the
 validator's VRF data.
 
-*Note*: There is no way yet to register an XMSS public key after the upgrade, so
-a validator that deposits after the upgrade cannot sign.
+*Note*: Deposits are ignored after the upgrade, and there is no way yet to
+register an XMSS public key after it.
 
 ### Modified `check_if_validator_active`
 
 ```python
 def check_if_validator_active(state: BeaconState, validator_index: ValidatorIndex) -> bool:
     # [Modified in PQ]
-    validator = state.pq_validators[validator_index]
+    validator = get_validator(state, validator_index)
     return is_active_validator(validator, get_current_epoch(state))
 ```
 
@@ -527,7 +527,7 @@ def get_validators_custody_requirement(
 ) -> Uint64:
     total_node_balance = sum(
         # [Modified in PQ]
-        state.pq_validators[index].effective_balance
+        get_validator(state, index).effective_balance
         for index in validator_indices
     )
     count = total_node_balance // BALANCE_PER_ADDITIONAL_CUSTODY_GROUP

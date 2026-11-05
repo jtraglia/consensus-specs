@@ -18,6 +18,7 @@ from eth_consensus_specs.test.helpers.fork_choice import (
     run_on_block,
     run_on_execution_payload_envelope,
 )
+from eth_consensus_specs.test.helpers.registry import get_balances
 from eth_consensus_specs.test.helpers.signatures import get_placeholder_signature
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
@@ -142,7 +143,7 @@ def test_prepare_execution_payload__extend_payload(spec, state):
     # no longer partially withdrawable. If the spec skipped apply, the
     # validator would still look partially withdrawable and prepared
     # withdrawals would diverge from expected.
-    proposal_state.balances[validator_index] = (
+    get_balances(spec, proposal_state)[validator_index] = (
         spec.MIN_ACTIVATION_BALANCE + 3 * spec.EFFECTIVE_BALANCE_INCREMENT
     )
 

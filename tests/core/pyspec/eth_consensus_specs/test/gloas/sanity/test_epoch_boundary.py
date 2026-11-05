@@ -12,7 +12,7 @@ from eth_consensus_specs.test.helpers.deposits import (
     prepare_deposit_request,
 )
 from eth_consensus_specs.test.helpers.forks import is_post_pq
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.signatures import get_placeholder_signature
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
@@ -46,7 +46,7 @@ def _setup_switch_to_compounding_validator(spec, state, validator_index):
     # Give the validator a balance above MIN_ACTIVATION_BALANCE so that
     # after switching to compounding, effective balance can increase.
     balance = spec.MIN_ACTIVATION_BALANCE + 3 * spec.EFFECTIVE_BALANCE_INCREMENT
-    state.balances[validator_index] = balance
+    get_balances(spec, state)[validator_index] = balance
 
     consolidation_request = prepare_switch_to_compounding_request(
         spec,
@@ -143,7 +143,7 @@ def _assert_registry_integrity(spec, state, pre_state):
     validators are immutable, and every effective_balance respects its
     current credential cap and the EFFECTIVE_BALANCE_INCREMENT quantization.
     """
-    assert len(state.validators) == len(state.balances)
+    assert len(state.validators) == len(get_balances(spec, state))
     assert len(state.validators) >= len(pre_state.validators)
     for idx in range(len(pre_state.validators)):
         pre_v = get_validators(spec, pre_state)[idx]
@@ -275,7 +275,7 @@ def _run_epoch_boundary_full_parent(spec, state, gap_epochs):
         get_validators(spec, state)[consolidation_validator_index].exit_epoch
         == spec.FAR_FUTURE_EPOCH
     )
-    assert state.balances[consolidation_validator_index] <= spec.MIN_ACTIVATION_BALANCE
+    assert get_balances(spec, state)[consolidation_validator_index] <= spec.MIN_ACTIVATION_BALANCE
     # effective_balance must not jump to the compounding cap: the epoch
     # transition ran against 0x01 credentials before block_2 applied the
     # switch, so it stays at MIN_ACTIVATION_BALANCE.
@@ -495,7 +495,7 @@ def test_switch_to_compounding_across_epoch_boundary(spec, state):
         get_validators(spec, state)[validator_index].effective_balance
         == spec.MIN_ACTIVATION_BALANCE
     )
-    assert state.balances[validator_index] > spec.MIN_ACTIVATION_BALANCE
+    assert get_balances(spec, state)[validator_index] > spec.MIN_ACTIVATION_BALANCE
 
     # Snapshot balance-dependent assignments before the request is in flight.
     if not is_post_pq(spec):
@@ -538,7 +538,7 @@ def test_switch_to_compounding_across_epoch_boundary(spec, state):
     assert spec.has_compounding_withdrawal_credential(get_validators(spec, state)[validator_index])
     # Switch-to-compounding is not an exit.
     assert get_validators(spec, state)[validator_index].exit_epoch == spec.FAR_FUTURE_EPOCH
-    assert state.balances[validator_index] <= spec.MIN_ACTIVATION_BALANCE
+    assert get_balances(spec, state)[validator_index] <= spec.MIN_ACTIVATION_BALANCE
 
     # effective_balance does not jump to the compounding cap.
     # process_effective_balance_updates ran against 0x01 credentials before
@@ -685,7 +685,7 @@ def test_epoch_boundary_full_parent_all_requests_gap_5_epochs(spec, state):
         get_validators(spec, state)[consolidation_validator_index].exit_epoch
         == spec.FAR_FUTURE_EPOCH
     )
-    assert state.balances[consolidation_validator_index] <= spec.MIN_ACTIVATION_BALANCE
+    assert get_balances(spec, state)[consolidation_validator_index] <= spec.MIN_ACTIVATION_BALANCE
     # effective_balance must not jump to the compounding cap across the
     # epoch boundary.
     assert (
@@ -706,7 +706,7 @@ def test_epoch_boundary_full_parent_all_requests_gap_5_epochs(spec, state):
             post_withdrawable_epoch
             == post_exit_epoch + spec.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
         )
-        assert state.balances[exit_index] > 0
+        assert get_balances(spec, state)[exit_index] > 0
         exit_epochs.append(post_exit_epoch)
 
     # Exit-churn progression: the three initiate_validator_exit calls share

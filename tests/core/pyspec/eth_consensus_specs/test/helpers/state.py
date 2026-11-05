@@ -9,13 +9,13 @@ from eth_consensus_specs.test.helpers.block import (
     transition_unsigned_block,
 )
 from eth_consensus_specs.test.helpers.forks import is_post_altair
-from eth_consensus_specs.test.helpers.registry import get_validators
+from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.voluntary_exits import get_unslashed_exited_validators
 from eth_consensus_specs.utils.ssz.bytes import Bytes32
 
 
-def get_balance(state, index):
-    return state.balances[index]
+def get_balance(spec, state, index):
+    return get_balances(spec, state)[index]
 
 
 def next_slot(spec, state):
@@ -219,7 +219,7 @@ def cause_effective_balance_decrease_below_threshold(
     """
     HYSTERESIS_INCREMENT = Uint64(spec.EFFECTIVE_BALANCE_INCREMENT // spec.HYSTERESIS_QUOTIENT)
     DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * spec.HYSTERESIS_DOWNWARD_MULTIPLIER
-    state.balances[validator_index] = (
+    get_balances(spec, state)[validator_index] = (
         min(
             threshold,
             get_validators(spec, state)[validator_index].effective_balance - DOWNWARD_THRESHOLD,
