@@ -1,14 +1,13 @@
 from eth_consensus_specs.test.context import (
     always_bls,
     spec_state_test_with_matching_config,
-    with_all_phases_from_except,
     with_gloas_and_later,
 )
 from eth_consensus_specs.test.helpers.block import build_empty_block_for_next_slot
-from eth_consensus_specs.test.helpers.constants import GLOAS, PQ
 from eth_consensus_specs.test.helpers.execution_payload import (
     build_signed_execution_payload_envelope,
 )
+from eth_consensus_specs.test.helpers.forks import is_post_pq
 from eth_consensus_specs.test.helpers.gloas.bid import (
     activate_builders,
     append_head_with_requests,
@@ -34,6 +33,18 @@ from eth_consensus_specs.test.helpers.registry import get_builders
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
+
+
+def get_builder_exit_pubkey(spec, state, builder_index):
+    """
+    The public key that a builder exit request names for the builder at
+    ``builder_index``, which from PQ onwards is its XMSS public key after
+    ``XMSS_DEPOSIT_PREFIX``.
+    """
+    pubkey = state.builders[builder_index].pubkey
+    if is_post_pq(spec):
+        return spec.Bytes48(spec.XMSS_DEPOSIT_PREFIX + pubkey)
+    return pubkey
 
 
 def _seed_bid_context(
@@ -1474,7 +1485,7 @@ def test_gossip_execution_payload_bid__reject_builder_not_payload_version(spec, 
     yield "messages", "meta", messages
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test_with_matching_config
 def test_gossip_execution_payload_bid__ignore_builder_exit_in_parent_payload(spec, state):
     """A bid from a builder that the full parent's payload exits is ignored.
@@ -1494,7 +1505,7 @@ def test_gossip_execution_payload_bid__ignore_builder_exit_in_parent_payload(spe
         builder_exits=spec.BuilderExitRequests.of(
             spec.BuilderExitRequest(
                 source_address=builder.execution_address,
-                pubkey=state.builders[builder_index].pubkey,
+                pubkey=get_builder_exit_pubkey(spec, state, builder_index),
             )
         ),
     )
@@ -1653,7 +1664,7 @@ def test_gossip_execution_payload_bid__valid_parent_exit_wrong_source_address(sp
         builder_exits=spec.BuilderExitRequests.of(
             spec.BuilderExitRequest(
                 source_address=wrong_address,
-                pubkey=state.builders[builder_index].pubkey,
+                pubkey=get_builder_exit_pubkey(spec, state, builder_index),
             )
         ),
     )
@@ -1712,7 +1723,7 @@ def test_gossip_execution_payload_bid__valid_parent_exit_wrong_source_address(sp
     yield "messages", "meta", messages
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test_with_matching_config
 def test_gossip_execution_payload_bid__ignore_builder_exit_with_pending_balance(spec, state):
     """A bid is ignored when a pending balance would block the requested exit.
@@ -1732,7 +1743,7 @@ def test_gossip_execution_payload_bid__ignore_builder_exit_with_pending_balance(
         builder_exits=spec.BuilderExitRequests.of(
             spec.BuilderExitRequest(
                 source_address=builder.execution_address,
-                pubkey=state.builders[builder_index].pubkey,
+                pubkey=get_builder_exit_pubkey(spec, state, builder_index),
             )
         ),
     )
