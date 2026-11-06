@@ -1476,8 +1476,8 @@ def process_withdrawal_request(state: BeaconState, withdrawal_request: Withdrawa
         return
 
     validator_pubkeys = [validator.pubkey for validator in state.validators]
-    # Verify pubkey exists
     # [Modified in PQ]
+    # Verify pubkey exists
     request_pubkey = XMSSPubkey(withdrawal_request.validator_pubkey[:32])
     if request_pubkey not in validator_pubkeys:
         return
