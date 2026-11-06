@@ -5,6 +5,9 @@
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
+- [Becoming a builder](#becoming-a-builder)
+  - [Submit deposit](#submit-deposit)
+  - [Exiting](#exiting)
 - [Builder activities](#builder-activities)
   - [Constructing the `SignedExecutionPayloadBid`](#constructing-the-signedexecutionpayloadbid)
   - [Constructing the `SignedExecutionPayloadEnvelope`](#constructing-the-signedexecutionpayloadenvelope)
@@ -23,8 +26,26 @@ exposes the leaf and lets others forge signatures at it.
 
 At the upgrade, each builder that registered an XMSS public key with a builder
 PQ registration request takes it in place of its BLS public key. A builder
-without a registration has its balance withdrawn at the upgrade, and there is no
-way yet to register an XMSS public key after it.
+without a registration has its balance withdrawn at the upgrade. A new builder
+joins with a deposit instead, see [Submit deposit](#submit-deposit).
+
+## Becoming a builder
+
+### Submit deposit
+
+After the upgrade, a builder deposit carries no signature. Its `pubkey` is
+`XMSS_DEPOSIT_PREFIX`, 16 zero bytes, followed by the builder's XMSS public key,
+and its `signature` is ignored. A deposit whose XMSS public key is already in
+`state.builders` tops up that builder.
+
+*Note*: A builder deposit whose `pubkey` does not start with 16 zero bytes is
+treated as a legacy deposit, so the builder it creates initiates its exit at
+once.
+
+### Exiting
+
+A builder exit request names the builder the same way, by `XMSS_DEPOSIT_PREFIX`
+followed by its XMSS public key.
 
 ## Builder activities
 
