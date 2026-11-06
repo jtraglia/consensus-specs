@@ -17,7 +17,7 @@ def get_registration_pq_data(xmss_pubkey, vrf_data):
 
 def register_xmss_pubkeys(spec, state, indices=None):
     """
-    Add a pqreg registration of each validator's XMSS public key and VRF data.
+    Add an EIP-8483 registration of each validator's XMSS public key and VRF data.
     """
     if indices is None:
         indices = range(len(state.validators))
@@ -32,7 +32,7 @@ def register_xmss_pubkeys(spec, state, indices=None):
 
 def register_builder_xmss_pubkeys(spec, state, indices=None):
     """
-    Add a pqreg registration of each builder's XMSS public key.
+    Add an EIP-8483 registration of each builder's XMSS public key.
     """
     if indices is None:
         indices = range(len(state.builders))

@@ -1,10 +1,10 @@
-from pysetup.constants import PQREG
+from pysetup.constants import EIP8483
 
 from .base import BaseSpecBuilder
 
 
-class PQRegSpecBuilder(BaseSpecBuilder):
-    fork: str = PQREG
+class EIP8483SpecBuilder(BaseSpecBuilder):
+    fork: str = EIP8483
 
     @classmethod
     def imports(cls, preset_name: str):

@@ -9,7 +9,7 @@ class PQSpecBuilder(BaseSpecBuilder):
     @classmethod
     def imports(cls, preset_name: str):
         return f"""
-from eth_consensus_specs.pqreg import {preset_name} as pqreg
+from eth_consensus_specs.eip8483 import {preset_name} as eip8483
 from eth_consensus_specs.utils import stark, xmss
 """
 
@@ -170,7 +170,7 @@ from eth_consensus_specs.utils import stark, xmss
             "upgrade_lc_optimistic_update_to_gloas",
             "upgrade_lc_store_to_gloas",
             "upgrade_lc_update_to_gloas",
-            "upgrade_to_pqreg",
+            "upgrade_to_eip8483",
             "validate_bls_to_execution_change_gossip",
             "validate_light_client_update",
             "validate_sync_committee_contribution_and_proof_gossip",

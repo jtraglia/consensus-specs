@@ -142,7 +142,7 @@ verifying each attestation's aggregate signature in turn. An aggregate on the
 wire carries a `stark_proof` of its own in `AggregateAndProof`, and the proposer
 merges those into the block's `stark_proof`.
 
-*Note*: This specification is built upon [PQReg](../pqreg/beacon-chain.md),
+*Note*: This specification is built upon [EIP-8483](../eip8483/beacon-chain.md),
 which is built upon [Gloas](../../gloas/beacon-chain.md).
 
 ## Types

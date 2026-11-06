@@ -24,7 +24,7 @@
 This document describes the process of the PQ upgrade.
 
 Before the fork, validators register their XMSS public key and VRF data, and
-builders their XMSS public key, through [PQReg](../pqreg/beacon-chain.md)
+builders their XMSS public key, through [EIP-8483](../eip8483/beacon-chain.md)
 registrations. At the fork, each validator and builder that registered takes its
 XMSS public key in place of its BLS public key, and each validator its VRF data.
 Validators and builders keep their indices.
@@ -65,8 +65,8 @@ Warning: this configuration is not definitive.
 ### New `compute_validators`
 
 ```python
-def compute_validators(pre: pqreg.BeaconState) -> Validators:
-    epoch = pqreg.get_current_epoch(pre)
+def compute_validators(pre: eip8483.BeaconState) -> Validators:
+    epoch = eip8483.get_current_epoch(pre)
     registered = {
         registration.validator_index: registration.pq_data
         for registration in pre.validator_pq_registrations
@@ -103,8 +103,8 @@ def compute_validators(pre: pqreg.BeaconState) -> Validators:
 ### New `compute_builders`
 
 ```python
-def compute_builders(pre: pqreg.BeaconState) -> Builders:
-    epoch = pqreg.get_current_epoch(pre)
+def compute_builders(pre: eip8483.BeaconState) -> Builders:
+    epoch = eip8483.get_current_epoch(pre)
     registered = {
         registration.builder_pubkey: registration.pq_data
         for registration in pre.builder_pq_registrations
@@ -133,7 +133,7 @@ def compute_builders(pre: pqreg.BeaconState) -> Builders:
 ### New `compute_balances`
 
 ```python
-def compute_balances(pre: pqreg.BeaconState) -> Balances:
+def compute_balances(pre: eip8483.BeaconState) -> Balances:
     balances = pre.balances.copy()
     validator_pubkeys = [validator.pubkey for validator in pre.validators]
     for deposit in pre.pending_deposits:
@@ -145,7 +145,7 @@ def compute_balances(pre: pqreg.BeaconState) -> Balances:
 ### New `compute_pending_deposits`
 
 ```python
-def compute_pending_deposits(pre: pqreg.BeaconState) -> PendingDeposits:
+def compute_pending_deposits(pre: eip8483.BeaconState) -> PendingDeposits:
     validator_pubkeys = [validator.pubkey for validator in pre.validators]
     return PendingDeposits(
         data=[
@@ -158,10 +158,10 @@ def compute_pending_deposits(pre: pqreg.BeaconState) -> PendingDeposits:
 
 ```python
 def compute_builder_pending_withdrawals(
-    pre: pqreg.BeaconState,
+    pre: eip8483.BeaconState,
 ) -> BuilderPendingWithdrawals:
     builder_pubkeys = [registration.builder_pubkey for registration in pre.builder_pq_registrations]
-    quorum = pqreg.get_builder_payment_quorum_threshold(pre)
+    quorum = eip8483.get_builder_payment_quorum_threshold(pre)
     withdrawals = pre.builder_pending_withdrawals.copy()
     for payment in pre.builder_pending_payments:
         builder = pre.builders[payment.withdrawal.builder_index]
@@ -177,7 +177,7 @@ def compute_builder_pending_withdrawals(
 ### New `compute_builder_pending_payments`
 
 ```python
-def compute_builder_pending_payments(pre: pqreg.BeaconState) -> BuilderPendingPayments:
+def compute_builder_pending_payments(pre: eip8483.BeaconState) -> BuilderPendingPayments:
     builder_pubkeys = [registration.builder_pubkey for registration in pre.builder_pq_registrations]
     payments = []
     for payment in pre.builder_pending_payments:
@@ -207,8 +207,8 @@ from the PQ type even for identical content. The upgrade cannot recompute it
 because the state stores only the commitment.
 
 ```python
-def upgrade_to_pq(pre: pqreg.BeaconState) -> BeaconState:
-    epoch = pqreg.get_current_epoch(pre)
+def upgrade_to_pq(pre: eip8483.BeaconState) -> BeaconState:
+    epoch = eip8483.get_current_epoch(pre)
 
     post = BeaconState(
         genesis_time=pre.genesis_time,
