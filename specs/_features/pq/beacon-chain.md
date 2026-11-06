@@ -28,6 +28,7 @@
     - [`Builder`](#builder)
     - [`BuilderDepositRequest`](#builderdepositrequest)
     - [`BuilderExitRequest`](#builderexitrequest)
+    - [`ConsolidationRequest`](#consolidationrequest)
     - [`DepositRequest`](#depositrequest)
     - [`ExecutionRequests`](#executionrequests)
     - [`IndexedAttestation`](#indexedattestation)
@@ -62,6 +63,7 @@
     - [Modified `get_indexed_attestation`](#modified-get_indexed_attestation)
     - [New `get_attestation_statements`](#new-get_attestation_statements)
   - [Beacon state mutators](#beacon-state-mutators)
+    - [Modified `queue_excess_active_balance`](#modified-queue_excess_active_balance)
 - [Beacon chain state transition function](#beacon-chain-state-transition-function)
   - [Modified `verify_block_signature`](#modified-verify_block_signature)
   - [Epoch processing](#epoch-processing)
@@ -94,6 +96,9 @@
         - [Modified `process_builder_exit_request`](#modified-process_builder_exit_request)
       - [Execution-layer withdrawal requests](#execution-layer-withdrawal-requests)
         - [Modified `process_withdrawal_request`](#modified-process_withdrawal_request)
+      - [Execution-layer consolidation requests](#execution-layer-consolidation-requests)
+        - [Modified `is_valid_switch_to_compounding_request`](#modified-is_valid_switch_to_compounding_request)
+        - [Modified `process_consolidation_request`](#modified-process_consolidation_request)
     - [Parent execution payload](#parent-execution-payload)
       - [Modified `apply_parent_execution_payload`](#modified-apply_parent_execution_payload)
 
@@ -144,12 +149,9 @@ set. A legacy deposit's validator takes the XMSS public key and VRF root that a
 validator that did not register takes at the fork, and it is exited at once, so
 the validator sweep refunds its balance after the withdrawability delay. A
 legacy builder deposit's builder is keyed the same way and initiates its exit at
-once. A legacy withdrawal request is ignored.
+once. A legacy withdrawal or consolidation request is ignored.
 
 `BLSToExecutionChange` is disabled, because its BLS signature could be forged.
-
-Consolidation requests are deprecated, so the execution layer must stop
-producing them at the fork. Pending consolidations still complete.
 
 Blocks no longer carry payload attestations, which spares proposers from
 aggregating them. The payload timeliness committee still broadcasts its votes,
@@ -412,6 +414,17 @@ class BuilderExitRequest(Container):
     pubkey: Bytes48
 ```
 
+#### `ConsolidationRequest`
+
+```python
+class ConsolidationRequest(Container):
+    source_address: ExecutionAddress
+    # [Modified in PQ]
+    source_pubkey: Bytes48
+    # [Modified in PQ]
+    target_pubkey: Bytes48
+```
+
 #### `DepositRequest`
 
 ```python
@@ -429,12 +442,11 @@ class DepositRequest(Container):
 
 ```python
 class ExecutionRequests(ProgressiveContainer):
-    ACTIVE_FIELDS = active_fields(width=5, gaps=(2,))
+    ACTIVE_FIELDS = active_fields(width=5)
 
     deposits: DepositRequests
     withdrawals: WithdrawalRequests
-    # [Modified in PQ]
-    # Removed `consolidations`
+    consolidations: ConsolidationRequests
     builder_deposits: BuilderDepositRequests
     builder_exits: BuilderExitRequests
     # [Modified in PQ]
@@ -802,6 +814,30 @@ def get_attestation_statements(
 
 ### Beacon state mutators
 
+#### Modified `queue_excess_active_balance`
+
+```python
+def queue_excess_active_balance(state: BeaconState, index: ValidatorIndex) -> None:
+    balance = state.balances[index]
+    if balance > MIN_ACTIVATION_BALANCE:
+        excess_balance = balance - MIN_ACTIVATION_BALANCE
+        state.balances[index] = MIN_ACTIVATION_BALANCE
+        validator = state.validators[index]
+        # Use an empty signature field as a placeholder
+        # and GENESIS_SLOT to distinguish from a pending deposit request
+        state.pending_deposits.append(
+            PendingDeposit(
+                # [Modified in PQ]
+                pubkey=Bytes48(XMSS_DEPOSIT_PREFIX + validator.pubkey),
+                withdrawal_credentials=validator.withdrawal_credentials,
+                amount=excess_balance,
+                # [Modified in PQ]
+                signature=Bytes96(),
+                slot=GENESIS_SLOT,
+            )
+        )
+```
+
 ## Beacon chain state transition function
 
 ### Modified `verify_block_signature`
@@ -1000,8 +1036,7 @@ def get_execution_requests_list(execution_requests: ExecutionRequests) -> Sequen
     requests: Sequence[tuple[Bytes1, ProgressiveList]] = [
         (DEPOSIT_REQUEST_TYPE, execution_requests.deposits),
         (WITHDRAWAL_REQUEST_TYPE, execution_requests.withdrawals),
-        # [Modified in PQ]
-        # Removed `CONSOLIDATION_REQUEST_TYPE`
+        (CONSOLIDATION_REQUEST_TYPE, execution_requests.consolidations),
         (BUILDER_DEPOSIT_REQUEST_TYPE, execution_requests.builder_deposits),
         (BUILDER_EXIT_REQUEST_TYPE, execution_requests.builder_exits),
         # [Modified in PQ]
@@ -1550,6 +1585,134 @@ def process_withdrawal_request(state: BeaconState, withdrawal_request: Withdrawa
         )
 ```
 
+##### Execution-layer consolidation requests
+
+###### Modified `is_valid_switch_to_compounding_request`
+
+```python
+def is_valid_switch_to_compounding_request(
+    state: BeaconState, consolidation_request: ConsolidationRequest
+) -> bool:
+    # Switch to compounding requires source and target be equal
+    if consolidation_request.source_pubkey != consolidation_request.target_pubkey:
+        return False
+
+    # [Modified in PQ]
+    # Verify pubkey exists
+    source_pubkey = XMSSPubkey(consolidation_request.source_pubkey[16:])
+    validator_pubkeys = [validator.pubkey for validator in state.validators]
+    if source_pubkey not in validator_pubkeys:
+        return False
+
+    source_validator = state.validators[ValidatorIndex(validator_pubkeys.index(source_pubkey))]
+
+    # Verify request has been authorized
+    if source_validator.withdrawal_credentials[12:] != consolidation_request.source_address:
+        return False
+
+    # Verify source withdrawal credentials
+    if not has_eth1_withdrawal_credential(source_validator):
+        return False
+
+    # Verify the source is active
+    current_epoch = get_current_epoch(state)
+    if not is_active_validator(source_validator, current_epoch):
+        return False
+
+    # Verify exit for source has not been initiated
+    if source_validator.exit_epoch != FAR_FUTURE_EPOCH:
+        return False
+
+    return True
+```
+
+###### Modified `process_consolidation_request`
+
+```python
+def process_consolidation_request(
+    state: BeaconState, consolidation_request: ConsolidationRequest
+) -> None:
+    # [New in PQ]
+    # Ignore requests that name a BLS public key
+    if is_legacy_pubkey(consolidation_request.source_pubkey):
+        return
+    if is_legacy_pubkey(consolidation_request.target_pubkey):
+        return
+
+    if is_valid_switch_to_compounding_request(state, consolidation_request):
+        validator_pubkeys = [validator.pubkey for validator in state.validators]
+        # [Modified in PQ]
+        request_source_pubkey = XMSSPubkey(consolidation_request.source_pubkey[16:])
+        source_index = ValidatorIndex(validator_pubkeys.index(request_source_pubkey))
+        switch_to_compounding_validator(state, source_index)
+        return
+
+    # Verify that source != target, so a consolidation cannot be used as an exit
+    if consolidation_request.source_pubkey == consolidation_request.target_pubkey:
+        return
+    # If the pending consolidations queue is full, consolidation requests are ignored
+    if len(state.pending_consolidations) == PENDING_CONSOLIDATIONS_LIMIT:
+        return
+    # If there is too little available consolidation churn limit, consolidation requests are ignored
+    if get_consolidation_churn_limit(state) <= MIN_ACTIVATION_BALANCE:
+        return
+
+    validator_pubkeys = [validator.pubkey for validator in state.validators]
+    # [Modified in PQ]
+    # Verify pubkeys exists
+    request_source_pubkey = XMSSPubkey(consolidation_request.source_pubkey[16:])
+    request_target_pubkey = XMSSPubkey(consolidation_request.target_pubkey[16:])
+    if request_source_pubkey not in validator_pubkeys:
+        return
+    if request_target_pubkey not in validator_pubkeys:
+        return
+    source_index = ValidatorIndex(validator_pubkeys.index(request_source_pubkey))
+    target_index = ValidatorIndex(validator_pubkeys.index(request_target_pubkey))
+    source_validator = state.validators[source_index]
+    target_validator = state.validators[target_index]
+
+    # Verify source withdrawal credentials
+    has_correct_credential = has_execution_withdrawal_credential(source_validator)
+    is_correct_source_address = (
+        source_validator.withdrawal_credentials[12:] == consolidation_request.source_address
+    )
+    if not (has_correct_credential and is_correct_source_address):
+        return
+
+    # Verify that target has compounding withdrawal credentials
+    if not has_compounding_withdrawal_credential(target_validator):
+        return
+
+    # Verify the source and the target are active
+    current_epoch = get_current_epoch(state)
+    if not is_active_validator(source_validator, current_epoch):
+        return
+    if not is_active_validator(target_validator, current_epoch):
+        return
+    # Verify exits for source and target have not been initiated
+    if source_validator.exit_epoch != FAR_FUTURE_EPOCH:
+        return
+    if target_validator.exit_epoch != FAR_FUTURE_EPOCH:
+        return
+    # Verify the source has been active long enough
+    if current_epoch < source_validator.activation_epoch + SHARD_COMMITTEE_PERIOD:
+        return
+    # Verify the source has no pending withdrawals in the queue
+    if get_pending_balance_to_withdraw(state, source_index) > 0:
+        return
+
+    # Initiate source validator exit and append pending consolidation
+    source_validator.exit_epoch = compute_consolidation_epoch_and_update_churn(
+        state, source_validator.effective_balance
+    )
+    source_validator.withdrawable_epoch = (
+        source_validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+    )
+    state.pending_consolidations.append(
+        PendingConsolidation(source_index=source_index, target_index=target_index)
+    )
+```
+
 #### Parent execution payload
 
 ##### Modified `apply_parent_execution_payload`
@@ -1569,8 +1732,7 @@ def apply_parent_execution_payload(
     parent_epoch = compute_epoch_at_slot(parent_slot)
 
     assert len(requests.withdrawals) <= MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD
-    # [Modified in PQ]
-    # Removed the consolidation request limit
+    assert len(requests.consolidations) <= MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD
     assert len(requests.builder_deposits) <= MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD
     assert len(requests.builder_exits) <= MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD
     # [Modified in PQ]
@@ -1603,8 +1765,7 @@ def apply_parent_execution_payload(
 
     for_ops(requests.deposits, process_deposit_request)
     for_ops(requests.withdrawals, process_withdrawal_request)
-    # [Modified in PQ]
-    # Removed `process_consolidation_request`
+    for_ops(requests.consolidations, process_consolidation_request)
     for_ops(requests.builder_deposits, process_builder_deposit_request)
     for_ops(requests.builder_exits, process_builder_exit_request)
     # [Modified in PQ]

@@ -258,22 +258,20 @@ zero bytes, and the `bid.value` MUST be zero. All other conditions on
 ##### Execution requests
 
 *Note*: The function `get_execution_requests` is modified to no longer parse PQ
-registration requests or consolidation requests.
+registration requests.
 
 ```python
 def get_execution_requests(execution_requests_list: Sequence[bytes]) -> ExecutionRequests:
     deposits = DepositRequests()
     withdrawals = WithdrawalRequests()
-    # [Modified in PQ]
-    # Removed `consolidations`
+    consolidations = ConsolidationRequests()
     builder_deposits = BuilderDepositRequests()
     builder_exits = BuilderExitRequests()
 
     request_types = [
         DEPOSIT_REQUEST_TYPE,
         WITHDRAWAL_REQUEST_TYPE,
-        # [Modified in PQ]
-        # Removed `CONSOLIDATION_REQUEST_TYPE`
+        CONSOLIDATION_REQUEST_TYPE,
         BUILDER_DEPOSIT_REQUEST_TYPE,
         BUILDER_EXIT_REQUEST_TYPE,
         # [Modified in PQ]
@@ -299,6 +297,8 @@ def get_execution_requests(execution_requests_list: Sequence[bytes]) -> Executio
             deposits = ssz_deserialize(DepositRequests, request_data)
         elif request_type == WITHDRAWAL_REQUEST_TYPE:
             withdrawals = ssz_deserialize(WithdrawalRequests, request_data)
+        elif request_type == CONSOLIDATION_REQUEST_TYPE:
+            consolidations = ssz_deserialize(ConsolidationRequests, request_data)
         elif request_type == BUILDER_DEPOSIT_REQUEST_TYPE:
             builder_deposits = ssz_deserialize(BuilderDepositRequests, request_data)
         elif request_type == BUILDER_EXIT_REQUEST_TYPE:
@@ -307,8 +307,7 @@ def get_execution_requests(execution_requests_list: Sequence[bytes]) -> Executio
     return ExecutionRequests(
         deposits=deposits,
         withdrawals=withdrawals,
-        # [Modified in PQ]
-        # Removed `consolidations`
+        consolidations=consolidations,
         builder_deposits=builder_deposits,
         builder_exits=builder_exits,
         # [Modified in PQ]
