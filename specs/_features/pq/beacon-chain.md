@@ -51,7 +51,7 @@
     - [STARK proofs](#stark-proofs)
   - [Misc](#misc)
     - [New `compute_deposit_pubkey`](#new-compute_deposit_pubkey)
-    - [New `compute_deposit_vrf_data`](#new-compute_deposit_vrf_data)
+    - [New `compute_deposit_vrf_root`](#new-compute_deposit_vrf_root)
     - [New `compute_xmss_attestation_leaf_index`](#new-compute_xmss_attestation_leaf_index)
     - [New `compute_xmss_leaf_index`](#new-compute_xmss_leaf_index)
   - [Predicates](#predicates)
@@ -125,12 +125,12 @@ once, such as those of attestations in an `AttestationProof`.
 
 XMSS signatures are not unique, so a proposer could grind a signature-based
 RANDAO reveal. Each validator instead registers the root of a Merkle tree of
-secret random values, one for each slot, as its VRF data. Its RANDAO reveal is
+secret random values, one for each slot, as its VRF root. Its RANDAO reveal is
 the leaf for the slot with the leaf's Merkle branch, a `VRFProof`, which the
 proposer committed to before the fork. The same proof serves as its selection
 proof when it aggregates.
 
-A validator's record carries the XMSS public key and VRF data it registered with
+A validator's record carries the XMSS public key and VRF root it registered with
 EIP-8483 before the fork in place of its BLS public key, and a builder's record
 the XMSS public key it registered. Validators and builders that did not register
 are withdrawn at the fork. See [the fork document](./fork.md) for details.
@@ -138,9 +138,9 @@ are withdrawn at the fork. See [the fork document](./fork.md) for details.
 Execution layer requests keep their formats. A request's 48-byte public key
 field is 16 zero bytes followed by an XMSS public key. Deposits no longer carry
 a signature. Instead, the first 32 bytes of a deposit's 96-byte signature field
-are the VRF data of the validator it creates. A legacy request made before the
+are the VRF root of the validator it creates. A legacy request made before the
 fork names a BLS public key instead, whose first byte always has its top bit
-set. A legacy deposit's validator takes the XMSS public key and VRF data that a
+set. A legacy deposit's validator takes the XMSS public key and VRF root that a
 validator that did not register takes at the fork, and it is exited at once, so
 the validator sweep refunds its balance after the withdrawability delay. A
 legacy builder deposit's builder is keyed the same way and initiates its exit at
@@ -171,8 +171,8 @@ which is built upon [Gloas](../../gloas/beacon-chain.md).
 ```python
 class VRFProof(Vector[Bytes32]):
     """
-    A leaf of the tree whose root is a validator's VRF data, followed by the
-    leaf's Merkle branch.
+    A leaf of the tree under a validator's VRF root, followed by the leaf's
+    Merkle branch.
     """
 
     LENGTH = VRF_TREE_DEPTH + 1
@@ -254,7 +254,7 @@ class XMSSSignature(ByteVector):
 | Name                        | Value            |
 | --------------------------- | ---------------- |
 | `LEGACY_XMSS_PUBKEY_DOMAIN` | `Bytes1("0x00")` |
-| `LEGACY_VRF_DATA_DOMAIN`    | `Bytes1("0x01")` |
+| `LEGACY_VRF_ROOT_DOMAIN`    | `Bytes1("0x01")` |
 
 ## Presets
 
@@ -543,7 +543,7 @@ class Validator(Container):
     # [Modified in PQ]
     pubkey: XMSSPubkey
     # [New in PQ]
-    vrf_data: Root
+    vrf_root: Root
     withdrawal_credentials: Bytes32
     effective_balance: Gwei
     slashed: Boolean
@@ -632,15 +632,15 @@ def compute_deposit_pubkey(pubkey: Bytes48) -> XMSSPubkey:
     return XMSSPubkey(pubkey[16:])
 ```
 
-#### New `compute_deposit_vrf_data`
+#### New `compute_deposit_vrf_root`
 
 ```python
-def compute_deposit_vrf_data(deposit: PendingDeposit) -> Root:
+def compute_deposit_vrf_root(deposit: PendingDeposit) -> Root:
     """
-    Return the VRF data of the validator that ``deposit`` creates.
+    Return the VRF root of the validator that ``deposit`` creates.
     """
     if is_legacy_pubkey(deposit.pubkey):
-        return Root(sha256(deposit.pubkey + LEGACY_VRF_DATA_DOMAIN))
+        return Root(sha256(deposit.pubkey + LEGACY_VRF_ROOT_DOMAIN))
     return Root(deposit.signature[:32])
 ```
 
@@ -700,15 +700,15 @@ def is_valid_vrf_proof(
     state: BeaconState, validator_index: ValidatorIndex, slot: Slot, proof: VRFProof
 ) -> bool:
     """
-    Check that ``proof`` opens the leaf at index ``slot`` of the tree whose root
-    is the VRF data of the validator at ``validator_index``.
+    Check that ``proof`` opens the leaf at index ``slot`` of the tree under
+    the VRF root of the validator at ``validator_index``.
     """
     return is_valid_merkle_branch(
         leaf=proof[0],
         branch=proof[1:],
         depth=VRF_TREE_DEPTH,
         index=slot,
-        root=state.validators[validator_index].vrf_data,
+        root=state.validators[validator_index].vrf_root,
     )
 ```
 
@@ -866,7 +866,7 @@ def apply_pending_deposit(state: BeaconState, deposit: PendingDeposit) -> None:
             state,
             pubkey,
             # [New in PQ]
-            compute_deposit_vrf_data(deposit),
+            compute_deposit_vrf_root(deposit),
             deposit.withdrawal_credentials,
             deposit.amount,
         )
@@ -967,7 +967,7 @@ def process_block(state: BeaconState, block: BeaconBlock) -> None:
 #### Modified `process_randao`
 
 *Note*: The reveal is the proposer's VRF proof for the slot. The proposer
-committed to its leaves when it registered its VRF data, so it cannot grind the
+committed to its leaves when it registered its VRF root, so it cannot grind the
 reveal and can only withhold its block, as with BLS.
 
 ```python
@@ -1327,14 +1327,14 @@ def get_validator_from_deposit(
     # [Modified in PQ]
     pubkey: XMSSPubkey,
     # [New in PQ]
-    vrf_data: Root,
+    vrf_root: Root,
     withdrawal_credentials: Bytes32,
     amount: Gwei,
 ) -> Validator:
     validator = Validator(
         pubkey=pubkey,
         # [New in PQ]
-        vrf_data=vrf_data,
+        vrf_root=vrf_root,
         withdrawal_credentials=withdrawal_credentials,
         effective_balance=Gwei(0),
         slashed=Boolean(False),
@@ -1360,13 +1360,13 @@ def add_validator_to_registry(
     # [Modified in PQ]
     pubkey: XMSSPubkey,
     # [New in PQ]
-    vrf_data: Root,
+    vrf_root: Root,
     withdrawal_credentials: Bytes32,
     amount: Gwei,
 ) -> None:
     index = get_index_for_new_validator(state)
     # [Modified in PQ]
-    validator = get_validator_from_deposit(pubkey, vrf_data, withdrawal_credentials, amount)
+    validator = get_validator_from_deposit(pubkey, vrf_root, withdrawal_credentials, amount)
     set_or_append_list(state.validators, index, validator)
     set_or_append_list(state.balances, index, amount)
     set_or_append_list(state.previous_epoch_participation, index, ParticipationFlags(0b0000_0000))
@@ -1405,7 +1405,7 @@ def add_builder_to_registry(
 ###### Modified `process_builder_deposit_request`
 
 *Note*: Builder deposits carry no signature, so a deposit for a new builder is
-not verified. A builder has no VRF data, so `request.signature` is ignored. The
+not verified. A builder has no VRF root, so `request.signature` is ignored. The
 builder of a legacy deposit initiates its exit at once, so the builder sweep
 refunds its balance.
 

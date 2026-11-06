@@ -110,7 +110,7 @@ class SignedAggregateAndProof(Container):
 
 A validator builds a Merkle tree of depth `VRF_TREE_DEPTH` whose leaves are
 secret random values, one for each slot, and registers the root of the tree as
-its VRF data with EIP-8483, as the last 32 bytes of the registration's
+its VRF root with EIP-8483, as the last 32 bytes of the registration's
 `pq_data`. Its VRF proof for a slot is the leaf at index `slot`, followed by the
 leaf's Merkle branch. It reveals the proof as its RANDAO reveal when it proposes
 and as its selection proof when it aggregates. The tree is fixed at
@@ -126,16 +126,16 @@ sign data throughout the lifetime of the validator.
 
 The XMSS public key is registered with EIP-8483 before the upgrade, as the first
 32 bytes of the registration's `pq_data`. The remaining 32 bytes are the
-validator's VRF data.
+validator's VRF root.
 
 *Note*: A validator that joins after the upgrade provides its XMSS public key
-and VRF data in its deposit instead, see [Submit deposit](#submit-deposit).
+and VRF root in its deposit instead, see [Submit deposit](#submit-deposit).
 
 ### Submit deposit
 
 After the upgrade, a deposit carries no signature. Its `pubkey` is
 `XMSS_DEPOSIT_PREFIX`, 16 zero bytes, followed by the validator's XMSS public
-key, and its `signature` holds the validator's VRF data followed by 64 zero
+key, and its `signature` holds the validator's VRF root followed by 64 zero
 bytes. A deposit whose XMSS public key is already in `state.validators` tops up
 that validator.
 

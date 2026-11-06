@@ -19,7 +19,7 @@ pubkey_to_privkey = {pubkey: privkey for privkey, pubkey in zip(privkeys, pubkey
 xmss_builder_pubkeys = [xmss.StubPk(privkey) for privkey in builder_privkeys]
 xmss_pubkeys = [xmss.StubPk(privkey) for privkey in privkeys]
 
-# Depth of the VRF trees whose roots validators register as VRF data
+# Depth of the VRF trees whose roots validators register
 VRF_TREE_DEPTH = 31
 
 
@@ -36,9 +36,9 @@ def get_vrf_tree_nodes(index):
     return tuple(nodes)
 
 
-def get_vrf_data(index):
+def get_vrf_root(index):
     """
-    The VRF data of the validator at ``index``, the root of its VRF tree.
+    The VRF root of the validator at ``index``.
     """
     return get_vrf_tree_nodes(index)[-1]
 

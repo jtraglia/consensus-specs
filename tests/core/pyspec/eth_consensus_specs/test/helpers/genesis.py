@@ -29,7 +29,7 @@ from eth_consensus_specs.test.helpers.gloas.state import (
 )
 from eth_consensus_specs.test.helpers.keys import (
     builder_pubkeys,
-    get_vrf_data,
+    get_vrf_root,
     pubkeys,
     xmss_builder_pubkeys,
     xmss_pubkeys,
@@ -80,7 +80,7 @@ def build_mock_validator(spec, i: int, balance: int):
         ),
     )
     if is_post_pq(spec):
-        validator.vrf_data = get_vrf_data(i)
+        validator.vrf_root = get_vrf_root(i)
 
     return validator
 

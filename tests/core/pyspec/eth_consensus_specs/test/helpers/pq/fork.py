@@ -1,23 +1,23 @@
 from eth_consensus_specs.test.helpers.constants import (
     PQ,
 )
-from eth_consensus_specs.test.helpers.keys import get_vrf_data, xmss_builder_pubkeys, xmss_pubkeys
+from eth_consensus_specs.test.helpers.keys import get_vrf_root, xmss_builder_pubkeys, xmss_pubkeys
 
 PQ_FORK_TEST_META_TAGS = {
     "fork": PQ,
 }
 
 
-def get_registration_pq_data(xmss_pubkey, vrf_data):
+def get_registration_pq_data(xmss_pubkey, vrf_root):
     """
-    The PQ material of a registration, the XMSS public key followed by VRF data.
+    The PQ material of a registration, the XMSS public key followed by VRF root.
     """
-    return xmss_pubkey + vrf_data
+    return xmss_pubkey + vrf_root
 
 
 def register_xmss_pubkeys(spec, state, indices=None):
     """
-    Add an EIP-8483 registration of each validator's XMSS public key and VRF data.
+    Add an EIP-8483 registration of each validator's XMSS public key and VRF root.
     """
     if indices is None:
         indices = range(len(state.validators))
@@ -25,7 +25,7 @@ def register_xmss_pubkeys(spec, state, indices=None):
         state.validator_pq_registrations.append(
             spec.ValidatorPQRegistration(
                 validator_index=index,
-                pq_data=get_registration_pq_data(xmss_pubkeys[index], get_vrf_data(index)),
+                pq_data=get_registration_pq_data(xmss_pubkeys[index], get_vrf_root(index)),
             )
         )
 
@@ -104,14 +104,14 @@ def run_fork_test(post_spec, pre_state):
         if index in registered:
             pq_data = registered[index]
             assert post_validator.pubkey == pq_data[:32]
-            assert post_validator.vrf_data == pq_data[32:]
+            assert post_validator.vrf_root == pq_data[32:]
             assert post_validator.exit_epoch == pre_validator.exit_epoch
         else:
             assert post_validator.pubkey == post_spec.sha256(
                 pre_validator.pubkey + post_spec.LEGACY_XMSS_PUBKEY_DOMAIN
             )
-            assert post_validator.vrf_data == post_spec.sha256(
-                pre_validator.pubkey + post_spec.LEGACY_VRF_DATA_DOMAIN
+            assert post_validator.vrf_root == post_spec.sha256(
+                pre_validator.pubkey + post_spec.LEGACY_VRF_ROOT_DOMAIN
             )
             assert post_validator.exit_epoch <= post_state.fork.epoch
             assert post_validator.withdrawable_epoch <= post_state.fork.epoch

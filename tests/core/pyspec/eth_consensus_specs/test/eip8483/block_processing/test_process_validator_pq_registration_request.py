@@ -212,7 +212,7 @@ def test_process_validator_pq_registration_request__xmss_pubkey_already_register
     spec.process_validator_pq_registration_request(
         state, prepare_validator_pq_registration_request(spec, state, 0, b"\x22" * 64)
     )
-    # Same XMSS public key, different VRF data
+    # Same XMSS public key, different VRF root
     request = prepare_validator_pq_registration_request(spec, state, 1, b"\x22" * 32 + b"\x33" * 32)
 
     yield from run_validator_pq_registration_request_processing(spec, state, request, valid=False)
@@ -220,14 +220,14 @@ def test_process_validator_pq_registration_request__xmss_pubkey_already_register
 
 @with_phases([EIP8483])
 @spec_state_test
-def test_process_validator_pq_registration_request__vrf_data_already_registered(spec, state):
+def test_process_validator_pq_registration_request__vrf_root_already_registered(spec, state):
     set_execution_withdrawal_address(spec, state, 0, b"\x11" * 20)
     set_execution_withdrawal_address(spec, state, 1, b"\x44" * 20)
     spec.process_validator_pq_registration_request(
         state,
         prepare_validator_pq_registration_request(spec, state, 0, b"\x22" * 32 + b"\x55" * 32),
     )
-    # Different XMSS public key, same VRF data
+    # Different XMSS public key, same VRF root
     request = prepare_validator_pq_registration_request(spec, state, 1, b"\x33" * 32 + b"\x55" * 32)
 
     yield from run_validator_pq_registration_request_processing(spec, state, request, valid=False)

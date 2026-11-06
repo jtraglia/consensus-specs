@@ -40,8 +40,8 @@
 This upgrade adds two execution layer triggered requests with which validators
 and builders register post-quantum material, as described by EIP-8483. The
 withdrawal address of a validator registers 64 bytes for it, an XMSS public key
-followed by VRF data. The execution address of a builder registers 32 bytes for
-it, an XMSS public key.
+followed by a VRF root. The execution address of a builder registers 32 bytes
+for it, an XMSS public key.
 
 The beacon state stores one `(validator_index, pq_data)` entry per validator and
 one `(builder_pubkey, pq_data)` entry per builder. Builder entries are keyed by
@@ -51,14 +51,14 @@ earlier one. A later fork that migrates consensus to post-quantum signatures
 defines how the material is used.
 
 *Note*: Unlike EIP-8483 as drafted, validator material is 64 bytes rather than
-32, so it can carry VRF data next to the XMSS public key, and builders register
-through a request type of their own.
+32, so it can carry a VRF root next to the XMSS public key, and builders
+register through a request type of their own.
 
 *Note*: Unlike EIP-8483 as drafted, a validator request is ignored if its XMSS
-public key or VRF data is already registered by a validator, and a builder
+public key or VRF root is already registered by a validator, and a builder
 request if its XMSS public key is already registered by a builder. The material
 is public, so otherwise anyone could register a copy of someone else's key or
-VRF data, and the migration fork could not give each its own. A validator and a
+VRF root, and the migration fork could not give each its own. A validator and a
 builder may share an XMSS public key, since they sign at different leaves.
 
 *Note*: This specification is built upon [Gloas](../../gloas/beacon-chain.md).
@@ -278,9 +278,9 @@ def get_execution_requests_list(execution_requests: ExecutionRequests) -> Sequen
 
 *Note*: Invalid requests are ignored. No status is checked, so pending, active,
 exited, and slashed validators can all register PQ material, as long as the
-request comes from their withdrawal address and its XMSS public key and VRF data
+request comes from their withdrawal address and its XMSS public key and VRF root
 are not already registered. A validator that registers again must change both
-its XMSS public key and its VRF data, because each is checked against every
+its XMSS public key and its VRF root, because each is checked against every
 registration, including its own.
 
 ```python
@@ -305,11 +305,11 @@ def process_validator_pq_registration_request(
     if request.pq_data[:32] in registered_xmss_pubkeys:
         return
 
-    # Verify the VRF data is not already registered
-    registered_vrf_data = [
+    # Verify the VRF root is not already registered
+    registered_vrf_roots = [
         registration.pq_data[32:] for registration in state.validator_pq_registrations
     ]
-    if request.pq_data[32:] in registered_vrf_data:
+    if request.pq_data[32:] in registered_vrf_roots:
         return
 
     # Overwrite an existing registration for this validator

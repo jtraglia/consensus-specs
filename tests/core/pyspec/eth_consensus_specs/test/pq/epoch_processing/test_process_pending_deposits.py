@@ -26,10 +26,10 @@ def run_process_pending_deposits(spec, state):
 def test_new_validator_deposit(spec, state):
     index = len(state.validators)
     pubkey = xmss_pubkeys[index]
-    vrf_data = b"\x88" * 32
+    vrf_root = b"\x88" * 32
     amount = spec.MIN_ACTIVATION_BALANCE
     deposit = prepare_pending_deposit(
-        spec, spec.XMSS_DEPOSIT_PREFIX + pubkey, amount, vrf_data + bytes(64)
+        spec, spec.XMSS_DEPOSIT_PREFIX + pubkey, amount, vrf_root + bytes(64)
     )
     state.pending_deposits.append(deposit)
     state.deposit_balance_to_consume = amount
@@ -39,7 +39,7 @@ def test_new_validator_deposit(spec, state):
     assert len(state.validators) == index + 1
     validator = state.validators[index]
     assert validator.pubkey == pubkey
-    assert validator.vrf_data == vrf_data
+    assert validator.vrf_root == vrf_root
     assert validator.withdrawal_credentials == deposit.withdrawal_credentials
     assert validator.exit_epoch == spec.FAR_FUTURE_EPOCH
     assert state.balances[index] == amount
@@ -80,7 +80,7 @@ def test_legacy_deposit_is_exited(spec, state):
     assert len(state.validators) == index + 1
     validator = state.validators[index]
     assert validator.pubkey == spec.sha256(bls_pubkey + spec.LEGACY_XMSS_PUBKEY_DOMAIN)
-    assert validator.vrf_data == spec.sha256(bls_pubkey + spec.LEGACY_VRF_DATA_DOMAIN)
+    assert validator.vrf_root == spec.sha256(bls_pubkey + spec.LEGACY_VRF_ROOT_DOMAIN)
     assert validator.exit_epoch == spec.get_current_epoch(state)
     expected_withdrawable = (
         spec.get_current_epoch(state) + spec.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY

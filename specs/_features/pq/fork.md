@@ -22,15 +22,15 @@
 
 This document describes the process of the PQ upgrade.
 
-Before the fork, validators register their XMSS public key and VRF data, and
+Before the fork, validators register their XMSS public key and VRF root, and
 builders their XMSS public key, through [EIP-8483](../eip8483/beacon-chain.md)
 registrations. At the fork, each validator and builder that registered takes its
-XMSS public key in place of its BLS public key, and each validator its VRF data.
+XMSS public key in place of its BLS public key, and each validator its VRF root.
 Validators and builders keep their indices.
 
 A validator that did not register takes
 `sha256(pubkey + LEGACY_XMSS_PUBKEY_DOMAIN)` of its BLS public key as its XMSS
-public key, and `sha256(pubkey + LEGACY_VRF_DATA_DOMAIN)` as its VRF data. No
+public key, and `sha256(pubkey + LEGACY_VRF_ROOT_DOMAIN)` as its VRF root. No
 signature verifies against that key. The validator becomes exited and
 withdrawable at the fork, so the validator sweep withdraws its balance. A
 validator with `0x00` withdrawal credentials has no withdrawal address, so its
@@ -49,7 +49,7 @@ validator that did not register does not consume churn, since the validator is
 withdrawable, and the validator sweep withdraws it.
 
 A pending deposit for a new validator is kept as is. It names a BLS public key,
-so it is a legacy deposit. Its validator takes the XMSS public key and VRF data
+so it is a legacy deposit. Its validator takes the XMSS public key and VRF root
 that a validator that did not register takes, and it is exited at once, so the
 validator sweep refunds its balance after the withdrawability delay.
 
@@ -81,18 +81,18 @@ def compute_validators(pre: eip8483.BeaconState) -> Validators:
         if ValidatorIndex(index) in registered:
             pq_data = registered[ValidatorIndex(index)]
             pubkey = XMSSPubkey(pq_data[:32])
-            vrf_data = Root(pq_data[32:])
+            vrf_root = Root(pq_data[32:])
             exit_epoch = validator.exit_epoch
             withdrawable_epoch = validator.withdrawable_epoch
         else:
             pubkey = XMSSPubkey(sha256(validator.pubkey + LEGACY_XMSS_PUBKEY_DOMAIN))
-            vrf_data = Root(sha256(validator.pubkey + LEGACY_VRF_DATA_DOMAIN))
+            vrf_root = Root(sha256(validator.pubkey + LEGACY_VRF_ROOT_DOMAIN))
             exit_epoch = min(validator.exit_epoch, epoch)
             withdrawable_epoch = min(validator.withdrawable_epoch, epoch)
         validators.append(
             Validator(
                 pubkey=pubkey,
-                vrf_data=vrf_data,
+                vrf_root=vrf_root,
                 withdrawal_credentials=validator.withdrawal_credentials,
                 effective_balance=validator.effective_balance,
                 slashed=validator.slashed,
