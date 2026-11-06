@@ -10,6 +10,8 @@
   - [New `AttestationProof`](#new-attestationproof)
   - [New `XMSSPubkey`](#new-xmsspubkey)
   - [New `XMSSSignature`](#new-xmsssignature)
+  - [New `PreregistrationRequests`](#new-preregistrationrequests)
+  - [New `ValidatorPreregistrations`](#new-validatorpreregistrations)
 - [Constants](#constants)
   - [XMSS](#xmss)
   - [VRF](#vrf)
@@ -17,9 +19,12 @@
   - [XMSS reserved leaves](#xmss-reserved-leaves)
   - [Deposits](#deposits)
   - [Legacy domains](#legacy-domains)
+  - [Domains](#domains)
+  - [Execution-layer triggered requests](#execution-layer-triggered-requests)
 - [Presets](#presets)
   - [XMSS](#xmss-1)
   - [Max operations per block](#max-operations-per-block)
+  - [Execution](#execution)
 - [Containers](#containers)
   - [Modified containers](#modified-containers)
     - [`Attestation`](#attestation)
@@ -43,6 +48,9 @@
     - [`Validator`](#validator)
     - [`WithdrawalRequest`](#withdrawalrequest)
   - [New containers](#new-containers)
+    - [`ValidatorPreregistration`](#validatorpreregistration)
+    - [`PreregistrationRequest`](#preregistrationrequest)
+    - [`StoredPreregistration`](#storedpreregistration)
 - [Dataclasses](#dataclasses)
   - [New dataclasses](#new-dataclasses)
     - [`XMSSAggregateStatement`](#xmssaggregatestatement)
@@ -56,18 +64,25 @@
     - [New `compute_xmss_attestation_leaf_index`](#new-compute_xmss_attestation_leaf_index)
     - [New `compute_xmss_leaf_index`](#new-compute_xmss_leaf_index)
   - [Predicates](#predicates)
+    - [New `is_active_preregistration`](#new-is_active_preregistration)
     - [New `is_legacy_pubkey`](#new-is_legacy_pubkey)
+    - [New `is_valid_preregistration_signature`](#new-is_valid_preregistration_signature)
     - [New `is_valid_vrf_proof`](#new-is_valid_vrf_proof)
+    - [Modified `is_pending_validator`](#modified-is_pending_validator)
     - [Modified `is_valid_indexed_attestation`](#modified-is_valid_indexed_attestation)
   - [Beacon state accessors](#beacon-state-accessors)
     - [Modified `get_indexed_attestation`](#modified-get_indexed_attestation)
     - [New `get_attestation_statements`](#new-get_attestation_statements)
+    - [New `get_stored_preregistration_index`](#new-get_stored_preregistration_index)
+    - [New `get_active_preregistration`](#new-get_active_preregistration)
   - [Beacon state mutators](#beacon-state-mutators)
     - [Modified `queue_excess_active_balance`](#modified-queue_excess_active_balance)
+    - [New `remove_stored_preregistration`](#new-remove_stored_preregistration)
 - [Beacon chain state transition function](#beacon-chain-state-transition-function)
   - [Modified `verify_block_signature`](#modified-verify_block_signature)
   - [Epoch processing](#epoch-processing)
     - [Modified `process_epoch`](#modified-process_epoch)
+    - [New `process_preregistration_expiry`](#new-process_preregistration_expiry)
     - [Modified `apply_pending_deposit`](#modified-apply_pending_deposit)
     - [Modified `process_pending_deposits`](#modified-process_pending_deposits)
   - [Block processing](#block-processing)
@@ -87,6 +102,7 @@
       - [Attestations](#attestations)
         - [Modified `process_attestation`](#modified-process_attestation)
       - [Deposit requests](#deposit-requests)
+        - [Modified `process_deposit_request`](#modified-process_deposit_request)
         - [Modified `get_validator_from_deposit`](#modified-get_validator_from_deposit)
         - [Modified `add_validator_to_registry`](#modified-add_validator_to_registry)
       - [Builder deposit requests](#builder-deposit-requests)
@@ -99,6 +115,8 @@
       - [Execution-layer consolidation requests](#execution-layer-consolidation-requests)
         - [Modified `is_valid_switch_to_compounding_request`](#modified-is_valid_switch_to_compounding_request)
         - [Modified `process_consolidation_request`](#modified-process_consolidation_request)
+      - [Preregistration requests](#preregistration-requests)
+        - [New `process_preregistration_request`](#new-process_preregistration_request)
     - [Parent execution payload](#parent-execution-payload)
       - [Modified `apply_parent_execution_payload`](#modified-apply_parent_execution_payload)
 
@@ -150,6 +168,15 @@ validator that did not register takes at the fork, and it is exited at once, so
 the validator sweep refunds its balance after the withdrawability delay. A
 legacy builder deposit's builder is keyed the same way and initiates its exit at
 once. A legacy withdrawal or consolidation request is ignored.
+
+Without deposit signatures, anyone who sees the first deposit for a new XMSS
+public key could get in first with a deposit of their own withdrawal credentials
+and VRF root. As in [EIP-8205](../eip8205/beacon-chain.md), the holder of a key
+can first bind the key to its withdrawal credentials and VRF root with a
+preregistration request, signed by the key at `RESERVED_LEAF_PREREGISTRATION`.
+While the binding is active, a deposit for the key is discarded unless it
+matches the binding. A key signs only one binding, so a different binding needs
+a new key.
 
 `BLSToExecutionChange` is disabled, because its BLS signature could be forged.
 
@@ -211,6 +238,25 @@ class XMSSSignature(ByteVector):
     LENGTH = XMSS_SIGNATURE_SIZE
 ```
 
+### New `PreregistrationRequests`
+
+```python
+class PreregistrationRequests(ProgressiveList[PreregistrationRequest]):
+    """
+    The preregistration requests pertaining to a single execution payload.
+    """
+```
+
+### New `ValidatorPreregistrations`
+
+```python
+class ValidatorPreregistrations(ProgressiveList[StoredPreregistration]):
+    """
+    The preregistrations stored in the beacon state, including expired
+    records not yet garbage-collected.
+    """
+```
+
 ## Constants
 
 ### XMSS
@@ -241,9 +287,10 @@ class XMSSSignature(ByteVector):
 
 ### XMSS reserved leaves
 
-| Name                           | Value       |
-| ------------------------------ | ----------- |
-| `RESERVED_LEAF_VOLUNTARY_EXIT` | `Uint64(0)` |
+| Name                            | Value       |
+| ------------------------------- | ----------- |
+| `RESERVED_LEAF_PREREGISTRATION` | `Uint64(0)` |
+| `RESERVED_LEAF_VOLUNTARY_EXIT`  | `Uint64(1)` |
 
 ### Deposits
 
@@ -257,6 +304,21 @@ class XMSSSignature(ByteVector):
 | --------------------------- | ---------------- |
 | `LEGACY_XMSS_PUBKEY_DOMAIN` | `Bytes1("0x00")` |
 | `LEGACY_VRF_ROOT_DOMAIN`    | `Bytes1("0x01")` |
+
+### Domains
+
+*Note*: As in EIP-8205, preregistration signatures use a fork-agnostic domain
+bound to the chain through `genesis_validators_root`.
+
+| Name                     | Value                      |
+| ------------------------ | -------------------------- |
+| `DOMAIN_PREREGISTRATION` | `DomainType("0x11000000")` |
+
+### Execution-layer triggered requests
+
+| Name                           | Value            |
+| ------------------------------ | ---------------- |
+| `PREREGISTRATION_REQUEST_TYPE` | `Bytes1("0x07")` |
 
 ## Presets
 
@@ -275,6 +337,14 @@ The reference concatenation fits at most
 | Name                  | Value                 |
 | --------------------- | --------------------- |
 | `MAX_ATTESTATIONS_PQ` | `Uint64(2**4)` (= 16) |
+
+### Execution
+
+| Name                                       | Value                       |
+| ------------------------------------------ | --------------------------- |
+| `MAX_PREREGISTRATION_REQUESTS_PER_PAYLOAD` | `Uint64(2**2)` (= 4)        |
+| `PREREGISTRATIONS_LIMIT`                   | `Uint64(2**19)` (= 524,288) |
+| `PREREGISTRATION_EXPIRY_SLOTS`             | `Slot(2**18)` (= 262,144)   |
 
 ## Containers
 
@@ -324,7 +394,7 @@ class BeaconBlockBody(ProgressiveContainer):
 
 ```python
 class BeaconState(ProgressiveContainer):
-    ACTIVE_FIELDS = active_fields(width=46, gaps=(22, 23))
+    ACTIVE_FIELDS = active_fields(width=49, gaps=(22, 23, 46, 47))
 
     genesis_time: Uint64
     genesis_validators_root: Root
@@ -378,6 +448,8 @@ class BeaconState(ProgressiveContainer):
     # Removed `validator_pq_registrations`
     # [Modified in PQ]
     # Removed `builder_pq_registrations`
+    # [New in EIP8205]
+    validator_preregistrations: ValidatorPreregistrations
 ```
 
 #### `Builder`
@@ -442,7 +514,7 @@ class DepositRequest(Container):
 
 ```python
 class ExecutionRequests(ProgressiveContainer):
-    ACTIVE_FIELDS = active_fields(width=5)
+    ACTIVE_FIELDS = active_fields(width=8, gaps=(5, 6))
 
     deposits: DepositRequests
     withdrawals: WithdrawalRequests
@@ -453,6 +525,8 @@ class ExecutionRequests(ProgressiveContainer):
     # Removed `validator_pq_registrations`
     # [Modified in PQ]
     # Removed `builder_pq_registrations`
+    # [New in EIP8205]
+    preregistrations: PreregistrationRequests
 ```
 
 #### `IndexedAttestation`
@@ -577,6 +651,41 @@ class WithdrawalRequest(Container):
 
 ### New containers
 
+#### `ValidatorPreregistration`
+
+*Note*: This is the signing container for preregistration signatures.
+
+```python
+class ValidatorPreregistration(Container):
+    pubkey: XMSSPubkey
+    withdrawal_credentials: Bytes32
+    vrf_root: Root
+```
+
+#### `PreregistrationRequest`
+
+```python
+class PreregistrationRequest(Container):
+    pubkey: XMSSPubkey
+    withdrawal_credentials: Bytes32
+    vrf_root: Root
+    signature: XMSSSignature
+```
+
+#### `StoredPreregistration`
+
+*Note*: `expiry_slot` is the absolute deadline computed when the preregistration
+is stored. A later change to `PREREGISTRATION_EXPIRY_SLOTS` therefore affects
+only newly stored records.
+
+```python
+class StoredPreregistration(Container):
+    pubkey: XMSSPubkey
+    withdrawal_credentials: Bytes32
+    vrf_root: Root
+    expiry_slot: Slot
+```
+
 ## Dataclasses
 
 ### New dataclasses
@@ -691,6 +800,21 @@ def compute_xmss_leaf_index(slot: Slot, leaf_offset: Uint64) -> Uint64:
 
 ### Predicates
 
+#### New `is_active_preregistration`
+
+*Note*: Activity is evaluated against the slot of the outstanding parent
+payload, whose execution requests are the ones being applied during block
+processing.
+
+```python
+def is_active_preregistration(state: BeaconState, preregistration: StoredPreregistration) -> bool:
+    """
+    Check if ``preregistration`` has not expired.
+    """
+    parent_slot = state.latest_execution_payload_bid.slot
+    return parent_slot < preregistration.expiry_slot
+```
+
 #### New `is_legacy_pubkey`
 
 *Note*: A request made after the upgrade names 16 zero bytes followed by an XMSS
@@ -703,6 +827,28 @@ def is_legacy_pubkey(pubkey: Bytes48) -> bool:
     Check if ``pubkey`` is a BLS public key rather than an XMSS public key.
     """
     return pubkey[:16] != XMSS_DEPOSIT_PREFIX
+```
+
+#### New `is_valid_preregistration_signature`
+
+```python
+def is_valid_preregistration_signature(state: BeaconState, request: PreregistrationRequest) -> bool:
+    """
+    Check if ``request`` is signed by its key.
+    """
+    preregistration = ValidatorPreregistration(
+        pubkey=request.pubkey,
+        withdrawal_credentials=request.withdrawal_credentials,
+        vrf_root=request.vrf_root,
+    )
+    domain = compute_domain(
+        DOMAIN_PREREGISTRATION,
+        genesis_validators_root=state.genesis_validators_root,
+    )
+    signing_root = compute_signing_root(preregistration, domain)
+    return xmss.Verify(
+        request.pubkey, RESERVED_LEAF_PREREGISTRATION, signing_root, request.signature
+    )
 ```
 
 #### New `is_valid_vrf_proof`
@@ -722,6 +868,26 @@ def is_valid_vrf_proof(
         index=slot,
         root=state.validators[validator_index].vrf_root,
     )
+```
+
+#### Modified `is_pending_validator`
+
+*Note*: Deposits carry no signature, so any pending deposit for the key counts.
+
+```python
+def is_pending_validator(
+    pending_deposits: Sequence[PendingDeposit],
+    # [Modified in PQ]
+    pubkey: XMSSPubkey,
+) -> bool:
+    """
+    Check if a pending deposit is in the queue for the given pubkey.
+    """
+    for pending_deposit in pending_deposits:
+        # [Modified in PQ]
+        if compute_deposit_pubkey(pending_deposit.pubkey) == pubkey:
+            return True
+    return False
 ```
 
 #### Modified `is_valid_indexed_attestation`
@@ -812,6 +978,37 @@ def get_attestation_statements(
     return statements
 ```
 
+#### New `get_stored_preregistration_index`
+
+```python
+def get_stored_preregistration_index(state: BeaconState, pubkey: XMSSPubkey) -> Uint64 | None:
+    """
+    Return the index of the stored preregistration of ``pubkey``, if any.
+    """
+    for index, preregistration in enumerate(state.validator_preregistrations):
+        if preregistration.pubkey == pubkey:
+            return Uint64(index)
+    return None
+```
+
+#### New `get_active_preregistration`
+
+```python
+def get_active_preregistration(
+    state: BeaconState, pubkey: XMSSPubkey
+) -> StoredPreregistration | None:
+    """
+    Return the active preregistration of ``pubkey``, if any.
+    """
+    index = get_stored_preregistration_index(state, pubkey)
+    if index is None:
+        return None
+    preregistration = state.validator_preregistrations[index]
+    if not is_active_preregistration(state, preregistration):
+        return None
+    return preregistration
+```
+
 ### Beacon state mutators
 
 #### Modified `queue_excess_active_balance`
@@ -836,6 +1033,25 @@ def queue_excess_active_balance(state: BeaconState, index: ValidatorIndex) -> No
                 slot=GENESIS_SLOT,
             )
         )
+```
+
+#### New `remove_stored_preregistration`
+
+*Note*: Removal preserves the order of the remaining records, which the state
+root commits to.
+
+```python
+def remove_stored_preregistration(state: BeaconState, pubkey: XMSSPubkey) -> None:
+    """
+    Remove the stored preregistration of ``pubkey``.
+    """
+    state.validator_preregistrations = ValidatorPreregistrations(
+        data=[
+            preregistration
+            for preregistration in state.validator_preregistrations
+            if preregistration.pubkey != pubkey
+        ]
+    )
 ```
 
 ## Beacon chain state transition function
@@ -877,6 +1093,25 @@ def process_epoch(state: BeaconState) -> None:
     # Removed `process_sync_committee_updates`
     process_proposer_lookahead(state)
     process_ptc_window(state)
+    # [New in EIP8205]
+    process_preregistration_expiry(state)
+```
+
+#### New `process_preregistration_expiry`
+
+*Note*: The sweep is garbage collection only. Bindings are enforced through
+`is_active_preregistration`, so the timing of the sweep has no effect on whether
+a binding is enforced or a request is admitted.
+
+```python
+def process_preregistration_expiry(state: BeaconState) -> None:
+    state.validator_preregistrations = ValidatorPreregistrations(
+        data=[
+            preregistration
+            for preregistration in state.validator_preregistrations
+            if is_active_preregistration(state, preregistration)
+        ]
+    )
 ```
 
 #### Modified `apply_pending_deposit`
@@ -1042,6 +1277,8 @@ def get_execution_requests_list(execution_requests: ExecutionRequests) -> Sequen
         # Removed `VALIDATOR_PQ_REGISTRATION_REQUEST_TYPE`
         # [Modified in PQ]
         # Removed `BUILDER_PQ_REGISTRATION_REQUEST_TYPE`
+        # [New in EIP8205]
+        (PREREGISTRATION_REQUEST_TYPE, execution_requests.preregistrations),
     ]
 
     return [
@@ -1346,6 +1583,31 @@ def process_attestation(
 ```
 
 ##### Deposit requests
+
+###### Modified `process_deposit_request`
+
+```python
+def process_deposit_request(state: BeaconState, deposit_request: DepositRequest) -> None:
+    # [New in EIP8205]
+    pubkey = compute_deposit_pubkey(deposit_request.pubkey)
+    preregistration = get_active_preregistration(state, pubkey)
+    if preregistration is not None:
+        if deposit_request.withdrawal_credentials != preregistration.withdrawal_credentials:
+            return
+        if Root(deposit_request.signature[:32]) != preregistration.vrf_root:
+            return
+        remove_stored_preregistration(state, pubkey)
+
+    state.pending_deposits.append(
+        PendingDeposit(
+            pubkey=deposit_request.pubkey,
+            withdrawal_credentials=deposit_request.withdrawal_credentials,
+            amount=deposit_request.amount,
+            signature=deposit_request.signature,
+            slot=state.slot,
+        )
+    )
+```
 
 ###### Modified `get_validator_from_deposit`
 
@@ -1705,6 +1967,53 @@ def process_consolidation_request(
     )
 ```
 
+##### Preregistration requests
+
+###### New `process_preregistration_request`
+
+```python
+def process_preregistration_request(state: BeaconState, request: PreregistrationRequest) -> None:
+    pubkey = request.pubkey
+
+    # An active binding for this pubkey makes the new request a no-op
+    if get_active_preregistration(state, pubkey) is not None:
+        return
+
+    # A pubkey with an existing validator cannot be preregistered
+    if pubkey in [validator.pubkey for validator in state.validators]:
+        return
+
+    # A pubkey with a pending deposit cannot be preregistered
+    if is_pending_validator(state.pending_deposits, pubkey):
+        return
+
+    # The capacity check counts only active records, so the timing of the
+    # garbage-collection sweep does not affect admission
+    active_preregistrations = [
+        preregistration
+        for preregistration in state.validator_preregistrations
+        if is_active_preregistration(state, preregistration)
+    ]
+    if len(active_preregistrations) >= PREREGISTRATIONS_LIMIT:
+        return
+
+    if not is_valid_preregistration_signature(state, request):
+        return
+
+    preregistration = StoredPreregistration(
+        pubkey=pubkey,
+        withdrawal_credentials=request.withdrawal_credentials,
+        vrf_root=request.vrf_root,
+        expiry_slot=state.slot + PREREGISTRATION_EXPIRY_SLOTS,
+    )
+    index = get_stored_preregistration_index(state, pubkey)
+    if index is not None:
+        # Replace the expired record in place
+        state.validator_preregistrations[index] = preregistration
+    else:
+        state.validator_preregistrations.append(preregistration)
+```
+
 #### Parent execution payload
 
 ##### Modified `apply_parent_execution_payload`
@@ -1729,6 +2038,8 @@ def apply_parent_execution_payload(
     assert len(requests.builder_exits) <= MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD
     # [Modified in PQ]
     # Removed the validator and builder PQ registration request limits
+    # [New in EIP8205]
+    assert len(requests.preregistrations) <= MAX_PREREGISTRATION_REQUESTS_PER_PAYLOAD
 
     # Settle the builder payment before the requests so that a builder exit
     # request is rejected while the payment is pending
@@ -1764,6 +2075,8 @@ def apply_parent_execution_payload(
     # Removed `process_validator_pq_registration_request`
     # [Modified in PQ]
     # Removed `process_builder_pq_registration_request`
+    # [New in EIP8205]
+    for_ops(requests.preregistrations, process_preregistration_request)
 
     # Update parent payload availability and latest block hash
     state.execution_payload_availability[parent_slot % SLOTS_PER_HISTORICAL_ROOT] = Boolean(True)

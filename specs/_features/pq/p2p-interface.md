@@ -174,6 +174,11 @@ def verify_execution_requests_limits(execution_requests: ExecutionRequests) -> N
 
     # [Modified in PQ]
     # Removed the validator and builder PQ registration request limits
+
+    # [New in EIP8205]
+    # [REJECT] The preregistration request count is within the limit
+    if len(execution_requests.preregistrations) > MAX_PREREGISTRATION_REQUESTS_PER_PAYLOAD:
+        raise GossipReject("too many preregistration requests")
 ```
 
 ### Modified `compute_attestation_subnet_prefix_bits`

@@ -87,6 +87,7 @@ def run_fork_test(post_spec, pre_state):
     ]
     for field in stable_fields:
         assert getattr(pre_state, field) == getattr(post_state, field)
+    assert len(post_state.validator_preregistrations) == 0
 
     # Every validator moves to the PQ registry at the same index
     registered = {

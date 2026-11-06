@@ -15,6 +15,7 @@
   - [Initialization](#initialization)
     - [VRF tree](#vrf-tree)
     - [XMSS public key](#xmss-public-key)
+  - [Preregister](#preregister)
   - [Submit deposit](#submit-deposit)
 - [Beacon chain responsibilities](#beacon-chain-responsibilities)
   - [Block and sidecar proposal](#block-and-sidecar-proposal)
@@ -131,13 +132,32 @@ validator's VRF root.
 *Note*: A validator that joins after the upgrade provides its XMSS public key
 and VRF root in its deposit instead, see [Submit deposit](#submit-deposit).
 
+### Preregister
+
+A deposit carries no signature, so anyone who sees the first deposit for a new
+XMSS public key before it is included could get in first with a deposit of their
+own withdrawal credentials and VRF root. To prevent this, a validator first
+submits a `PreregistrationRequest` that binds its XMSS public key to its
+withdrawal credentials and VRF root. It signs the `ValidatorPreregistration`
+under `DOMAIN_PREREGISTRATION`, computed with `compute_domain` and the chain's
+`genesis_validators_root`, at `RESERVED_LEAF_PREREGISTRATION`.
+
+The validator waits until its binding is in `state.validator_preregistrations`,
+then submits its deposit before the binding's `expiry_slot`. If the binding is
+not stored, a deposit for the key may already be pending, so the validator
+generates a new key and preregisters that one instead.
+
+A key signs only one binding. To renew an expired binding, the validator
+resubmits the same request. To change its binding, it generates a new key.
+
 ### Submit deposit
 
 After the upgrade, a deposit carries no signature. Its `pubkey` is
 `XMSS_DEPOSIT_PREFIX`, 16 zero bytes, followed by the validator's XMSS public
 key, and its `signature` holds the validator's VRF root followed by 64 zero
 bytes. A deposit whose XMSS public key is already in `state.validators` tops up
-that validator.
+that validator. While the key has an active preregistration, a deposit for it is
+discarded unless its withdrawal credentials and VRF root match the binding.
 
 *Note*: A deposit whose `pubkey` does not start with 16 zero bytes is treated as
 a legacy deposit, so the validator it creates is exited at once.
@@ -258,7 +278,7 @@ zero bytes, and the `bid.value` MUST be zero. All other conditions on
 ##### Execution requests
 
 *Note*: The function `get_execution_requests` is modified to no longer parse PQ
-registration requests.
+registration requests and to parse preregistration requests.
 
 ```python
 def get_execution_requests(execution_requests_list: Sequence[bytes]) -> ExecutionRequests:
@@ -267,6 +287,8 @@ def get_execution_requests(execution_requests_list: Sequence[bytes]) -> Executio
     consolidations = ConsolidationRequests()
     builder_deposits = BuilderDepositRequests()
     builder_exits = BuilderExitRequests()
+    # [New in EIP8205]
+    preregistrations = PreregistrationRequests()
 
     request_types = [
         DEPOSIT_REQUEST_TYPE,
@@ -278,6 +300,8 @@ def get_execution_requests(execution_requests_list: Sequence[bytes]) -> Executio
         # Removed `VALIDATOR_PQ_REGISTRATION_REQUEST_TYPE`
         # [Modified in PQ]
         # Removed `BUILDER_PQ_REGISTRATION_REQUEST_TYPE`
+        # [New in EIP8205]
+        PREREGISTRATION_REQUEST_TYPE,
     ]
 
     prev_request_type = None
@@ -303,6 +327,9 @@ def get_execution_requests(execution_requests_list: Sequence[bytes]) -> Executio
             builder_deposits = ssz_deserialize(BuilderDepositRequests, request_data)
         elif request_type == BUILDER_EXIT_REQUEST_TYPE:
             builder_exits = ssz_deserialize(BuilderExitRequests, request_data)
+        # [New in EIP8205]
+        elif request_type == PREREGISTRATION_REQUEST_TYPE:
+            preregistrations = ssz_deserialize(PreregistrationRequests, request_data)
 
     return ExecutionRequests(
         deposits=deposits,
@@ -314,6 +341,8 @@ def get_execution_requests(execution_requests_list: Sequence[bytes]) -> Executio
         # Removed `validator_pq_registrations`
         # [Modified in PQ]
         # Removed `builder_pq_registrations`
+        # [New in EIP8205]
+        preregistrations=preregistrations,
     )
 ```
 
