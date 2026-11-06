@@ -50,10 +50,6 @@ has withdrawn. A later request for the same validator or builder overwrites the
 earlier one. A later fork that migrates consensus to post-quantum signatures
 defines how the material is used.
 
-*Note*: Unlike EIP-8483 as drafted, validator material is 64 bytes rather than
-32, so it can carry a VRF root next to the XMSS public key, and builders
-register through a request type of their own.
-
 *Note*: Unlike EIP-8483 as drafted, a validator request is ignored if its XMSS
 public key or VRF root is already registered by a validator, and a builder
 request if its XMSS public key is already registered by a builder. The material
