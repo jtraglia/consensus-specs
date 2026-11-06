@@ -7,7 +7,6 @@ from eth_consensus_specs.test.context import (
     spec_state_test_with_matching_config,
     spec_test,
     with_all_phases,
-    with_all_phases_except,
     with_all_phases_from_to,
     with_phases,
 )
@@ -21,9 +20,9 @@ from eth_consensus_specs.test.helpers.constants import (
     FULU,
     HEZE,
     PHASE0,
-    PQ,
 )
-from eth_consensus_specs.test.helpers.keys import privkeys, pubkeys
+from eth_consensus_specs.test.helpers.forks import is_post_pq
+from eth_consensus_specs.test.helpers.keys import get_vrf_root, privkeys, pubkeys, xmss_pubkeys
 from eth_consensus_specs.test.helpers.state import next_epoch
 from eth_consensus_specs.utils import bls
 
@@ -79,14 +78,23 @@ def get_mock_aggregate(spec):
 #
 
 
-@with_all_phases_except([PQ])
+@with_all_phases
 @spec_state_test
 def test_check_if_validator_active(spec, state):
     active_validator_index = len(state.validators) - 1
     assert spec.check_if_validator_active(state, active_validator_index)
     new_validator_index = len(state.validators)
     amount = spec.MAX_EFFECTIVE_BALANCE
-    spec.add_validator_to_registry(state, pubkeys[new_validator_index], b"\x00" * 32, amount)
+    if is_post_pq(spec):
+        spec.add_validator_to_registry(
+            state,
+            xmss_pubkeys[new_validator_index],
+            get_vrf_root(new_validator_index),
+            b"\x00" * 32,
+            amount,
+        )
+    else:
+        spec.add_validator_to_registry(state, pubkeys[new_validator_index], b"\x00" * 32, amount)
     assert not spec.check_if_validator_active(state, new_validator_index)
 
 

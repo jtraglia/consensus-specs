@@ -7,7 +7,6 @@ from eth_consensus_specs.test.helpers.block import build_empty_block_for_next_sl
 from eth_consensus_specs.test.helpers.execution_payload import (
     build_signed_execution_payload_envelope,
 )
-from eth_consensus_specs.test.helpers.forks import is_post_pq
 from eth_consensus_specs.test.helpers.gloas.bid import (
     activate_builders,
     append_head_with_requests,
@@ -29,22 +28,11 @@ from eth_consensus_specs.test.helpers.gossip import (
     get_seen,
     run_validate_gossip,
 )
+from eth_consensus_specs.test.helpers.keys import get_request_pubkey
 from eth_consensus_specs.test.helpers.registry import get_builders
 from eth_consensus_specs.test.helpers.state import (
     state_transition_and_sign_block,
 )
-
-
-def get_builder_exit_pubkey(spec, state, builder_index):
-    """
-    The public key that a builder exit request names for the builder at
-    ``builder_index``, which from PQ onwards is its XMSS public key after
-    ``XMSS_DEPOSIT_PREFIX``.
-    """
-    pubkey = state.builders[builder_index].pubkey
-    if is_post_pq(spec):
-        return spec.Bytes48(spec.XMSS_DEPOSIT_PREFIX + pubkey)
-    return pubkey
 
 
 def _seed_bid_context(
@@ -1505,7 +1493,7 @@ def test_gossip_execution_payload_bid__ignore_builder_exit_in_parent_payload(spe
         builder_exits=spec.BuilderExitRequests.of(
             spec.BuilderExitRequest(
                 source_address=builder.execution_address,
-                pubkey=get_builder_exit_pubkey(spec, state, builder_index),
+                pubkey=get_request_pubkey(spec, state.builders[builder_index].pubkey),
             )
         ),
     )
@@ -1664,7 +1652,7 @@ def test_gossip_execution_payload_bid__valid_parent_exit_wrong_source_address(sp
         builder_exits=spec.BuilderExitRequests.of(
             spec.BuilderExitRequest(
                 source_address=wrong_address,
-                pubkey=get_builder_exit_pubkey(spec, state, builder_index),
+                pubkey=get_request_pubkey(spec, state.builders[builder_index].pubkey),
             )
         ),
     )
@@ -1743,7 +1731,7 @@ def test_gossip_execution_payload_bid__ignore_builder_exit_with_pending_balance(
         builder_exits=spec.BuilderExitRequests.of(
             spec.BuilderExitRequest(
                 source_address=builder.execution_address,
-                pubkey=get_builder_exit_pubkey(spec, state, builder_index),
+                pubkey=get_request_pubkey(spec, state.builders[builder_index].pubkey),
             )
         ),
     )
