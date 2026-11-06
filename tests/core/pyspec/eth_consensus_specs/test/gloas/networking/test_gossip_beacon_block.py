@@ -471,7 +471,7 @@ def test_gossip_beacon_block__reject_too_many_parent_withdrawal_requests(spec, s
     )
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_gossip_beacon_block__valid_max_parent_consolidation_requests(spec, state):
     """A block with the maximum number of parent consolidation requests is valid."""
@@ -485,7 +485,7 @@ def test_gossip_beacon_block__valid_max_parent_consolidation_requests(spec, stat
     yield from _assert_beacon_block_gossip(spec, state, mutate, "valid")
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_gossip_beacon_block__reject_too_many_parent_consolidation_requests(spec, state):
     """A block whose parent execution requests exceed the consolidation-request limit is rejected."""

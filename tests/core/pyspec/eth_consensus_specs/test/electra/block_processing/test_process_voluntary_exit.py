@@ -5,7 +5,11 @@ from eth_consensus_specs.test.context import (
 )
 from eth_consensus_specs.test.helpers.churn import get_exit_churn_limit
 from eth_consensus_specs.test.helpers.constants import MAINNET
-from eth_consensus_specs.test.helpers.keys import pubkey_to_privkey
+from eth_consensus_specs.test.helpers.deposits import get_placeholder_deposit_signature
+from eth_consensus_specs.test.helpers.keys import (
+    get_request_pubkey,
+    pubkey_to_privkey,
+)
 from eth_consensus_specs.test.helpers.registry import get_validators
 from eth_consensus_specs.test.helpers.voluntary_exits import (
     run_voluntary_exit_processing,
@@ -384,10 +388,10 @@ def test_voluntary_exit_with_pending_deposit(spec, state):
     # A pending deposit will not prevent an exit
     state.pending_deposits = spec.PendingDeposits.of(
         spec.PendingDeposit(
-            pubkey=state.validators[validator_index].pubkey,
+            pubkey=get_request_pubkey(spec, state.validators[validator_index].pubkey),
             withdrawal_credentials=validator.withdrawal_credentials,
             amount=spec.EFFECTIVE_BALANCE_INCREMENT,
-            signature=spec.bls.G2_POINT_AT_INFINITY,
+            signature=get_placeholder_deposit_signature(spec),
             slot=spec.GENESIS_SLOT,
         )
     )

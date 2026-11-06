@@ -11,12 +11,17 @@ from eth_consensus_specs.test.helpers.forks import (
     is_post_electra,
     is_post_fulu,
     is_post_heze,
+    is_post_pq,
 )
 from eth_consensus_specs.test.helpers.keys import (
     builder_pubkey_to_privkey,
     builder_pubkeys,
+    get_request_pubkey,
+    get_vrf_root,
     privkeys,
+    pubkey_to_privkey,
     pubkeys,
+    xmss_builder_pubkeys,
 )
 from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.state import get_balance
@@ -57,6 +62,8 @@ def mock_deposit(spec, state, index):
 def build_deposit_data(
     spec, pubkey, privkey, amount, withdrawal_credentials, fork_version=None, signed=False
 ):
+    if is_post_pq(spec):
+        return build_pq_deposit_data(spec, pubkey, privkey, amount, withdrawal_credentials)
     deposit_data = spec.DepositData(
         pubkey=pubkey,
         withdrawal_credentials=withdrawal_credentials,
@@ -65,6 +72,32 @@ def build_deposit_data(
     if signed:
         sign_deposit_data(spec, deposit_data, privkey, fork_version)
     return deposit_data
+
+
+def build_pq_deposit_data(spec, pubkey, privkey, amount, withdrawal_credentials):
+    """
+    The deposit data of a PQ deposit, which names the XMSS public key of the
+    validator that ``pubkey`` belongs to and carries its VRF root in place of a
+    signature.
+    """
+    privkey = pubkey_to_privkey.get(pubkey, privkey)
+    vrf_root = get_vrf_root(privkeys.index(privkey)) if privkey in privkeys else bytes(32)
+    return spec.DepositData(
+        pubkey=get_request_pubkey(spec, pubkey),
+        withdrawal_credentials=withdrawal_credentials,
+        amount=amount,
+        signature=spec.Bytes96(vrf_root + bytes(64)),
+    )
+
+
+def get_placeholder_deposit_signature(spec):
+    """
+    The signature field of a pending deposit that carries no signature, such
+    as the one ``queue_excess_active_balance`` queues.
+    """
+    if is_post_pq(spec):
+        return spec.Bytes96()
+    return spec.bls.G2_POINT_AT_INFINITY
 
 
 def sign_deposit_data(spec, deposit_data, privkey, fork_version=None):
@@ -286,7 +319,7 @@ def prepare_builder_deposit_request(
     if pubkey is None:
         # Find a pubkey that doesn't exist in state.builders
         existing_pubkeys = {builder.pubkey for builder in state.builders}
-        for pk in builder_pubkeys:
+        for pk in xmss_builder_pubkeys if is_post_pq(spec) else builder_pubkeys:
             if pk not in existing_pubkeys:
                 pubkey = pk
                 break
@@ -304,7 +337,7 @@ def prepare_builder_deposit_request(
         )
 
     request = spec.BuilderDepositRequest(
-        pubkey=pubkey,
+        pubkey=get_request_pubkey(spec, pubkey),
         withdrawal_credentials=withdrawal_credentials,
         amount=amount,
     )

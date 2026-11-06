@@ -1,16 +1,11 @@
 from eth_consensus_specs.test.context import (
     expect_assertion_error,
     spec_state_test,
-    with_all_phases_from_except,
     with_gloas_and_later,
 )
 from eth_consensus_specs.test.helpers.block import build_empty_block_for_next_slot
 from eth_consensus_specs.test.helpers.builder_deposit_requests import (
     prepare_process_builder_deposit_request,
-)
-from eth_consensus_specs.test.helpers.constants import (
-    GLOAS,
-    PQ,
 )
 from eth_consensus_specs.test.helpers.deposits import (
     make_withdrawal_credentials,
@@ -18,7 +13,11 @@ from eth_consensus_specs.test.helpers.deposits import (
 )
 from eth_consensus_specs.test.helpers.execution_requests import get_non_empty_execution_requests
 from eth_consensus_specs.test.helpers.forks import is_post_pq
-from eth_consensus_specs.test.helpers.keys import pubkeys
+from eth_consensus_specs.test.helpers.keys import (
+    get_deposit_pubkey,
+    get_request_pubkey,
+    pubkeys,
+)
 from eth_consensus_specs.test.helpers.registry import get_builders, get_validators
 from eth_consensus_specs.test.helpers.withdrawals import set_parent_block_full
 
@@ -468,7 +467,7 @@ def test_process_parent_execution_payload__older_than_previous_epoch_builder_exi
             data=[
                 spec.BuilderExitRequest(
                     source_address=builder.execution_address,
-                    pubkey=state.builders[builder_index].pubkey,
+                    pubkey=get_request_pubkey(spec, state.builders[builder_index].pubkey),
                 )
             ]
         )
@@ -502,7 +501,7 @@ def test_process_parent_execution_payload__older_than_previous_epoch_builder_exi
     assert get_builders(spec, state)[builder_index].withdrawable_epoch == spec.FAR_FUTURE_EPOCH
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_parent_execution_payload__older_than_previous_epoch_builder_exit_no_payment(
     spec, state
@@ -518,7 +517,7 @@ def test_process_parent_execution_payload__older_than_previous_epoch_builder_exi
             data=[
                 spec.BuilderExitRequest(
                     source_address=builder.execution_address,
-                    pubkey=state.builders[builder_index].pubkey,
+                    pubkey=get_request_pubkey(spec, state.builders[builder_index].pubkey),
                 )
             ]
         )
@@ -545,7 +544,7 @@ def test_process_parent_execution_payload__older_than_previous_epoch_builder_exi
     assert not spec.is_active_builder(state, builder_index)
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_parent_execution_payload__new_builder_does_not_reuse_topped_up_builder_slot(
     spec, state
@@ -603,7 +602,7 @@ def test_process_parent_execution_payload__new_builder_does_not_reuse_topped_up_
 
     new_builder_index = None
     for i, builder in enumerate(state.builders):
-        if builder.pubkey == builder_deposit_request_2.pubkey:
+        if builder.pubkey == get_deposit_pubkey(spec, builder_deposit_request_2.pubkey):
             new_builder_index = i
             break
 
@@ -612,7 +611,7 @@ def test_process_parent_execution_payload__new_builder_does_not_reuse_topped_up_
     assert get_builders(spec, state)[new_builder_index].balance == new_builder_amount
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_parent_execution_payload__duplicate_new_builder_after_slot_reuse(spec, state):
     """
@@ -642,7 +641,7 @@ def test_process_parent_execution_payload__duplicate_new_builder_after_slot_reus
         amount=amount,
         signed=True,
     )
-    new_pubkey = builder_deposit_request_1.pubkey
+    new_pubkey = get_deposit_pubkey(spec, builder_deposit_request_1.pubkey)
     assert new_pubkey != reused_pubkey
     builder_deposit_request_2 = prepare_process_builder_deposit_request(
         spec,
@@ -681,7 +680,7 @@ def test_process_parent_execution_payload__duplicate_new_builder_after_slot_reus
         assert get_builders(spec, state)[i] == builder
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_parent_execution_payload__builder_exit_request(spec, state):
     """
@@ -700,7 +699,7 @@ def test_process_parent_execution_payload__builder_exit_request(spec, state):
         builder_exits=spec.BuilderExitRequests.of(
             spec.BuilderExitRequest(
                 source_address=builder.execution_address,
-                pubkey=state.builders[builder_index].pubkey,
+                pubkey=get_request_pubkey(spec, state.builders[builder_index].pubkey),
             )
         ),
     )
@@ -772,7 +771,7 @@ def test_invalid_too_many_withdrawal_requests(spec, state):
     yield from run_parent_execution_payload_processing(spec, state, block, valid=False)
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_max_consolidation_requests(spec, state):
     requests = spec.ExecutionRequests(
@@ -789,7 +788,7 @@ def test_max_consolidation_requests(spec, state):
     yield from run_parent_execution_payload_processing(spec, state, block)
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_invalid_too_many_consolidation_requests(spec, state):
     requests = spec.ExecutionRequests(

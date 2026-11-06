@@ -3,12 +3,12 @@ import random
 from eth_consensus_specs.test.context import (
     expect_assertion_error,
     spec_state_test,
-    with_all_phases_from_except,
     with_electra_and_later,
     with_presets,
 )
 from eth_consensus_specs.test.helpers.churn import get_exit_churn_limit
-from eth_consensus_specs.test.helpers.constants import ELECTRA, MINIMAL, PQ
+from eth_consensus_specs.test.helpers.constants import MINIMAL
+from eth_consensus_specs.test.helpers.keys import get_pubkey_from_request, get_request_pubkey
 from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.state import (
     get_validator_index_by_pubkey,
@@ -50,7 +50,9 @@ def run_withdrawal_request_processing(spec, state, withdrawal_request, valid=Tru
         # No-op
         assert pre_state == state
     else:
-        validator_index = get_validator_index_by_pubkey(state, withdrawal_request.validator_pubkey)
+        validator_index = get_validator_index_by_pubkey(
+            state, get_pubkey_from_request(spec, withdrawal_request.validator_pubkey)
+        )
         pre_exit_epoch = get_validators(spec, pre_state)[validator_index].exit_epoch
         pre_pending_partial_withdrawals = pre_state.pending_partial_withdrawals.copy()
         pre_balance = get_balances(spec, pre_state)[validator_index]
@@ -97,7 +99,7 @@ def compute_amount_to_withdraw(spec, state, index, amount):
 # Modified tests from 7002. Just testing EL-triggered exits, not partial withdrawals
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_basic_withdrawal_request(spec, state):
     rng = random.Random(1337)
@@ -106,7 +108,7 @@ def test_basic_withdrawal_request(spec, state):
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     set_eth1_withdrawal_credential_with_balance(spec, state, validator_index, address=address)
     withdrawal_request = spec.WithdrawalRequest(
@@ -118,7 +120,7 @@ def test_basic_withdrawal_request(spec, state):
     yield from run_withdrawal_request_processing(spec, state, withdrawal_request)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_basic_withdrawal_request_with_first_validator(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for exit
@@ -126,7 +128,7 @@ def test_basic_withdrawal_request_with_first_validator(spec, state):
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = spec.get_active_validator_indices(state, current_epoch)[0]
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     set_eth1_withdrawal_credential_with_balance(spec, state, validator_index, address=address)
     withdrawal_request = spec.WithdrawalRequest(
@@ -138,7 +140,7 @@ def test_basic_withdrawal_request_with_first_validator(spec, state):
     yield from run_withdrawal_request_processing(spec, state, withdrawal_request)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_basic_withdrawal_request_with_compounding_credentials(spec, state):
     rng = random.Random(1338)
@@ -147,7 +149,7 @@ def test_basic_withdrawal_request_with_compounding_credentials(spec, state):
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     set_compounding_withdrawal_credential(spec, state, validator_index, address=address)
     withdrawal_request = spec.WithdrawalRequest(
@@ -159,7 +161,7 @@ def test_basic_withdrawal_request_with_compounding_credentials(spec, state):
     yield from run_withdrawal_request_processing(spec, state, withdrawal_request)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 @with_presets([MINIMAL], "need full partial withdrawal queue")
 def test_basic_withdrawal_request_with_full_partial_withdrawal_queue(spec, state):
@@ -167,7 +169,7 @@ def test_basic_withdrawal_request_with_full_partial_withdrawal_queue(spec, state
     state.slot += spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     set_eth1_withdrawal_credential_with_balance(spec, state, validator_index, address=address)
     withdrawal_request = spec.WithdrawalRequest(
@@ -204,7 +206,7 @@ def test_incorrect_source_address(spec, state):
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     incorrect_address = b"\x33" * 20
     set_eth1_withdrawal_credential_with_balance(spec, state, validator_index, address=address)
@@ -226,7 +228,7 @@ def test_incorrect_withdrawal_credential_prefix(spec, state):
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     set_eth1_withdrawal_credential_with_balance(spec, state, validator_index, address=address)
     # Set incorrect prefix
@@ -252,7 +254,7 @@ def test_on_withdrawal_request_initiated_exit_validator(spec, state):
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     set_eth1_withdrawal_credential_with_balance(spec, state, validator_index, address=address)
     # Initiate exit earlier
@@ -272,7 +274,7 @@ def test_activation_epoch_less_than_shard_committee_period(spec, state):
     rng = random.Random(1343)
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     set_eth1_withdrawal_credential_with_balance(spec, state, validator_index, address=address)
     withdrawal_request = spec.WithdrawalRequest(
@@ -313,7 +315,7 @@ def test_unknown_pubkey(spec, state):
 # Partial withdrawals tests
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 @with_presets([MINIMAL])
 def test_basic_partial_withdrawal_request(spec, state):
@@ -321,7 +323,7 @@ def test_basic_partial_withdrawal_request(spec, state):
     state.slot += spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     amount = spec.EFFECTIVE_BALANCE_INCREMENT
     # Set excess balance exactly to the requested amount
@@ -344,7 +346,7 @@ def test_basic_partial_withdrawal_request(spec, state):
     assert state.earliest_exit_epoch == spec.compute_activation_exit_epoch(current_epoch)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 @with_presets([MINIMAL])
 def test_basic_partial_withdrawal_request_higher_excess_balance(spec, state):
@@ -352,7 +354,7 @@ def test_basic_partial_withdrawal_request_higher_excess_balance(spec, state):
     state.slot += spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     amount = spec.EFFECTIVE_BALANCE_INCREMENT
     # Set excess balance higher than requested amount
@@ -375,7 +377,7 @@ def test_basic_partial_withdrawal_request_higher_excess_balance(spec, state):
     assert state.earliest_exit_epoch == spec.compute_activation_exit_epoch(current_epoch)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 @with_presets([MINIMAL])
 def test_basic_partial_withdrawal_request_lower_than_excess_balance(spec, state):
@@ -383,7 +385,7 @@ def test_basic_partial_withdrawal_request_lower_than_excess_balance(spec, state)
     state.slot += spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     excess_balance = spec.EFFECTIVE_BALANCE_INCREMENT
     amount = 2 * excess_balance
@@ -407,7 +409,7 @@ def test_basic_partial_withdrawal_request_lower_than_excess_balance(spec, state)
     assert state.earliest_exit_epoch == spec.compute_activation_exit_epoch(current_epoch)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 @with_presets([MINIMAL])
 def test_partial_withdrawal_request_with_pending_withdrawals(spec, state):
@@ -415,7 +417,7 @@ def test_partial_withdrawal_request_with_pending_withdrawals(spec, state):
     state.slot += spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     amount = spec.EFFECTIVE_BALANCE_INCREMENT
 
@@ -447,7 +449,7 @@ def test_partial_withdrawal_request_with_pending_withdrawals(spec, state):
     assert state.earliest_exit_epoch == spec.compute_activation_exit_epoch(current_epoch)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 @with_presets([MINIMAL])
 def test_partial_withdrawal_request_with_pending_withdrawals_and_high_amount(spec, state):
@@ -455,7 +457,7 @@ def test_partial_withdrawal_request_with_pending_withdrawals_and_high_amount(spe
     state.slot += spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     amount = spec.UINT64_MAX
 
@@ -486,7 +488,7 @@ def test_partial_withdrawal_request_with_pending_withdrawals_and_high_amount(spe
     )
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 @with_presets([MINIMAL])
 def test_partial_withdrawal_request_with_high_balance(spec, state):
@@ -494,7 +496,7 @@ def test_partial_withdrawal_request_with_high_balance(spec, state):
     state.slot += spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     amount = spec.MAX_EFFECTIVE_BALANCE_ELECTRA
     get_balances(spec, state)[validator_index] = 3 * spec.MAX_EFFECTIVE_BALANCE_ELECTRA
@@ -524,7 +526,7 @@ def test_partial_withdrawal_request_with_high_balance(spec, state):
     assert state.earliest_exit_epoch == exit_epoch
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 @with_presets([MINIMAL])
 def test_partial_withdrawal_request_with_high_amount(spec, state):
@@ -532,7 +534,7 @@ def test_partial_withdrawal_request_with_high_amount(spec, state):
     state.slot += spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     # Set high amount requested to withdraw
     amount = spec.UINT64_MAX
@@ -556,7 +558,7 @@ def test_partial_withdrawal_request_with_high_amount(spec, state):
     assert state.earliest_exit_epoch == spec.compute_activation_exit_epoch(current_epoch)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 @with_presets([MINIMAL])
 def test_partial_withdrawal_request_with_low_amount(spec, state):
@@ -564,7 +566,7 @@ def test_partial_withdrawal_request_with_low_amount(spec, state):
     state.slot += spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     amount = 1
     # Give the validator some excess balance to withdraw
@@ -598,7 +600,7 @@ def test_partial_withdrawal_queue_full(spec, state):
     state.slot += spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     amount = spec.EFFECTIVE_BALANCE_INCREMENT
     # Ensure that the validator has sufficient excess balance
@@ -627,7 +629,7 @@ def test_no_compounding_credentials(spec, state):
     state.slot += spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     amount = spec.EFFECTIVE_BALANCE_INCREMENT
     # Ensure that the validator has sufficient excess balance
@@ -655,7 +657,7 @@ def test_no_excess_balance(spec, state):
     state.slot += spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     amount = spec.EFFECTIVE_BALANCE_INCREMENT
 
@@ -676,7 +678,7 @@ def test_pending_withdrawals_consume_all_excess_balance(spec, state):
     state.slot += spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     amount = spec.EFFECTIVE_BALANCE_INCREMENT
     # Add excess balance
@@ -707,7 +709,7 @@ def test_insufficient_effective_balance(spec, state):
     state.slot += spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     amount = spec.EFFECTIVE_BALANCE_INCREMENT
     # Make effective balance insufficient
@@ -741,7 +743,7 @@ def test_partial_withdrawal_incorrect_source_address(spec, state):
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     incorrect_address = b"\x33" * 20
     amount = spec.EFFECTIVE_BALANCE_INCREMENT
@@ -766,7 +768,7 @@ def test_partial_withdrawal_incorrect_withdrawal_credential_prefix(spec, state):
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     amount = spec.EFFECTIVE_BALANCE_INCREMENT
     get_balances(spec, state)[validator_index] += 2 * amount
@@ -794,7 +796,7 @@ def test_partial_withdrawal_on_exit_initiated_validator(spec, state):
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     amount = spec.EFFECTIVE_BALANCE_INCREMENT
     get_balances(spec, state)[validator_index] += 2 * amount
@@ -816,7 +818,7 @@ def test_partial_withdrawal_activation_epoch_less_than_shard_committee_period(sp
     rng = random.Random(1360)
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     amount = spec.EFFECTIVE_BALANCE_INCREMENT
     get_balances(spec, state)[validator_index] += 2 * amount
@@ -842,7 +844,7 @@ def test_insufficient_balance(spec, state):
     state.slot += spec.Uint64(spec.config.SHARD_COMMITTEE_PERIOD) * spec.SLOTS_PER_EPOCH
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     amount = spec.EFFECTIVE_BALANCE_INCREMENT
 
@@ -871,7 +873,7 @@ def test_full_exit_request_has_partial_withdrawal(spec, state):
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     set_eth1_withdrawal_credential_with_balance(spec, state, validator_index, address=address)
     withdrawal_request = spec.WithdrawalRequest(
@@ -902,7 +904,7 @@ def test_incorrect_inactive_validator(spec, state):
 
     current_epoch = spec.get_current_epoch(state)
     validator_index = rng.choice(spec.get_active_validator_indices(state, current_epoch))
-    validator_pubkey = state.validators[validator_index].pubkey
+    validator_pubkey = get_request_pubkey(spec, state.validators[validator_index].pubkey)
     address = b"\x22" * 20
     set_eth1_withdrawal_credential_with_balance(spec, state, validator_index, address=address)
     withdrawal_request = spec.WithdrawalRequest(

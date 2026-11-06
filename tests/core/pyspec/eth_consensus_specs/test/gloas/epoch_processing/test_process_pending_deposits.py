@@ -1,10 +1,8 @@
 from eth_consensus_specs.test.context import (
     always_bls,
     spec_state_test,
-    with_all_phases_from_except,
     with_gloas_and_later,
 )
-from eth_consensus_specs.test.helpers.constants import GLOAS, PQ
 from eth_consensus_specs.test.helpers.deposits import prepare_pending_deposit
 from eth_consensus_specs.test.helpers.epoch_processing import run_epoch_processing_with
 from eth_consensus_specs.test.helpers.keys import (
@@ -53,7 +51,7 @@ def test_process_pending_deposits__builder_deposit_domain(spec, state):
     assert state.pending_deposits == spec.PendingDeposits()
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_pending_deposits__existing_validator_valid_non_builder_topup(spec, state):
     """A valid non-B0 top-up funds the existing validator, not its same-key builder."""

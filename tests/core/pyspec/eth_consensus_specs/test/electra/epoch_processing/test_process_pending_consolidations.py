@@ -2,10 +2,12 @@ from eth_consensus_specs.test.context import (
     spec_state_test,
     with_electra_and_later,
 )
+from eth_consensus_specs.test.helpers.deposits import get_placeholder_deposit_signature
 from eth_consensus_specs.test.helpers.epoch_processing import (
     run_epoch_processing_to,
     run_epoch_processing_with,
 )
+from eth_consensus_specs.test.helpers.keys import get_request_pubkey
 from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.state import (
     next_epoch_with_full_participation,
@@ -264,10 +266,10 @@ def test_pending_consolidation_with_pending_deposit(spec, state):
     )
     # append pending deposit
     pending_deposit = spec.PendingDeposit(
-        pubkey=state.validators[source_index].pubkey,
+        pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
         withdrawal_credentials=source.withdrawal_credentials,
         amount=spec.MIN_ACTIVATION_BALANCE,
-        signature=spec.bls.G2_POINT_AT_INFINITY,
+        signature=get_placeholder_deposit_signature(spec),
         slot=spec.GENESIS_SLOT,
     )
     state.pending_deposits.append(pending_deposit)

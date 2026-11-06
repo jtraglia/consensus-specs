@@ -1,5 +1,10 @@
 from eth_consensus_specs.test.helpers.deposits import sign_builder_deposit_request
-from eth_consensus_specs.test.helpers.keys import builder_pubkey_to_privkey, builder_pubkeys
+from eth_consensus_specs.test.helpers.keys import (
+    builder_pubkey_to_privkey,
+    builder_pubkeys,
+    get_deposit_pubkey,
+    get_request_pubkey,
+)
 from eth_consensus_specs.test.helpers.registry import get_builders, set_builders
 from eth_consensus_specs.test.helpers.state import next_epoch
 
@@ -70,7 +75,9 @@ def prepare_process_builder_deposit_request(
     # Phase 2: Derive effective values
     index = builder_index if builder_index is not None else len(state.builders)
     effective_pubkey = pubkey if pubkey is not None else builder_pubkeys[index]
-    effective_privkey = builder_pubkey_to_privkey[effective_pubkey]
+    effective_privkey = builder_pubkey_to_privkey.get(effective_pubkey)
+    if effective_privkey is None:
+        effective_privkey = builder_pubkey_to_privkey[get_deposit_pubkey(spec, effective_pubkey)]
     effective_amount = amount if amount is not None else spec.MIN_ACTIVATION_BALANCE
     if withdrawal_credentials is not None:
         effective_withdrawal_credentials = withdrawal_credentials
@@ -102,7 +109,7 @@ def prepare_process_builder_deposit_request(
 
     # Phase 4: Build the request and optionally sign
     request = spec.BuilderDepositRequest(
-        pubkey=effective_pubkey,
+        pubkey=get_request_pubkey(spec, effective_pubkey),
         withdrawal_credentials=effective_withdrawal_credentials,
         amount=effective_amount,
     )
@@ -155,7 +162,7 @@ def assert_process_builder_deposit_request(
     # Find the builder by pubkey
     builder_index = None
     for i, builder in enumerate(state.builders):
-        if builder.pubkey == builder_deposit_request.pubkey:
+        if builder.pubkey == get_deposit_pubkey(spec, builder_deposit_request.pubkey):
             builder_index = i
             break
 
@@ -166,7 +173,7 @@ def assert_process_builder_deposit_request(
     # Check if this was a new builder or top-up
     pre_builder_index = None
     for i, builder in enumerate(pre_state.builders):
-        if builder.pubkey == builder_deposit_request.pubkey:
+        if builder.pubkey == get_deposit_pubkey(spec, builder_deposit_request.pubkey):
             pre_builder_index = i
             break
 

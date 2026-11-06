@@ -5,7 +5,6 @@ from eth_consensus_specs.test.context import (
     single_phase,
     spec_state_test,
     spec_test,
-    with_all_phases_from_except,
     with_all_phases_from_to,
     with_custom_state,
     with_electra_and_later,
@@ -17,11 +16,11 @@ from eth_consensus_specs.test.helpers.constants import (
     ELECTRA,
     HEZE,
     MINIMAL,
-    PQ,
 )
 from eth_consensus_specs.test.helpers.deposits import prepare_pending_deposit
 from eth_consensus_specs.test.helpers.epoch_processing import run_epoch_processing_with
 from eth_consensus_specs.test.helpers.forks import is_post_heze
+from eth_consensus_specs.test.helpers.keys import get_deposit_pubkey
 from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.state import (
     advance_finality_to,
@@ -87,7 +86,7 @@ def _check_pending_deposits_induced_new_validators(
         validator_index = pre_validator_count + index
         validator = get_validators(spec, state)[validator_index]
         assert get_balances(spec, state)[validator_index] == deposit.amount
-        assert state.validators[validator_index].pubkey == deposit.pubkey
+        assert state.validators[validator_index].pubkey == get_deposit_pubkey(spec, deposit.pubkey)
         # Effective balance is updated after pending deposits by process_effective_balance_updates
         assert validator.effective_balance == spec.Gwei(0)
         assert validator.withdrawal_credentials == deposit.withdrawal_credentials
@@ -97,7 +96,7 @@ def _check_pending_deposits_induced_new_validators(
         validator_index = pre_validator_count + len(eth1_bridge_deposits) + index
         validator = get_validators(spec, state)[validator_index]
         assert get_balances(spec, state)[validator_index] == deposit.amount
-        assert state.validators[validator_index].pubkey == deposit.pubkey
+        assert state.validators[validator_index].pubkey == get_deposit_pubkey(spec, deposit.pubkey)
         assert validator.withdrawal_credentials == deposit.withdrawal_credentials
         # Validators induced from deposit requests get instant update of the EB
         assert validator.effective_balance == deposit.amount
@@ -171,7 +170,7 @@ def test_process_pending_deposits_eth1_bridge_transition_complete(spec, state):
     assert state.deposit_balance_to_consume == 0
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_process_pending_deposits_not_finalized(spec, state):
     # complete eth1 bridge transition

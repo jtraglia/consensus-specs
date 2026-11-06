@@ -4,12 +4,18 @@ from eth_consensus_specs.test.context import (
     single_phase,
     spec_state_test,
     spec_test,
-    with_all_phases_from_except,
     with_custom_state,
+    with_electra_and_later,
     with_presets,
 )
-from eth_consensus_specs.test.helpers.constants import ELECTRA, MINIMAL, PQ
+from eth_consensus_specs.test.helpers.constants import MINIMAL
+from eth_consensus_specs.test.helpers.deposits import get_placeholder_deposit_signature
 from eth_consensus_specs.test.helpers.forks import is_post_gloas
+from eth_consensus_specs.test.helpers.keys import (
+    get_deposit_pubkey,
+    get_pubkey_from_request,
+    get_request_pubkey,
+)
 from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.withdrawals import (
     set_compounding_withdrawal_credential,
@@ -22,7 +28,7 @@ from eth_consensus_specs.test.helpers.withdrawals import (
 #  ***********************
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -44,8 +50,8 @@ def test_basic_consolidation_in_current_consolidation_epoch(spec, state):
     # Make consolidation with source address
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
 
     # Set target to compounding credentials
@@ -69,7 +75,7 @@ def test_basic_consolidation_in_current_consolidation_epoch(spec, state):
     assert get_validators(spec, state)[source_index].exit_epoch == expected_exit_epoch
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -91,8 +97,8 @@ def test_basic_consolidation_with_excess_target_balance(spec, state):
     # Make consolidation with source address
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
 
     # Set target to compounding credentials
@@ -121,7 +127,7 @@ def test_basic_consolidation_with_excess_target_balance(spec, state):
     assert get_validators(spec, state)[source_index].exit_epoch == expected_exit_epoch
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -145,8 +151,8 @@ def test_basic_consolidation_in_new_consolidation_epoch(spec, state):
     # Make consolidation with source address
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
 
     # Set target to compounding credentials
@@ -166,7 +172,7 @@ def test_basic_consolidation_in_new_consolidation_epoch(spec, state):
     assert get_validators(spec, state)[source_index].exit_epoch == expected_exit_epoch
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -188,8 +194,8 @@ def test_basic_consolidation_with_preexisting_churn(spec, state):
     # Make consolidation with source address
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
 
     # Set target to compounding credentials
@@ -210,7 +216,7 @@ def test_basic_consolidation_with_preexisting_churn(spec, state):
     assert get_validators(spec, state)[source_index].exit_epoch == expected_exit_epoch
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -232,8 +238,8 @@ def test_basic_consolidation_with_insufficient_preexisting_churn(spec, state):
     # Make consolidation with source address
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
 
     # Set target to compounding credentials
@@ -257,7 +263,7 @@ def test_basic_consolidation_with_insufficient_preexisting_churn(spec, state):
     assert get_validators(spec, state)[source_index].exit_epoch == expected_exit_epoch
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -279,8 +285,8 @@ def test_basic_consolidation_with_compounding_credentials(spec, state):
     # Make consolidation with source address
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
 
     # Set target to compounding credentials
@@ -302,7 +308,7 @@ def test_basic_consolidation_with_compounding_credentials(spec, state):
     assert get_validators(spec, state)[source_index].exit_epoch == expected_exit_epoch
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -324,8 +330,8 @@ def test_consolidation_churn_limit_balance(spec, state):
     # Make consolidation with source address
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
 
     # Set target to compounding credentials
@@ -350,7 +356,7 @@ def test_consolidation_churn_limit_balance(spec, state):
     assert get_validators(spec, state)[source_index].exit_epoch == expected_exit_epoch
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -378,8 +384,8 @@ def test_basic_consolidation_source_has_less_than_max_effective_balance(spec, st
     # Make consolidation with source address
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
 
     # Set target to compounding credentials
@@ -403,7 +409,7 @@ def test_basic_consolidation_source_has_less_than_max_effective_balance(spec, st
     assert get_validators(spec, state)[source_index].exit_epoch == expected_exit_epoch
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -432,8 +438,8 @@ def test_basic_consolidation_target_has_less_than_min_activation_effective_balan
     # Make consolidation with source address
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
 
     # Set target to compounding credentials
@@ -452,7 +458,7 @@ def test_basic_consolidation_target_has_less_than_min_activation_effective_balan
     assert get_validators(spec, state)[source_index].exit_epoch == expected_exit_epoch
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -474,8 +480,8 @@ def test_consolidation_balance_larger_than_churn_limit(spec, state):
     # Make consolidation with source address
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
 
     # Set target to compounding credentials
@@ -502,7 +508,7 @@ def test_consolidation_balance_larger_than_churn_limit(spec, state):
     assert get_validators(spec, state)[source_index].exit_epoch == expected_exit_epoch
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -524,8 +530,8 @@ def test_consolidation_balance_through_two_churn_epochs(spec, state):
     # Make consolidation with source address
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
 
     # Set target to compounding credentials
@@ -548,7 +554,7 @@ def test_consolidation_balance_through_two_churn_epochs(spec, state):
     assert state.consolidation_balance_to_consume == expected_balance
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_basic_switch_to_compounding(spec, state):
     # move state forward SHARD_COMMITTEE_PERIOD epochs to allow for consolidation
@@ -562,14 +568,14 @@ def test_basic_switch_to_compounding(spec, state):
     # Make consolidation from source to source
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[source_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
     )
 
     yield from run_switch_to_compounding_processing(spec, state, consolidation, success=True)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_switch_to_compounding_with_excess(spec, state):
     current_epoch = spec.get_current_epoch(state)
@@ -585,14 +591,14 @@ def test_switch_to_compounding_with_excess(spec, state):
     # Make consolidation from source to source
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[source_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
     )
 
     yield from run_switch_to_compounding_processing(spec, state, consolidation, success=True)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_switch_to_compounding_with_pending_consolidations_at_limit(spec, state):
     state.pending_consolidations = spec.PendingConsolidations(
@@ -613,8 +619,8 @@ def test_switch_to_compounding_with_pending_consolidations_at_limit(spec, state)
     # Make consolidation from source to source
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[source_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
     )
 
     yield from run_switch_to_compounding_processing(spec, state, consolidation, success=True)
@@ -623,7 +629,7 @@ def test_switch_to_compounding_with_pending_consolidations_at_limit(spec, state)
 # Tests that should fail
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -649,14 +655,14 @@ def test_incorrect_same_source_target(spec, state):
     )
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
 
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -681,8 +687,8 @@ def test_incorrect_exceed_pending_consolidations_limit(spec, state):
     set_eth1_withdrawal_credential_with_balance(spec, state, source_index, address=source_address)
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
     set_compounding_withdrawal_credential_with_balance(spec, state, target_index)
 
@@ -692,7 +698,7 @@ def test_incorrect_exceed_pending_consolidations_limit(spec, state):
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 @single_phase
 def test_incorrect_not_enough_consolidation_churn_available(spec, state):
@@ -711,8 +717,8 @@ def test_incorrect_not_enough_consolidation_churn_available(spec, state):
     set_eth1_withdrawal_credential_with_balance(spec, state, source_index, address=source_address)
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
 
     set_compounding_withdrawal_credential_with_balance(spec, state, target_index)
@@ -734,7 +740,7 @@ def test_incorrect_not_enough_consolidation_churn_available(spec, state):
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -753,8 +759,8 @@ def test_incorrect_exited_source(spec, state):
     set_eth1_withdrawal_credential_with_balance(spec, state, source_index, address=source_address)
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
     set_compounding_withdrawal_credential_with_balance(spec, state, target_index)
 
@@ -767,7 +773,7 @@ def test_incorrect_exited_source(spec, state):
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -786,8 +792,8 @@ def test_incorrect_exited_target(spec, state):
     set_eth1_withdrawal_credential_with_balance(spec, state, source_index, address=source_address)
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
     set_compounding_withdrawal_credential_with_balance(spec, state, target_index)
     # exit target
@@ -799,7 +805,7 @@ def test_incorrect_exited_target(spec, state):
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -818,8 +824,8 @@ def test_incorrect_inactive_source(spec, state):
     set_eth1_withdrawal_credential_with_balance(spec, state, source_index, address=source_address)
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
     set_compounding_withdrawal_credential_with_balance(spec, state, target_index)
 
@@ -832,7 +838,7 @@ def test_incorrect_inactive_source(spec, state):
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -851,8 +857,8 @@ def test_incorrect_inactive_target(spec, state):
     set_eth1_withdrawal_credential_with_balance(spec, state, source_index, address=source_address)
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
     set_compounding_withdrawal_credential_with_balance(spec, state, target_index)
 
@@ -865,7 +871,7 @@ def test_incorrect_inactive_target(spec, state):
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -884,8 +890,8 @@ def test_incorrect_no_source_execution_withdrawal_credential(spec, state):
     source_address = b"\x22" * 20
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
     set_compounding_withdrawal_credential_with_balance(spec, state, target_index)
 
@@ -895,7 +901,7 @@ def test_incorrect_no_source_execution_withdrawal_credential(spec, state):
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -915,8 +921,8 @@ def test_incorrect_target_with_bls_credential(spec, state):
     set_eth1_withdrawal_credential_with_balance(spec, state, source_index, address=source_address)
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
 
     # Check the return condition
@@ -925,7 +931,7 @@ def test_incorrect_target_with_bls_credential(spec, state):
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -955,14 +961,14 @@ def test_incorrect_source_with_bls_credential(spec, state):
 
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
 
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -981,8 +987,8 @@ def test_incorrect_target_with_eth1_credential(spec, state):
     set_eth1_withdrawal_credential_with_balance(spec, state, source_index, address=source_address)
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
 
     # Set target to eth1 credentials
@@ -991,7 +997,7 @@ def test_incorrect_target_with_eth1_credential(spec, state):
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -1011,8 +1017,8 @@ def test_incorrect_source_address(spec, state):
     # Make consolidation with different source address
     consolidation = spec.ConsolidationRequest(
         source_address=b"\x33" * 20,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
     set_compounding_withdrawal_credential_with_balance(spec, state, target_index)
 
@@ -1025,7 +1031,7 @@ def test_incorrect_source_address(spec, state):
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -1046,14 +1052,14 @@ def test_incorrect_source_pubkey_is_target_pubkey(spec, state):
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
         # Use the target's pubkey instead
-        source_pubkey=state.validators[target_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
     set_compounding_withdrawal_credential_with_balance(spec, state, target_index)
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -1074,17 +1080,19 @@ def test_incorrect_unknown_source_pubkey(spec, state):
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
         source_pubkey=b"\x00" * 48,
-        target_pubkey=state.validators[target_index].pubkey,
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
     set_compounding_withdrawal_credential_with_balance(spec, state, target_index)
 
     # Check the return condition
-    assert state.validators[source_index].pubkey != consolidation.source_pubkey
+    assert state.validators[source_index].pubkey != get_pubkey_from_request(
+        spec, consolidation.source_pubkey
+    )
 
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -1104,18 +1112,20 @@ def test_incorrect_unknown_target_pubkey(spec, state):
     # Make consolidation with different target pubkey
     consolidation = spec.ConsolidationRequest(
         source_address=b"\x33" * 20,
-        source_pubkey=state.validators[source_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
         target_pubkey=b"\x00" * 48,
     )
     set_compounding_withdrawal_credential_with_balance(spec, state, target_index)
 
     # Check the return condition
-    assert state.validators[target_index].pubkey != consolidation.target_pubkey
+    assert state.validators[target_index].pubkey != get_pubkey_from_request(
+        spec, consolidation.target_pubkey
+    )
 
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -1142,8 +1152,8 @@ def test_incorrect_source_has_pending_withdrawal(spec, state):
     )
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
     set_compounding_withdrawal_credential_with_balance(spec, state, target_index)
 
@@ -1159,7 +1169,7 @@ def test_incorrect_source_has_pending_withdrawal(spec, state):
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @with_presets([MINIMAL], "need sufficient consolidation churn limit")
 @with_custom_state(
     balances_fn=scaled_churn_balances_exceed_activation_exit_churn_limit,
@@ -1184,8 +1194,8 @@ def test_incorrect_source_not_active_long_enough(spec, state):
     )
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[target_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[target_index].pubkey),
     )
     set_compounding_withdrawal_credential_with_balance(spec, state, target_index)
 
@@ -1199,7 +1209,7 @@ def test_incorrect_source_not_active_long_enough(spec, state):
     yield from run_consolidation_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_switch_to_compounding_exited_source(spec, state):
     # Set up an otherwise correct request
@@ -1209,8 +1219,8 @@ def test_switch_to_compounding_exited_source(spec, state):
     set_eth1_withdrawal_credential_with_balance(spec, state, source_index, address=source_address)
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[source_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
     )
 
     # Initiate exit for source
@@ -1222,7 +1232,7 @@ def test_switch_to_compounding_exited_source(spec, state):
     yield from run_switch_to_compounding_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_switch_to_compounding_inactive_source(spec, state):
     # Set up an otherwise correct request
@@ -1232,8 +1242,8 @@ def test_switch_to_compounding_inactive_source(spec, state):
     set_eth1_withdrawal_credential_with_balance(spec, state, source_index, address=source_address)
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[source_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
     )
 
     # Set source validator as not yet activated
@@ -1245,7 +1255,7 @@ def test_switch_to_compounding_inactive_source(spec, state):
     yield from run_switch_to_compounding_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_switch_to_compounding_source_bls_withdrawal_credential(spec, state):
     # Set up a correct request, but source does have
@@ -1254,8 +1264,8 @@ def test_switch_to_compounding_source_bls_withdrawal_credential(spec, state):
     source_index = spec.get_active_validator_indices(state, current_epoch)[0]
     consolidation = spec.ConsolidationRequest(
         source_address=get_validators(spec, state)[source_index].withdrawal_credentials[12:],
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[source_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
     )
 
     # Check the return condition
@@ -1264,7 +1274,7 @@ def test_switch_to_compounding_source_bls_withdrawal_credential(spec, state):
     yield from run_switch_to_compounding_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_switch_to_compounding_source_compounding_withdrawal_credential(spec, state):
     # Set up a correct request, but source does have
@@ -1275,8 +1285,8 @@ def test_switch_to_compounding_source_compounding_withdrawal_credential(spec, st
     set_compounding_withdrawal_credential(spec, state, source_index, address=source_address)
     consolidation = spec.ConsolidationRequest(
         source_address=source_address,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[source_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
     )
     get_balances(spec, state)[source_index] = (
         spec.MIN_ACTIVATION_BALANCE + spec.EFFECTIVE_BALANCE_INCREMENT
@@ -1288,7 +1298,7 @@ def test_switch_to_compounding_source_compounding_withdrawal_credential(spec, st
     yield from run_switch_to_compounding_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_switch_to_compounding_not_authorized(spec, state):
     # Set up an otherwise correct request
@@ -1299,8 +1309,8 @@ def test_switch_to_compounding_not_authorized(spec, state):
     # Make request with different source address
     consolidation = spec.ConsolidationRequest(
         source_address=b"\x33" * 20,
-        source_pubkey=state.validators[source_index].pubkey,
-        target_pubkey=state.validators[source_index].pubkey,
+        source_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
+        target_pubkey=get_request_pubkey(spec, state.validators[source_index].pubkey),
     )
 
     # Check the return condition
@@ -1312,7 +1322,7 @@ def test_switch_to_compounding_not_authorized(spec, state):
     yield from run_switch_to_compounding_processing(spec, state, consolidation, success=False)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_switch_to_compounding_unknown_source_pubkey(spec, state):
     # Set up an otherwise correct request
@@ -1328,7 +1338,9 @@ def test_switch_to_compounding_unknown_source_pubkey(spec, state):
     )
 
     # Check the return condition
-    assert state.validators[source_index].pubkey != consolidation.source_pubkey
+    assert state.validators[source_index].pubkey != get_pubkey_from_request(
+        spec, consolidation.source_pubkey
+    )
 
     yield from run_switch_to_compounding_processing(spec, state, consolidation, success=False)
 
@@ -1343,8 +1355,12 @@ def run_consolidation_processing(spec, state, consolidation, success=True):
     """
     if success:
         validator_pubkeys = [v.pubkey for v in state.validators]
-        source_index = spec.ValidatorIndex(validator_pubkeys.index(consolidation.source_pubkey))
-        target_index = spec.ValidatorIndex(validator_pubkeys.index(consolidation.target_pubkey))
+        source_index = spec.ValidatorIndex(
+            validator_pubkeys.index(get_pubkey_from_request(spec, consolidation.source_pubkey))
+        )
+        target_index = spec.ValidatorIndex(
+            validator_pubkeys.index(get_pubkey_from_request(spec, consolidation.target_pubkey))
+        )
         source_validator = get_validators(spec, state)[source_index]
         target_validator = get_validators(spec, state)[target_index]
         pre_exit_epoch_source = source_validator.exit_epoch
@@ -1411,8 +1427,12 @@ def run_switch_to_compounding_processing(spec, state, consolidation, success=Tru
     """
     if success:
         validator_pubkeys = [v.pubkey for v in state.validators]
-        source_index = spec.ValidatorIndex(validator_pubkeys.index(consolidation.source_pubkey))
-        target_index = spec.ValidatorIndex(validator_pubkeys.index(consolidation.target_pubkey))
+        source_index = spec.ValidatorIndex(
+            validator_pubkeys.index(get_pubkey_from_request(spec, consolidation.source_pubkey))
+        )
+        target_index = spec.ValidatorIndex(
+            validator_pubkeys.index(get_pubkey_from_request(spec, consolidation.target_pubkey))
+        )
         source_validator = get_validators(spec, state)[source_index]
         pre_pending_consolidations = state.pending_consolidations.copy()
         pre_withdrawal_credentials = source_validator.withdrawal_credentials
@@ -1450,10 +1470,10 @@ def run_switch_to_compounding_processing(spec, state, consolidation, success=Tru
         if pre_balance > spec.MIN_ACTIVATION_BALANCE:
             assert len(state.pending_deposits) == 1
             pending_deposit = state.pending_deposits[0]
-            assert pending_deposit.pubkey == source_validator.pubkey
+            assert get_deposit_pubkey(spec, pending_deposit.pubkey) == source_validator.pubkey
             assert pending_deposit.withdrawal_credentials == post_withdrawal_credentials
             assert pending_deposit.amount == (pre_balance - spec.MIN_ACTIVATION_BALANCE)
-            assert pending_deposit.signature == spec.G2_POINT_AT_INFINITY
+            assert pending_deposit.signature == get_placeholder_deposit_signature(spec)
             assert pending_deposit.slot == spec.GENESIS_SLOT
         # Check no consolidation has been initiated
         assert get_validators(spec, state)[source_index].exit_epoch == spec.FAR_FUTURE_EPOCH

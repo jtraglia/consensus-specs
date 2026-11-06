@@ -4,12 +4,11 @@ from eth_consensus_specs.test.context import (
     single_phase,
     spec_state_test,
     spec_test,
-    with_all_phases_from_except,
     with_custom_state,
     with_gloas_and_later,
     with_presets,
 )
-from eth_consensus_specs.test.helpers.constants import GLOAS, MINIMAL, PQ
+from eth_consensus_specs.test.helpers.constants import MINIMAL
 
 
 @with_gloas_and_later
@@ -109,7 +108,7 @@ def test_compute_weak_subjectivity_period_scaled(spec, state):
     assert actual_wsp == expected_wsp
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @with_presets(
     [MINIMAL],
     reason="mainnet config leads to larger validator set than limit of public/private keys pre-generated",

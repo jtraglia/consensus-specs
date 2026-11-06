@@ -1,11 +1,9 @@
 from eth_consensus_specs.test.context import (
     always_bls,
     spec_state_test,
-    with_all_phases_from_except,
     with_gloas_and_later,
 )
 from eth_consensus_specs.test.helpers.block import build_empty_block_for_next_slot
-from eth_consensus_specs.test.helpers.constants import GLOAS, PQ
 from eth_consensus_specs.test.helpers.execution_payload import (
     build_signed_execution_payload_envelope,
 )
@@ -560,7 +558,7 @@ def test_gossip_execution_payload_envelope__reject_too_many_withdrawal_requests(
     )
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_gossip_execution_payload_envelope__valid_max_consolidation_requests(spec, state):
     """An envelope with the maximum number of consolidation requests is valid."""
@@ -571,7 +569,7 @@ def test_gossip_execution_payload_envelope__valid_max_consolidation_requests(spe
     yield from _assert_envelope_requests(spec, state, requests, "valid")
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_gossip_execution_payload_envelope__reject_too_many_consolidation_requests(spec, state):
     """An envelope whose execution requests exceed the consolidation-request limit is rejected."""

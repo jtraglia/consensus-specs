@@ -1,11 +1,15 @@
 from random import Random
 
 from eth_consensus_specs.test.helpers.attestations import cached_prepare_state_with_attestations
-from eth_consensus_specs.test.helpers.deposits import mock_deposit
+from eth_consensus_specs.test.helpers.deposits import (
+    get_placeholder_deposit_signature,
+    mock_deposit,
+)
 from eth_consensus_specs.test.helpers.forks import (
     is_post_altair,
     is_post_electra,
 )
+from eth_consensus_specs.test.helpers.keys import get_request_pubkey
 from eth_consensus_specs.test.helpers.registry import get_validators
 from eth_consensus_specs.test.helpers.state import next_epoch
 from eth_consensus_specs.test.helpers.withdrawals import (
@@ -207,10 +211,10 @@ def set_some_pending_deposits(spec, state, rng):
             amount = spec.EFFECTIVE_BALANCE_INCREMENT * rng.randint(1, 4)
 
             pending_deposit = spec.PendingDeposit(
-                pubkey=state.validators[index].pubkey,
+                pubkey=get_request_pubkey(spec, state.validators[index].pubkey),
                 withdrawal_credentials=validator.withdrawal_credentials,
                 amount=amount,
-                signature=spec.bls.G2_POINT_AT_INFINITY,
+                signature=get_placeholder_deposit_signature(spec),
                 slot=spec.GENESIS_SLOT,
             )
             state.pending_deposits.append(pending_deposit)

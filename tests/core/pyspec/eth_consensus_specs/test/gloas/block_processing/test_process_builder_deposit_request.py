@@ -1,7 +1,6 @@
 from eth_consensus_specs.test.context import (
     always_bls,
     spec_state_test,
-    with_all_phases_from_except,
     with_gloas_and_later,
 )
 from eth_consensus_specs.test.helpers.builder_deposit_requests import (
@@ -9,9 +8,14 @@ from eth_consensus_specs.test.helpers.builder_deposit_requests import (
     prepare_process_builder_deposit_request,
     run_builder_deposit_request_processing,
 )
-from eth_consensus_specs.test.helpers.constants import GLOAS, PQ
 from eth_consensus_specs.test.helpers.deposits import prepare_builder_deposit_request
-from eth_consensus_specs.test.helpers.keys import builder_pubkey_to_privkey, privkeys, pubkeys
+from eth_consensus_specs.test.helpers.forks import is_post_pq
+from eth_consensus_specs.test.helpers.keys import (
+    builder_pubkey_to_privkey,
+    privkeys,
+    pubkeys,
+    xmss_pubkeys,
+)
 from eth_consensus_specs.test.helpers.registry import get_builders
 from eth_consensus_specs.utils import bls
 
@@ -75,7 +79,7 @@ def run_builder_deposit_processing(
 #
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__new_builder(spec, state):
     """Test fresh builder deposit creates a new builder."""
@@ -111,7 +115,7 @@ def test_process_builder_deposit_request__new_builder_non_builder_withdrawal_pre
     )
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__new_builder_large_amount(spec, state):
     """Test fresh builder deposit with a large amount."""
@@ -122,7 +126,7 @@ def test_process_builder_deposit_request__new_builder_large_amount(spec, state):
     yield from run_builder_deposit_processing(spec, state, builder_deposit_request)
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__new_builder_very_large_amount(spec, state):
     """Test fresh builder deposit with a very large amount."""
@@ -133,7 +137,7 @@ def test_process_builder_deposit_request__new_builder_very_large_amount(spec, st
     yield from run_builder_deposit_processing(spec, state, builder_deposit_request)
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__new_builder_extra_gwei(spec, state):
     """
@@ -164,7 +168,7 @@ def test_process_builder_deposit_request__new_builder_extra_gwei(spec, state):
     )
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__new_builder_max_minus_one(spec, state):
     """
@@ -195,7 +199,7 @@ def test_process_builder_deposit_request__new_builder_max_minus_one(spec, state)
     )
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__new_builder_empty_registry(spec, state):
     """
@@ -229,7 +233,7 @@ def test_process_builder_deposit_request__new_builder_empty_registry(spec, state
     )
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__new_builder_pubkey_is_validator(spec, state):
     """
@@ -238,7 +242,7 @@ def test_process_builder_deposit_request__new_builder_pubkey_is_validator(spec, 
     registries are keyed independently, so one pubkey may be both.
     """
     validator_pubkey = state.validators[0].pubkey
-    assert validator_pubkey == pubkeys[0]
+    assert validator_pubkey == (xmss_pubkeys[0] if is_post_pq(spec) else pubkeys[0])
     amount = spec.MIN_DEPOSIT_AMOUNT
     pre_builder_count = len(state.builders)
 
@@ -264,7 +268,7 @@ def test_process_builder_deposit_request__new_builder_pubkey_is_validator(spec, 
 #
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__top_up(spec, state):
     """
@@ -300,7 +304,7 @@ def test_process_builder_deposit_request__top_up(spec, state):
     )
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__top_up_large(spec, state):
     """Test large top-up deposit for an existing builder."""
@@ -316,7 +320,7 @@ def test_process_builder_deposit_request__top_up_large(spec, state):
     )
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__top_up_single_builder(spec, state):
     """
@@ -357,7 +361,7 @@ def test_process_builder_deposit_request__top_up_single_builder(spec, state):
     )
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__top_up_last_index(spec, state):
     """
@@ -396,7 +400,7 @@ def test_process_builder_deposit_request__top_up_last_index(spec, state):
     )
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__top_up_ignores_request_fields(spec, state):
     """
@@ -648,7 +652,7 @@ def test_process_builder_deposit_request__top_up_invalid_sig(spec, state):
 #
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__reuses_exited_builder_slot(spec, state):
     """Test that new builder can reuse slot of fully exited builder with zero balance."""
@@ -678,7 +682,7 @@ def test_process_builder_deposit_request__reuses_exited_builder_slot(spec, state
     )
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__reuses_first_of_multiple_exited_slots(spec, state):
     """
@@ -723,7 +727,7 @@ def test_process_builder_deposit_request__reuses_first_of_multiple_exited_slots(
     )
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__reuses_slot_at_current_epoch(spec, state):
     """
@@ -762,7 +766,7 @@ def test_process_builder_deposit_request__reuses_slot_at_current_epoch(spec, sta
     )
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__no_reuse_future_epoch(spec, state):
     """
@@ -803,7 +807,7 @@ def test_process_builder_deposit_request__no_reuse_future_epoch(spec, state):
     )
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__no_reuse_nonzero_balance(spec, state):
     """
@@ -844,7 +848,7 @@ def test_process_builder_deposit_request__no_reuse_nonzero_balance(spec, state):
     )
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__exited_builder_top_up_zero_balance(spec, state):
     """
@@ -895,7 +899,7 @@ def test_process_builder_deposit_request__exited_builder_top_up_zero_balance(spe
     )
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_deposit_request__exited_builder_top_up_nonzero_balance(spec, state):
     """

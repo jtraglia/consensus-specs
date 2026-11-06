@@ -1,6 +1,7 @@
 from functools import cache
 from hashlib import sha256
 
+from eth_consensus_specs.test.helpers.forks import is_post_pq
 from eth_consensus_specs.utils import bls, xmss
 
 # Enough keys for 256 builders
@@ -18,6 +19,8 @@ pubkey_to_privkey = {pubkey: privkey for privkey, pubkey in zip(privkeys, pubkey
 # XMSS key generation takes minutes, so the XMSS keys are placeholders
 xmss_builder_pubkeys = [xmss.StubPk(privkey) for privkey in builder_privkeys]
 xmss_pubkeys = [xmss.StubPk(privkey) for privkey in privkeys]
+builder_pubkey_to_privkey.update(zip(xmss_builder_pubkeys, builder_privkeys, strict=True))
+pubkey_to_privkey.update(zip(xmss_pubkeys, privkeys, strict=True))
 
 # Depth of the VRF trees whose roots validators register
 VRF_TREE_DEPTH = 31
@@ -50,3 +53,39 @@ def get_vrf_proof(index):
     """
     nodes = get_vrf_tree_nodes(index)
     return (nodes[0], *nodes[:VRF_TREE_DEPTH])
+
+
+def get_request_pubkey(spec, pubkey):
+    """
+    The 48-byte public key that an execution layer request names for
+    ``pubkey``. From PQ onwards it is the XMSS public key after
+    ``XMSS_DEPOSIT_PREFIX``, and a BLS test key stands for the XMSS key that
+    shares its private key.
+    """
+    if not is_post_pq(spec):
+        return pubkey
+    if len(pubkey) == 48:
+        privkey = pubkey_to_privkey.get(pubkey, builder_pubkey_to_privkey.get(pubkey))
+        if privkey is None:
+            return pubkey
+        pubkey = xmss.StubPk(privkey)
+    return spec.Bytes48(spec.XMSS_DEPOSIT_PREFIX + pubkey)
+
+
+def get_pubkey_from_request(spec, request_pubkey):
+    """
+    The public key of the validator or builder that ``request_pubkey`` names.
+    """
+    if is_post_pq(spec):
+        return spec.XMSSPubkey(request_pubkey[16:])
+    return request_pubkey
+
+
+def get_deposit_pubkey(spec, request_pubkey):
+    """
+    The public key of the validator or builder that a deposit naming
+    ``request_pubkey`` is for.
+    """
+    if is_post_pq(spec):
+        return spec.compute_deposit_pubkey(request_pubkey)
+    return request_pubkey

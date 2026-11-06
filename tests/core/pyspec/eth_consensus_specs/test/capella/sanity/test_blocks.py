@@ -25,8 +25,17 @@ from eth_consensus_specs.test.helpers.constants import (
 from eth_consensus_specs.test.helpers.deposits import (
     prepare_state_and_deposit,
 )
-from eth_consensus_specs.test.helpers.forks import is_post_eip8148, is_post_electra, is_post_gloas
-from eth_consensus_specs.test.helpers.keys import pubkeys
+from eth_consensus_specs.test.helpers.forks import (
+    is_post_eip8148,
+    is_post_electra,
+    is_post_gloas,
+    is_post_pq,
+)
+from eth_consensus_specs.test.helpers.keys import (
+    get_vrf_root,
+    pubkeys,
+    xmss_pubkeys,
+)
 from eth_consensus_specs.test.helpers.registry import append_validator, get_balances, get_validators
 from eth_consensus_specs.test.helpers.state import (
     next_epoch_via_block,
@@ -545,7 +554,7 @@ def _insert_validator(spec, state, balance):
 
     validator_index = len(state.validators)
     validator = spec.Validator(
-        pubkey=pubkeys[validator_index],
+        pubkey=xmss_pubkeys[validator_index] if is_post_pq(spec) else pubkeys[validator_index],
         withdrawal_credentials=spec.ETH1_ADDRESS_WITHDRAWAL_PREFIX + b"\x00" * 11 + b"\x56" * 20,
         activation_eligibility_epoch=1,
         activation_epoch=2,
@@ -553,6 +562,8 @@ def _insert_validator(spec, state, balance):
         withdrawable_epoch=spec.FAR_FUTURE_EPOCH,
         effective_balance=effective_balance,
     )
+    if is_post_pq(spec):
+        validator.vrf_root = get_vrf_root(validator_index)
     append_validator(spec, state, validator, balance)
     if is_post_eip8148(spec):
         state.validator_sweep_thresholds.append(spec.Gwei(0))

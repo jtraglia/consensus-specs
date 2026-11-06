@@ -1,9 +1,7 @@
 from eth_consensus_specs.test.context import (
     spec_state_test,
-    with_all_phases_from_except,
     with_electra_and_later,
 )
-from eth_consensus_specs.test.helpers.constants import ELECTRA, PQ
 from eth_consensus_specs.test.helpers.deposits import prepare_pending_deposit
 from eth_consensus_specs.test.helpers.registry import get_balances, get_validators
 from eth_consensus_specs.test.helpers.state import transition_to
@@ -28,7 +26,7 @@ def run_epoch_processing(spec, state, pending_deposits=None, pending_consolidati
     assert len(state.pending_consolidations) == 0
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_pending_deposit_extra_gwei(spec, state):
     # Deposit where the amount has a little extra gwei
@@ -48,7 +46,7 @@ def test_pending_deposit_extra_gwei(spec, state):
     assert get_validators(spec, state)[index].effective_balance == spec.MIN_ACTIVATION_BALANCE
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_multiple_pending_deposits_same_pubkey(spec, state):
     # Create multiple deposits with the same pubkey
@@ -65,7 +63,7 @@ def test_multiple_pending_deposits_same_pubkey(spec, state):
     assert get_validators(spec, state)[index].effective_balance == spec.MIN_ACTIVATION_BALANCE
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_multiple_pending_deposits_same_pubkey_different_signature(spec, state):
     # Create multiple deposits with the same pubkey, but only the first has a valid signature
@@ -90,7 +88,7 @@ def test_multiple_pending_deposits_same_pubkey_different_signature(spec, state):
     assert get_validators(spec, state)[index].effective_balance == spec.MIN_ACTIVATION_BALANCE
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_multiple_pending_deposits_same_pubkey_compounding(spec, state):
     # Create multiple deposits with the same pubkey and compounding creds
@@ -111,7 +109,7 @@ def test_multiple_pending_deposits_same_pubkey_compounding(spec, state):
     assert get_validators(spec, state)[index].effective_balance == get_balances(spec, state)[index]
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_multiple_pending_deposits_same_pubkey_below_upward_threshold(spec, state):
     # Create multiple deposits with top up lower than the upward threshold
@@ -134,7 +132,7 @@ def test_multiple_pending_deposits_same_pubkey_below_upward_threshold(spec, stat
     assert get_validators(spec, state)[index].effective_balance == deposit_0.amount
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_multiple_pending_deposits_same_pubkey_above_upward_threshold(spec, state):
     # Create multiple deposits with top up greater than the upward threshold

@@ -2,10 +2,8 @@ from eth_consensus_specs.test.context import (
     expect_assertion_error,
     single_phase,
     spec_test,
-    with_all_phases_from_except,
     with_electra_and_later,
 )
-from eth_consensus_specs.test.helpers.constants import ELECTRA, PQ
 
 
 @with_electra_and_later
@@ -30,7 +28,7 @@ def test_requests_serialization_round_trip__one_request(spec):
     assert deserialized_execution_requests == execution_requests
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_test
 @single_phase
 def test_requests_serialization_round_trip__multiple_requests(spec):

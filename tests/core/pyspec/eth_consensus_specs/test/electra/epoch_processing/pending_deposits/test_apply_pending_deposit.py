@@ -1,10 +1,8 @@
 from eth_consensus_specs.test.context import (
     always_bls,
     spec_state_test,
-    with_all_phases_from_except,
     with_electra_and_later,
 )
-from eth_consensus_specs.test.helpers.constants import ELECTRA, PQ
 from eth_consensus_specs.test.helpers.deposits import (
     prepare_pending_deposit,
     run_pending_deposit_applying,
@@ -18,7 +16,7 @@ from eth_consensus_specs.test.helpers.withdrawals import (
 )
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_apply_pending_deposit_under_min_activation(spec, state):
     # fresh deposit = next validator index = validator appended to registry
@@ -30,7 +28,7 @@ def test_apply_pending_deposit_under_min_activation(spec, state):
     yield from run_pending_deposit_applying(spec, state, pending_deposit, validator_index)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_apply_pending_deposit_min_activation(spec, state):
     # fresh deposit = next validator index = validator appended to registry
@@ -42,7 +40,7 @@ def test_apply_pending_deposit_min_activation(spec, state):
     yield from run_pending_deposit_applying(spec, state, pending_deposit, validator_index)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_apply_pending_deposit_over_min_activation(spec, state):
     # fresh deposit = next validator index = validator appended to registry
@@ -54,7 +52,7 @@ def test_apply_pending_deposit_over_min_activation(spec, state):
     yield from run_pending_deposit_applying(spec, state, pending_deposit, validator_index)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_apply_pending_deposit_over_min_activation_next_increment(spec, state):
     # fresh deposit = next validator index = validator appended to registry
@@ -72,7 +70,7 @@ def test_apply_pending_deposit_over_min_activation_next_increment(spec, state):
     )
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_apply_pending_deposit_eth1_withdrawal_credentials(spec, state):
     # fresh deposit = next validator index = validator appended to registry
@@ -94,7 +92,7 @@ def test_apply_pending_deposit_eth1_withdrawal_credentials(spec, state):
     yield from run_pending_deposit_applying(spec, state, pending_deposit, validator_index)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_apply_pending_deposit_compounding_withdrawal_credentials_under_max(spec, state):
     # fresh deposit = next validator index = validator appended to registry
@@ -117,7 +115,7 @@ def test_apply_pending_deposit_compounding_withdrawal_credentials_under_max(spec
     yield from run_pending_deposit_applying(spec, state, pending_deposit, validator_index)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_apply_pending_deposit_compounding_withdrawal_credentials_max(spec, state):
     # fresh deposit = next validator index = validator appended to registry
@@ -140,7 +138,7 @@ def test_apply_pending_deposit_compounding_withdrawal_credentials_max(spec, stat
     yield from run_pending_deposit_applying(spec, state, pending_deposit, validator_index)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_apply_pending_deposit_compounding_withdrawal_credentials_over_max(spec, state):
     # fresh deposit = next validator index = validator appended to registry
@@ -163,7 +161,7 @@ def test_apply_pending_deposit_compounding_withdrawal_credentials_over_max(spec,
     yield from run_pending_deposit_applying(spec, state, pending_deposit, validator_index)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_apply_pending_deposit_compounding_withdrawal_credentials_over_max_next_increment(
     spec, state
@@ -195,7 +193,7 @@ def test_apply_pending_deposit_compounding_withdrawal_credentials_over_max_next_
     )
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_apply_pending_deposit_non_versioned_withdrawal_credentials(spec, state):
     # fresh deposit = next validator index = validator appended to registry
@@ -215,7 +213,7 @@ def test_apply_pending_deposit_non_versioned_withdrawal_credentials(spec, state)
     yield from run_pending_deposit_applying(spec, state, pending_deposit, validator_index)
 
 
-@with_all_phases_from_except(ELECTRA, [PQ])
+@with_electra_and_later
 @spec_state_test
 def test_apply_pending_deposit_non_versioned_withdrawal_credentials_over_min_activation(
     spec, state

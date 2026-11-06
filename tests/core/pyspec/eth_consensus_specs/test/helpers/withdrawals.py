@@ -6,6 +6,7 @@ from eth_consensus_specs.test.helpers.forks import (
     is_post_fulu,
     is_post_gloas,
 )
+from eth_consensus_specs.test.helpers.keys import get_request_pubkey
 from eth_consensus_specs.test.helpers.registry import get_balances, get_builders, get_validators
 
 
@@ -216,7 +217,7 @@ def prepare_withdrawal_request(spec, state, validator_index, address=None, amoun
 
     return spec.WithdrawalRequest(
         source_address=get_validators(spec, state)[validator_index].withdrawal_credentials[12:],
-        validator_pubkey=state.validators[validator_index].pubkey,
+        validator_pubkey=get_request_pubkey(spec, state.validators[validator_index].pubkey),
         amount=amount,
     )
 

@@ -1,10 +1,11 @@
 from eth_consensus_specs.test.context import (
     spec_state_test,
-    with_all_phases_from_except,
     with_gloas_and_later,
 )
-from eth_consensus_specs.test.helpers.constants import GLOAS, PQ
-from eth_consensus_specs.test.helpers.keys import builder_pubkeys
+from eth_consensus_specs.test.helpers.keys import (
+    builder_pubkeys,
+    get_request_pubkey,
+)
 from eth_consensus_specs.test.helpers.registry import get_builders
 from eth_consensus_specs.test.helpers.state import next_slots
 
@@ -26,7 +27,7 @@ def prepare_builder_exit_request(spec, state, builder_index, source_address=None
         source_address = builder.execution_address
     return spec.BuilderExitRequest(
         source_address=source_address,
-        pubkey=state.builders[builder_index].pubkey,
+        pubkey=get_request_pubkey(spec, state.builders[builder_index].pubkey),
     )
 
 
@@ -53,7 +54,7 @@ def run_builder_exit_request_processing(spec, state, builder_exit_request, valid
         assert state == pre_state
 
 
-@with_all_phases_from_except(GLOAS, [PQ])
+@with_gloas_and_later
 @spec_state_test
 def test_process_builder_exit_request__success(spec, state):
     """Test successful builder exit with no pending balance."""
