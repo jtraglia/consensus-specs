@@ -24,9 +24,13 @@
     - [`BeaconBlockBody`](#beaconblockbody)
     - [`BeaconState`](#beaconstate)
     - [`Builder`](#builder)
+    - [`BuilderDepositRequest`](#builderdepositrequest)
+    - [`BuilderExitRequest`](#builderexitrequest)
+    - [`DepositRequest`](#depositrequest)
     - [`ExecutionRequests`](#executionrequests)
     - [`IndexedAttestation`](#indexedattestation)
     - [`PayloadAttestationMessage`](#payloadattestationmessage)
+    - [`PendingDeposit`](#pendingdeposit)
     - [`SignedBeaconBlock`](#signedbeaconblock)
     - [`SignedBeaconBlockHeader`](#signedbeaconblockheader)
     - [`SignedExecutionPayloadBid`](#signedexecutionpayloadbid)
@@ -34,6 +38,7 @@
     - [`SignedVoluntaryExit`](#signedvoluntaryexit)
     - [`SingleAttestation`](#singleattestation)
     - [`Validator`](#validator)
+    - [`WithdrawalRequest`](#withdrawalrequest)
   - [New containers](#new-containers)
 - [Dataclasses](#dataclasses)
   - [New dataclasses](#new-dataclasses)
@@ -43,9 +48,12 @@
     - [XMSS signatures](#xmss-signatures)
     - [STARK proofs](#stark-proofs)
   - [Misc](#misc)
+    - [New `compute_deposit_pubkey`](#new-compute_deposit_pubkey)
+    - [New `compute_deposit_vrf_data`](#new-compute_deposit_vrf_data)
     - [New `compute_xmss_attestation_leaf_index`](#new-compute_xmss_attestation_leaf_index)
     - [New `compute_xmss_leaf_index`](#new-compute_xmss_leaf_index)
   - [Predicates](#predicates)
+    - [New `is_legacy_pubkey`](#new-is_legacy_pubkey)
     - [New `is_valid_vrf_proof`](#new-is_valid_vrf_proof)
     - [Modified `is_valid_indexed_attestation`](#modified-is_valid_indexed_attestation)
   - [Beacon state accessors](#beacon-state-accessors)
@@ -56,6 +64,8 @@
   - [Modified `verify_block_signature`](#modified-verify_block_signature)
   - [Epoch processing](#epoch-processing)
     - [Modified `process_epoch`](#modified-process_epoch)
+    - [Modified `apply_pending_deposit`](#modified-apply_pending_deposit)
+    - [Modified `process_pending_deposits`](#modified-process_pending_deposits)
   - [Block processing](#block-processing)
     - [Modified `process_block`](#modified-process_block)
     - [Modified `process_randao`](#modified-process_randao)
@@ -73,8 +83,10 @@
       - [Attestations](#attestations)
         - [Modified `process_attestation`](#modified-process_attestation)
       - [Deposit requests](#deposit-requests)
-        - [Modified `process_deposit_request`](#modified-process_deposit_request)
+        - [Modified `get_validator_from_deposit`](#modified-get_validator_from_deposit)
+        - [Modified `add_validator_to_registry`](#modified-add_validator_to_registry)
       - [Builder deposit requests](#builder-deposit-requests)
+        - [Modified `add_builder_to_registry`](#modified-add_builder_to_registry)
         - [Modified `process_builder_deposit_request`](#modified-process_builder_deposit_request)
       - [Builder exit requests](#builder-exit-requests)
         - [Modified `process_builder_exit_request`](#modified-process_builder_exit_request)
@@ -121,11 +133,16 @@ EIP-8483 before the fork in place of its BLS public key, and a builder's record
 the XMSS public key it registered. Validators and builders that did not register
 are withdrawn at the fork. See [the fork document](./fork.md) for details.
 
-Execution layer requests still name validators and builders by BLS public key,
-which the state no longer holds. Deposit, withdrawal, builder deposit, and
-builder exit requests are therefore ignored until a later upgrade changes the
-system contracts to name them by XMSS public key. A way to add validators and
-builders after the fork is left open.
+Execution layer requests keep their formats. The first 32 bytes of a request's
+48-byte public key field are an XMSS public key. Deposits no longer carry a
+signature. Instead, the first 32 bytes of a deposit's 96-byte signature field
+are the VRF data of the validator it creates. A request's public key ends in 16
+zero bytes, unless it is a legacy request made before the fork with a BLS public
+key. A legacy deposit's validator takes the XMSS public key and VRF data that a
+validator that did not register takes at the fork, and it is exited at once, so
+the validator sweep refunds its balance after the withdrawability delay. A
+legacy builder deposit's builder is keyed the same way and initiates its exit at
+once. A legacy withdrawal request is ignored.
 
 `BLSToExecutionChange` is disabled, because its BLS signature could be forged.
 
@@ -359,6 +376,40 @@ class Builder(Container):
     withdrawable_epoch: Epoch
 ```
 
+#### `BuilderDepositRequest`
+
+```python
+class BuilderDepositRequest(Container):
+    # [Modified in PQ]
+    pubkey: Bytes48
+    withdrawal_credentials: Bytes32
+    amount: Gwei
+    # [Modified in PQ]
+    signature: Bytes96
+```
+
+#### `BuilderExitRequest`
+
+```python
+class BuilderExitRequest(Container):
+    source_address: ExecutionAddress
+    # [Modified in PQ]
+    pubkey: Bytes48
+```
+
+#### `DepositRequest`
+
+```python
+class DepositRequest(Container):
+    # [Modified in PQ]
+    pubkey: Bytes48
+    withdrawal_credentials: Bytes32
+    amount: Gwei
+    # [Modified in PQ]
+    signature: Bytes96
+    index: Uint64
+```
+
 #### `ExecutionRequests`
 
 ```python
@@ -399,6 +450,19 @@ class PayloadAttestationMessage(Container):
     data: PayloadAttestationData
     # [Modified in PQ]
     signature: XMSSSignature
+```
+
+#### `PendingDeposit`
+
+```python
+class PendingDeposit(Container):
+    # [Modified in PQ]
+    pubkey: Bytes48
+    withdrawal_credentials: Bytes32
+    amount: Gwei
+    # [Modified in PQ]
+    signature: Bytes96
+    slot: Slot
 ```
 
 #### `SignedBeaconBlock`
@@ -474,6 +538,16 @@ class Validator(Container):
     withdrawable_epoch: Epoch
 ```
 
+#### `WithdrawalRequest`
+
+```python
+class WithdrawalRequest(Container):
+    source_address: ExecutionAddress
+    # [Modified in PQ]
+    validator_pubkey: Bytes48
+    amount: Gwei
+```
+
 ### New containers
 
 ## Dataclasses
@@ -531,6 +605,30 @@ They stand in for a recursive STARK, which would change the encoding of
 
 ### Misc
 
+#### New `compute_deposit_pubkey`
+
+```python
+def compute_deposit_pubkey(pubkey: Bytes48) -> XMSSPubkey:
+    """
+    Return the XMSS public key that a deposit naming ``pubkey`` is for.
+    """
+    if is_legacy_pubkey(pubkey):
+        return XMSSPubkey(sha256(pubkey + b"\x00"))
+    return XMSSPubkey(pubkey[:32])
+```
+
+#### New `compute_deposit_vrf_data`
+
+```python
+def compute_deposit_vrf_data(deposit: PendingDeposit) -> Root:
+    """
+    Return the VRF data of the validator that ``deposit`` creates.
+    """
+    if is_legacy_pubkey(deposit.pubkey):
+        return Root(sha256(deposit.pubkey + b"\x01"))
+    return Root(deposit.signature[:32])
+```
+
 #### New `compute_xmss_attestation_leaf_index`
 
 *Note*: The first `XMSS_RESERVED_LEAVES` leaves are reserved for messages that a
@@ -565,6 +663,19 @@ def compute_xmss_leaf_index(slot: Slot, leaf_offset: Uint64) -> Uint64:
 ```
 
 ### Predicates
+
+#### New `is_legacy_pubkey`
+
+*Note*: A request made after the upgrade names an XMSS public key followed by 16
+zero bytes, while a request made before it names a BLS public key.
+
+```python
+def is_legacy_pubkey(pubkey: Bytes48) -> bool:
+    """
+    Check if ``pubkey`` is a BLS public key rather than an XMSS public key.
+    """
+    return pubkey[32:] != bytes(16)
+```
 
 #### New `is_valid_vrf_proof`
 
@@ -703,8 +814,7 @@ def process_epoch(state: BeaconState) -> None:
     process_registry_updates(state)
     process_slashings(state)
     process_eth1_data_reset(state)
-    # [Modified in PQ]
-    # Removed `process_pending_deposits`
+    process_pending_deposits(state)
     process_pending_consolidations(state)
     process_builder_pending_payments(state)
     process_effective_balance_updates(state)
@@ -716,6 +826,105 @@ def process_epoch(state: BeaconState) -> None:
     # Removed `process_sync_committee_updates`
     process_proposer_lookahead(state)
     process_ptc_window(state)
+```
+
+#### Modified `apply_pending_deposit`
+
+*Note*: Deposits carry no signature, so a deposit for a new validator is not
+verified. The validator of a legacy deposit is exited at once without consuming
+exit churn, since it was never active, and becomes withdrawable after
+`MIN_VALIDATOR_WITHDRAWABILITY_DELAY` epochs, as after any exit.
+
+```python
+def apply_pending_deposit(state: BeaconState, deposit: PendingDeposit) -> None:
+    """
+    Applies ``deposit`` to the ``state``.
+    """
+    # [Modified in PQ]
+    pubkey = compute_deposit_pubkey(deposit.pubkey)
+    validator_pubkeys = [validator.pubkey for validator in state.validators]
+    if pubkey not in validator_pubkeys:
+        # [New in PQ]
+        index = get_index_for_new_validator(state)
+        add_validator_to_registry(
+            state,
+            pubkey,
+            # [New in PQ]
+            compute_deposit_vrf_data(deposit),
+            deposit.withdrawal_credentials,
+            deposit.amount,
+        )
+        # [New in PQ]
+        if is_legacy_pubkey(deposit.pubkey):
+            epoch = get_current_epoch(state)
+            validator = state.validators[index]
+            validator.exit_epoch = epoch
+            validator.withdrawable_epoch = epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+    else:
+        validator_index = ValidatorIndex(validator_pubkeys.index(pubkey))
+        increase_balance(state, validator_index, deposit.amount)
+```
+
+#### Modified `process_pending_deposits`
+
+```python
+def process_pending_deposits(state: BeaconState) -> None:
+    next_epoch = get_current_epoch(state) + 1
+    # Deposits still consume the activation-only churn budget in Gloas.
+    available_for_processing = state.deposit_balance_to_consume + get_activation_churn_limit(state)
+    processed_amount = 0
+    next_deposit_index = 0
+    deposits_to_postpone = []
+    is_churn_limit_reached = False
+    finalized_slot = compute_start_slot_at_epoch(state.finalized_checkpoint.epoch)
+
+    for deposit in state.pending_deposits:
+        # Check if deposit has been finalized, otherwise, stop processing.
+        if deposit.slot > finalized_slot:
+            break
+
+        # Check if number of processed deposits has not reached the limit, otherwise, stop processing.
+        if next_deposit_index >= MAX_PENDING_DEPOSITS_PER_EPOCH:
+            break
+
+        # Read validator state
+        is_validator_exited = False
+        is_validator_withdrawn = False
+        # [Modified in PQ]
+        pubkey = compute_deposit_pubkey(deposit.pubkey)
+        validator_pubkeys = [validator.pubkey for validator in state.validators]
+        if pubkey in validator_pubkeys:
+            validator = state.validators[ValidatorIndex(validator_pubkeys.index(pubkey))]
+            is_validator_exited = validator.exit_epoch < FAR_FUTURE_EPOCH
+            is_validator_withdrawn = validator.withdrawable_epoch < next_epoch
+
+        # [Modified in PQ]
+        if is_validator_withdrawn or is_legacy_pubkey(deposit.pubkey):
+            # Deposited balance will never become active. Increase balance but do not consume churn
+            apply_pending_deposit(state, deposit)
+        elif is_validator_exited:
+            # Validator is exiting, postpone the deposit until after withdrawable epoch
+            deposits_to_postpone.append(deposit)
+        else:
+            # Check if deposit fits in the churn, otherwise, do no more deposit processing in this epoch.
+            is_churn_limit_reached = processed_amount + deposit.amount > available_for_processing
+            if is_churn_limit_reached:
+                break
+
+            # Consume churn and apply deposit.
+            processed_amount += deposit.amount
+            apply_pending_deposit(state, deposit)
+
+        # Regardless of how the deposit was handled, we move on in the queue.
+        next_deposit_index += 1
+
+    state.pending_deposits = state.pending_deposits[next_deposit_index:] + deposits_to_postpone
+
+    # Accumulate churn only if the churn limit has been hit.
+    if is_churn_limit_reached:
+        state.deposit_balance_to_consume = available_for_processing - processed_amount
+    else:
+        state.deposit_balance_to_consume = Gwei(0)
 ```
 
 ### Block processing
@@ -751,7 +960,10 @@ def process_randao(state: BeaconState, body: BeaconBlockBody) -> None:
     # [Modified in PQ]
     # Verify RANDAO reveal
     assert is_valid_vrf_proof(
-        state, get_beacon_proposer_index(state), state.slot, body.randao_reveal
+        state,
+        get_beacon_proposer_index(state),
+        state.slot,
+        body.randao_reveal,
     )
     # [Modified in PQ]
     # Mix in RANDAO reveal
@@ -1092,58 +1304,234 @@ def process_attestation(
 
 ##### Deposit requests
 
-###### Modified `process_deposit_request`
-
-*Note*: A deposit names its validator by BLS public key, which the state no
-longer holds, so it is ignored and its amount is not credited.
+###### Modified `get_validator_from_deposit`
 
 ```python
-def process_deposit_request(state: BeaconState, deposit_request: DepositRequest) -> None:
+def get_validator_from_deposit(
     # [Modified in PQ]
-    # Removed the processing of the request
-    pass
+    pubkey: XMSSPubkey,
+    # [New in PQ]
+    vrf_data: Root,
+    withdrawal_credentials: Bytes32,
+    amount: Gwei,
+) -> Validator:
+    validator = Validator(
+        pubkey=pubkey,
+        # [New in PQ]
+        vrf_data=vrf_data,
+        withdrawal_credentials=withdrawal_credentials,
+        effective_balance=Gwei(0),
+        slashed=Boolean(False),
+        activation_eligibility_epoch=FAR_FUTURE_EPOCH,
+        activation_epoch=FAR_FUTURE_EPOCH,
+        exit_epoch=FAR_FUTURE_EPOCH,
+        withdrawable_epoch=FAR_FUTURE_EPOCH,
+    )
+
+    max_effective_balance = get_max_effective_balance(validator)
+    validator.effective_balance = min(
+        amount - amount % EFFECTIVE_BALANCE_INCREMENT, max_effective_balance
+    )
+
+    return validator
+```
+
+###### Modified `add_validator_to_registry`
+
+```python
+def add_validator_to_registry(
+    state: BeaconState,
+    # [Modified in PQ]
+    pubkey: XMSSPubkey,
+    # [New in PQ]
+    vrf_data: Root,
+    withdrawal_credentials: Bytes32,
+    amount: Gwei,
+) -> None:
+    index = get_index_for_new_validator(state)
+    # [Modified in PQ]
+    validator = get_validator_from_deposit(pubkey, vrf_data, withdrawal_credentials, amount)
+    set_or_append_list(state.validators, index, validator)
+    set_or_append_list(state.balances, index, amount)
+    set_or_append_list(state.previous_epoch_participation, index, ParticipationFlags(0b0000_0000))
+    set_or_append_list(state.current_epoch_participation, index, ParticipationFlags(0b0000_0000))
+    set_or_append_list(state.inactivity_scores, index, Uint64(0))
 ```
 
 ##### Builder deposit requests
 
+###### Modified `add_builder_to_registry`
+
+```python
+def add_builder_to_registry(
+    state: BeaconState,
+    # [Modified in PQ]
+    pubkey: XMSSPubkey,
+    version: Uint8,
+    execution_address: ExecutionAddress,
+    amount: Gwei,
+    slot: Slot,
+) -> None:
+    set_or_append_list(
+        state.builders,
+        get_index_for_new_builder(state),
+        Builder(
+            pubkey=pubkey,
+            version=version,
+            execution_address=execution_address,
+            balance=amount,
+            deposit_epoch=compute_epoch_at_slot(slot),
+            withdrawable_epoch=FAR_FUTURE_EPOCH,
+        ),
+    )
+```
+
 ###### Modified `process_builder_deposit_request`
 
-*Note*: A builder deposit names its builder by BLS public key, which
-`state.builders` does not hold, so it is ignored and its amount is not credited.
+*Note*: Builder deposits carry no signature, so a deposit for a new builder is
+not verified. A builder has no VRF data, so `request.signature` is ignored. The
+builder of a legacy deposit initiates its exit at once, so the builder sweep
+refunds its balance.
 
 ```python
 def process_builder_deposit_request(state: BeaconState, request: BuilderDepositRequest) -> None:
+    # Ignore deposits with unexpected withdrawal credential prefixes
+    if not is_builder_withdrawal_credential(request.withdrawal_credentials):
+        return
+
     # [Modified in PQ]
-    # Removed the processing of the request
-    pass
+    pubkey = compute_deposit_pubkey(request.pubkey)
+    builder_pubkeys = [builder.pubkey for builder in state.builders]
+    if pubkey not in builder_pubkeys:
+        # [New in PQ]
+        builder_index = get_index_for_new_builder(state)
+        add_builder_to_registry(
+            state,
+            pubkey,
+            PAYLOAD_BUILDER_VERSION,
+            ExecutionAddress(request.withdrawal_credentials[12:]),
+            request.amount,
+            state.slot,
+        )
+        # [New in PQ]
+        if is_legacy_pubkey(request.pubkey):
+            initiate_builder_exit(state, builder_index)
+    else:
+        builder_index = BuilderIndex(builder_pubkeys.index(pubkey))
+        builder = state.builders[builder_index]
+
+        # If exited and swept, reset the withdrawable epoch
+        if builder.withdrawable_epoch != FAR_FUTURE_EPOCH and builder.balance == 0:
+            epoch = get_current_epoch(state)
+            builder.withdrawable_epoch = epoch + MIN_BUILDER_WITHDRAWABILITY_DELAY
+
+        # Increase balance by deposit amount
+        builder.balance += request.amount
 ```
 
 ##### Builder exit requests
 
 ###### Modified `process_builder_exit_request`
 
-*Note*: A builder exit request names its builder by BLS public key, which
-`state.builders` does not hold, so it is ignored.
-
 ```python
 def process_builder_exit_request(state: BeaconState, request: BuilderExitRequest) -> None:
     # [Modified in PQ]
-    # Removed the processing of the request
-    pass
+    pubkey = XMSSPubkey(request.pubkey[:32])
+    builder_pubkeys = [builder.pubkey for builder in state.builders]
+    if pubkey not in builder_pubkeys:
+        return
+
+    builder_index = BuilderIndex(builder_pubkeys.index(pubkey))
+    builder = state.builders[builder_index]
+
+    if not is_active_builder(state, builder_index):
+        return
+    if builder.execution_address != request.source_address:
+        return
+    if get_pending_balance_to_withdraw_for_builder(state, builder_index) != 0:
+        return
+
+    initiate_builder_exit(state, builder_index)
 ```
 
 ##### Execution-layer withdrawal requests
 
 ###### Modified `process_withdrawal_request`
 
-*Note*: A withdrawal request names its validator by BLS public key, which
-`state.validators` does not hold, so it is ignored.
-
 ```python
 def process_withdrawal_request(state: BeaconState, withdrawal_request: WithdrawalRequest) -> None:
+    # [New in PQ]
+    # Ignore requests that name a BLS public key
+    if is_legacy_pubkey(withdrawal_request.validator_pubkey):
+        return
+
+    amount = withdrawal_request.amount
+    is_full_exit_request = amount == FULL_EXIT_REQUEST_AMOUNT
+
+    # If partial withdrawal queue is full, only full exits are processed
+    if (
+        len(state.pending_partial_withdrawals) == PENDING_PARTIAL_WITHDRAWALS_LIMIT
+        and not is_full_exit_request
+    ):
+        return
+
+    validator_pubkeys = [validator.pubkey for validator in state.validators]
+    # Verify pubkey exists
     # [Modified in PQ]
-    # Removed the processing of the request
-    pass
+    request_pubkey = XMSSPubkey(withdrawal_request.validator_pubkey[:32])
+    if request_pubkey not in validator_pubkeys:
+        return
+    index = ValidatorIndex(validator_pubkeys.index(request_pubkey))
+    validator = state.validators[index]
+
+    # Verify withdrawal credentials
+    has_correct_credential = has_execution_withdrawal_credential(validator)
+    is_correct_source_address = (
+        validator.withdrawal_credentials[12:] == withdrawal_request.source_address
+    )
+    if not (has_correct_credential and is_correct_source_address):
+        return
+    # Verify the validator is active
+    if not is_active_validator(validator, get_current_epoch(state)):
+        return
+    # Verify exit has not been initiated
+    if validator.exit_epoch != FAR_FUTURE_EPOCH:
+        return
+    # Verify the validator has been active long enough
+    if get_current_epoch(state) < validator.activation_epoch + SHARD_COMMITTEE_PERIOD:
+        return
+
+    pending_balance_to_withdraw = get_pending_balance_to_withdraw(state, index)
+
+    if is_full_exit_request:
+        # Only exit validator if it has no pending withdrawals in the queue
+        if pending_balance_to_withdraw == 0:
+            initiate_validator_exit(state, index)
+        return
+
+    has_sufficient_effective_balance = validator.effective_balance >= MIN_ACTIVATION_BALANCE
+    has_excess_balance = (
+        state.balances[index] > MIN_ACTIVATION_BALANCE + pending_balance_to_withdraw
+    )
+
+    # Only allow partial withdrawals with compounding withdrawal credentials
+    if (
+        has_compounding_withdrawal_credential(validator)
+        and has_sufficient_effective_balance
+        and has_excess_balance
+    ):
+        to_withdraw = min(
+            state.balances[index] - MIN_ACTIVATION_BALANCE - pending_balance_to_withdraw, amount
+        )
+        exit_queue_epoch = compute_exit_epoch_and_update_churn(state, to_withdraw)
+        withdrawable_epoch = exit_queue_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+        state.pending_partial_withdrawals.append(
+            PendingPartialWithdrawal(
+                validator_index=index,
+                amount=to_withdraw,
+                withdrawable_epoch=withdrawable_epoch,
+            )
+        )
 ```
 
 #### Parent execution payload

@@ -61,7 +61,6 @@ def run_fork_test(post_spec, pre_state):
         "eth1_data",
         "eth1_data_votes",
         "eth1_deposit_index",
-        "validators",
         "balances",
         "randao_mixes",
         "slashings",
@@ -77,15 +76,11 @@ def run_fork_test(post_spec, pre_state):
         "deposit_balance_to_consume",
         "consolidation_balance_to_consume",
         "earliest_consolidation_epoch",
-        "pending_deposits",
         "pending_partial_withdrawals",
         "pending_consolidations",
         "proposer_lookahead",
-        "builders",
         "next_withdrawal_builder_index",
         "execution_payload_availability",
-        "builder_pending_payments",
-        "builder_pending_withdrawals",
         "latest_execution_payload_bid",
         "payload_expected_withdrawals",
         "ptc_window",
@@ -112,9 +107,26 @@ def run_fork_test(post_spec, pre_state):
             assert post_validator.vrf_data == pq_data[32:]
             assert post_validator.exit_epoch == pre_validator.exit_epoch
         else:
-            assert post_validator.pubkey == post_spec.XMSSPubkey()
-            assert post_validator.vrf_data == post_spec.Bytes32()
-            assert post_validator.exit_epoch != post_spec.FAR_FUTURE_EPOCH
+            assert post_validator.pubkey == post_spec.sha256(pre_validator.pubkey + b"\x00")
+            assert post_validator.vrf_data == post_spec.sha256(pre_validator.pubkey + b"\x01")
+            assert post_validator.exit_epoch <= post_state.fork.epoch
+            assert post_validator.withdrawable_epoch <= post_state.fork.epoch
+
+    # Each pending deposit for an existing validator names its XMSS public key
+    pre_pubkeys = [validator.pubkey for validator in pre_state.validators]
+    assert len(post_state.pending_deposits) == len(pre_state.pending_deposits)
+    for pre_deposit, post_deposit in zip(
+        pre_state.pending_deposits, post_state.pending_deposits, strict=True
+    ):
+        assert post_deposit.withdrawal_credentials == pre_deposit.withdrawal_credentials
+        assert post_deposit.amount == pre_deposit.amount
+        assert post_deposit.signature == pre_deposit.signature
+        assert post_deposit.slot == pre_deposit.slot
+        if pre_deposit.pubkey in pre_pubkeys:
+            post_validator = post_state.validators[pre_pubkeys.index(pre_deposit.pubkey)]
+            assert post_deposit.pubkey == post_validator.pubkey + bytes(16)
+        else:
+            assert post_deposit.pubkey == pre_deposit.pubkey
 
     # Sync committees are removed
     assert not hasattr(post_state, "current_sync_committee")

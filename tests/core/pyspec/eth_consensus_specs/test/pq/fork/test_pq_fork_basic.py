@@ -82,7 +82,6 @@ def test_fork_no_registrations(spec, phases, state):
 
     post_spec = phases[PQ]
     for validator in post_state.validators:
-        assert validator.pubkey == post_spec.XMSSPubkey()
         assert validator.exit_epoch != post_spec.FAR_FUTURE_EPOCH
 
 
@@ -107,6 +106,17 @@ def test_fork_partially_registered(spec, phases, state):
 @with_meta_tags(PQ_FORK_TEST_META_TAGS)
 def test_fork_pending_top_up_deposit(spec, phases, state):
     register_xmss_pubkeys(spec, state)
+    state.pending_deposits.append(
+        prepare_pending_deposit(spec, 0, spec.EFFECTIVE_BALANCE_INCREMENT, signed=True)
+    )
+    yield from run_fork_test(phases[PQ], state)
+
+
+@with_phases(phases=[EIP8483], other_phases=[PQ])
+@spec_test
+@with_state
+@with_meta_tags(PQ_FORK_TEST_META_TAGS)
+def test_fork_pending_top_up_deposit_not_registered(spec, phases, state):
     state.pending_deposits.append(
         prepare_pending_deposit(spec, 0, spec.EFFECTIVE_BALANCE_INCREMENT, signed=True)
     )

@@ -9,7 +9,6 @@
 - [Helpers](#helpers)
   - [New `compute_validators`](#new-compute_validators)
   - [New `compute_builders`](#new-compute_builders)
-  - [New `compute_balances`](#new-compute_balances)
   - [New `compute_pending_deposits`](#new-compute_pending_deposits)
   - [New `compute_builder_pending_withdrawals`](#new-compute_builder_pending_withdrawals)
   - [New `compute_builder_pending_payments`](#new-compute_builder_pending_payments)
@@ -42,11 +41,16 @@ to their fee recipients, and the builder sweep then withdraws the rest of its
 balance to its execution address. Its unsettled payments are settled at the fork
 if they have reached the payment quorum, and dropped otherwise.
 
-Deposits name their validator by BLS public key, which the state no longer
-holds. The fork credits each pending top-up to the balance of the validator it
-tops up, and the validator sweep withdraws it from a validator that did not
-register. A deposit for a new validator stays in `state.pending_deposits`, which
-is no longer processed, until a later upgrade refunds it.
+Pending deposits name their validator by BLS public key. The fork renames a
+pending deposit for an existing validator to that validator's XMSS public key,
+followed by 16 zero bytes, so it still tops up that validator. A top-up for a
+validator that did not register does not consume churn, since the validator is
+withdrawable, and the validator sweep withdraws it.
+
+A pending deposit for a new validator is kept as is. It names a BLS public key,
+so it is a legacy deposit. Its validator takes the XMSS public key and VRF data
+that a validator that did not register takes, and it is exited at once, so the
+validator sweep refunds its balance after the withdrawability delay.
 
 The proposer lookahead and the PTC window are kept, so the slots and votes they
 assign to validators that did not register are missed.
@@ -130,28 +134,28 @@ def compute_builders(pre: eip8483.BeaconState) -> Builders:
     return builders
 ```
 
-### New `compute_balances`
-
-```python
-def compute_balances(pre: eip8483.BeaconState) -> Balances:
-    balances = pre.balances.copy()
-    validator_pubkeys = [validator.pubkey for validator in pre.validators]
-    for deposit in pre.pending_deposits:
-        if deposit.pubkey in validator_pubkeys:
-            balances[validator_pubkeys.index(deposit.pubkey)] += deposit.amount
-    return balances
-```
-
 ### New `compute_pending_deposits`
 
 ```python
-def compute_pending_deposits(pre: eip8483.BeaconState) -> PendingDeposits:
+def compute_pending_deposits(pre: eip8483.BeaconState, validators: Validators) -> PendingDeposits:
     validator_pubkeys = [validator.pubkey for validator in pre.validators]
-    return PendingDeposits(
-        data=[
-            deposit for deposit in pre.pending_deposits if deposit.pubkey not in validator_pubkeys
-        ]
-    )
+    pending_deposits = PendingDeposits()
+    for deposit in pre.pending_deposits:
+        if deposit.pubkey in validator_pubkeys:
+            validator = validators[validator_pubkeys.index(deposit.pubkey)]
+            pubkey = Bytes48(validator.pubkey + bytes(16))
+        else:
+            pubkey = deposit.pubkey
+        pending_deposits.append(
+            PendingDeposit(
+                pubkey=pubkey,
+                withdrawal_credentials=deposit.withdrawal_credentials,
+                amount=deposit.amount,
+                signature=deposit.signature,
+                slot=deposit.slot,
+            )
+        )
+    return pending_deposits
 ```
 
 ### New `compute_builder_pending_withdrawals`
@@ -209,6 +213,7 @@ because the state stores only the commitment.
 ```python
 def upgrade_to_pq(pre: eip8483.BeaconState) -> BeaconState:
     epoch = eip8483.get_current_epoch(pre)
+    validators = compute_validators(pre)
 
     post = BeaconState(
         genesis_time=pre.genesis_time,
@@ -228,9 +233,8 @@ def upgrade_to_pq(pre: eip8483.BeaconState) -> BeaconState:
         eth1_data_votes=pre.eth1_data_votes,
         eth1_deposit_index=pre.eth1_deposit_index,
         # [Modified in PQ]
-        validators=compute_validators(pre),
-        # [Modified in PQ]
-        balances=compute_balances(pre),
+        validators=validators,
+        balances=pre.balances,
         randao_mixes=pre.randao_mixes,
         slashings=pre.slashings,
         previous_epoch_participation=pre.previous_epoch_participation,
@@ -255,7 +259,7 @@ def upgrade_to_pq(pre: eip8483.BeaconState) -> BeaconState:
         consolidation_balance_to_consume=pre.consolidation_balance_to_consume,
         earliest_consolidation_epoch=pre.earliest_consolidation_epoch,
         # [Modified in PQ]
-        pending_deposits=compute_pending_deposits(pre),
+        pending_deposits=compute_pending_deposits(pre, validators),
         pending_partial_withdrawals=pre.pending_partial_withdrawals,
         pending_consolidations=pre.pending_consolidations,
         proposer_lookahead=pre.proposer_lookahead,

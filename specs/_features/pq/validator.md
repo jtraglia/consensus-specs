@@ -15,6 +15,7 @@
   - [Initialization](#initialization)
     - [VRF tree](#vrf-tree)
     - [XMSS public key](#xmss-public-key)
+  - [Submit deposit](#submit-deposit)
 - [Beacon chain responsibilities](#beacon-chain-responsibilities)
   - [Block and sidecar proposal](#block-and-sidecar-proposal)
     - [Broadcasting `SignedProposerPreferences`](#broadcasting-signedproposerpreferences)
@@ -127,8 +128,18 @@ The XMSS public key is registered with EIP-8483 before the upgrade, as the first
 32 bytes of the registration's `pq_data`. The remaining 32 bytes are the
 validator's VRF data.
 
-*Note*: Deposits are ignored after the upgrade, and there is no way yet to
-register an XMSS public key after it.
+*Note*: A validator that joins after the upgrade provides its XMSS public key
+and VRF data in its deposit instead, see [Submit deposit](#submit-deposit).
+
+### Submit deposit
+
+After the upgrade, a deposit carries no signature. Its `pubkey` is the
+validator's XMSS public key followed by 16 zero bytes, and its `signature` holds
+the validator's VRF data followed by 64 zero bytes. A deposit whose XMSS public
+key is already in `state.validators` tops up that validator.
+
+*Note*: A deposit whose `pubkey` does not end in 16 zero bytes is treated as a
+legacy deposit, so the validator it creates is exited at once.
 
 ## Beacon chain responsibilities
 
