@@ -69,10 +69,8 @@ def get_aggregate_and_proof(spec, state, aggregator_index, aggregate, privkey):
             get_attestation_signature(spec, state, aggregate.data, privkeys[index])
             for index in get_committee_attesters(spec, state, aggregate)
         ]
-        stark_proof = spec.get_aggregate_stark(state, aggregate, signatures)
-        return spec.get_aggregate_and_proof(
-            aggregator_index, aggregate, selection_proof, stark_proof
-        )
+        proof = spec.get_aggregate_stark(state, aggregate, signatures)
+        return spec.get_aggregate_and_proof(aggregator_index, aggregate, selection_proof, proof)
     return spec.get_aggregate_and_proof(state, aggregator_index, aggregate, privkey)
 
 
@@ -103,7 +101,7 @@ def prove_attestation_signatures(spec, state, attestation_data, participants, si
         leaf_index=spec.compute_xmss_attestation_leaf_index(attestation_data.target.epoch),
         message=spec.compute_signing_root(attestation_data, domain),
     )
-    return spec.StarkProof(data=stark.ProveAggregates([statement], [signatures]))
+    return spec.AttestationProof(data=stark.ProveAggregates([statement], [signatures]))
 
 
 def get_indexed_attestation(spec, state, attestation, signed=True):
@@ -114,10 +112,10 @@ def get_indexed_attestation(spec, state, attestation, signed=True):
     if is_post_pq(spec):
         participants = sorted(spec.get_attesting_indices(state, attestation))
         if signed:
-            stark_proof = sign_aggregate_attestation(spec, state, attestation.data, participants)
+            proof = sign_aggregate_attestation(spec, state, attestation.data, participants)
         else:
-            stark_proof = spec.StarkProof()
-        return spec.get_indexed_attestation(state, attestation, stark_proof)
+            proof = spec.AttestationProof()
+        return spec.get_indexed_attestation(state, attestation, proof)
     return spec.get_indexed_attestation(state, attestation)
 
 
@@ -280,7 +278,7 @@ def sign_indexed_attestation(spec, state, indexed_attestation):
     data = indexed_attestation.data
     proof = sign_aggregate_attestation(spec, state, data, participants)
     if is_post_pq(spec):
-        indexed_attestation.stark_proof = proof
+        indexed_attestation.proof = proof
     else:
         indexed_attestation.signature = proof
 

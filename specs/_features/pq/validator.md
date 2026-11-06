@@ -21,7 +21,7 @@
     - [Constructing the `BeaconBlockBody`](#constructing-the-beaconblockbody)
       - [Randao reveal](#randao-reveal)
       - [Attestations](#attestations)
-      - [Stark proof](#stark-proof)
+      - [Proof](#proof)
       - [Sync committee](#sync-committee)
       - [BLS to execution changes](#bls-to-execution-changes)
       - [Payload attestations](#payload-attestations)
@@ -89,7 +89,7 @@ class AggregateAndProof(Container):
     # [Modified in PQ]
     selection_proof: VRFProof
     # [New in PQ]
-    stark_proof: StarkProof
+    proof: AttestationProof
 ```
 
 #### `SignedAggregateAndProof`
@@ -215,13 +215,12 @@ def compute_on_chain_aggregate(network_aggregates: Sequence[Attestation]) -> Att
     )
 ```
 
-##### Stark proof
+##### Proof
 
-The proposer sets `body.stark_proof` to `stark.MergeProofs(proofs)`, where
-`proofs` holds the `stark_proof` of each network aggregate behind
-`body.attestations`, ordered as the attestations are and, within each, by
-committee index. The merged proof then proves the statements that
-`process_stark` checks.
+The proposer sets `body.proof` to `stark.MergeProofs(proofs)`, where `proofs`
+holds the `proof` of each network aggregate behind `body.attestations`, ordered
+as the attestations are and, within each, by committee index. The merged proof
+then proves the statements that `process_stark` checks.
 
 ##### Sync committee
 
@@ -420,16 +419,16 @@ def is_aggregator(
 ##### Aggregate stark
 
 An attestation carries no signature, so the aggregator proves the signatures of
-the attestations it aggregates with a `stark_proof`, in place of an aggregate
-signature. It passes the signatures of the attesters in the order of their
-committee:
+the attestations it aggregates with an `AttestationProof`, in place of an
+aggregate signature. It passes the signatures of the attesters in the order of
+their committee:
 
 ```python
 def get_aggregate_stark(
     state: BeaconState, aggregate: Attestation, signatures: Sequence[XMSSSignature]
-) -> StarkProof:
+) -> AttestationProof:
     statements = get_attestation_statements(state, aggregate)
-    return StarkProof(data=stark.ProveAggregates(statements, [signatures]))
+    return AttestationProof(data=stark.ProveAggregates(statements, [signatures]))
 ```
 
 #### Broadcast aggregate
@@ -445,7 +444,7 @@ def get_aggregate_and_proof(
     # [New in PQ]
     selection_proof: VRFProof,
     # [New in PQ]
-    stark_proof: StarkProof,
+    proof: AttestationProof,
 ) -> AggregateAndProof:
     return AggregateAndProof(
         aggregator_index=aggregator_index,
@@ -453,7 +452,7 @@ def get_aggregate_and_proof(
         # [Modified in PQ]
         selection_proof=selection_proof,
         # [New in PQ]
-        stark_proof=stark_proof,
+        proof=proof,
     )
 ```
 

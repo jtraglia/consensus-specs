@@ -7,7 +7,7 @@
 - [Introduction](#introduction)
 - [Types](#types)
   - [New `VRFProof`](#new-vrfproof)
-  - [New `StarkProof`](#new-starkproof)
+  - [New `AttestationProof`](#new-attestationproof)
   - [New `XMSSPubkey`](#new-xmsspubkey)
   - [New `XMSSSignature`](#new-xmsssignature)
 - [Constants](#constants)
@@ -107,7 +107,7 @@ reuses a leaf. Each signature carries its leaf index, and verification checks it
 against the expected one.
 
 XMSS has no native aggregation. A STARK instead proves many XMSS signatures at
-once, as a `StarkProof`.
+once, such as those of attestations in an `AttestationProof`.
 
 XMSS signatures are not unique, so a proposer could grind a signature-based
 RANDAO reveal. Each validator instead registers the root of a Merkle tree of
@@ -136,11 +136,11 @@ Blocks no longer carry payload attestations, which spares proposers from
 aggregating them. The payload timeliness committee still broadcasts its votes,
 which fork choice uses as before.
 
-Attestations no longer carry a signature. A block instead carries one
-`stark_proof` of the signatures of all its attestations, which replaces
-verifying each attestation's aggregate signature in turn. An aggregate on the
-wire carries a `stark_proof` of its own in `AggregateAndProof`, and the proposer
-merges those into the block's `stark_proof`.
+Attestations no longer carry a signature. A block instead carries one `proof` of
+the signatures of all its attestations, which replaces verifying each
+attestation's aggregate signature in turn. An aggregate on the wire carries a
+`proof` of its own in `AggregateAndProof`, and the proposer merges those into
+the block's `proof`.
 
 *Note*: This specification is built upon [EIP-8483](../eip8483/beacon-chain.md),
 which is built upon [Gloas](../../gloas/beacon-chain.md).
@@ -159,12 +159,12 @@ class VRFProof(Vector[Bytes32]):
     LENGTH = VRF_TREE_DEPTH + 1
 ```
 
-### New `StarkProof`
+### New `AttestationProof`
 
 ```python
-class StarkProof(ByteList):
+class AttestationProof(ByteList):
     """
-    A STARK proof of XMSS signatures, such as those of a block's attestations.
+    A STARK proof of the XMSS signatures of attestations.
     """
 
     LIMIT = MAX_STARK_PROOF_SIZE
@@ -283,7 +283,7 @@ class BeaconBlockBody(ProgressiveContainer):
     # Removed `payload_attestations`
     parent_execution_requests: ExecutionRequests
     # [New in PQ]
-    stark_proof: StarkProof
+    proof: AttestationProof
 ```
 
 #### `BeaconState`
@@ -388,7 +388,7 @@ class IndexedAttestation(ProgressiveContainer):
     # [Modified in PQ]
     # Removed `signature`
     # [New in PQ]
-    stark_proof: StarkProof
+    proof: AttestationProof
 ```
 
 #### `PayloadAttestationMessage`
@@ -510,9 +510,9 @@ The above functions are accessed through the `xmss` module, e.g. `xmss.Verify`.
 
 This upgrade adds the following functions to prove many XMSS signatures at once:
 
-- `def ProveAggregates(statements: Sequence[XMSSAggregateStatement], signatures: Sequence[Sequence[XMSSSignature]]) -> StarkProof`
-- `def MergeProofs(proofs: Sequence[StarkProof]) -> StarkProof`
-- `def VerifyAggregates(statements: Sequence[XMSSAggregateStatement], proof: StarkProof) -> bool`
+- `def ProveAggregates(statements: Sequence[XMSSAggregateStatement], signatures: Sequence[Sequence[XMSSSignature]]) -> AttestationProof`
+- `def MergeProofs(proofs: Sequence[AttestationProof]) -> AttestationProof`
+- `def VerifyAggregates(statements: Sequence[XMSSAggregateStatement], proof: AttestationProof) -> bool`
 
 `VerifyAggregates` returns `True` only if `proof` proves, for each statement and
 each of its public keys, a signature that
@@ -527,7 +527,7 @@ The above functions are accessed through the `stark` module, e.g.
 *Note*: The reference implementations of `ProveAggregates` and `MergeProofs`
 concatenate their inputs, and `VerifyAggregates` checks each signature in turn.
 They stand in for a recursive STARK, which would change the encoding of
-`StarkProof` but not how these functions are used.
+`AttestationProof` but not how these functions are used.
 
 ### Misc
 
@@ -587,8 +587,8 @@ def is_valid_vrf_proof(
 
 #### Modified `is_valid_indexed_attestation`
 
-*Note*: The `stark_proof` of an indexed attestation proves one statement, over
-the public keys of its attesting indices in order.
+*Note*: The `proof` of an indexed attestation proves one statement, over the
+public keys of its attesting indices in order.
 
 ```python
 def is_valid_indexed_attestation(
@@ -612,7 +612,7 @@ def is_valid_indexed_attestation(
     signing_root = compute_signing_root(indexed_attestation.data, domain)
     leaf_index = compute_xmss_attestation_leaf_index(indexed_attestation.data.target.epoch)
     statement = XMSSAggregateStatement(pubkeys=pubkeys, leaf_index=leaf_index, message=signing_root)
-    return stark.VerifyAggregates([statement], indexed_attestation.stark_proof)
+    return stark.VerifyAggregates([statement], indexed_attestation.proof)
 ```
 
 ### Beacon state accessors
@@ -624,11 +624,11 @@ def get_indexed_attestation(
     state: BeaconState,
     attestation: Attestation,
     # [New in PQ]
-    stark_proof: StarkProof,
+    proof: AttestationProof,
 ) -> IndexedAttestation:
     """
     Return the indexed attestation corresponding to ``attestation`` and the
-    ``stark_proof`` of its attesters' signatures.
+    ``proof`` of its attesters' signatures.
     """
     attesting_indices = get_attesting_indices(state, attestation)
 
@@ -636,15 +636,15 @@ def get_indexed_attestation(
         attesting_indices=AttestingIndices(data=sorted(attesting_indices)),
         data=attestation.data,
         # [Modified in PQ]
-        stark_proof=stark_proof,
+        proof=proof,
     )
 ```
 
 #### New `get_attestation_statements`
 
-*Note*: A network aggregate covers one committee, so its `stark_proof` proves
-one statement. Statements are per committee so that the proposer can merge those
-proofs into the block's `stark_proof`.
+*Note*: A network aggregate covers one committee, so its `proof` proves one
+statement. Statements are per committee so that the proposer can merge those
+proofs into the block's `proof`.
 
 ```python
 def get_attestation_statements(
@@ -934,7 +934,7 @@ def process_stark(state: BeaconState, body: BeaconBlockBody) -> None:
     statements = []
     for attestation in body.attestations:
         statements.extend(get_attestation_statements(state, attestation))
-    assert stark.VerifyAggregates(statements, body.stark_proof)
+    assert stark.VerifyAggregates(statements, body.proof)
 ```
 
 ##### Modified `process_proposer_slashing`

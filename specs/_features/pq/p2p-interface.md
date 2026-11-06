@@ -439,7 +439,7 @@ def validate_beacon_aggregate_and_proof_gossip(
     # [Modified in PQ]
     # [REJECT] The aggregate stark is valid
     statements = get_attestation_statements(state, aggregate)
-    if not stark.VerifyAggregates(statements, aggregate_and_proof.stark_proof):
+    if not stark.VerifyAggregates(statements, aggregate_and_proof.proof):
         raise GossipReject("invalid aggregate stark")
 
     # [REJECT] The target block is an ancestor of the LMD vote block
