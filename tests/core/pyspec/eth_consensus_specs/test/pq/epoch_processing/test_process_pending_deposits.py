@@ -28,7 +28,9 @@ def test_new_validator_deposit(spec, state):
     pubkey = xmss_pubkeys[index]
     vrf_data = b"\x88" * 32
     amount = spec.MIN_ACTIVATION_BALANCE
-    deposit = prepare_pending_deposit(spec, pubkey + bytes(16), amount, vrf_data + bytes(64))
+    deposit = prepare_pending_deposit(
+        spec, spec.XMSS_DEPOSIT_PREFIX + pubkey, amount, vrf_data + bytes(64)
+    )
     state.pending_deposits.append(deposit)
     state.deposit_balance_to_consume = amount
 
@@ -51,7 +53,7 @@ def test_top_up_deposit(spec, state):
     pre_validator_count = len(state.validators)
     pre_balance = state.balances[validator_index]
     amount = spec.EFFECTIVE_BALANCE_INCREMENT
-    pubkey = state.validators[validator_index].pubkey + bytes(16)
+    pubkey = spec.XMSS_DEPOSIT_PREFIX + state.validators[validator_index].pubkey
     state.pending_deposits.append(prepare_pending_deposit(spec, pubkey, amount))
     state.deposit_balance_to_consume = amount
 

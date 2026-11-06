@@ -43,8 +43,8 @@ balance to its execution address. Its unsettled payments are settled at the fork
 if they have reached the payment quorum, and dropped otherwise.
 
 Pending deposits name their validator by BLS public key. The fork renames a
-pending deposit for an existing validator to that validator's XMSS public key,
-followed by 16 zero bytes, so it still tops up that validator. A top-up for a
+pending deposit for an existing validator to 16 zero bytes followed by that
+validator's XMSS public key, so it still tops up that validator. A top-up for a
 validator that did not register does not consume churn, since the validator is
 withdrawable, and the validator sweep withdraws it.
 
@@ -144,7 +144,7 @@ def compute_pending_deposits(pre: eip8483.BeaconState, validators: Validators) -
     for deposit in pre.pending_deposits:
         if deposit.pubkey in validator_pubkeys:
             validator = validators[validator_pubkeys.index(deposit.pubkey)]
-            pubkey = Bytes48(validator.pubkey + bytes(16))
+            pubkey = Bytes48(XMSS_DEPOSIT_PREFIX + validator.pubkey)
         else:
             pubkey = deposit.pubkey
         pending_deposits.append(

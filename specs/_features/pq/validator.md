@@ -133,13 +133,14 @@ and VRF data in its deposit instead, see [Submit deposit](#submit-deposit).
 
 ### Submit deposit
 
-After the upgrade, a deposit carries no signature. Its `pubkey` is the
-validator's XMSS public key followed by 16 zero bytes, and its `signature` holds
-the validator's VRF data followed by 64 zero bytes. A deposit whose XMSS public
-key is already in `state.validators` tops up that validator.
+After the upgrade, a deposit carries no signature. Its `pubkey` is
+`XMSS_DEPOSIT_PREFIX`, 16 zero bytes, followed by the validator's XMSS public
+key, and its `signature` holds the validator's VRF data followed by 64 zero
+bytes. A deposit whose XMSS public key is already in `state.validators` tops up
+that validator.
 
-*Note*: A deposit whose `pubkey` does not end in 16 zero bytes is treated as a
-legacy deposit, so the validator it creates is exited at once.
+*Note*: A deposit whose `pubkey` does not start with 16 zero bytes is treated as
+a legacy deposit, so the validator it creates is exited at once.
 
 ## Beacon chain responsibilities
 

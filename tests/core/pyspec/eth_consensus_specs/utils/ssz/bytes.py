@@ -41,6 +41,10 @@ class Bytes8(BytesN):
     LENGTH = 8
 
 
+class Bytes16(BytesN):
+    LENGTH = 16
+
+
 class Bytes20(BytesN):
     LENGTH = 20
 

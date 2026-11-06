@@ -11,6 +11,7 @@ class PQSpecBuilder(BaseSpecBuilder):
         return f"""
 from eth_consensus_specs.eip8483 import {preset_name} as eip8483
 from eth_consensus_specs.utils import stark, xmss
+from eth_consensus_specs.utils.ssz.bytes import Bytes16
 """
 
     @classmethod

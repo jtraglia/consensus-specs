@@ -6,15 +6,17 @@ from eth_consensus_specs.test.gloas.block_processing.test_process_builder_exit_r
 from eth_consensus_specs.test.helpers.constants import PQ
 
 
-def prepare_builder_exit_request(spec, state, builder_index, suffix=bytes(16)):
+def prepare_builder_exit_request(spec, state, builder_index, prefix=None):
     """
     A builder exit request naming the XMSS public key of the builder at
-    ``builder_index``, followed by ``suffix``.
+    ``builder_index``, after ``prefix``.
     """
+    if prefix is None:
+        prefix = spec.XMSS_DEPOSIT_PREFIX
     builder = state.builders[builder_index]
     return spec.BuilderExitRequest(
         source_address=builder.execution_address,
-        pubkey=spec.Bytes48(builder.pubkey + suffix),
+        pubkey=spec.Bytes48(prefix + builder.pubkey),
     )
 
 
@@ -36,11 +38,11 @@ def test_builder_exit_request(spec, state):
 
 @with_phases([PQ])
 @spec_state_test
-def test_builder_exit_request_ignores_pubkey_suffix(spec, state):
+def test_builder_exit_request_ignores_pubkey_prefix(spec, state):
     builder_index = 0
     advance_past_finalization(spec, state)
     builder_exit_request = prepare_builder_exit_request(
-        spec, state, builder_index, suffix=b"\xff" * 16
+        spec, state, builder_index, prefix=b"\xff" * 16
     )
 
     yield from run_builder_exit_request_processing(spec, state, builder_exit_request)

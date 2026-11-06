@@ -15,6 +15,7 @@
   - [VRF](#vrf)
   - [XMSS leaf offsets](#xmss-leaf-offsets)
   - [XMSS reserved leaves](#xmss-reserved-leaves)
+  - [Deposits](#deposits)
   - [Legacy domains](#legacy-domains)
 - [Presets](#presets)
   - [XMSS](#xmss-1)
@@ -134,12 +135,12 @@ EIP-8483 before the fork in place of its BLS public key, and a builder's record
 the XMSS public key it registered. Validators and builders that did not register
 are withdrawn at the fork. See [the fork document](./fork.md) for details.
 
-Execution layer requests keep their formats. The first 32 bytes of a request's
-48-byte public key field are an XMSS public key. Deposits no longer carry a
-signature. Instead, the first 32 bytes of a deposit's 96-byte signature field
-are the VRF data of the validator it creates. A request's public key ends in 16
-zero bytes, unless it is a legacy request made before the fork with a BLS public
-key. A legacy deposit's validator takes the XMSS public key and VRF data that a
+Execution layer requests keep their formats. A request's 48-byte public key
+field is 16 zero bytes followed by an XMSS public key. Deposits no longer carry
+a signature. Instead, the first 32 bytes of a deposit's 96-byte signature field
+are the VRF data of the validator it creates. A legacy request made before the
+fork names a BLS public key instead, whose first byte always has its top bit
+set. A legacy deposit's validator takes the XMSS public key and VRF data that a
 validator that did not register takes at the fork, and it is exited at once, so
 the validator sweep refunds its balance after the withdrawability delay. A
 legacy builder deposit's builder is keyed the same way and initiates its exit at
@@ -241,6 +242,12 @@ class XMSSSignature(ByteVector):
 | Name                           | Value       |
 | ------------------------------ | ----------- |
 | `RESERVED_LEAF_VOLUNTARY_EXIT` | `Uint64(0)` |
+
+### Deposits
+
+| Name                  | Value       |
+| --------------------- | ----------- |
+| `XMSS_DEPOSIT_PREFIX` | `Bytes16()` |
 
 ### Legacy domains
 
@@ -622,7 +629,7 @@ def compute_deposit_pubkey(pubkey: Bytes48) -> XMSSPubkey:
     """
     if is_legacy_pubkey(pubkey):
         return XMSSPubkey(sha256(pubkey + LEGACY_XMSS_PUBKEY_DOMAIN))
-    return XMSSPubkey(pubkey[:32])
+    return XMSSPubkey(pubkey[16:])
 ```
 
 #### New `compute_deposit_vrf_data`
@@ -674,15 +681,16 @@ def compute_xmss_leaf_index(slot: Slot, leaf_offset: Uint64) -> Uint64:
 
 #### New `is_legacy_pubkey`
 
-*Note*: A request made after the upgrade names an XMSS public key followed by 16
-zero bytes, while a request made before it names a BLS public key.
+*Note*: A request made after the upgrade names 16 zero bytes followed by an XMSS
+public key. A request made before it names a compressed BLS public key, whose
+first byte always has its top bit set as the compression flag.
 
 ```python
 def is_legacy_pubkey(pubkey: Bytes48) -> bool:
     """
     Check if ``pubkey`` is a BLS public key rather than an XMSS public key.
     """
-    return pubkey[32:] != bytes(16)
+    return pubkey[:16] != XMSS_DEPOSIT_PREFIX
 ```
 
 #### New `is_valid_vrf_proof`
@@ -1444,7 +1452,7 @@ def process_builder_deposit_request(state: BeaconState, request: BuilderDepositR
 ```python
 def process_builder_exit_request(state: BeaconState, request: BuilderExitRequest) -> None:
     # [Modified in PQ]
-    pubkey = XMSSPubkey(request.pubkey[:32])
+    pubkey = XMSSPubkey(request.pubkey[16:])
     builder_pubkeys = [builder.pubkey for builder in state.builders]
     if pubkey not in builder_pubkeys:
         return
@@ -1486,7 +1494,7 @@ def process_withdrawal_request(state: BeaconState, withdrawal_request: Withdrawa
     validator_pubkeys = [validator.pubkey for validator in state.validators]
     # [Modified in PQ]
     # Verify pubkey exists
-    request_pubkey = XMSSPubkey(withdrawal_request.validator_pubkey[:32])
+    request_pubkey = XMSSPubkey(withdrawal_request.validator_pubkey[16:])
     if request_pubkey not in validator_pubkeys:
         return
     index = ValidatorIndex(validator_pubkeys.index(request_pubkey))

@@ -6,12 +6,14 @@ from eth_consensus_specs.test.helpers.constants import PQ
 from eth_consensus_specs.test.helpers.keys import builder_pubkeys, xmss_builder_pubkeys
 
 
-def prepare_builder_deposit_request(spec, pubkey, amount, suffix=bytes(16), signature=bytes(96)):
+def prepare_builder_deposit_request(spec, pubkey, amount, prefix=None, signature=bytes(96)):
     """
-    A builder deposit request naming ``pubkey``, followed by ``suffix``.
+    A builder deposit request naming ``pubkey``, after ``prefix``.
     """
+    if prefix is None:
+        prefix = spec.XMSS_DEPOSIT_PREFIX
     return spec.BuilderDepositRequest(
-        pubkey=spec.Bytes48(pubkey + suffix),
+        pubkey=spec.Bytes48(prefix + pubkey),
         withdrawal_credentials=spec.BUILDER_WITHDRAWAL_PREFIX + b"\x00" * 11 + b"\x33" * 20,
         amount=amount,
         signature=spec.Bytes96(signature),
@@ -55,7 +57,7 @@ def test_new_builder_deposit_ignores_signature(spec, state):
 def test_legacy_builder_deposit_initiates_exit(spec, state):
     bls_pubkey = builder_pubkeys[len(state.builders)]
     amount = spec.MIN_DEPOSIT_AMOUNT
-    request = prepare_builder_deposit_request(spec, bls_pubkey[:32], amount, suffix=bls_pubkey[32:])
+    request = prepare_builder_deposit_request(spec, bls_pubkey[16:], amount, prefix=bls_pubkey[:16])
     assert spec.is_legacy_pubkey(request.pubkey)
     current_epoch = spec.get_current_epoch(state)
 

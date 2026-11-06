@@ -6,14 +6,16 @@ from eth_consensus_specs.test.helpers.withdrawals import (
 )
 
 
-def prepare_withdrawal_request(spec, state, validator_index, address, amount, suffix=bytes(16)):
+def prepare_withdrawal_request(spec, state, validator_index, address, amount, prefix=None):
     """
     A withdrawal request naming the XMSS public key of the validator at
-    ``validator_index``, followed by ``suffix``.
+    ``validator_index``, after ``prefix``.
     """
+    if prefix is None:
+        prefix = spec.XMSS_DEPOSIT_PREFIX
     return spec.WithdrawalRequest(
         source_address=address,
-        validator_pubkey=spec.Bytes48(state.validators[validator_index].pubkey + suffix),
+        validator_pubkey=spec.Bytes48(prefix + state.validators[validator_index].pubkey),
         amount=amount,
     )
 
@@ -56,7 +58,7 @@ def test_full_exit_request_legacy_pubkey_ignored(spec, state):
         validator_index,
         address,
         spec.FULL_EXIT_REQUEST_AMOUNT,
-        suffix=b"\xff" * 16,
+        prefix=b"\xff" * 16,
     )
     pre_state = state.copy()
 
@@ -73,7 +75,7 @@ def test_full_exit_request_unknown_pubkey(spec, state):
     set_eth1_withdrawal_credential_with_balance(spec, state, 0, address=address)
     withdrawal_request = spec.WithdrawalRequest(
         source_address=address,
-        validator_pubkey=spec.Bytes48(b"\x11" * 48),
+        validator_pubkey=spec.Bytes48(spec.XMSS_DEPOSIT_PREFIX + b"\x11" * 32),
         amount=spec.FULL_EXIT_REQUEST_AMOUNT,
     )
     pre_state = state.copy()

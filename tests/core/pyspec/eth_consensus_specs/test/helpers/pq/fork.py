@@ -128,7 +128,7 @@ def run_fork_test(post_spec, pre_state):
         assert post_deposit.slot == pre_deposit.slot
         if pre_deposit.pubkey in pre_pubkeys:
             post_validator = post_state.validators[pre_pubkeys.index(pre_deposit.pubkey)]
-            assert post_deposit.pubkey == post_validator.pubkey + bytes(16)
+            assert post_deposit.pubkey == post_spec.XMSS_DEPOSIT_PREFIX + post_validator.pubkey
         else:
             assert post_deposit.pubkey == pre_deposit.pubkey
 
