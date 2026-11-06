@@ -61,7 +61,9 @@ def test_legacy_builder_deposit_initiates_exit(spec, state):
 
     yield from run_builder_deposit_request_processing(spec, state, request)
 
-    builder = state.builders[get_builder_index(state, spec.sha256(bls_pubkey + b"\x00"))]
+    builder = state.builders[
+        get_builder_index(state, spec.sha256(bls_pubkey + spec.LEGACY_XMSS_PUBKEY_DOMAIN))
+    ]
     assert builder.balance == amount
     expected_withdrawable = current_epoch + spec.config.MIN_BUILDER_WITHDRAWABILITY_DELAY
     assert builder.withdrawable_epoch == expected_withdrawable

@@ -15,6 +15,7 @@
   - [VRF](#vrf)
   - [XMSS leaf offsets](#xmss-leaf-offsets)
   - [XMSS reserved leaves](#xmss-reserved-leaves)
+  - [Legacy domains](#legacy-domains)
 - [Presets](#presets)
   - [XMSS](#xmss-1)
   - [Max operations per block](#max-operations-per-block)
@@ -240,6 +241,13 @@ class XMSSSignature(ByteVector):
 | Name                           | Value       |
 | ------------------------------ | ----------- |
 | `RESERVED_LEAF_VOLUNTARY_EXIT` | `Uint64(0)` |
+
+### Legacy domains
+
+| Name                        | Value            |
+| --------------------------- | ---------------- |
+| `LEGACY_XMSS_PUBKEY_DOMAIN` | `Bytes1("0x00")` |
+| `LEGACY_VRF_DATA_DOMAIN`    | `Bytes1("0x01")` |
 
 ## Presets
 
@@ -613,7 +621,7 @@ def compute_deposit_pubkey(pubkey: Bytes48) -> XMSSPubkey:
     Return the XMSS public key that a deposit naming ``pubkey`` is for.
     """
     if is_legacy_pubkey(pubkey):
-        return XMSSPubkey(sha256(pubkey + b"\x00"))
+        return XMSSPubkey(sha256(pubkey + LEGACY_XMSS_PUBKEY_DOMAIN))
     return XMSSPubkey(pubkey[:32])
 ```
 
@@ -625,7 +633,7 @@ def compute_deposit_vrf_data(deposit: PendingDeposit) -> Root:
     Return the VRF data of the validator that ``deposit`` creates.
     """
     if is_legacy_pubkey(deposit.pubkey):
-        return Root(sha256(deposit.pubkey + b"\x01"))
+        return Root(sha256(deposit.pubkey + LEGACY_VRF_DATA_DOMAIN))
     return Root(deposit.signature[:32])
 ```
 

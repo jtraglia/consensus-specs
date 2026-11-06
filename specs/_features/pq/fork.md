@@ -28,9 +28,10 @@ registrations. At the fork, each validator and builder that registered takes its
 XMSS public key in place of its BLS public key, and each validator its VRF data.
 Validators and builders keep their indices.
 
-A validator that did not register takes `sha256(pubkey + 0x00)` of its BLS
-public key as its XMSS public key, and `sha256(pubkey + 0x01)` as its VRF data.
-No signature verifies against that key. The validator becomes exited and
+A validator that did not register takes
+`sha256(pubkey + LEGACY_XMSS_PUBKEY_DOMAIN)` of its BLS public key as its XMSS
+public key, and `sha256(pubkey + LEGACY_VRF_DATA_DOMAIN)` as its VRF data. No
+signature verifies against that key. The validator becomes exited and
 withdrawable at the fork, so the validator sweep withdraws its balance. A
 validator with `0x00` withdrawal credentials has no withdrawal address, so its
 balance stays locked until a later upgrade adds a quantum-safe way to set one.
@@ -84,8 +85,8 @@ def compute_validators(pre: eip8483.BeaconState) -> Validators:
             exit_epoch = validator.exit_epoch
             withdrawable_epoch = validator.withdrawable_epoch
         else:
-            pubkey = XMSSPubkey(sha256(validator.pubkey + b"\x00"))
-            vrf_data = Root(sha256(validator.pubkey + b"\x01"))
+            pubkey = XMSSPubkey(sha256(validator.pubkey + LEGACY_XMSS_PUBKEY_DOMAIN))
+            vrf_data = Root(sha256(validator.pubkey + LEGACY_VRF_DATA_DOMAIN))
             exit_epoch = min(validator.exit_epoch, epoch)
             withdrawable_epoch = min(validator.withdrawable_epoch, epoch)
         validators.append(

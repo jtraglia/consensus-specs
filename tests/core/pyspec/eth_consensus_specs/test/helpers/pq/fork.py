@@ -107,8 +107,12 @@ def run_fork_test(post_spec, pre_state):
             assert post_validator.vrf_data == pq_data[32:]
             assert post_validator.exit_epoch == pre_validator.exit_epoch
         else:
-            assert post_validator.pubkey == post_spec.sha256(pre_validator.pubkey + b"\x00")
-            assert post_validator.vrf_data == post_spec.sha256(pre_validator.pubkey + b"\x01")
+            assert post_validator.pubkey == post_spec.sha256(
+                pre_validator.pubkey + post_spec.LEGACY_XMSS_PUBKEY_DOMAIN
+            )
+            assert post_validator.vrf_data == post_spec.sha256(
+                pre_validator.pubkey + post_spec.LEGACY_VRF_DATA_DOMAIN
+            )
             assert post_validator.exit_epoch <= post_state.fork.epoch
             assert post_validator.withdrawable_epoch <= post_state.fork.epoch
 
