@@ -103,8 +103,8 @@ class ValidatorPQRegistrations(ProgressiveList[ValidatorPQRegistration]):
 
 | Name                                     | Value            |
 | ---------------------------------------- | ---------------- |
-| `VALIDATOR_PQ_REGISTRATION_REQUEST_TYPE` | `Bytes1("0x06")` |
-| `BUILDER_PQ_REGISTRATION_REQUEST_TYPE`   | `Bytes1("0x07")` |
+| `VALIDATOR_PQ_REGISTRATION_REQUEST_TYPE` | `Bytes1("0x05")` |
+| `BUILDER_PQ_REGISTRATION_REQUEST_TYPE`   | `Bytes1("0x06")` |
 
 ## Presets
 
