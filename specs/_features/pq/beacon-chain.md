@@ -844,7 +844,6 @@ def queue_excess_active_balance(state: BeaconState, index: ValidatorIndex) -> No
 
 ```python
 def verify_block_signature(state: BeaconState, signed_block: SignedBeaconBlock) -> bool:
-    # [Modified in PQ]
     proposer = state.validators[signed_block.message.proposer_index]
     signing_root = compute_signing_root(
         signed_block.message, get_domain(state, DOMAIN_BEACON_PROPOSER)
@@ -1061,10 +1060,8 @@ def verify_execution_payload_envelope_signature(
     builder_index = signed_envelope.message.builder_index
     if builder_index == BUILDER_INDEX_SELF_BUILD:
         validator_index = state.latest_block_header.proposer_index
-        # [Modified in PQ]
         pubkey = state.validators[validator_index].pubkey
     else:
-        # [Modified in PQ]
         pubkey = state.builders[builder_index].pubkey
 
     signing_root = compute_signing_root(
@@ -1085,7 +1082,6 @@ def verify_execution_payload_envelope_signature(
 def verify_execution_payload_bid_signature(
     state: BeaconState, signed_bid: SignedExecutionPayloadBid
 ) -> bool:
-    # [Modified in PQ]
     builder = state.builders[signed_bid.message.builder_index]
     signing_root = compute_signing_root(
         signed_bid.message, get_domain(state, DOMAIN_BEACON_BUILDER)
@@ -1113,7 +1109,6 @@ def process_execution_payload_bid(
     else:
         # Verify that the builder is active
         assert is_active_builder(state, builder_index)
-        # [Modified in PQ]
         # Verify that the builder is a payload builder
         assert state.builders[builder_index].version == PAYLOAD_BUILDER_VERSION
         # Verify that the builder has funds to cover the bid
@@ -1216,7 +1211,6 @@ def process_proposer_slashing(state: BeaconState, proposer_slashing: ProposerSla
     assert header_1.proposer_index == header_2.proposer_index
     # Verify the headers are different
     assert header_1 != header_2
-    # [Modified in PQ]
     # Verify the proposer is slashable
     proposer = state.validators[header_1.proposer_index]
     assert is_slashable_validator(proposer, get_current_epoch(state))
@@ -1240,7 +1234,6 @@ def process_proposer_slashing(state: BeaconState, proposer_slashing: ProposerSla
 ```python
 def process_voluntary_exit(state: BeaconState, signed_voluntary_exit: SignedVoluntaryExit) -> None:
     voluntary_exit = signed_voluntary_exit.message
-    # [Modified in PQ]
     validator = state.validators[voluntary_exit.validator_index]
     # Verify the validator is active
     assert is_active_validator(validator, get_current_epoch(state))
@@ -1336,7 +1329,6 @@ def process_attestation(
             and is_attestation_same_slot(state, data)
             and payment.withdrawal.amount > 0
         ):
-            # [Modified in PQ]
             payment.weight += state.validators[index].effective_balance
 
     # Reward proposer

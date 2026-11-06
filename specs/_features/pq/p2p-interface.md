@@ -267,7 +267,6 @@ def validate_beacon_block_gossip(
 
     state = store.block_states[get_head(store).root]
 
-    # [Modified in PQ]
     # [REJECT] The proposer index is a valid validator index
     if block.proposer_index >= len(state.validators):
         raise GossipReject("proposer index out of range")
@@ -490,12 +489,10 @@ def validate_voluntary_exit_gossip(
 
     state = store.block_states[get_head(store).root]
 
-    # [Modified in PQ]
     # [REJECT] The validator index is valid
     if validator_index >= len(state.validators):
         raise GossipReject("validator index out of range")
 
-    # [Modified in PQ]
     validator = state.validators[validator_index]
     current_epoch = get_current_epoch(state)
 
@@ -565,12 +562,10 @@ def validate_proposer_slashing_gossip(
 
     state = store.block_states[get_head(store).root]
 
-    # [Modified in PQ]
     # [REJECT] The proposer index is a valid validator index
     if proposer_index >= len(state.validators):
         raise GossipReject("proposer index out of range")
 
-    # [Modified in PQ]
     # [REJECT] The proposer is slashable
     proposer = state.validators[proposer_index]
     if not is_slashable_validator(proposer, get_current_epoch(state)):
@@ -642,7 +637,6 @@ def validate_payload_attestation_message_gossip(
 
     state = store.block_states[get_head(store).root]
 
-    # [Modified in PQ]
     # [REJECT] The validator index is valid
     if validator_index >= len(state.validators):
         raise GossipReject("validator index out of range")
@@ -767,12 +761,10 @@ def validate_execution_payload_bid_gossip(
     state = state.copy()
     process_slots(state, bid.slot)
 
-    # [Modified in PQ]
     # [REJECT] The builder index is valid
     if bid.builder_index >= len(state.builders):
         raise GossipReject("builder index out of range")
 
-    # [Modified in PQ]
     builder = state.builders[bid.builder_index]
 
     # [REJECT] The builder is a payload builder
