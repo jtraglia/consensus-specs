@@ -47,6 +47,9 @@
     - [Construct aggregate](#construct-aggregate)
       - [Aggregate stark](#aggregate-stark)
     - [Broadcast aggregate](#broadcast-aggregate)
+  - [Global aggregation](#global-aggregation)
+    - [Construct global aggregate](#construct-global-aggregate)
+    - [Broadcast global aggregate](#broadcast-global-aggregate)
   - [Sync committees](#sync-committees)
   - [Payload timeliness attestation](#payload-timeliness-attestation)
     - [Constructing the `PayloadAttestationMessage`](#constructing-the-payloadattestationmessage)
@@ -292,6 +295,13 @@ The proposer sets `body.proof` to `stark.MergeProofs(proofs)`, where `proofs`
 holds the `proof` of each network aggregate behind `body.attestations`, ordered
 as the attestations are and, within each, by committee index. The merged proof
 then proves the statements that `process_stark` checks.
+
+A proposer MAY take the `attestations` of a valid
+`SignedGlobalAggregateAndProof` for a slot as a contiguous run of
+`body.attestations`, and its `proof` as the one entry of `proofs` for that run,
+in place of merging the network aggregates of that slot itself:
+`compute_global_aggregate` orders the attestations and their proofs as
+`process_stark` reads them.
 
 ##### Sync committee
 
@@ -549,6 +559,64 @@ def get_aggregate_and_proof_signature(
     signing_root = compute_signing_root(aggregate_and_proof, domain)
     # [Modified in PQ]
     leaf_index = compute_xmss_leaf_index(aggregate.data.slot, LEAF_OFFSET_AGGREGATE_AND_PROOF)
+    return xmss.Sign(privkey, leaf_index, signing_root)
+```
+
+### Global aggregation
+
+*Note*: Any validator MAY act as a global aggregator for a slot. Once
+`get_global_aggregate_due_ms()` has elapsed in the slot, it takes the network
+aggregates of the slot it has seen, keeps for each `AttestationData` and
+committee the one with the most participants, and, if they cover every committee
+of the slot, builds a `GlobalAggregateAndProof` and broadcasts it on the
+`beacon_global_aggregate_and_proof` topic. A node propagates at most one global
+aggregate per validator and slot, and none whose participation is a subset of
+one it has already seen, so a validator SHOULD NOT broadcast one that adds no
+participant to a global aggregate it has received.
+
+#### Construct global aggregate
+
+```python
+def compute_global_aggregate(
+    network_aggregates: Sequence[AggregateAndProof],
+) -> tuple[Attestations, AttestationProof]:
+    """
+    Return the attestations and the proof of ``network_aggregates``, which are
+    from one slot and hold at most one aggregate per ``AttestationData`` and
+    committee: one attestation per ``AttestationData`` in the order of their
+    roots, each over its committees in index order, and the proof of all their
+    signatures in that order, as ``process_stark`` reads them.
+    """
+    by_data: dict[Root, list[AggregateAndProof]] = {}
+    for aggregate_and_proof in network_aggregates:
+        data_root = hash_tree_root(aggregate_and_proof.aggregate.data)
+        by_data.setdefault(data_root, []).append(aggregate_and_proof)
+
+    attestations = []
+    proofs = []
+    for data_root in sorted(by_data):
+        group = sorted(
+            by_data[data_root],
+            key=lambda a: get_committee_indices(a.aggregate.committee_bits)[0],
+        )
+        attestations.append(compute_on_chain_aggregate([a.aggregate for a in group]))
+        proofs.extend(a.proof for a in group)
+
+    return Attestations(data=attestations), AttestationProof(data=stark.MergeProofs(proofs))
+```
+
+#### Broadcast global aggregate
+
+```python
+def get_global_aggregate_and_proof_signature(
+    state: BeaconState,
+    global_aggregate_and_proof: GlobalAggregateAndProof,
+    privkey: Bytes32,
+) -> XMSSSignature:
+    slot = global_aggregate_and_proof.attestations[0].data.slot
+    domain = get_domain(state, DOMAIN_AGGREGATE_AND_PROOF, compute_epoch_at_slot(slot))
+    signing_root = compute_signing_root(global_aggregate_and_proof, domain)
+    leaf_index = compute_xmss_leaf_index(slot, LEAF_OFFSET_GLOBAL_AGGREGATE_AND_PROOF)
     return xmss.Sign(privkey, leaf_index, signing_root)
 ```
 
