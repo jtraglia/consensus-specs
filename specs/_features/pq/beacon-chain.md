@@ -284,6 +284,7 @@ class ValidatorPreregistrations(ProgressiveList[StoredPreregistration]):
 | `LEAF_OFFSET_PROPOSER_PREFERENCES`       | `Uint64(3)` |
 | `LEAF_OFFSET_EXECUTION_PAYLOAD_BID`      | `Uint64(4)` |
 | `LEAF_OFFSET_EXECUTION_PAYLOAD_ENVELOPE` | `Uint64(5)` |
+| `LEAF_OFFSET_GLOBAL_AGGREGATE_AND_PROOF` | `Uint64(6)` |
 
 ### XMSS reserved leaves
 

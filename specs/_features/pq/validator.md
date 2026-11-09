@@ -5,6 +5,8 @@
 <!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
 
 - [Introduction](#introduction)
+- [Configs](#configs)
+  - [Time parameters](#time-parameters)
 - [Constants](#constants)
   - [Misc](#misc)
 - [Containers](#containers)
@@ -63,6 +65,16 @@ it in place of its BLS public key. A validator without a registration becomes
 withdrawable at the upgrade, and its balance is withdrawn, unless it has `0x00`
 withdrawal credentials, in which case its balance stays locked. See
 [the fork document](./fork.md) for details.
+
+## Configs
+
+### Time parameters
+
+*[New in PQ]*
+
+| Name                       | Value          | Duration                  |
+| -------------------------- | -------------- | ------------------------- |
+| `GLOBAL_AGGREGATE_DUE_BPS` | `Uint64(7500)` | 75% of `SLOT_DURATION_MS` |
 
 ## Constants
 

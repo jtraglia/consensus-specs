@@ -10,6 +10,7 @@
   - [Modified `on_attestation`](#modified-on_attestation)
   - [Modified `on_payload_attestation_message`](#modified-on_payload_attestation_message)
 - [Helpers](#helpers)
+  - [New `get_global_aggregate_due_ms`](#new-get_global_aggregate_due_ms)
 
 <!-- mdformat-toc end -->
 
@@ -174,3 +175,10 @@ def on_payload_attestation_message(
 ```
 
 ## Helpers
+
+### New `get_global_aggregate_due_ms`
+
+```python
+def get_global_aggregate_due_ms() -> Uint64:
+    return get_slot_component_duration_ms(GLOBAL_AGGREGATE_DUE_BPS)
+```
