@@ -72,6 +72,21 @@ def build_max_size_signed_aggregate_and_proof(spec):
     )
 
 
+def build_max_size_signed_global_aggregate_and_proof(spec):
+    attestations = spec.Attestations(
+        data=[build_max_size_attestation(spec)] * spec.MAX_ATTESTATIONS_PQ
+    )
+    message = spec.GlobalAggregateAndProof(
+        validator_index=spec.ValidatorIndex(0),
+        attestations=attestations,
+        proof=build_max_size_attestation_proof(spec),
+    )
+    return spec.SignedGlobalAggregateAndProof(
+        message=message,
+        signature=get_unsigned_signature(spec),
+    )
+
+
 def build_max_size_signed_execution_payload_bid(spec):
     blob_kzg_commitments = spec.BlobKZGCommitments(
         data=[spec.KZGCommitment()] * spec.MAX_BLOB_COMMITMENTS_PER_BLOCK

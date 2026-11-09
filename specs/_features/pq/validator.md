@@ -13,6 +13,9 @@
   - [Modified containers](#modified-containers)
     - [`AggregateAndProof`](#aggregateandproof)
     - [`SignedAggregateAndProof`](#signedaggregateandproof)
+  - [New containers](#new-containers)
+    - [`GlobalAggregateAndProof`](#globalaggregateandproof)
+    - [`SignedGlobalAggregateAndProof`](#signedglobalaggregateandproof)
 - [Becoming a validator](#becoming-a-validator)
   - [Initialization](#initialization)
     - [VRF tree](#vrf-tree)
@@ -112,6 +115,30 @@ class AggregateAndProof(Container):
 class SignedAggregateAndProof(Container):
     message: AggregateAndProof
     # [Modified in PQ]
+    signature: XMSSSignature
+```
+
+### New containers
+
+#### `GlobalAggregateAndProof`
+
+*Note*: The attestations of one slot, one per `AttestationData`, over every
+committee of the slot, and one proof of all their signatures. Any validator may
+publish one, so a proposer can include its attestations without merging the
+network aggregates itself.
+
+```python
+class GlobalAggregateAndProof(Container):
+    validator_index: ValidatorIndex
+    attestations: Attestations
+    proof: AttestationProof
+```
+
+#### `SignedGlobalAggregateAndProof`
+
+```python
+class SignedGlobalAggregateAndProof(Container):
+    message: GlobalAggregateAndProof
     signature: XMSSSignature
 ```
 
