@@ -118,3 +118,186 @@ def test_gossip_global_aggregate__valid_full_coverage(spec, state):
     assert (attestations[0].data.slot, spec.ValidatorIndex(0)) in seen.global_aggregator_slots
 
     yield "messages", "meta", [message_meta(current_time_ms, signed, "valid")]
+
+
+@with_pq_and_later
+@spec_state_test
+@with_presets([MINIMAL], "need multiple committees per slot")
+def test_gossip_global_aggregate__reject_missing_committee(spec, state):
+    """A global aggregate that leaves out a committee of the slot is rejected."""
+    anchor_state = state.copy()
+    yield "topic", "meta", "beacon_global_aggregate_and_proof"
+    yield "state", anchor_state
+
+    store, signed_anchor, attestations = prepare(spec, state)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
+    assert len(attestations) >= 2
+
+    signed = create_signed_global_aggregate(spec, state, attestations[:1])
+    yield get_filename(signed), signed
+
+    current_time_ms = time_for(spec, store, attestations)
+    result, reason = run(spec, store, get_seen(spec), signed, current_time_ms)
+    assert result == "reject"
+    assert reason == "global aggregate does not cover every committee of the slot"
+
+    yield "messages", "meta", [message_meta(current_time_ms, signed, "reject")]
+
+
+@with_pq_and_later
+@spec_state_test
+def test_gossip_global_aggregate__reject_equal_data(spec, state):
+    """Two attestations with the same data must have been merged."""
+    anchor_state = state.copy()
+    yield "topic", "meta", "beacon_global_aggregate_and_proof"
+    yield "state", anchor_state
+
+    store, signed_anchor, attestations = prepare(spec, state)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
+
+    merged, proof = spec.compute_global_aggregate(get_network_aggregates(spec, state, attestations))
+    doubled = spec.Attestations(data=[merged[0], merged[0]])
+    signed = sign_global_aggregate(spec, state, spec.ValidatorIndex(0), doubled, proof)
+    yield get_filename(signed), signed
+
+    current_time_ms = time_for(spec, store, attestations)
+    result, reason = run(spec, store, get_seen(spec), signed, current_time_ms)
+    assert result == "reject"
+    assert reason == "global aggregate attestations have equal data"
+
+    yield "messages", "meta", [message_meta(current_time_ms, signed, "reject")]
+
+
+@with_pq_and_later
+@spec_state_test
+def test_gossip_global_aggregate__reject_data_index_too_high(spec, state):
+    """An attestation with data.index >= 2 is rejected."""
+    anchor_state = state.copy()
+    yield "topic", "meta", "beacon_global_aggregate_and_proof"
+    yield "state", anchor_state
+
+    store, signed_anchor, attestations = prepare(spec, state)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
+
+    merged, proof = spec.compute_global_aggregate(get_network_aggregates(spec, state, attestations))
+    merged[0].data.index = 2
+    signed = sign_global_aggregate(spec, state, spec.ValidatorIndex(0), merged, proof)
+    yield get_filename(signed), signed
+
+    current_time_ms = time_for(spec, store, attestations)
+    result, reason = run(spec, store, get_seen(spec), signed, current_time_ms)
+    assert result == "reject"
+    assert reason == "attestation data index must be 0 or 1"
+
+    yield "messages", "meta", [message_meta(current_time_ms, signed, "reject")]
+
+
+@with_pq_and_later
+@spec_state_test
+def test_gossip_global_aggregate__reject_unknown_validator(spec, state):
+    """A validator index past the registry is rejected."""
+    anchor_state = state.copy()
+    yield "topic", "meta", "beacon_global_aggregate_and_proof"
+    yield "state", anchor_state
+
+    store, signed_anchor, attestations = prepare(spec, state)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
+
+    merged, proof = spec.compute_global_aggregate(get_network_aggregates(spec, state, attestations))
+    message = spec.GlobalAggregateAndProof(
+        validator_index=spec.ValidatorIndex(len(state.validators)),
+        attestations=merged,
+        proof=proof,
+    )
+    signed = spec.SignedGlobalAggregateAndProof(message=message, signature=spec.XMSSSignature())
+    yield get_filename(signed), signed
+
+    current_time_ms = time_for(spec, store, attestations)
+    result, reason = run(spec, store, get_seen(spec), signed, current_time_ms)
+    assert result == "reject"
+    assert reason == "validator index out of range"
+
+    yield "messages", "meta", [message_meta(current_time_ms, signed, "reject")]
+
+
+@with_pq_and_later
+@spec_state_test
+def test_gossip_global_aggregate__ignore_second_from_same_validator(spec, state):
+    """One global aggregate per validator and slot propagates."""
+    anchor_state = state.copy()
+    yield "topic", "meta", "beacon_global_aggregate_and_proof"
+    yield "state", anchor_state
+
+    store, signed_anchor, attestations = prepare(spec, state)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
+
+    merged, proof = spec.compute_global_aggregate(get_network_aggregates(spec, state, attestations))
+    first = sign_global_aggregate(spec, state, spec.ValidatorIndex(0), merged, proof)
+    # Drop one participant so the second message is not a subset-ignore
+    fewer = spec.Attestations(data=[attestation.copy() for attestation in merged])
+    bits = list(fewer[0].aggregation_bits)
+    set_positions = [i for i, bit in enumerate(bits) if bit]
+    assert len(set_positions) >= 2, "need two participants to drop one"
+    bits[set_positions[0]] = False
+    fewer[0].aggregation_bits = spec.AggregationBits(data=bits)
+    second = sign_global_aggregate(spec, state, spec.ValidatorIndex(0), fewer, proof)
+    yield get_filename(first), first
+    yield get_filename(second), second
+
+    seen = get_seen(spec)
+    current_time_ms = time_for(spec, store, attestations)
+    result, reason = run(spec, store, seen, first, current_time_ms)
+    assert result == "valid", reason
+    result, reason = run(spec, store, seen, second, current_time_ms + 100)
+    assert result == "ignore"
+    assert reason == "already seen global aggregate for this slot and validator"
+
+    yield (
+        "messages",
+        "meta",
+        [
+            message_meta(current_time_ms, first, "valid"),
+            message_meta(current_time_ms + 100, second, "ignore"),
+        ],
+    )
+
+
+@with_pq_and_later
+@spec_state_test
+def test_gossip_global_aggregate__ignore_subset_participation(spec, state):
+    """A global aggregate that adds no participant to a seen one is ignored."""
+    anchor_state = state.copy()
+    yield "topic", "meta", "beacon_global_aggregate_and_proof"
+    yield "state", anchor_state
+
+    store, signed_anchor, attestations = prepare(spec, state)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
+
+    merged, proof = spec.compute_global_aggregate(get_network_aggregates(spec, state, attestations))
+    first = sign_global_aggregate(spec, state, spec.ValidatorIndex(0), merged, proof)
+    second = sign_global_aggregate(spec, state, spec.ValidatorIndex(1), merged, proof)
+    yield get_filename(first), first
+    yield get_filename(second), second
+
+    seen = get_seen(spec)
+    current_time_ms = time_for(spec, store, attestations)
+    result, reason = run(spec, store, seen, first, current_time_ms)
+    assert result == "valid", reason
+    result, reason = run(spec, store, seen, second, current_time_ms + 100)
+    assert result == "ignore"
+    assert reason == "already seen global aggregate with this participation"
+
+    yield (
+        "messages",
+        "meta",
+        [
+            message_meta(current_time_ms, first, "valid"),
+            message_meta(current_time_ms + 100, second, "ignore"),
+        ],
+    )
