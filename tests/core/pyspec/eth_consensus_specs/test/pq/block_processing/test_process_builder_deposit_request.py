@@ -73,6 +73,25 @@ def test_legacy_builder_deposit_initiates_exit(spec, state):
 
 @with_phases([PQ])
 @spec_state_test
+def test_legacy_builder_deposit_tops_up_unregistered_builder(spec, state):
+    # A builder that did not register takes the legacy XMSS public key at the fork
+    builder_index = 0
+    bls_pubkey = builder_pubkeys[builder_index]
+    state.builders[builder_index].pubkey = spec.sha256(bls_pubkey + spec.LEGACY_XMSS_PUBKEY_DOMAIN)
+    pre_builder_count = len(state.builders)
+    pre_balance = state.builders[builder_index].balance
+    amount = spec.MIN_DEPOSIT_AMOUNT
+    request = prepare_builder_deposit_request(spec, bls_pubkey[16:], amount, prefix=bls_pubkey[:16])
+    assert spec.is_legacy_pubkey(request.pubkey)
+
+    yield from run_builder_deposit_request_processing(spec, state, request)
+
+    assert len(state.builders) == pre_builder_count
+    assert state.builders[builder_index].balance == pre_balance + amount
+
+
+@with_phases([PQ])
+@spec_state_test
 def test_builder_top_up(spec, state):
     builder_index = 0
     pre_balance = state.builders[builder_index].balance

@@ -115,7 +115,10 @@ def run_fork_test(post_spec, pre_state):
                 pre_validator.pubkey + post_spec.LEGACY_VRF_ROOT_DOMAIN
             )
             assert post_validator.exit_epoch <= post_state.fork.epoch
-            assert post_validator.withdrawable_epoch <= post_state.fork.epoch
+            if pre_validator.slashed:
+                assert post_validator.withdrawable_epoch == pre_validator.withdrawable_epoch
+            else:
+                assert post_validator.withdrawable_epoch <= post_state.fork.epoch
 
     # Each pending deposit for an existing validator names its XMSS public key
     pre_pubkeys = [validator.pubkey for validator in pre_state.validators]
@@ -150,7 +153,9 @@ def run_fork_test(post_spec, pre_state):
             assert post_builder.pubkey == registered_builders[pre_builder.pubkey]
             assert post_builder.withdrawable_epoch == pre_builder.withdrawable_epoch
         else:
-            assert post_builder.pubkey == post_spec.XMSSPubkey()
+            assert post_builder.pubkey == post_spec.sha256(
+                pre_builder.pubkey + post_spec.LEGACY_XMSS_PUBKEY_DOMAIN
+            )
             assert post_builder.withdrawable_epoch != post_spec.FAR_FUTURE_EPOCH
 
     assert pre_state.fork.current_version == post_state.fork.previous_version

@@ -33,14 +33,18 @@ A validator that did not register takes
 public key, and `sha256(pubkey + LEGACY_VRF_ROOT_DOMAIN)` as its VRF root. No
 signature verifies against that key. The validator becomes exited and
 withdrawable at the fork, so the validator sweep withdraws its balance. A
-validator with `0x00` withdrawal credentials has no withdrawal address, so its
-balance stays locked until a later upgrade adds a quantum-safe way to set one.
+slashed validator instead keeps its withdrawable epoch, so `process_slashings`
+still applies its slashing penalty before the sweep. A validator with `0x00`
+withdrawal credentials has no withdrawal address, so its balance stays locked
+until a later upgrade adds a quantum-safe way to set one.
 
-A builder that did not register takes the empty XMSS public key and becomes
-withdrawable at the fork. Builder withdrawals pay its settled builder payments
-to their fee recipients, and the builder sweep then withdraws the rest of its
-balance to its execution address. Its unsettled payments are settled at the fork
-if they have reached the payment quorum, and dropped otherwise.
+A builder that did not register takes
+`sha256(pubkey + LEGACY_XMSS_PUBKEY_DOMAIN)` of its BLS public key as its XMSS
+public key, as a validator does, so a legacy deposit for it still tops it up. It
+becomes withdrawable at the fork. Builder withdrawals pay its settled builder
+payments to their fee recipients, and the builder sweep then withdraws the rest
+of its balance to its execution address. Its unsettled payments are settled at
+the fork if they have reached the payment quorum, and dropped otherwise.
 
 Pending deposits name their validator by BLS public key. The fork renames a
 pending deposit for an existing validator to 16 zero bytes followed by that
@@ -88,7 +92,11 @@ def compute_validators(pre: eip8483.BeaconState) -> Validators:
             pubkey = XMSSPubkey(sha256(validator.pubkey + LEGACY_XMSS_PUBKEY_DOMAIN))
             vrf_root = Root(sha256(validator.pubkey + LEGACY_VRF_ROOT_DOMAIN))
             exit_epoch = min(validator.exit_epoch, epoch)
-            withdrawable_epoch = min(validator.withdrawable_epoch, epoch)
+            # A slashed validator must still receive its slashing penalty
+            if validator.slashed:
+                withdrawable_epoch = validator.withdrawable_epoch
+            else:
+                withdrawable_epoch = min(validator.withdrawable_epoch, epoch)
         validators.append(
             Validator(
                 pubkey=pubkey,
@@ -120,7 +128,7 @@ def compute_builders(pre: eip8483.BeaconState) -> Builders:
             pubkey = XMSSPubkey(registered[builder.pubkey])
             withdrawable_epoch = builder.withdrawable_epoch
         else:
-            pubkey = XMSSPubkey()
+            pubkey = XMSSPubkey(sha256(builder.pubkey + LEGACY_XMSS_PUBKEY_DOMAIN))
             withdrawable_epoch = min(builder.withdrawable_epoch, epoch)
         builders.append(
             Builder(

@@ -51,8 +51,10 @@ def test_fork_builders_not_registered(spec, phases, state):
 
     post_spec = phases[PQ]
     assert len(post_state.builders) > 0
-    for builder in post_state.builders:
-        assert builder.pubkey == post_spec.XMSSPubkey()
+    for pre_builder, builder in zip(state.builders, post_state.builders, strict=True):
+        assert builder.pubkey == post_spec.sha256(
+            pre_builder.pubkey + post_spec.LEGACY_XMSS_PUBKEY_DOMAIN
+        )
         assert builder.withdrawable_epoch != post_spec.FAR_FUTURE_EPOCH
 
 
@@ -98,6 +100,24 @@ def test_fork_partially_registered(spec, phases, state):
     for index, validator in enumerate(post_state.validators):
         is_registered = index in registered_indices
         assert (validator.exit_epoch == post_spec.FAR_FUTURE_EPOCH) == is_registered
+
+
+@with_phases(phases=[EIP8483], other_phases=[PQ])
+@spec_test
+@with_state
+@with_meta_tags(PQ_FORK_TEST_META_TAGS)
+def test_fork_slashed_validator_not_registered(spec, phases, state):
+    slashed_index = 0
+    spec.slash_validator(state, slashed_index)
+    register_xmss_pubkeys(spec, state, range(1, len(state.validators)))
+    pre_withdrawable_epoch = state.validators[slashed_index].withdrawable_epoch
+    post_state = yield from run_fork_test(phases[PQ], state)
+
+    validator = post_state.validators[slashed_index]
+    assert validator.slashed
+    assert validator.exit_epoch <= post_state.fork.epoch
+    assert validator.withdrawable_epoch == pre_withdrawable_epoch
+    assert validator.withdrawable_epoch > post_state.fork.epoch
 
 
 @with_phases(phases=[EIP8483], other_phases=[PQ])
