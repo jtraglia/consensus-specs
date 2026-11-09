@@ -214,6 +214,13 @@ _MESSAGE_INFO = {
         "file_prefix": "randao_commitment_registration",
         "validation_fn": "validate_randao_commitment_registration_gossip",
     },
+    ###########################################################################
+    # pq
+    ###########################################################################
+    "SignedGlobalAggregateAndProof": {
+        "file_prefix": "global_aggregate",
+        "validation_fn": "validate_beacon_global_aggregate_and_proof_gossip",
+    },
 }
 
 

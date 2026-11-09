@@ -11,6 +11,7 @@
 - [Containers](#containers)
   - [Modified `SignedProposerPreferences`](#modified-signedproposerpreferences)
 - [Helpers](#helpers)
+  - [Modified `Seen`](#modified-seen)
   - [Modified `compute_fork_version`](#modified-compute_fork_version)
   - [Modified `verify_block_body_operation_limits`](#modified-verify_block_body_operation_limits)
   - [Modified `verify_execution_requests_limits`](#modified-verify_execution_requests_limits)
@@ -21,6 +22,7 @@
     - [Global topics](#global-topics)
       - [Modified `beacon_block`](#modified-beacon_block)
       - [Modified `beacon_aggregate_and_proof`](#modified-beacon_aggregate_and_proof)
+      - [New `beacon_global_aggregate_and_proof`](#new-beacon_global_aggregate_and_proof)
       - [Modified `voluntary_exit`](#modified-voluntary_exit)
       - [Modified `proposer_slashing`](#modified-proposer_slashing)
       - [Removed `sync_committee_contribution_and_proof`](#removed-sync_committee_contribution_and_proof)
@@ -42,6 +44,10 @@ specifications of previous upgrades, and assumes them as pre-requisite.
 
 Sync committees are removed in PQ, and with them the light client protocol, so
 the light client topics and request/response methods are no longer used.
+
+A new global topic, `beacon_global_aggregate_and_proof`, carries the
+attestations of a slot over all of its committees with one proof, so that a
+proposer can include them without merging the network aggregates itself.
 
 ## Configs
 
@@ -80,6 +86,35 @@ class SignedProposerPreferences(Container):
 ```
 
 ## Helpers
+
+### Modified `Seen`
+
+```python
+@dataclass
+class Seen:
+    proposer_slots: set[tuple[Slot, ValidatorIndex]]
+    aggregator_epochs: set[tuple[Epoch, ValidatorIndex]]
+    aggregate_data_roots: dict[tuple[Root, CommitteeIndex], set[tuple[bool, ...]]]
+    voluntary_exit_indices: set[ValidatorIndex]
+    proposer_slashing_indices: set[ValidatorIndex]
+    attester_slashing_indices: set[ValidatorIndex]
+    attestation_validator_epochs: set[tuple[Epoch, ValidatorIndex]]
+    sync_contribution_aggregator_slots: set[tuple[Slot, ValidatorIndex, Uint64]]
+    sync_contribution_data: dict[tuple[Slot, Root, Uint64], set[tuple[bool, ...]]]
+    sync_message_validator_slots: set[tuple[Slot, ValidatorIndex, Uint64]]
+    bls_to_execution_change_indices: set[ValidatorIndex]
+    data_column_sidecar_tuples: set[tuple[Root, ColumnIndex]]
+    execution_payloads: dict[Hash32, ExecutionPayload]
+    execution_payload_envelopes: set[tuple[Root, BuilderIndex]]
+    payload_attestation_validators: set[tuple[Slot, ValidatorIndex]]
+    execution_payload_bids: set[tuple[Slot, Hash32, Root, BuilderIndex]]
+    best_execution_payload_bid: dict[tuple[Slot, Hash32, Root], Gwei]
+    proposer_preferences: dict[tuple[Slot, Root], ProposerPreferences]
+    # [New in PQ]
+    global_aggregator_slots: set[tuple[Slot, ValidatorIndex]]
+    # [New in PQ]
+    global_aggregate_participations: dict[Slot, set[frozenset[tuple[Root, ValidatorIndex]]]]
+```
 
 ### Modified `compute_fork_version`
 
@@ -467,6 +502,162 @@ def validate_beacon_aggregate_and_proof_gossip(
     if aggregate_cache_key not in seen.aggregate_data_roots:
         seen.aggregate_data_roots[aggregate_cache_key] = set()
     seen.aggregate_data_roots[aggregate_cache_key].add(aggregate_bits)
+```
+
+##### New `beacon_global_aggregate_and_proof`
+
+*Note*: The message carries the attestations of one slot over every committee of
+the slot and one proof of their signatures. Any active validator may publish one
+per slot. A message whose participation adds nothing to one already seen is not
+propagated.
+
+```python
+def validate_beacon_global_aggregate_and_proof_gossip(
+    seen: Seen,
+    store: Store,
+    signed_global_aggregate_and_proof: SignedGlobalAggregateAndProof,
+    current_time_ms: Uint64,
+    block_payload_statuses: dict[Root, PayloadValidationStatus],
+) -> None:
+    """
+    Validate a SignedGlobalAggregateAndProof for gossip propagation.
+    Raises GossipIgnore or GossipReject on validation failure.
+    """
+    message = signed_global_aggregate_and_proof.message
+    attestations = message.attestations
+    validator_index = message.validator_index
+
+    # [REJECT] The attestation count is at least one and within the block limit
+    if not 1 <= len(attestations) <= MAX_ATTESTATIONS_PQ:
+        raise GossipReject("global aggregate attestation count out of range")
+
+    slot = attestations[0].data.slot
+
+    # [REJECT] The attestations are from one slot
+    if any(attestation.data.slot != slot for attestation in attestations):
+        raise GossipReject("global aggregate attestations are not from one slot")
+
+    # [REJECT] The attestations' data indices are 0 or 1
+    if any(attestation.data.index > 1 for attestation in attestations):
+        raise GossipReject("attestation data index must be 0 or 1")
+
+    # [REJECT] The attestations have distinct data
+    data_roots = [hash_tree_root(attestation.data) for attestation in attestations]
+    if len(set(data_roots)) != len(data_roots):
+        raise GossipReject("global aggregate attestations have equal data")
+
+    # [IGNORE] This is the first valid global aggregate for this slot and validator
+    validator_slot_key = (slot, validator_index)
+    if validator_slot_key in seen.global_aggregator_slots:
+        raise GossipIgnore("already seen global aggregate for this slot and validator")
+
+    # [IGNORE] The blocks being voted for have been seen (via gossip or non-gossip sources)
+    # (MAY be queued until the blocks are retrieved)
+    if any(attestation.data.beacon_block_root not in store.blocks for attestation in attestations):
+        raise GossipIgnore("block being voted for has not been seen")
+
+    # [REJECT] The blocks being voted for pass validation
+    if any(
+        attestation.data.beacon_block_root not in store.block_states for attestation in attestations
+    ):
+        raise GossipReject("block being voted for failed validation")
+
+    state = store.block_states[get_head(store).root]
+
+    # [IGNORE] The slot is not from a future slot
+    # (MAY be queued for processing at the appropriate slot)
+    if is_future_slot(store, slot, current_time_ms):
+        raise GossipIgnore("global aggregate slot is from a future slot")
+
+    # [IGNORE] The epoch is either the current or previous epoch
+    attestation_epoch = compute_epoch_at_slot(slot)
+    if not is_current_or_previous_epoch(store, attestation_epoch, current_time_ms):
+        raise GossipIgnore("global aggregate epoch is not current or previous epoch")
+
+    # [REJECT] The attestations' epochs match their targets
+    if any(attestation.data.target.epoch != attestation_epoch for attestation in attestations):
+        raise GossipReject("attestation epoch does not match target epoch")
+
+    # [REJECT] The validator index is a valid validator index
+    if validator_index >= len(state.validators):
+        raise GossipReject("validator index out of range")
+
+    # [REJECT] The validator is active
+    if not is_active_validator(state.validators[validator_index], attestation_epoch):
+        raise GossipReject("validator is not active")
+
+    # [REJECT] The committees are in range, each has participants, and the bit counts match
+    committee_count = get_committee_count_per_slot(state, attestation_epoch)
+    covered_committees: set[CommitteeIndex] = set()
+    for attestation in attestations:
+        committee_indices = get_committee_indices(attestation.committee_bits)
+        if any(index >= committee_count for index in committee_indices):
+            raise GossipReject("committee index out of range")
+        committees = [get_beacon_committee(state, slot, index) for index in committee_indices]
+        if len(attestation.aggregation_bits) != sum(len(committee) for committee in committees):
+            raise GossipReject("aggregation bits length does not match committee sizes")
+        committee_offset = 0
+        for committee in committees:
+            if not any(
+                attestation.aggregation_bits[committee_offset + i] for i in range(len(committee))
+            ):
+                raise GossipReject("committee has no participants")
+            committee_offset += len(committee)
+        covered_committees.update(committee_indices)
+
+    # [REJECT] The attestations cover every committee of the slot
+    if len(covered_committees) != committee_count:
+        raise GossipReject("global aggregate does not cover every committee of the slot")
+
+    # [IGNORE] A valid global aggregate with a superset of the participation has not already been seen
+    participation = frozenset(
+        (data_root, attester_index)
+        for data_root, attestation in zip(data_roots, attestations, strict=True)
+        for attester_index in get_attesting_indices(state, attestation)
+    )
+    seen_participations = seen.global_aggregate_participations.get(slot, set())
+    if any(participation <= prior for prior in seen_participations):
+        raise GossipIgnore("already seen global aggregate with this participation")
+
+    # [REJECT] The validator signature is valid
+    domain = get_domain(state, DOMAIN_AGGREGATE_AND_PROOF, attestation_epoch)
+    signing_root = compute_signing_root(message, domain)
+    leaf_index = compute_xmss_leaf_index(slot, LEAF_OFFSET_GLOBAL_AGGREGATE_AND_PROOF)
+    pubkey = state.validators[validator_index].pubkey
+    if not xmss.Verify(
+        pubkey, leaf_index, signing_root, signed_global_aggregate_and_proof.signature
+    ):
+        raise GossipReject("invalid validator signature")
+
+    # [REJECT] The global aggregate stark is valid
+    statements = []
+    for attestation in attestations:
+        statements.extend(get_attestation_statements(state, attestation))
+    if not stark.VerifyAggregates(statements, message.proof):
+        raise GossipReject("invalid global aggregate stark")
+
+    finalized_epoch = store.finalized_checkpoint.epoch
+    for attestation in attestations:
+        block_root = attestation.data.beacon_block_root
+
+        # [REJECT] The target block is an ancestor of the LMD vote block
+        checkpoint_block = get_checkpoint_block(store, block_root, attestation_epoch)
+        if checkpoint_block != attestation.data.target.root:
+            raise GossipReject("target block is not an ancestor of LMD vote block")
+
+        # [IGNORE] The finalized checkpoint is an ancestor of the block
+        finalized_checkpoint_block = get_checkpoint_block(store, block_root, finalized_epoch)
+        if finalized_checkpoint_block != store.finalized_checkpoint.root:
+            raise GossipIgnore("finalized checkpoint is not an ancestor of block")
+
+        # The attested payload status is consistent with the block's execution payload
+        verify_attestation_payload_status(store, attestation.data, block_payload_statuses)
+
+    # Mark this global aggregate as seen
+    seen.global_aggregator_slots.add(validator_slot_key)
+    if slot not in seen.global_aggregate_participations:
+        seen.global_aggregate_participations[slot] = set()
+    seen.global_aggregate_participations[slot].add(participation)
 ```
 
 ##### Modified `voluntary_exit`
