@@ -301,3 +301,112 @@ def test_gossip_global_aggregate__ignore_subset_participation(spec, state):
             message_meta(current_time_ms + 100, second, "ignore"),
         ],
     )
+
+
+def create_signed_committee_aggregate(spec, state, attestation):
+    committee_index = spec.get_committee_indices(attestation.committee_bits)[0]
+    aggregator_index = get_aggregator_index(spec, state, attestation.data.slot, committee_index)
+    aggregate_and_proof = get_aggregate_and_proof(
+        spec, state, aggregator_index, attestation, privkeys[aggregator_index]
+    )
+    signature = spec.get_aggregate_and_proof_signature(
+        state, aggregate_and_proof, privkeys[aggregator_index]
+    )
+    return spec.SignedAggregateAndProof(message=aggregate_and_proof, signature=signature)
+
+
+def run_committee_aggregate(spec, store, seen, signed, current_time_ms):
+    return run_validate_gossip(
+        spec,
+        seen=seen,
+        store=store,
+        signed_aggregate_and_proof=signed,
+        current_time_ms=current_time_ms,
+        block_payload_statuses={},
+    )
+
+
+@with_pq_and_later
+@spec_state_test
+def test_gossip_aggregate_and_proof__ignore_covered_by_global_aggregate(spec, state):
+    """
+    A committee aggregate whose participants a seen global aggregate of the
+    slot already covers is not propagated.
+    """
+    anchor_state = state.copy()
+    yield "topic", "meta", "beacon_aggregate_and_proof"
+    yield "state", anchor_state
+
+    store, signed_anchor, attestations = prepare(spec, state)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
+
+    signed_global = create_signed_global_aggregate(spec, state, attestations)
+    signed_committee = create_signed_committee_aggregate(spec, state, attestations[0])
+    yield get_filename(signed_global), signed_global
+    yield get_filename(signed_committee), signed_committee
+
+    seen = get_seen(spec)
+    current_time_ms = time_for(spec, store, attestations)
+    result, reason = run(spec, store, seen, signed_global, current_time_ms)
+    assert result == "valid", reason
+    result, reason = run_committee_aggregate(
+        spec, store, seen, signed_committee, current_time_ms + 100
+    )
+    assert result == "ignore"
+    assert reason == "already seen global aggregate covering this aggregate"
+
+    yield (
+        "messages",
+        "meta",
+        [
+            message_meta(current_time_ms, signed_global, "valid"),
+            message_meta(current_time_ms + 100, signed_committee, "ignore"),
+        ],
+    )
+
+
+@with_pq_and_later
+@spec_state_test
+def test_gossip_aggregate_and_proof__valid_adds_to_global_aggregate(spec, state):
+    """
+    A committee aggregate with a participant the seen global aggregate lacks
+    still propagates.
+    """
+    anchor_state = state.copy()
+    yield "topic", "meta", "beacon_aggregate_and_proof"
+    yield "state", anchor_state
+
+    store, signed_anchor, attestations = prepare(spec, state)
+    yield get_filename(signed_anchor), signed_anchor
+    yield "blocks", "meta", [{"block": get_filename(signed_anchor)}]
+
+    # The global aggregate misses the first participant of committee 0
+    partial = [attestation.copy() for attestation in attestations]
+    bits = list(partial[0].aggregation_bits)
+    set_positions = [i for i, bit in enumerate(bits) if bit]
+    assert len(set_positions) >= 2, "need two participants to drop one"
+    bits[set_positions[0]] = False
+    partial[0].aggregation_bits = spec.AggregationBits(data=bits)
+    signed_global = create_signed_global_aggregate(spec, state, partial)
+    signed_committee = create_signed_committee_aggregate(spec, state, attestations[0])
+    yield get_filename(signed_global), signed_global
+    yield get_filename(signed_committee), signed_committee
+
+    seen = get_seen(spec)
+    current_time_ms = time_for(spec, store, attestations)
+    result, reason = run(spec, store, seen, signed_global, current_time_ms)
+    assert result == "valid", reason
+    result, reason = run_committee_aggregate(
+        spec, store, seen, signed_committee, current_time_ms + 100
+    )
+    assert result == "valid", reason
+
+    yield (
+        "messages",
+        "meta",
+        [
+            message_meta(current_time_ms, signed_global, "valid"),
+            message_meta(current_time_ms + 100, signed_committee, "valid"),
+        ],
+    )

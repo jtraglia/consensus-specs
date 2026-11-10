@@ -2,38 +2,42 @@
 
 *Note*: This document is a work-in-progress for researchers and implementers.
 
-<!-- mdformat-toc start --slug=github --no-anchors --maxlevel=6 --minlevel=2 -->
-
 - [Introduction](#introduction)
 - [Configs](#configs)
 - [Presets](#presets)
   - [Type-specific SSZ bounds](#type-specific-ssz-bounds)
 - [Containers](#containers)
-  - [Modified `SignedProposerPreferences`](#modified-signedproposerpreferences)
+  - [Modified](#modified-signedproposerpreferences) `SignedProposerPreferences`
 - [Helpers](#helpers)
-  - [Modified `Seen`](#modified-seen)
-  - [Modified `compute_fork_version`](#modified-compute_fork_version)
-  - [Modified `verify_block_body_operation_limits`](#modified-verify_block_body_operation_limits)
-  - [Modified `verify_execution_requests_limits`](#modified-verify_execution_requests_limits)
-  - [Modified `compute_attestation_subnet_prefix_bits`](#modified-compute_attestation_subnet_prefix_bits)
-  - [Modified `compute_subscribed_subnet`](#modified-compute_subscribed_subnet)
+  - [Modified](#modified-seen) `Seen`
+  - [Modified](#modified-compute_fork_version) `compute_fork_version`
+  - [Modified](#modified-verify_block_body_operation_limits)
+    `verify_block_body_operation_limits`
+  - [Modified](#modified-verify_execution_requests_limits)
+    `verify_execution_requests_limits`
+  - [Modified](#modified-compute_attestation_subnet_prefix_bits)
+    `compute_attestation_subnet_prefix_bits`
+  - [Modified](#modified-compute_subscribed_subnet) `compute_subscribed_subnet`
 - [The gossip domain: gossipsub](#the-gossip-domain-gossipsub)
   - [Topics and messages](#topics-and-messages)
     - [Global topics](#global-topics)
-      - [Modified `beacon_block`](#modified-beacon_block)
-      - [Modified `beacon_aggregate_and_proof`](#modified-beacon_aggregate_and_proof)
-      - [New `beacon_global_aggregate_and_proof`](#new-beacon_global_aggregate_and_proof)
-      - [Modified `voluntary_exit`](#modified-voluntary_exit)
-      - [Modified `proposer_slashing`](#modified-proposer_slashing)
-      - [Removed `sync_committee_contribution_and_proof`](#removed-sync_committee_contribution_and_proof)
-      - [Modified `payload_attestation_message`](#modified-payload_attestation_message)
-      - [Modified `execution_payload_bid`](#modified-execution_payload_bid)
-      - [Modified `proposer_preferences`](#modified-proposer_preferences)
+      - [Modified](#modified-beacon_block) `beacon_block`
+      - [Modified](#modified-beacon_aggregate_and_proof)
+        `beacon_aggregate_and_proof`
+      - [New](#new-beacon_global_aggregate_and_proof)
+        `beacon_global_aggregate_and_proof`
+      - [Modified](#modified-voluntary_exit) `voluntary_exit`
+      - [Modified](#modified-proposer_slashing) `proposer_slashing`
+      - [Removed](#removed-sync_committee_contribution_and_proof)
+        `sync_committee_contribution_and_proof`
+      - [Modified](#modified-payload_attestation_message)
+        `payload_attestation_message`
+      - [Modified](#modified-execution_payload_bid) `execution_payload_bid`
+      - [Modified](#modified-proposer_preferences) `proposer_preferences`
     - [Attestation subnets](#attestation-subnets)
-      - [Modified `beacon_attestation_{subnet_id}`](#modified-beacon_attestation_subnet_id)
+      - [Modified](#modified-beacon_attestation_subnet_id)
+        `beacon_attestation_{subnet_id}`
     - [Sync committee subnets](#sync-committee-subnets)
-
-<!-- mdformat-toc end -->
 
 ## Introduction
 
@@ -364,6 +368,10 @@ def validate_beacon_block_gossip(
 
 ##### Modified `beacon_aggregate_and_proof`
 
+*Note*: A committee aggregate whose participants a global aggregate of the slot
+already covers is not propagated, since every node that holds the global
+aggregate already holds their signatures.
+
 ```python
 def validate_beacon_aggregate_and_proof_gossip(
     seen: Seen,
@@ -445,6 +453,17 @@ def validate_beacon_aggregate_and_proof_gossip(
     attesting_indices = get_attesting_indices(state, aggregate)
     if len(attesting_indices) < 1:
         raise GossipReject("aggregate has no participants")
+
+    # [New in PQ]
+    # [IGNORE] A seen global aggregate of the slot does not cover every participant
+    covered_participation: set[tuple[Root, ValidatorIndex]] = set()
+    for participation in seen.global_aggregate_participations.get(aggregate.data.slot, set()):
+        covered_participation |= participation
+    if all(
+        (aggregate_data_root, attester_index) in covered_participation
+        for attester_index in attesting_indices
+    ):
+        raise GossipIgnore("already seen global aggregate covering this aggregate")
 
     # [Modified in PQ]
     # [REJECT] The selection proof selects the validator as an aggregator
